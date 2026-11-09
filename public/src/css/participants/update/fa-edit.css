@@ -1,0 +1,202 @@
+.fa-edit-card .overview-card-body,
+.fa-tag-card .overview-card-body {
+  padding: 22px;
+}
+
+.fa-edit-fields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.fa-edit-fields .form-label {
+  margin-bottom: 6px;
+  color: #526474;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.fa-edit-fields .form-control,
+.fa-edit-fields .form-select {
+  min-height: 40px;
+  font-size: 13px;
+}
+
+.fa-edit-fields .form-control[readonly] {
+  color: #526474;
+  background: #f3f6f4;
+}
+
+.fa-edit-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 22px 0 15px;
+  padding-top: 20px;
+  border-top: 1px solid #e3e9e5;
+  color: #286b38;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.fa-edit-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #e3e9e5;
+}
+
+.fa-edit-actions p {
+  margin: 0;
+  color: #286b38;
+  font-size: 12px;
+}
+
+.fa-edit-actions p.is-error {
+  color: #aa3f33;
+}
+
+.fa-tag-help {
+  margin: 0 0 18px;
+  color: #637487;
+  font-size: 12px;
+}
+
+@media (max-width: 1100px) {
+  .fa-edit-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .fa-edit-fields { grid-template-columns: 1fr; }
+  .fa-edit-actions { align-items: stretch; flex-direction: column; }
+  .fa-edit-actions .btn { width: 100%; }
+  .fa-edit-card .overview-card-body,
+  .fa-tag-card .overview-card-body { padding: 16px; }
+}
+
+[data-theme='dark'] .app-main .app-main-body .fa-edit-fields .form-label,
+[data-theme='dark'] .app-main .app-main-body .fa-tag-help {
+  color: var(--color-text-secondary);
+}
+
+[data-theme='dark'] .app-main .app-main-body .fa-edit-subtitle,
+[data-theme='dark'] .app-main .app-main-body .fa-edit-actions p {
+  color: var(--color-primary);
+  border-color: var(--color-border);
+}
+
+[data-theme='dark'] .app-main .app-main-body .fa-edit-actions p.is-error {
+  color: var(--color-danger);
+}
+
+[data-theme='dark'] .app-main .app-main-body .fa-edit-fields .form-control[readonly] {
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+}
+
+.fa-roster-card { overflow: visible; border: 1px solid var(--color-border); border-radius: 16px; }
+.fa-roster-card > .overview-card-body { padding: 0; }
+.fa-roster-card .fa-roster-header { position: relative; display: flex; align-items: center; padding: 22px 24px; background: var(--color-primary-surface); border-bottom: 1px solid var(--color-border); border-radius: 16px 16px 0 0; }
+.fa-roster-header .overview-heading { width: 100%; align-items: center; gap: 13px; }
+.fa-roster-heading-copy { min-width: 0; flex: 1 1 auto; padding-right: 118px; }
+.fa-roster-title-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin: 3px 0 4px; }
+.fa-roster-header .overview-heading-icon { width: 46px; height: 46px; flex: 0 0 46px; border-radius: 12px; }
+.fa-roster-header .title-card { margin: 0; font-size: 19px; }
+.fa-roster-header p { margin: 0; color: var(--color-text-secondary); font-size: 12px; }
+.fa-roster-eyebrow { color: var(--color-primary-dark); font-size: 10px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+.fa-roster-header-count { position: absolute; top: 18px; right: 24px; display: inline-flex; align-items: center; min-height: 30px; padding: 5px 12px; border: 1px solid var(--color-border); border-radius: 999px; color: var(--color-primary-dark); background: var(--color-surface); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.fa-roster-tabs { display: flex; gap: 8px; padding: 0 24px; border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
+.fa-roster-tabs button { padding: 16px 13px 13px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--color-text-secondary); font-size: 13px; font-weight: 700; }
+.fa-roster-tabs button.is-active { border-bottom-color: var(--color-primary); color: var(--color-primary-dark); }
+.fa-roster-tabs button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -3px; border-radius: 6px; }
+#faCurrentMembersPanel,#faAddMembersPanel { padding: 22px 24px 25px; }
+#faCurrentMembersPanel[hidden],#faAddMembersPanel[hidden] { display: none; }
+#faCurrentMembersPanel .fa-members-card { margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+#faCurrentMembersPanel .fa-members-card > .card-header { padding: 0 0 16px; border: 0; background: transparent; }
+#faCurrentMembersPanel .fa-members-card > .card-header .overview-heading-icon { display: none; }
+#faCurrentMembersPanel .fa-members-card > .card-header .title-card { font-size: 15px; }
+#faCurrentMembersPanel #faMemberCount { display: none; }
+#faCurrentMembersPanel .fa-members-card > .overview-card-body { padding: 0; }
+#faCurrentMembersPanel .fa-member-toolbar { padding: 16px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-primary-surface); }
+#faCurrentMembersPanel .fa-member-search { max-width: 520px; }
+#faCurrentMembersPanel .fa-member-table-frame { border-radius: 12px; }
+.fa-roster-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 15px 0; }
+.fa-roster-filters label { flex: 1 1 180px; color: var(--color-text-secondary); font-size: 12px; font-weight: 650; }
+.fa-roster-filters .form-control,.fa-roster-filters .form-select { margin-top: 5px; }
+.fa-available-table-wrap { overflow-x: auto; max-width: 100%; }
+.fa-available-table-wrap table { min-width: 690px; color: var(--color-text-primary); }
+.fa-available-table-wrap th { white-space: nowrap; color: var(--color-text-secondary); font-size: 12px; }
+.fa-available-table-wrap td { color: var(--color-text-primary); font-size: 12px; }
+.fa-roster-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 15px; color: var(--color-text-secondary); font-size: 12px; }
+.fa-roster-footer label { display: flex; align-items: center; gap: 7px; }
+.fa-roster-footer .form-select { width: auto; }
+.fa-roster-footer #faAddSelected { margin-left: auto; }
+#faRosterMessage { margin: 12px 0 0; color: var(--color-primary-dark); font-size: 12px; }
+@media (max-width: 640px) {
+  .fa-roster-card .fa-roster-header { padding: 58px 18px 18px; }
+  .fa-roster-header .overview-heading { align-items: flex-start; }
+  .fa-roster-heading-copy { padding-right: 0; }
+  .fa-roster-header-count { top: 14px; right: 18px; }
+  .fa-roster-tabs { padding: 0 12px; }
+  #faCurrentMembersPanel,#faAddMembersPanel { padding: 16px; }
+  #faCurrentMembersPanel .fa-member-toolbar { padding: 12px; }
+}
+[data-theme='dark'] .app-main .app-main-body .fa-roster-tabs button.is-active,
+[data-theme='dark'] .app-main .app-main-body #faRosterMessage { color: var(--color-primary); }
+
+[data-theme='dark'] .app-main .app-main-body #fa-members .overview-heading .title-card,
+[data-theme='dark'] .app-main .app-main-body #fa-members .fa-available-table-wrap td,
+[data-theme='dark'] .app-main .app-main-body #fa-members .fa-available-table-wrap td strong {
+  color: var(--color-text-primary);
+}
+
+[data-theme='dark'] .app-main .app-main-body #fa-members .fa-roster-tabs button,
+[data-theme='dark'] .app-main .app-main-body #fa-members .fa-roster-filters label,
+[data-theme='dark'] .app-main .app-main-body #fa-members .fa-roster-footer,
+[data-theme='dark'] .app-main .app-main-body #fa-members .fa-available-table-wrap th {
+  color: var(--color-text-secondary);
+}
+
+[data-theme='dark'] .app-main .app-main-body #fa-members .fa-roster-tabs button.is-active {
+  color: var(--color-primary);
+}
+
+[data-theme='dark'] .app-main .app-main-body #fa-members .fa-roster-eyebrow,
+[data-theme='dark'] .app-main .app-main-body #fa-members .fa-roster-header-count {
+  color: var(--color-primary);
+}
+
+[data-theme='dark'] .app-main .app-main-body #fa-members .fa-roster-header-count {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+[data-theme='dark'] .app-main .app-main-body #fa-members .fa-available-table-wrap th {
+  background-color: #213027;
+  border-color: var(--color-border);
+}
+
+[data-theme='dark'] .app-main .app-main-body #fa-members .fa-available-table-wrap td {
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+[data-theme='dark'] .app-main .app-main-body #fa-members :is(
+  .fa-roster-filters .form-control,
+  .fa-roster-filters .form-select,
+  .fa-roster-footer .form-select,
+  .fa-edit-fields .form-control,
+  .fa-edit-fields .form-select
+) {
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  border-color: var(--color-border);
+}
+
+[data-theme='dark'] .app-main .app-main-body #fa-members :is(.fa-roster-filters .form-control, .fa-edit-fields .form-control)::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}

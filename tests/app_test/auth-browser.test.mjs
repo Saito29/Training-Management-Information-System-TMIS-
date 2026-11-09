@@ -1,0 +1,51 @@
+﻿import test from 'node:test';
+import assert from 'node:assert/strict';
+import { chromium } from 'playwright-core';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createApp } from '../backend/server.mjs';
+import { totp } from '../backend/services/security.mjs';
+
+test('browser: create sign-in, enroll app, save recovery codes, and verify the next login', { skip: process.env.TMIS_ENABLE_AUTH_BACKEND !== 'true' }, async t => {
+  const dataDir = mkdtempSync(join(tmpdir(), 'tmis-browser-')); let now = Date.now();
+  const server = createApp({ dataDir, origin: 'http://127.0.0.1:0', now: () => now });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  let browser;
+  t.after(async () => { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); rmSync(dataDir, { recursive: true, force: true }); });
+  browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
+  const page = await browser.newPage();
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  // Keep this regression test independent of CDN availability.
+  await page.route('**/*', route => route.request().url().startsWith(origin) ? route.continue() : route.abort());
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  await page.goto(`${origin}/TMIS/app/authentication/login.html`);
+  await page.locator('#initialAccountSetup').waitFor({ state: 'visible' });
+  await page.fill('#setupFirstName','Browser'); await page.fill('#setupLastName','Test'); await page.fill('#setupEmail','browser@example.com');
+  await page.fill('#setupPassword','Example-Password1!'); await page.fill('#setupConfirm','Example-Password1!');
+  await page.locator('#initialAccountSetup button[type=submit]').click();
+  await page.waitForURL('**/profile.html#security');
+  await page.locator('#mfaSection summary').click();
+  await page.locator('#mfaSetupForm').waitFor({ state: 'visible' });
+  await page.fill('#mfaSetupPassword','Example-Password1!'); await page.locator('#mfaSetupForm button').click();
+  await page.locator('#mfaVerifyForm').waitFor({ state: 'visible' });
+  const secret = await page.inputValue('#mfaManualKey'); assert.ok(secret.length > 20);
+  await page.waitForFunction(() => document.getElementById('mfaQr').naturalWidth > 0);
+  await page.fill('#mfaVerifyCode',totp(secret,Math.floor(now / 30000))); await page.locator('#mfaVerifyForm button[type=submit]').click();
+  await page.locator('#mfaRecoveryPanel').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('#mfaRecoveryCodes li').count(),10);
+  await page.locator('#mfaAcknowledgeCodes').click();
+  assert.equal(await page.locator('#mfaRecoveryCodes li').count(),0);
+  await page.waitForFunction(() => document.getElementById('mfaBadge').textContent === 'Enabled');
+  // Sign out through the real same-origin API, then complete the two-step login form.
+  await page.evaluate(async () => { await window.TmisAuth.request('logout',{}); });
+  await page.goto(`${origin}/TMIS/app/authentication/login.html`);
+  await page.fill('#email-input','browser@example.com'); await page.fill('#password_input','Example-Password1!');
+  await page.locator('#authenticator_form [type=submit]').click();
+  await page.locator('#signInVerification').waitFor({ state: 'visible' });
+  now += 31000;
+  await page.fill('#signInCode',totp(secret,Math.floor(now / 30000))); await page.locator('#signInVerification [type=submit]').click();
+  await page.waitForURL('**/profile.html#security');
+  await page.waitForFunction(() => document.getElementById('myProfileName').textContent === 'Browser Test');
+  assert.deepEqual(errors, []);
+});

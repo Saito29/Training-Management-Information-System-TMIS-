@@ -1,0 +1,9 @@
+.card-form form .rp-wizard-step[hidden], #rpOtherOfficeWrap[hidden] { display: none !important; }
+.card-form form .rp-wizard-step { width: 100%; border-bottom: 0; padding: 12px 8px; }
+.rp-step-actions { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.rp-step-actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 42px; }
+.rp-back-button { border: 1px solid var(--color-border, #d8e1d9); color: var(--color-text-primary, #2b3d2f); background: var(--color-surface, #fff); }
+.rp-back-button:hover { border-color: #185e20; color: #185e20; }
+.rp-help-text { margin: 0 0 18px; color: var(--color-text-secondary, #64736b); font-size: 13px; }
+.rp-form-status { min-height: 20px; margin: 4px 0 12px; color: #176329; font-size: 13px; }
+@media (max-width: 575px) { .rp-step-actions .btn { flex: 1 1 auto; } }

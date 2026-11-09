@@ -1,0 +1,138 @@
+.for-review-table-card .for-review-table-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 1rem;
+  min-height: 0;
+  padding: 1.15rem 1.35rem;
+}
+.for-review-table-card .table-header-actions {
+  position: static;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  justify-self: end;
+  align-self: start;
+  margin: 0;
+}
+.for-review-table-card .for-review-table-header > div:first-child { min-width: 0; }
+.for-review-table-card .for-review-table-body { padding: 1.25rem 1.35rem; }
+.questionnaire-filter-bar {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+.questionnaire-filter-bar .review-toolbar-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(12rem, 1.3fr) auto;
+  align-items: end;
+  gap: .75rem;
+}
+.questionnaire-filter-bar .toolbar-filter { min-width: 0; }
+.questionnaire-filter-bar label {
+  display: block;
+  margin-bottom: .4rem;
+  color: var(--color-text-secondary);
+  font-size: .76rem;
+  font-weight: 650;
+}
+.questionnaire-filter-bar .form-control,
+.questionnaire-filter-bar .form-select {
+  width: 100%;
+  min-height: 2.55rem;
+  color: var(--color-text-primary);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  font-size: .83rem;
+}
+.questionnaire-filter-bar .form-control:focus,
+.questionnaire-filter-bar .form-select:focus,
+.questionnaire-column-filters .form-control:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 .18rem color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+.questionnaire-clear-filters {
+  min-height: 2.55rem;
+  padding-inline: .8rem;
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  font-size: .8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.questionnaire-clear-filters:hover { color: var(--color-surface); background: var(--color-primary); border-color: var(--color-primary); }
+.questionnaire-page-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .7rem 0; }
+.questionnaire-table-controls { display: flex; flex: 0 0 auto; align-items: center; gap: .5rem; margin: 0; color: var(--color-text-secondary); font-size: .79rem; white-space: nowrap; }
+.questionnaire-table-controls select { width: 6rem; color: var(--color-text-primary); background-color: var(--color-surface); border-color: var(--color-border); }
+.for-review-table-card .review-pagination { display: flex; flex-direction: row; justify-content: flex-end; align-items: center; gap: 1rem; margin: 0; padding: 0; font-size: .79rem; }
+.for-review-table-card .review-pagination .btn { min-width: 2rem; color: var(--color-primary); background: var(--color-surface); border-color: var(--color-border); }
+.for-review-table-card .review-pagination .btn:hover:not(:disabled) { color: var(--color-surface); background: var(--color-primary); border-color: var(--color-primary); }
+.questionnaire-table-scroll {
+  height: auto;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 11px;
+  scrollbar-color: var(--color-primary-light) var(--color-bg);
+}
+.questionnaire-table-scroll::-webkit-scrollbar:vertical { width: 0; }
+#questionnaireTable { min-width: 1100px; width: 100%; margin: 0; color: var(--color-text-primary); border-collapse: separate; border-spacing: 0; }
+#questionnaireTable th,
+#questionnaireTable td { padding: .72rem .75rem; vertical-align: middle; border-color: var(--color-border); font-size: .8rem; }
+#questionnaireTable thead tr:first-child th { color: var(--color-text-secondary); background: var(--color-primary-surface); font-size: .74rem; font-weight: 700; white-space: nowrap; }
+#questionnaireTable tbody td { background: var(--color-surface); }
+#questionnaireTable tbody tr:hover td { background: var(--color-bg); }
+#questionnaireTable tbody tr:last-child td { border-bottom: 0; }
+#questionnaireTable th:nth-child(4),
+#questionnaireTable td:nth-child(4) { min-width: 13rem; }
+#questionnaireTable th:nth-child(7),
+#questionnaireTable td:nth-child(7) { min-width: 12rem; }
+#questionnaireTable th:nth-child(8),
+#questionnaireTable td:nth-child(8) { text-align: center; }
+.questionnaire-column-filters th { padding: .4rem .45rem !important; background: var(--color-surface); }
+.questionnaire-column-filters .form-control { min-width: 5.5rem; color: var(--color-text-primary); background: var(--color-surface); border-color: var(--color-border); font-size: .74rem; }
+.questionnaire-column-filters .form-control::placeholder { color: var(--color-text-muted); }
+.questionnaire-actions { display: flex; gap: .3rem; white-space: nowrap; }
+.questionnaire-actions .btn { display: inline-grid; place-items: center; width: 1.95rem; height: 1.95rem; padding: 0; }
+.questionnaire-id { max-width: 10.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.questionnaire-loading-row td { height: 11rem; text-align: center; vertical-align: middle !important; color: var(--color-text-secondary); }
+.questionnaire-loading-row .spinner-border { margin-right: .6rem; color: var(--color-primary); }
+#deleteQuestionnaireDialog .modal-dialog { max-width: 34rem; }
+#deleteQuestionnaireDialog .modal-content { overflow: hidden; color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 16px; box-shadow: 0 24px 70px rgba(0, 0, 0, .22); }
+#deleteQuestionnaireDialog .modal-content::before { content: ''; height: 4px; background: var(--color-danger); }
+#deleteQuestionnaireDialog .modal-header { align-items: flex-start; gap: 1rem; padding: 1.35rem 1.5rem .9rem; border-bottom: 0; }
+.delete-modal-heading { display: flex; align-items: flex-start; gap: .85rem; min-width: 0; }
+.delete-modal-icon { display: grid; place-items: center; flex: 0 0 2.65rem; height: 2.65rem; color: var(--color-danger); background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface)); border-radius: 11px; font-size: 1.15rem; }
+#deleteQuestionnaireDialog .modal-title { margin: .05rem 0 .2rem; font-size: 1.15rem; font-weight: 750; }
+.delete-modal-heading p { margin: 0; color: var(--color-text-secondary); font-size: .82rem; }
+#deleteQuestionnaireDialog .btn-close { margin: .2rem 0 0 auto; flex: 0 0 auto; }
+#deleteQuestionnaireDialog .modal-body { padding: .3rem 1.5rem 1.25rem; }
+.delete-record-title { display: grid; gap: .2rem; padding: .85rem 1rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 10px; }
+.delete-record-title > span { color: var(--color-text-muted); font-size: .68rem; font-weight: 800; letter-spacing: .07em; }
+.delete-record-title strong { font-size: .92rem; font-weight: 700; overflow-wrap: anywhere; }
+.delete-record-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem 1rem; margin: 1rem 0; }
+.delete-record-details > div { min-width: 0; }
+.delete-record-details dt { margin-bottom: .13rem; color: var(--color-text-muted); font-size: .72rem; font-weight: 650; }
+.delete-record-details dd { margin: 0; font-size: .82rem; font-weight: 650; overflow-wrap: anywhere; }
+.delete-undo-hint { display: flex; align-items: flex-start; gap: .55rem; padding: .7rem .8rem; color: var(--color-text-secondary); background: color-mix(in srgb, var(--color-info) 8%, var(--color-surface)); border: 1px solid color-mix(in srgb, var(--color-info) 20%, var(--color-border)); border-radius: 9px; font-size: .77rem; }
+.delete-undo-hint i { color: var(--color-info); font-size: .9rem; }
+#deleteQuestionnaireDialog .modal-footer { gap: .55rem; padding: 1rem 1.5rem 1.25rem; background: var(--color-bg); border-top: 1px solid var(--color-border); }
+.delete-cancel-button, .delete-confirm-button { min-height: 2.4rem; padding-inline: 1rem; border-radius: 8px; font-size: .83rem; font-weight: 700; }
+.delete-cancel-button { color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); }
+.delete-cancel-button:hover { color: var(--color-text-primary); background: var(--color-primary-surface); border-color: var(--color-primary-light); }
+.delete-confirm-button { display: inline-flex; align-items: center; gap: .45rem; color: #fff; background: var(--color-danger); border: 1px solid var(--color-danger); }
+.delete-confirm-button:hover { color: #fff; background: color-mix(in srgb, var(--color-danger) 82%, #000); border-color: transparent; }
+.questionnaire-undo-stack { position: fixed; right: 1rem; bottom: 1rem; z-index: 1090; display: grid; gap: .55rem; max-width: min(24rem, calc(100vw - 2rem)); }
+.questionnaire-undo-notice { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem 1rem; color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); border-left: 4px solid var(--color-danger); border-radius: 10px; box-shadow: 0 8px 30px rgba(0, 0, 0, .16); font-size: .82rem; }
+.questionnaire-undo-notice > span { min-width: 0; overflow-wrap: anywhere; }
+.questionnaire-undo-notice .btn { flex: 0 0 auto; color: var(--color-primary); background: var(--color-primary-surface); border: 1px solid var(--color-primary-light); font-weight: 700; }
+@media (max-width: 1100px) { .questionnaire-filter-bar .review-toolbar-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .questionnaire-clear-filters { justify-self: start; } }
+@media (max-width: 767.98px) { .for-review-table-card .for-review-table-body { padding: 1rem; } .questionnaire-page-bar { flex-wrap: wrap; } .for-review-table-card .review-pagination { flex: 1 1 100%; justify-content: space-between; } }
+@media (max-width: 575.98px) { .for-review-table-card .for-review-table-header { grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: .5rem; padding: 1rem; } .for-review-table-card .table-header-actions { gap: .25rem; } .for-review-table-card .table-icon-button { width: 2rem; height: 2rem; } .questionnaire-filter-bar .review-toolbar-filters { grid-template-columns: 1fr; } .questionnaire-clear-filters { width: 100%; } .for-review-table-card .review-pagination { flex-wrap: wrap; } .for-review-table-card .review-pagination > div { flex-wrap: wrap; } }
+@media (max-width: 575.98px) { #deleteQuestionnaireDialog .modal-header { padding: 1.1rem 1rem .8rem; } #deleteQuestionnaireDialog .modal-body { padding: .25rem 1rem 1rem; } #deleteQuestionnaireDialog .modal-footer { padding: .85rem 1rem 1rem; } .delete-record-details { gap: .7rem; } }

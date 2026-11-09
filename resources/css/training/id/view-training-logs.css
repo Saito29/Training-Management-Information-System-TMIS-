@@ -1,0 +1,26 @@
+.training-activity-card { overflow:hidden; border-radius:16px; }
+.training-activity-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:18px; padding:22px 24px; border-bottom:1px solid var(--color-border); background:linear-gradient(120deg,color-mix(in srgb,var(--color-primary-surface) 46%,var(--color-surface)),var(--color-surface) 70%); }
+.training-activity-heading { display:flex; align-items:center; gap:13px; }
+.training-activity-icon { display:grid; place-items:center; flex:none; width:46px; height:46px; border:1px solid color-mix(in srgb,var(--color-primary) 20%,transparent); border-radius:13px; color:var(--color-primary-dark); background:var(--color-primary-surface); font-size:20px; }
+.training-activity-heading h2 { margin:0; color:var(--color-text-primary); font-size:17px; font-weight:750; }
+.training-activity-heading p { margin:4px 0 0; color:var(--color-text-secondary); font-size:12px; }
+.training-activity-search { width:min(300px,100%); flex:0 1 300px; }
+.training-activity-search .input-group-text,.training-activity-search .form-control { min-height:42px; border-color:var(--color-border); color:var(--color-text-primary); background:var(--color-surface); font-size:12px; }
+.training-activity-search .input-group-text { border-right:0; border-radius:10px 0 0 10px; color:var(--color-text-secondary); }
+.training-activity-search .form-control { border-left:0; border-radius:0 10px 10px 0; }
+.training-activity-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:12px 24px; border-bottom:1px solid var(--color-border); background:color-mix(in srgb,var(--color-bg) 58%,var(--color-surface)); }
+.training-activity-filters { display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+.training-activity-filter { display:inline-flex; align-items:center; gap:7px; min-height:36px; padding:7px 11px; border:1px solid transparent; border-radius:9px; color:var(--color-text-secondary); background:transparent; font-size:11px; font-weight:650; }
+.training-activity-filter span { display:grid; place-items:center; min-width:20px; height:20px; padding:0 5px; border-radius:999px; background:var(--color-border); font-size:10px; }
+.training-activity-filter:hover,.training-activity-filter:focus-visible,.training-activity-filter.is-active { border-color:color-mix(in srgb,var(--color-primary) 30%,var(--color-border)); color:var(--color-primary-dark); background:var(--color-primary-surface); }
+#trainingActivityCount { margin:0; color:var(--color-text-secondary); font-size:11px; }
+.training-activity-list { display:grid; gap:10px; padding:18px 24px 22px; }
+.training-activity-entry { display:grid; grid-template-columns:40px minmax(0,1fr); gap:14px; padding:15px 16px; border:1px solid var(--color-border); border-radius:12px; }
+.training-activity-entry-icon { display:grid; place-items:center; width:40px; height:40px; border-radius:11px; color:var(--color-primary-dark); background:var(--color-primary-surface); }
+.training-activity-entry-top { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; color:var(--color-text-primary); font-size:13px; }
+.training-activity-entry-top time,.training-activity-entry small { color:var(--color-text-secondary); font-size:11px; }
+.training-activity-entry p { margin:5px 0; color:var(--color-text-secondary); font-size:12px; }
+.training-activity-empty { display:grid; justify-items:center; gap:8px; padding:44px 16px; border:1px dashed var(--color-border); border-radius:12px; color:var(--color-text-secondary); text-align:center; font-size:12px; }
+.training-activity-empty i { color:var(--color-primary); font-size:28px; }
+.training-activity-empty strong { color:var(--color-text-primary); font-size:14px; }
+@media (max-width:600px) { .training-activity-header,.training-activity-toolbar,.training-activity-list { padding:16px; } .training-activity-search { flex-basis:100%; } }

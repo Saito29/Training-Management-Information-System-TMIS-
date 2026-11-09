@@ -1,0 +1,16 @@
+.questionnaire-delete-trigger { display: inline-flex; align-items: center; gap: .45rem; margin: .25rem 0 .7rem; padding: .4rem .7rem; color: #a92d27; background: var(--color-surface); border: 1px solid #e9bbb7; border-radius: .55rem; font-size: .78rem; font-weight: 700; }
+.questionnaire-delete-trigger:hover { color: #fff; background: #b42318; border-color: #b42318; }
+.questionnaire-delete-modal .modal-content { overflow: hidden; color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 1rem; box-shadow: 0 1.5rem 4rem rgb(0 0 0 / .18); }
+.questionnaire-delete-modal .modal-header { display: flex; align-items: center; gap: .8rem; padding: 1.2rem 1.35rem; border-color: var(--color-border); }
+.questionnaire-delete-icon { display: grid; flex: 0 0 2.5rem; place-items: center; height: 2.5rem; color: #b42318; background: #fef0ee; border-radius: .7rem; }
+.questionnaire-delete-modal small { color: var(--color-text-secondary); font-size: .7rem; font-weight: 700; text-transform: uppercase; }
+.questionnaire-delete-modal .modal-title { font-size: 1.1rem; font-weight: 750; }
+.questionnaire-delete-modal .modal-body { padding: 1.2rem 1.35rem; }
+.questionnaire-delete-modal .modal-body p { color: var(--color-text-secondary); font-size: .85rem; }
+.questionnaire-delete-modal dl { display: grid; gap: .65rem; margin: 0; padding: 1rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: .7rem; }
+.questionnaire-delete-modal dt { color: var(--color-text-secondary); font-size: .7rem; font-weight: 700; text-transform: uppercase; }
+.questionnaire-delete-modal dd { margin: 0; overflow-wrap: anywhere; font-size: .83rem; font-weight: 600; }
+.questionnaire-delete-modal .modal-footer { border-color: var(--color-border); }
+.questionnaire-delete-undo { position: fixed; z-index: 1100; top: 1rem; right: 1rem; display: flex; align-items: center; gap: 1rem; width: min(24rem, calc(100vw - 2rem)); padding: .85rem; color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); border-left: 3px solid var(--color-primary); border-radius: .7rem; box-shadow: 0 .8rem 2rem rgb(0 0 0 / .15); font-size: .8rem; font-weight: 600; }
+.questionnaire-delete-undo span { flex: 1; overflow-wrap: anywhere; }
+.questionnaire-delete-undo button { flex: 0 0 auto; padding: .35rem .5rem; color: var(--color-primary); background: var(--color-primary-surface); border: 0; border-radius: .4rem; font-size: .75rem; font-weight: 750; }

@@ -1,0 +1,18 @@
+.fa-detail-card { max-width: 1040px; margin: 22px auto 36px; border: 1px solid #dce7de; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(31, 62, 38, .06); }
+.fa-detail-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px; padding: 22px 26px; background: #f5faf6; }
+.fa-detail-eyebrow { display: block; margin-bottom: 5px; color: #54805f; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; }
+.fa-detail-header h5 { margin: 0 0 9px; color: #1c4f29; font-weight: 750; }
+.fa-detail-status { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #e7f4e9; color: #176329; font-size: 12px; font-weight: 700; }
+.fa-detail-status.is-inactive { background: #f4e9e6; color: #a34432; }
+.fa-detail-back { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #cbdccd; color: #285b34; background: #fff; }
+.fa-detail-back:hover { background: #ebf5ed; color: #174d26; }
+.fa-detail-card .card-body { padding: 26px; }
+.fa-detail-label { display: block; color: #536e5a; font-size: 12px; font-weight: 700; }
+.fa-detail-value { min-height: 43px; margin-top: 7px; padding: 11px 13px; border: 1px solid #e0e9e1; border-radius: 8px; background: #fafcfb; color: #273b2b; font-size: 14px; font-weight: 500; }
+.fa-detail-label .form-control { margin-top: 7px; min-height: 43px; }
+.fa-detail-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 26px; padding-top: 20px; border-top: 1px solid #e5eee6; }
+.fa-detail-actions [role="status"] { color: #176329; font-size: 13px; }
+.fa-detail-save { display: inline-flex; align-items: center; gap: 7px; margin-left: auto; color: #fff; background: #185e20; }
+.fa-detail-save:hover { color: #fff; background: #104a18; }
+.fa-detail-empty { padding: 20px; border: 1px solid #efddda; border-radius: 10px; background: #fff8f7; color: #92392e; }
+@media (max-width: 575px) { .fa-detail-card .card-body { padding: 18px; } .fa-detail-header { padding: 18px; } .fa-detail-save, .fa-detail-back { width: 100%; justify-content: center; } }

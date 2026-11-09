@@ -1,0 +1,18 @@
+﻿.auth-service-form[hidden], #mfaSection [hidden] { display: none !important; }
+.auth-service-form { display: grid; gap: .65rem; font-size: .8125rem; }
+.auth-service-form h3, .self-mfa-content h3 { font-size: .95rem; font-weight: 650; margin: .5rem 0; }
+.auth-service-form label { font-size: .75rem; font-weight: 600; }
+.auth-service-form p { margin: .5rem 0; color: var(--color-text-secondary, #607064); font-size: .775rem; }
+.auth-service-form input { font-size: .8125rem; min-height: 2.6rem; color: var(--color-text-primary); background: var(--color-surface); border-color: var(--color-border); }
+.auth-service-form .btn { font-size: .8rem; margin-top: .35rem; }
+.auth-service-message { padding: .75rem; font-size: .8rem; color: var(--color-text-primary); background: var(--color-primary-surface); border-radius: .6rem; }
+.auth-service-message:empty { display: none; }
+.auth-service-message.is-error, #mfaFeedback.is-error { color: #a52b2b; background: #fff0ee; }
+.self-mfa-content { max-width: 36rem; padding: .5rem 0 1.25rem 2rem; font-size: .8rem; }
+.self-mfa-qr { display: block; width: 240px; height: 240px; max-width: 100%; object-fit: contain; background: #fff; border-radius: .6rem; }
+.self-mfa-key { font-family: ui-monospace, monospace; letter-spacing: .08em; }
+.self-recovery-codes { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .6rem; padding: .9rem; list-style: none; border: 1px solid var(--color-border); border-radius: .6rem; }
+.self-recovery-codes li { font: .75rem/1.5 ui-monospace, monospace; overflow-wrap: anywhere; }
+[data-theme='dark'] .auth-service-message.is-error, [data-theme='dark'] #mfaFeedback.is-error { color: #ffb9b9; background: #4b2727; }
+@media(max-width:575.98px) { .self-mfa-content { padding-left: 0; } .self-recovery-codes { grid-template-columns: 1fr; } }
+.authenticator-container form[hidden] { display: none !important; }

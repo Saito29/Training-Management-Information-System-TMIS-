@@ -1,0 +1,150 @@
+:root {
+  --page-loading-bg: var(--color-bg, #f7f9f7);
+  --page-loading-surface: var(--color-surface, #f5f7f5);
+  --page-loading-border: var(--color-border, #e0e0e0);
+  --page-loading-primary: var(--color-primary, #2e7d32);
+  --page-loading-primary-light: var(--color-primary-light, #66bb6a);
+}
+
+[data-theme='dark'] {
+  --page-loading-bg: var(--color-bg, #0f1410);
+  --page-loading-surface: var(--color-surface, #171d18);
+  --page-loading-border: var(--color-border, #303830);
+  --page-loading-primary: var(--color-primary, #66bb6a);
+  --page-loading-primary-light: var(--color-primary-light, #388e3c);
+}
+
+html[data-page-loading]::before,
+html[data-page-loading]::after {
+  content: none;
+}
+
+html[data-page-loading='true'] :is(.authenticator-right, .training-details-page) {
+  position: relative;
+  isolation: isolate;
+}
+
+html[data-page-loading='true'] .training-details-page {
+  min-height: 100vh;
+}
+
+html[data-page-loading='true'] :is(.authenticator-right, .training-details-page)::before {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  border-radius: inherit;
+  background-color: var(--page-loading-surface);
+  background-image:
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--page-loading-primary) 12%, var(--page-loading-border)),
+      color-mix(in srgb, var(--page-loading-primary) 22%, var(--page-loading-border))
+    ),
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--page-loading-primary) 10%, var(--page-loading-border)),
+      color-mix(in srgb, var(--page-loading-primary) 18%, var(--page-loading-border))
+    ),
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--page-loading-primary) 8%, var(--page-loading-border)),
+      color-mix(in srgb, var(--page-loading-primary) 16%, var(--page-loading-border))
+    ),
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--page-loading-primary) 8%, var(--page-loading-border)),
+      color-mix(in srgb, var(--page-loading-primary) 15%, var(--page-loading-border))
+    ),
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--page-loading-primary) 8%, var(--page-loading-border)),
+      color-mix(in srgb, var(--page-loading-primary) 15%, var(--page-loading-border))
+    ),
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--page-loading-primary) 8%, var(--page-loading-border)),
+      color-mix(in srgb, var(--page-loading-primary) 15%, var(--page-loading-border))
+    ),
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--page-loading-primary) 8%, var(--page-loading-border)),
+      color-mix(in srgb, var(--page-loading-primary) 15%, var(--page-loading-border))
+    );
+  background-repeat: no-repeat;
+  background-size:
+    min(300px, 62%) 20px,
+    min(240px, 52%) 12px,
+    min(360px, 76%) 42px,
+    min(360px, 76%) 42px,
+    min(360px, 76%) 42px,
+    min(360px, 76%) 42px,
+    min(180px, 48%) 38px;
+  background-position:
+    center 110px,
+    center 144px,
+    center 194px,
+    center 246px,
+    center 298px,
+    center 350px,
+    center calc(100% - 24px);
+  transition: opacity 220ms ease;
+}
+
+html[data-page-loading='true'] :is(.authenticator-right, .training-details-page)::after {
+  position: absolute;
+  z-index: 21;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(
+    105deg,
+    transparent 34%,
+    color-mix(in srgb, var(--page-loading-primary) 10%, transparent) 48%,
+    color-mix(in srgb, var(--page-loading-primary-light) 20%, transparent) 52%,
+    transparent 66%
+  );
+  background-size: 220% 100%;
+  animation: page-loading-glow 1.35s ease-in-out infinite;
+  transition: opacity 220ms ease;
+}
+
+html[data-page-loading='exit'] :is(.authenticator-right, .training-details-page)::before,
+html[data-page-loading='exit'] :is(.authenticator-right, .training-details-page)::after {
+  opacity: 0;
+}
+
+@keyframes page-loading-glow {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+@media (max-width: 767.98px) {
+  html[data-page-loading='true'] :is(.authenticator-right, .training-details-page)::before {
+    background-position:
+      center 90px,
+      center 122px,
+      center 166px,
+      center 210px,
+      center 254px,
+      center 298px,
+      center calc(100% - 20px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-page-loading='true'] :is(.authenticator-right, .training-details-page)::after {
+    animation: none;
+  }
+
+  html[data-page-loading] :is(.authenticator-right, .training-details-page)::before,
+  html[data-page-loading] :is(.authenticator-right, .training-details-page)::after {
+    transition: none;
+  }
+}

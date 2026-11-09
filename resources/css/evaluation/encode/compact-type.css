@@ -1,0 +1,42 @@
+/* Shared type scale for evaluation encoding pages. */
+.encode-page { font-size: 12px; }
+.encode-page .encode-heading h1 { font-size: clamp(22px, 1.9vw, 28px); }
+.encode-page .encode-heading p { font-size: 12px; }
+.encode-page .encode-badge { font-size: 11px; }
+.encode-page .section-heading h2,
+.encode-page .summary-card h2 { font-size: 15px; }
+.encode-page .table-card-heading h2 { font-size: 16px; }
+.encode-page .section-heading p,
+.encode-page .table-card-heading p { font-size: 11px; }
+.encode-page label,
+.encode-page .summary-card dd,
+.encode-page .summary-card dt,
+.encode-page .table-page-controls label { font-size: 11px; }
+.encode-page select,
+.encode-page input:not([type=radio]),
+.encode-page .feedback-field textarea { font-size: 12px; }
+.encode-page .farmer-table th,
+.encode-page .farmer-table td,
+.encode-page .ratings-table th,
+.encode-page .ratings-table td { font-size: 11px; }
+.encode-page .ratings-table thead small { font-size: 9px; }
+.encode-page .guide-card h3 { font-size: 13px; }
+.encode-page .guide-card p,
+.encode-page .guide-card li,
+.encode-page .rating-guide-row b,
+.encode-page .score-hint { font-size: 11px; }
+.encode-page .rating-guide-row p { font-size: 10px; }
+.encode-page .encode-actions button { font-size: 11px; }
+
+/* Native calendar icon follows the active form theme. */
+.encode-page input[type='date'] { color-scheme: light; }
+.encode-page input[type='date']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 1;
+  filter: invert(36%) sepia(72%) saturate(700%) hue-rotate(78deg) brightness(90%);
+}
+[data-theme='dark'] .encode-page input[type='date'] { color-scheme: dark; }
+[data-theme='dark'] .encode-page input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(81%) sepia(19%) saturate(618%) hue-rotate(67deg) brightness(96%);
+}
+.encode-page [hidden] { display: none !important; }

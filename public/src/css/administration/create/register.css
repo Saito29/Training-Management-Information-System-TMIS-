@@ -1,0 +1,188 @@
+/* Developer: Registration layout and field styles. Keep responsive widths and theme tokens when adding fields; field validation and payload mapping live in src/js/administration/create/register.js. */
+.user-register-page .first-row { margin-bottom: 1.25rem; }
+.user-register-page .content-header-wrap { width: 100%; }
+.user-register-page .btn-back-list { display: inline-flex; align-items: center; gap: .45rem; padding: .55rem .8rem; color: var(--color-primary-dark); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: .6rem; font-size: .8rem; font-weight: 700; }
+.user-register-page .btn-back-list:hover { background: var(--color-primary-surface); border-color: var(--color-primary); }
+.user-step-card, .user-form-card, .user-help-card { height: 100%; color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 1rem; box-shadow: 0 .4rem 1.2rem rgb(0 0 0 / .04); }
+.user-step-card .card-body, .user-help-card .card-body { padding: 1.25rem; }
+.user-step-card .wizard-steps { margin: 1rem 0 0; }
+.user-card-kicker { color: var(--color-primary); font-size: .68rem; font-weight: 800; letter-spacing: .085em; }
+.user-form-card .card-body { padding: clamp(1.25rem, 2.3vw, 2rem); }
+.user-step[hidden], .user-form-actions [hidden] { display: none !important; }
+.user-section-heading { display: flex; align-items: flex-start; gap: .85rem; margin-bottom: 1.4rem; padding-bottom: 1.1rem; border-bottom: 1px solid var(--color-border); }
+.user-section-icon, .user-help-icon { display: grid; flex: 0 0 2.7rem; place-items: center; height: 2.7rem; color: var(--color-primary-dark); background: var(--color-primary-surface); border-radius: .75rem; font-size: 1.2rem; }
+.user-section-heading h5 { margin: .2rem 0 .3rem; font-size: 1.12rem; font-weight: 750; }
+.user-section-heading p { margin: 0; color: var(--color-text-secondary); font-size: .78rem; line-height: 1.5; }
+.user-form-card .form-label { margin-bottom: .4rem; color: var(--color-text-primary); font-size: .78rem; font-weight: 700; }
+.user-form-card :is(.form-control, .form-select) { min-height: 2.65rem; color: var(--color-text-primary); background-color: var(--color-surface); border-color: var(--color-border); border-radius: .6rem; font-size: .84rem; }
+.user-form-card :is(.form-control, .form-select):focus { border-color: var(--color-primary); box-shadow: 0 0 0 .18rem var(--color-primary-surface); }
+.user-form-card .form-text { color: var(--color-text-secondary); font-size: .7rem; }
+.user-form-actions { display: flex; justify-content: space-between; gap: .75rem; margin-top: 1.5rem; padding-top: 1.1rem; border-top: 1px solid var(--color-border); }
+.user-form-actions .btn, .user-next-button { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 2.55rem; padding: .55rem 1rem; border-radius: .6rem; font-size: .8rem; font-weight: 750; }
+.user-back-button { color: var(--color-primary-dark); background: var(--color-surface); border: 1px solid var(--color-border); }
+.user-back-button:hover { color: var(--color-primary-dark); background: var(--color-primary-surface); border-color: var(--color-primary); }
+.user-next-button, .user-submit-button { margin-left: auto; color: #fff; background: #2e7d32; border: 1px solid #2e7d32; }
+.user-next-button:hover, .user-submit-button:hover { color: #fff; background: #1b5e20; border-color: #1b5e20; }
+.user-help-card { height: auto; overflow: hidden; }
+.user-help-card .card-body { padding: 1.25rem; }
+.user-help-heading { display: flex; align-items: center; gap: .75rem; }
+.user-help-card h5 { margin: .2rem 0 0; font-size: 1rem; font-weight: 750; line-height: 1.3; }
+.user-help-card .user-help-intro { margin: 1rem 0; color: var(--color-text-secondary); font-size: .78rem; line-height: 1.55; }
+.user-help-list { display: grid; gap: .7rem; margin: 0; padding: 0; list-style: none; }
+.user-help-list li { display: flex; align-items: flex-start; gap: .65rem; padding: .75rem; color: var(--color-text-primary); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: .7rem; font-size: .76rem; line-height: 1.5; }
+.user-help-list li i { flex: 0 0 auto; margin-top: .05rem; color: var(--color-primary); font-size: .95rem; }
+.user-help-footer { display: flex; align-items: center; gap: .5rem; margin-top: 1rem; padding-top: .9rem; color: var(--color-text-secondary); border-top: 1px solid var(--color-border); font-size: .72rem; line-height: 1.4; }
+.user-help-footer i { color: var(--color-primary); font-size: .9rem; }
+.user-review { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin: 0; }
+.user-review > div { min-width: 0; padding: .8rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: .65rem; }
+.user-review dt { color: var(--color-text-secondary); font-size: .67rem; font-weight: 700; text-transform: uppercase; }
+.user-review dd { margin: .25rem 0 0; overflow-wrap: anywhere; font-size: .8rem; font-weight: 650; }
+@media (max-width: 575.98px) { .user-review { grid-template-columns: 1fr; } .user-form-actions { flex-wrap: wrap; } .user-form-actions .btn { flex: 1; } }
+
+.user-register-page .content-header { font-size: clamp(1.65rem, 2.5vw, 2rem); line-height: 1.2; }
+.user-register-page .content-info { font-size: .93rem; line-height: 1.55; }
+.user-section-heading h5 { font-size: 1.16rem; }
+.user-section-heading p, .user-help-card .user-help-intro { font-size: .86rem; }
+.user-form-card .form-label { font-size: .85rem; }
+.user-form-card :is(.form-control, .form-select) { min-height: 2.75rem; font-size: .9rem; }
+.user-form-card .form-text, .user-help-footer { font-size: .76rem; }
+.user-help-list li, .user-review dd { font-size: .84rem; }
+.user-review dt { font-size: .72rem; }
+.user-step-card .wizard-context { line-height: 1.45; }
+@media (min-width: 992px) and (max-width: 1199.98px) {
+  .user-help-card .user-help-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 575.98px) {
+  .user-register-page .btn-back-list { width: 100%; justify-content: center; }
+  .user-form-card .card-body, .user-help-card .card-body { padding: 1rem; }
+  .user-section-heading { gap: .65rem; }
+}
+
+/* Page-owned layout: Bootstrap rows retain their gutters without the training
+   registration stylesheet. Adjust the max width here as fields are added. */
+.app-main .app-main-body.user-register-page { max-width: 1500px; margin-inline: auto; padding-block: 18px 36px; }
+.app-main .app-main-body.user-register-page .first-row { margin-block: 0 22px; }
+.app-main .app-main-body.user-register-page .second-row { margin-block: 0; align-items: flex-start; }
+.user-register-page .second-row > * { min-width: 0; }
+.user-register-page .user-step-card,
+.user-register-page .user-form-card,
+.user-register-page .user-help-card { height: auto; }
+.user-register-page .content-header-wrap > div { min-width: 0; }
+.user-register-page .breadcrumb { margin-bottom: .5rem; }
+.user-register-page .app-content-header .breadcrumb-item { font-size: .8rem; }
+.user-register-page .app-content-header .content-header { margin-bottom: .35rem; font-size: clamp(1.4rem, 2vw, 1.7rem); line-height: 1.25; }
+.user-register-page .app-content-header .content-info { color: var(--color-text-secondary); font-size: .875rem; line-height: 1.5; }
+
+/* Three-step progress list. These selectors are scoped to administration so
+   training and participant wizards can change independently. */
+.user-register-page .wizard-steps { counter-reset: user-step; display: grid; gap: 1.25rem; padding: 0; list-style: none; }
+.user-register-page .wizard-steps li { counter-increment: user-step; position: relative; min-width: 0; min-height: 2.6rem; padding-left: 2.8rem; color: var(--color-text-secondary); }
+.user-register-page .wizard-steps li::before { content: counter(user-step); position: absolute; top: 0; left: 0; display: grid; place-items: center; width: 2rem; height: 2rem; border: 1px solid var(--color-border); border-radius: 50%; background: var(--color-bg); color: var(--color-text-secondary); font-size: .82rem; font-weight: 700; }
+.user-register-page .wizard-steps li:not(:last-child)::after { content: ''; position: absolute; top: 2rem; bottom: -1.25rem; left: .97rem; border-left: 2px solid var(--color-border); }
+.user-register-page .wizard-steps li.is-current { color: var(--color-text-primary); }
+.user-register-page .wizard-steps li.is-current::before { color: var(--color-info); background: var(--color-surface); border: 2px solid var(--color-info); }
+.user-register-page .wizard-steps li.is-completed::before { content: '\2713'; color: #fff; background: #2e7d32; border-color: #2e7d32; }
+.user-register-page .wizard-steps li.is-completed::after { border-color: var(--color-primary); }
+.user-register-page .wizard-header { margin: 0; color: inherit; font-size: .8125rem; font-weight: 700; line-height: 1.35; }
+.user-register-page .wizard-context { display: block; margin-top: .18rem; font-size: .75rem; }
+
+.user-register-page .user-form-card :is(.form-control, .form-select) { min-width: 0; min-height: 2.8rem; }
+.user-register-page .user-form-card :is(.form-control, .form-select):disabled { color: var(--color-text-secondary); background: var(--color-bg); opacity: 1; }
+.user-register-page :is(a, button, input, select):focus-visible { outline: 3px solid var(--color-info); outline-offset: 2px; }
+
+@media (max-width: 991.98px) {
+  .user-register-page .wizard-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
+  .user-register-page .wizard-steps li { padding: 2.45rem .25rem 0; text-align: center; }
+  .user-register-page .wizard-steps li::before { right: 0; margin-inline: auto; }
+  .user-register-page .wizard-steps li:not(:last-child)::after { top: .97rem; right: -50%; bottom: auto; left: 50%; height: 2px; border: 0; background: var(--color-border); }
+  .user-register-page .wizard-steps li.is-completed::after { background: var(--color-primary); }
+  .user-register-page .wizard-context { display: none; }
+}
+
+@media (max-width: 575.98px) {
+  .app-main .app-main-body.user-register-page { padding-block: 12px 24px; }
+  .user-register-page .wizard-header { font-size: .76rem; overflow-wrap: anywhere; }
+  .user-register-page .user-section-icon { flex-basis: 2.3rem; height: 2.3rem; }
+  .user-register-page .user-form-actions .btn { min-height: 2.8rem; }
+}
+
+/* Registration type scale: change these scoped sizes together when adjusting
+   density; shared page and toast typography belongs in the shared styles. */
+.user-register-page .user-card-kicker { font-size: .6875rem; line-height: 1.4; }
+.user-register-page .user-section-heading h5 { font-size: clamp(1.05rem, 1.35vw, 1.2rem); line-height: 1.3; }
+.user-register-page .user-section-heading p { max-width: 52ch; font-size: .8125rem; }
+.user-register-page .user-form-card .form-label { margin-bottom: .4rem; font-size: .8125rem; line-height: 1.35; }
+.user-register-page .user-form-card :is(.form-control, .form-select) { font-size: .875rem; line-height: 1.4; }
+.user-register-page .user-form-card .form-text { margin-top: .35rem; font-size: .75rem; line-height: 1.45; }
+.user-register-page .user-form-actions .btn { min-height: 2.8rem; font-size: .8125rem; }
+.user-register-page .user-help-card h5 { font-size: .9375rem; }
+.user-register-page .user-help-card .user-help-intro,
+.user-register-page .user-help-list li { font-size: .8125rem; }
+.user-register-page .user-review dt { font-size: .6875rem; letter-spacing: .02em; }
+.user-register-page .user-review dd { font-size: .8125rem; }
+.user-register-page .user-form-card .is-invalid { border-color: var(--color-danger); }
+
+/* Hide legacy in-form notices if an older cached template leaves one behind.
+   Registration status messages belong exclusively in #userRegisterToast. */
+.user-register-page :is(#userFormMessage, .user-form-message, .user-field-error) {
+  display: none !important;
+}
+
+/* Use a real, theme-colored calendar button instead of the browser's date
+   indicator, which can disappear against dark input backgrounds. */
+.user-register-page .user-date-field { position: relative; }
+.user-register-page .user-date-field .form-control { padding-inline-end: 3rem; }
+.user-register-page .user-date-field input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  pointer-events: none;
+}
+.user-register-page .user-date-picker-button {
+  position: absolute;
+  z-index: 1;
+  inset-block-start: 50%;
+  inset-inline-end: .25rem;
+  display: grid;
+  place-items: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  transform: translateY(-50%);
+  color: var(--color-text-primary);
+  background: var(--color-primary-surface);
+  border: 0;
+  border-radius: .45rem;
+  cursor: pointer;
+  font-size: 1rem;
+}
+.user-register-page .user-date-picker-button:hover { color: var(--color-primary-dark); }
+.user-register-page .user-date-picker-button:focus-visible { outline: 2px solid var(--color-info); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .user-register-page .card { transition: none; }
+}
+
+/* Registration toast uses the shared theme.css toast shell; these modifiers
+   supply only the page position and status colors. */
+.user-toast-container { top: 76px; }
+[data-theme] .user-toast-container .user-register-toast.is-success { --toast-accent: var(--color-success); }
+[data-theme] .user-toast-container .user-register-toast.is-warning { --toast-accent: var(--color-warning); }
+[data-theme] .user-toast-container .user-register-toast.is-error { --toast-accent: var(--color-danger); }
+@media (max-width: 575.98px) {
+  .user-toast-container { top: 64px; }
+}
+.user-credential-summary,.profile-credential-summary { padding:.75rem .85rem; margin-top:.7rem; border:1px solid var(--color-border); border-radius:.7rem; background:var(--color-primary-surface); color:var(--color-text-secondary); font-size:.72rem; }
+.user-credential-summary[hidden],.profile-credential-summary[hidden] { display:none!important; }
+.user-credential-summary strong,.profile-credential-summary strong { display:block; margin-bottom:.35rem; color:var(--color-text-primary); font-size:.75rem; }
+.user-credential-summary ul,.profile-credential-summary ul { display:grid; gap:.2rem; margin:0; padding-left:1rem; }
+.user-credential-summary li.is-granted,.profile-credential-summary li.is-granted { color:var(--color-primary-dark); }
+.user-credential-summary li.is-blocked,.profile-credential-summary li.is-blocked { color:var(--color-danger); }
+.user-credential-summary { background:var(--color-surface); }
+.user-credential-split { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; }
+.user-credential-access { min-width:0; padding:.75rem; border:1px solid var(--color-border); border-radius:.65rem; background:var(--color-bg); }
+.user-credential-access h6 { display:flex; align-items:center; gap:.4rem; margin:0 0 .55rem; color:var(--color-text-primary); font-size:.72rem; font-weight:750; }
+.user-credential-access.is-granted h6,.user-credential-access.is-granted li { color:var(--color-primary-dark); }
+.user-credential-access.is-blocked h6,.user-credential-access.is-blocked li { color:var(--color-danger); }
+.user-credential-access ul { display:grid; gap:.35rem; margin:0; padding:0; list-style:none; }
+.user-credential-access li { padding:.4rem .5rem; border:1px solid var(--color-border); border-radius:.45rem; background:var(--color-surface); font-size:.68rem; line-height:1.4; overflow-wrap:anywhere; }
+.user-credential-empty { margin:0; color:var(--color-text-secondary); font-size:.67rem; line-height:1.45; }
+@media(max-width:575.98px) { .user-credential-split { grid-template-columns:minmax(0,1fr); } }

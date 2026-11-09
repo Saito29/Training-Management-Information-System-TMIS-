@@ -1,0 +1,1 @@
+.account-avatar.user-profile{display:inline-flex;align-items:center;justify-content:center;overflow:hidden;background:var(--color-primary,#256b45)!important;color:#fff!important;vertical-align:middle;font-size:.85rem;font-weight:700;line-height:1;flex-shrink:0}.account-avatar img{width:100%;height:100%;object-fit:cover}.account-avatar-initials[hidden]{display:none}

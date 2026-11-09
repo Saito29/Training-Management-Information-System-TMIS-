@@ -1,0 +1,26 @@
+﻿import test from 'node:test';
+import assert from 'node:assert/strict';
+import http from 'node:http';
+import { readFileSync,existsSync,statSync } from 'node:fs';
+import { resolve,extname } from 'node:path';
+import { chromium } from 'playwright-core';
+test('browser inbox: read/unread, archive/restore, persistence, privacy and isolated preview',async t=>{
+ const root=resolve('.');const server=http.createServer((req,res)=>{const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname),file=resolve(root,'.'+path);if(!file.startsWith(root)||!/^\/(app|src|assets)\//.test(path)||!existsSync(file)||!statSync(file).isFile()){res.writeHead(404);res.end();return;}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg'})[extname(file)]||'application/octet-stream');res.end(readFileSync(file));});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));let browser;t.after(async()=>{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));});
+ browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});const page=await browser.newPage(),origin=`http://127.0.0.1:${server.address().port}`,errors=[],apiCalls=[];
+ page.on('pageerror',error=>errors.push(error.message));page.on('request',request=>{if(request.url().includes('/api/auth/'))apiCalls.push(request.url());});await page.route('**/*',route=>route.request().url().startsWith(origin)?route.continue():route.abort());
+ await page.addInitScript(()=>{if(!localStorage.getItem('inbox-test-seed')){sessionStorage.setItem('tmis-current-user-id','ME');localStorage.setItem('tmis-users',JSON.stringify([{id:'ME',firstName:'Mark Kinnedy',middleName:'Vega',lastName:'Anda',role:'System Administrator',status:'Approved & Accepted'},{id:'PENDING',firstName:'New',lastName:'User',status:'Pending approval',createdAt:new Date().toISOString()}]));localStorage.setItem('tmis-notifications',JSON.stringify([{id:'mine',recipientId:'ME',type:'training',title:'My training update',message:'Updated schedule ready for review.',createdAt:new Date().toISOString(),href:'training/details/all-status.html'},{id:'private',recipientId:'OTHER',title:'PRIVATE OTHER USER NOTIFICATION'}]));localStorage.setItem('inbox-test-seed','true');}});
+ await page.goto(`${origin}/app/admin/notification/details/all-notification.html`);await page.waitForFunction(()=>document.querySelectorAll('#inboxList .inbox-item').length===2);
+ assert.equal(await page.getByText('PRIVATE OTHER USER NOTIFICATION').count(),0);assert.equal(await page.textContent('#inboxUnread'),'2');
+ await page.getByRole('button',{name:'Open unread notification: My training update',exact:true}).click();await page.locator('#inboxDetailsDialog').waitFor({state:'visible'});assert.equal(await page.textContent('#inboxUnread'),'1');assert.ok((await page.getAttribute('#inboxDetailsLink','href')).includes('/training/details/all-status.html'));await page.locator('#inboxDetailsDialog').getByRole('button',{name:'Close',exact:true}).click();
+ const card=()=>page.locator('#inboxList .inbox-item').filter({hasText:'My training update'});
+ await card().getByRole('button',{name:'Mark as unread',exact:true}).click();assert.equal(await page.textContent('#inboxUnread'),'2');
+ await card().getByRole('button',{name:'Archive notification',exact:true}).click();assert.equal(await page.textContent('#inboxArchived'),'1');await page.click('[data-inbox-view="archived"]');assert.equal(await page.locator('#inboxList .inbox-item').count(),1);
+ await page.getByRole('button',{name:'Restore notification',exact:true}).click();await page.click('[data-inbox-view="all"]');await page.click('#markAllInboxRead');assert.equal(await page.textContent('#inboxUnread'),'0');
+ await page.reload();await page.waitForFunction(()=>document.querySelectorAll('#inboxList .inbox-item').length===2);assert.equal(await page.textContent('#inboxUnread'),'0');
+ await page.fill('#inboxSearch','not-existing-anywhere');await page.locator('#inboxEmpty').waitFor({state:'visible'});const realState=await page.evaluate(()=>localStorage.getItem('tmis-notification-state:ME'));
+ await page.click('#previewInbox');await page.waitForFunction(()=>document.querySelectorAll('#inboxList .inbox-item').length===4);await page.click('#markAllInboxRead');assert.equal(await page.evaluate(()=>localStorage.getItem('tmis-notification-state:ME')),realState);await page.click('#exitInboxPreview');
+ await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Open read notification: My training update',exact:true}).click();assert.ok((await page.locator('#inboxDetailsDialog').boundingBox()).width<=390);await page.locator('#inboxDetailsDialog').getByRole('button',{name:'Close',exact:true}).click();
+ await page.goto(`${origin}/app/admin/users/profile.html`);await page.click('.notification-view-all');await page.waitForURL('**/notification/details/all-notification.html');
+ assert.deepEqual(errors,[]);assert.deepEqual(apiCalls,[]);
+});
