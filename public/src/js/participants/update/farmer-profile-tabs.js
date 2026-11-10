@@ -51,19 +51,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const trainingCount = document.getElementById('overviewTrainingCount');
   const trainingPrevious = document.getElementById('overviewTrainingPrevious');
   const trainingNext = document.getElementById('overviewTrainingNext');
-  const trainingEmpty = document.getElementById('overviewTrainingEmpty');
-  const trainingControls = document.getElementById('overviewTrainingControls');
 
   if (
     trainingTrack &&
     trainingCarousel &&
     trainingCount &&
     trainingPrevious &&
-    trainingNext &&
-    trainingEmpty &&
-    trainingControls
+    trainingNext
   ) {
-    let visibleCards = [];
+    const trainingCards = [...trainingTrack.children];
+    trainingCards.forEach((card, index) => {
+      card.hidden = index >= 10;
+    });
+    const visibleCards = trainingCards.slice(0, 10);
     const getVisibleCount = () => {
       const card = visibleCards[0];
       if (!card) return 1;
@@ -77,12 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
       );
     };
     const updateTrainingControls = () => {
-      if (!visibleCards.length) {
-        trainingCount.textContent = 'No training participated';
-        trainingPrevious.disabled = true;
-        trainingNext.disabled = true;
-        return;
-      }
       const visibleCount = getVisibleCount();
       const start = Math.min(
         visibleCards.length,
@@ -92,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const end = Math.min(start + visibleCount, visibleCards.length);
       trainingCount.textContent = visibleCards.length
         ? `${start + 1}–${end} of ${visibleCards.length}`
-        : '0 trainings';
+        : 'No training participated found yet.';
       trainingPrevious.disabled = trainingCarousel.scrollLeft <= 1;
       trainingNext.disabled =
         trainingCarousel.scrollLeft + trainingCarousel.clientWidth >=
@@ -115,24 +109,12 @@ document.addEventListener('DOMContentLoaded', () => {
       passive: true,
     });
     window.addEventListener('resize', updateTrainingControls);
-    const refreshTrainingHistory = () => {
-      const cards = [...trainingTrack.querySelectorAll('.training-preview-card')];
-      cards.forEach((card, index) => { card.hidden = index >= 10; });
-      visibleCards = cards.slice(0, 10);
-      const hasParticipations = visibleCards.length > 0;
-      trainingCarousel.hidden = !hasParticipations;
-      trainingEmpty.hidden = hasParticipations;
-      trainingControls.hidden = !hasParticipations;
-      trainingCarousel.scrollLeft = 0;
-      updateTrainingControls();
-    };
-    window.addEventListener('load', refreshTrainingHistory, { once: true });
-    window.addEventListener('tmis:farmer-training-history-updated', refreshTrainingHistory);
+    window.addEventListener('load', updateTrainingControls, { once: true });
     if ('ResizeObserver' in window) {
       new ResizeObserver(updateTrainingControls).observe(trainingCarousel);
     }
-    requestAnimationFrame(refreshTrainingHistory);
-    refreshTrainingHistory();
+    requestAnimationFrame(updateTrainingControls);
+    updateTrainingControls();
   }
 
   document.querySelectorAll('[data-view-all-trainings]').forEach((link) => {

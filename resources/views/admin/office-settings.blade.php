@@ -52,5 +52,5 @@
         </div>
     </article>
     <script type="application/json" id="registeredOfficesData">{!! Illuminate\Support\Js::encode($registeredOffices) !!}</script>
-    <script src="{{ asset('src/js/shared/office-settings.js?v=delete-confirm-modal-1') }}" defer></script>
+    <script src="{{ asset('src/js/shared/office-settings.js?v=directory-table-previous-design-1') }}" defer></script>
 </section>

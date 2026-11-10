@@ -23,65 +23,17 @@ document.addEventListener('DOMContentLoaded', () => {
       try { sessionStorage.removeItem('tmis-current-user-id'); } catch { /* Storage may be disabled. */ }
       window.location.assign(loginUrl.href);
     });
-    const queueBadges = [
-      ...document.querySelectorAll('.badge-review'),
-      ...document.querySelectorAll('.badge-approval'),
-      ...document.querySelectorAll('.badge-acceptance'),
-    ];
-    queueBadges.forEach((badge) => { badge.textContent = '…'; });
-    fetch(new URL('../../../operations/training-queue-counts', profileScript.src), {
-      credentials: 'same-origin',
-      cache: 'no-store',
-      headers: { Accept: 'application/json' },
-    }).then((response) => {
-      if (!response.ok) throw new Error('Queue counts unavailable');
-      return response.json();
-    }).then((counts) => {
-      document.querySelectorAll('.badge-review').forEach((badge) => {
-        const count = counts.for_review;
-        badge.textContent = count ?? '';
-        badge.hidden = count === null || count === 0;
-        badge.setAttribute('aria-label', count === null ? 'Review queue access unavailable' : `${count} trainings for review`);
-      });
-      document.querySelectorAll('.badge-approval').forEach((badge) => {
-        const count = counts.for_approval;
-        badge.textContent = count ?? '';
-        badge.hidden = count === null || count === 0;
-        badge.setAttribute('aria-label', count === null ? 'Approval queue access unavailable' : `${count} trainings for approval`);
-      });
-      document.querySelectorAll('.badge-acceptance').forEach((badge) => {
-        const count = counts.for_acceptance;
-        badge.textContent = count ?? '';
-        badge.hidden = count === null || count === 0;
-        badge.setAttribute('aria-label', count === null ? 'Acceptance queue access unavailable' : `${count} trainings for acceptance`);
-      });
-    }).catch(() => {
-      queueBadges.forEach((badge) => { badge.hidden = true; });
-    });
     const accountPages = { Profile: 'profile', Logs: 'logs' };
     document.querySelectorAll('.app-profile a, .app-mobile-menu a').forEach((link) => {
       const file = accountPages[link.textContent.trim()];
       if (!file) return;
-      const profileUrl = window.TMIS_ACCOUNT_NAV?.[file] || new URL(`../../../app/admin/users/${file}`, profileScript.src).href;
-      const normalizedUrl = new URL(profileUrl, location.href);
-      link.href = normalizedUrl.href;
-      if (window.location.pathname === normalizedUrl.pathname) {
+      const profileUrl = new URL(`../../../app/admin/users/${file}`, profileScript.src);
+      link.href = profileUrl.href;
+      if (window.location.pathname === profileUrl.pathname) {
         link.setAttribute('aria-current', 'page');
         link.classList.add('active-page');
       }
     });
-    const accountMenu = document.querySelector('.app-profile .user-menu');
-    const administratorLinks = window.TMIS_ACCOUNT_NAV;
-    if (accountMenu && administratorLinks?.visibility && !accountMenu.querySelector('[data-open-profile-visibility]')) {
-      const signOut = accountMenu.querySelector('.sign-out-item')?.closest('li');
-      if (signOut) {
-        const item = document.createElement('li'), link = document.createElement('button');
-        link.className = 'dropdown-item'; link.type = 'button'; link.setAttribute('data-open-profile-visibility', ''); link.setAttribute('aria-haspopup', 'dialog'); link.setAttribute('aria-controls', 'profileVisibilityDialog');
-        const symbol = document.createElement('i'); symbol.className = 'bi bi-globe2'; symbol.setAttribute('aria-hidden', 'true');
-        const text = document.createElement('span'); text.textContent = 'Data visibility';
-        link.append(symbol, text); item.append(link); accountMenu.insertBefore(item, signOut);
-      }
-    }
   }
 
   const mobileMainCollapses = {
@@ -109,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const notificationDetailModal = document.getElementById('notificationDetailModal');
   if (profileScript) import(new URL('../notification/header.js', profileScript.src).href);
   let notificationFullContent = '';
-  let notificationMetadata = { priority: '', reference: '' };
+  let notificationMetadata = '';
   if (notificationDetailModal) {
     notificationDetailModal.tabIndex = -1;
     const body = notificationDetailModal.querySelector('.modal-body');
@@ -132,12 +84,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     fullModal.setAttribute('aria-labelledby', 'notificationFullModalLabel');
     fullModal.querySelector('.modal-dialog').classList.add('notification-full-dialog');
-    fullModal.querySelector('.modal-content')?.classList.add('notification-full-modal');
     fullModal.querySelector('#notificationFullAction')?.remove();
     document.body.append(fullModal);
-    const metadata = document.createElement('div');
-    metadata.className = 'notification-full-meta';
-    fullModal.querySelector('#notificationFullDescription')?.classList.add('notification-full-message');
+    const metadata = document.createElement('p');
+    metadata.className = 'notification-detail-meta';
     fullModal.querySelector('.modal-body').prepend(metadata);
     const fullBody = fullModal.querySelector('.modal-body');
     fullModal.addEventListener('show.bs.modal', () => document.body.classList.add('notification-modal-open'));
@@ -156,19 +106,10 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       fullModal.querySelector('#notificationFullDescription').textContent = notificationFullContent ||
         document.getElementById('notificationDetailDescription').textContent;
-      metadata.replaceChildren();
-      for (const [icon, value, className] of [
-        ['bi-exclamation-circle', notificationMetadata.priority, 'is-priority'],
-        ['bi-hash', notificationMetadata.reference ? `Reference ${notificationMetadata.reference}` : '', 'is-reference'],
-      ]) {
-        if (!value) continue;
-        const badge = document.createElement('span'); badge.className = `notification-full-chip ${className}`;
-        const symbol = document.createElement('i'); symbol.className = `bi ${icon}`; symbol.setAttribute('aria-hidden', 'true');
-        badge.append(symbol, document.createTextNode(value)); metadata.append(badge);
-      }
+      metadata.textContent = notificationMetadata;
       if (profileScript) {
         const content = notificationFullContent;
-        import(new URL('../notification/message-editor.js?v=role-access-message-templates-1', profileScript.src).href).then(({ renderMessage }) => {
+        import(new URL('../notification/message-editor.js', profileScript.src).href).then(({ renderMessage }) => {
           renderMessage(fullModal.querySelector('#notificationFullDescription'), content);
         });
       }
@@ -186,9 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     window.addEventListener('tmis:notification-preview', ({ detail }) => {
       notificationFullContent = String(detail.message || '');
-      const reference = String(detail.reference || '');
-      const roleAccessNotice = /role|permission|access profile/i.test(String(detail.title || ''));
-      notificationMetadata = { priority: detail.priority === 'high' ? 'Important' : '', reference: roleAccessNotice ? (/^TMIS-[A-Z0-9]{12}$/.test(reference) ? reference : '') : (/^\d+$/.test(reference) ? '' : reference) };
+      notificationMetadata = [detail.priority === 'high' ? 'Important' : '', detail.reference ? `Reference: ${detail.reference}` : ''].filter(Boolean).join(' · ');
       for (const [suffix, value] of Object.entries({ Type: detail.type || 'Notification', Time: detail.time || '', ModalLabel: detail.title || 'Notification', Description: detail.summary || notificationFullContent.slice(0,240), Action: 'View full details' })) {
         document.getElementById('notificationDetail' + suffix).textContent = value;
       }
@@ -210,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     item.addEventListener('click', () => {
       const { notificationType, notificationTime, notificationTitle, notificationDescription, notificationAction } = item.dataset;
       notificationFullContent = item.dataset.notificationContent || notificationDescription || '';
-      notificationMetadata = { priority: '', reference: '' };
+      notificationMetadata = '';
       const detailFields = {
         notificationDetailType: notificationType,
         notificationDetailTime: notificationTime,

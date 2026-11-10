@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const records = (window.TMIS_PAGE ? window.TmisStore.records('tmis-trainings').filter(item=>(item.participants||[]).includes(window.TmisStore.selectedId())).map(item=>({...item,category:item.type,date:item.startDate,location:item.venue,organizer:item.office,preTest:null,postTest:null,rating:null})) : [
+  let records = (window.TMIS_PAGE ? window.TmisStore.records('tmis-trainings').filter(item=>(item.participants||[]).includes(window.TmisStore.selectedId())).map(item=>({...item,category:item.type,date:item.startDate,location:item.venue,organizer:item.office,preTest:null,postTest:null,rating:null})) : [
     {
       id: 'modern-rice-production',
       title: 'Modern Rice Production',
@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const titleCell = document.createElement('td');
     const titleLink = document.createElement('a');
     titleLink.className = 'training-table-title-link';
-    titleLink.href = `../../training/id/view-training?id=${encodeURIComponent(record.id)}`;
+    titleLink.href = `../../training/id/view-training/${encodeURIComponent(record.id)}`;
     titleLink.target = '_blank';
     titleLink.rel = 'noopener';
     titleLink.textContent = record.title;
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (emptyMessage) {
       emptyMessage.textContent = records.length
         ? 'No training records match the current filters.'
-        : 'No training attended found for this farmer/participant.';
+        : 'No training participated found yet.';
     }
     paginationIds.forEach((id) => renderPagination(id, sorted.length, pages));
 
@@ -332,6 +332,23 @@ document.addEventListener('DOMContentLoaded', () => {
             ? Math.min(pages, state.page + 1)
             : Number(button.dataset.page);
       render();
+      if (window.TMIS_PAGE) {
+        window.addEventListener('tmis:data-updated', () => {
+          records = window.TmisStore.records('tmis-trainings')
+            .filter((item) => (item.participants || []).includes(window.TmisStore.selectedId()))
+            .map((item) => ({
+              ...item,
+              category: item.type,
+              date: item.startDate,
+              location: item.venue,
+              organizer: item.office,
+              preTest: null,
+              postTest: null,
+              rating: null,
+            }));
+          refresh();
+        });
+      }
     });
     container?.addEventListener('change', (event) => {
       if (!event.target.matches('[data-page-size]')) return;

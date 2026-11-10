@@ -15,9 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const associationStatus = [...document.querySelectorAll('input[name="association_status"]')];
   const associationName = document.querySelector('#associate_name');
   const associationRole = document.querySelector('#associate_role');
-  const createAssociationButton = document.querySelector('#openCreateAssociation');
-  const createAssociationForm = document.querySelector('#createFarmerAssociationForm');
   const submitButton = form?.querySelector('button[type="submit"]');
+  const duplicateDialog = document.querySelector('#participantDuplicateDialog');
+  const duplicateList = document.querySelector('#participantDuplicateList');
 
   if (!form || !steps.length || !fieldsets.length) return;
 
@@ -161,91 +161,86 @@ document.addEventListener('DOMContentLoaded', () => {
     submitButton.setAttribute('aria-busy', String(isLoading));
   };
 
-  const duplicateDialog = document.querySelector('#participantDuplicateDialog');
-  const duplicateList = document.querySelector('#participantDuplicateList');
-  const duplicateError = document.querySelector('#participantDuplicateError');
-  const routeForFarmer = (page, id) => `${page}?id=${encodeURIComponent(id)}`;
-  function showPossibleMatches(matches, values) {
-    duplicateError.hidden = true;
-    duplicateList.replaceChildren();
-    for (const match of matches) {
+  const addDuplicateFact = (list, label, value) => {
+    const row = document.createElement('div');
+    const term = document.createElement('dt');
+    const detail = document.createElement('dd');
+    term.textContent = label;
+    detail.textContent = value || 'Not recorded';
+    row.append(term, detail);
+    list.append(row);
+  };
+
+  const showDuplicateDialog = (matches) => {
+    duplicateList.replaceChildren(...matches.map(match => {
       const card = document.createElement('article');
       card.className = 'participant-duplicate-card';
-      const name = document.createElement('h3'); name.textContent = match.name || 'Farmer record'; card.append(name);
+      const heading = document.createElement('h3');
+      heading.textContent = match.name || 'Registered farmer';
       const details = document.createElement('dl');
-      for (const [label, value] of [
-        ['Farmer ID', match.farmerNumber], ['Date of birth', match.dateOfBirth], ['Sex', match.sex],
-        ['Current region and office', [match.region, match.office].filter(Boolean).join(' - ')],
-        ['Farmer organization', match.association || 'No organization linked'],
-        ['Beneficiary offices', (match.beneficiaryOffices || []).map(item => `${item.office} - ${item.region}`).join('; ') || 'No beneficiary offices linked'],
-        ['Status', match.isActive ? 'Active' : 'Inactive'],
-      ]) {
-        const row = document.createElement('div'), term = document.createElement('dt'), description = document.createElement('dd');
-        term.textContent = label; description.textContent = value || 'Not recorded'; row.append(term, description); details.append(row);
-      }
-      card.append(details);
-      const actions = document.createElement('div'); actions.className = 'participant-duplicate-actions';
-      if (match.isCurrentBeneficiary) {
-        if (match.canView) {
-          const view = document.createElement('a'); view.className = 'btn btn-outline-secondary'; view.href = routeForFarmer('../id/view-farmer', match.id); view.target = '_blank'; view.rel = 'noopener'; view.textContent = 'View profile';
-          actions.append(view);
-        }
-        if (match.canEdit) {
-          const edit = document.createElement('a'); edit.className = 'btn btn-outline-secondary'; edit.href = routeForFarmer('../id/edit-farmer', match.id); edit.target = '_blank'; edit.rel = 'noopener'; edit.textContent = 'Edit profile';
-          actions.append(edit);
-        }
-        const assigned = document.createElement('span'); assigned.className = 'participant-duplicate-linked'; assigned.textContent = 'Already linked to this office'; actions.append(assigned);
-      } else {
-        const link = document.createElement('button'); link.type = 'button'; link.className = 'btn btn-success'; link.textContent = 'Link as beneficiary here';
-        link.disabled = !match.isActive;
-        if (!match.isActive) link.title = 'Inactive profiles cannot be linked as active beneficiaries.';
-        link.addEventListener('click', async () => {
-          link.disabled = true; link.setAttribute('aria-busy', 'true');
-          try {
-            const linkUrl = form.dataset.beneficiaryUrlTemplate.replace('__participant__', encodeURIComponent(match.id));
-            const result = await window.TmisStore.request(linkUrl, {
-              fname: values.fname, lname: values.lname, dob: values.dob, gender: values.gender,
-              region_id: values.region_id, org_id: values.org_id,
-            });
-            if (result.can_view) {
-              window.location.assign(routeForFarmer('../id/view-farmer', result.participant_id || match.id));
-            } else {
-              link.removeAttribute('aria-busy');
-              link.textContent = 'Linked to this office';
-              const linked = document.createElement('span'); linked.className = 'participant-duplicate-linked'; linked.textContent = 'Saved. Your role does not include viewing participant profiles.'; actions.append(linked);
-            }
-          } catch (error) {
-            duplicateError.textContent = error.message || 'This farmer could not be linked to your office.';
-            duplicateError.hidden = false; link.disabled = false; link.removeAttribute('aria-busy');
-          }
-        });
-        actions.append(link);
-      }
-      card.append(actions); duplicateList.append(card);
-    }
-    duplicateDialog.showModal();
-    document.querySelector('#closeParticipantDuplicate').focus();
-  }
+      addDuplicateFact(details, 'Farmer ID', match.farmerNumber);
+      addDuplicateFact(details, 'Status', match.isActive ? 'Active' : 'Inactive');
+      card.append(heading, details);
 
-  document.querySelector('#closeParticipantDuplicate')?.addEventListener('click', () => duplicateDialog.close());
-  document.querySelector('#cancelParticipantDuplicate')?.addEventListener('click', () => duplicateDialog.close());
-  duplicateDialog?.addEventListener('click', event => { if (event.target === duplicateDialog) duplicateDialog.close(); });
-  document.querySelector('#createSeparateParticipant')?.addEventListener('click', async event => {
-    const button = event.currentTarget;
-    button.disabled = true;
-    setSubmitLoading(true);
-    try {
-      const values = Object.fromEntries(new FormData(form));
-      const result = await window.TmisStore.request(form.action, { ...values, confirm_duplicate: true });
-      window.TmisStore.publish(result);
-      window.location.assign('../id/view-farmer?id=' + encodeURIComponent(result.participant_id));
-    } catch (error) {
-      duplicateError.textContent = error.message || 'A separate farmer profile could not be created.';
-      duplicateError.hidden = false;
-    } finally {
-      button.disabled = false;
-      setSubmitLoading(false);
+      const officeHeading = document.createElement('h4');
+      officeHeading.textContent = 'Registered region and office';
+      const offices = document.createElement('div');
+      offices.className = 'participant-duplicate-offices';
+      const beneficiaryOffices = match.beneficiaryOffices?.length
+        ? match.beneficiaryOffices
+        : [{region: match.region, office: match.office, is_primary: true}];
+      beneficiaryOffices.forEach(office => {
+        const officeCard = document.createElement('div');
+        officeCard.className = 'participant-duplicate-office';
+        const officeName = document.createElement('strong');
+        officeName.textContent = office.office || 'Office not recorded';
+        const regionName = document.createElement('span');
+        regionName.textContent = office.region || 'Region not recorded';
+        officeCard.append(officeName, regionName);
+        offices.append(officeCard);
+      });
+      card.append(officeHeading, offices);
+      return card;
+    }));
+
+    if (!duplicateDialog.open) duplicateDialog.showModal();
+  };
+
+  const showDuplicateToast = (matches) => {
+    const toast = window.TmisToast?.show(
+      'A farmer with the same first, middle, and last name is registered in this region and office.',
+      'warning',
+      {persistent: true},
+    );
+    if (!toast?.element) {
+      showDuplicateDialog(matches);
+      return;
     }
+
+    const content = toast.element.children[1];
+    const actions = document.createElement('div');
+    actions.className = 'compose-toast-actions';
+    const view = document.createElement('button');
+    view.type = 'button';
+    view.className = 'compose-toast-action compose-toast-action-primary';
+    view.textContent = 'View';
+    view.addEventListener('click', () => {
+      showDuplicateDialog(matches);
+      toast.dismiss();
+    });
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'compose-toast-action';
+    close.dataset.toastClose = '';
+    close.textContent = 'Close';
+    actions.append(view, close);
+    content.append(actions);
+  };
+
+  duplicateDialog?.querySelectorAll('#closeParticipantDuplicate, #closeParticipantDuplicateFooter')
+    .forEach(button => button.addEventListener('click', () => duplicateDialog.close()));
+  duplicateDialog?.addEventListener('click', event => {
+    if (event.target === duplicateDialog) duplicateDialog.close();
   });
 
   // The submit event only fires after built-in required/pattern validation.
@@ -255,24 +250,24 @@ document.addEventListener('DOMContentLoaded', () => {
     setSubmitLoading(true);
     try {
       const values = Object.fromEntries(new FormData(form));
-      const { matches = [] } = await window.TmisStore.request(form.dataset.matchUrl, values);
-      if (matches.length) {
-        setSubmitLoading(false);
-        showPossibleMatches(matches, values);
-        return;
-      }
       const result = await window.TmisStore.request(form.action, values);
       window.TmisStore.publish(result);
-      const id = result.participant_id;
       window.TmisToast?.show('Record saved successfully.', 'success');
-      location.assign('../id/view-farmer?id=' + encodeURIComponent(id));
+      form.reset();
+      currentStep = Number(fieldsets[0].dataset.step);
+      syncTribeName();
+      syncAllergies();
+      syncAssociationFields();
+      region.value = regions.length === 1 ? String(regions[0].region_id) : '';
+      region.dispatchEvent(new Event('change', {bubbles:true}));
+      updateWizard();
     } catch (error) {
-      if (error.response?.matches?.length) {
-        setSubmitLoading(false);
-        showPossibleMatches(error.response.matches, Object.fromEntries(new FormData(form)));
-        return;
+      const matches = error?.status === 409 ? error.data?.matches : null;
+      if (Array.isArray(matches) && matches.length > 0) {
+        showDuplicateToast(matches);
+      } else {
+        window.TmisToast?.show(error.message || 'The record could not be saved.', 'error');
       }
-      window.TmisToast?.show(error.message || 'The record could not be saved.', 'error');
     } finally { setSubmitLoading(false); }
   });
   window.addEventListener('pageshow', () => setSubmitLoading(false));
@@ -363,11 +358,6 @@ document.addEventListener('DOMContentLoaded', () => {
     select.dispatchEvent(new Event('change', {bubbles:true}));
   }
   for (const [name, rows] of Object.entries(data.registration.options)) fill(form.elements.namedItem(name), rows, 'Select an option');
-  const coveredYear = form.elements.namedItem('yearCovered');
-  if (coveredYear) {
-    const currentYear = new Date().getFullYear();
-    coveredYear.replaceChildren(...Array.from({length: 27}, (_, index) => String(currentYear + 1 - index)).map(year => new Option(year, year, year === String(currentYear), year === String(currentYear))));
-  }
   fill(form.elements.namedItem('pob'), locations.filter(row => row.kind === 'municipality'), 'Select a municipality / city');
   const chain = [region, province, district, municipality, barangay];
   const kinds = ['region', 'province', 'district', 'municipality', 'barangay'];
@@ -377,73 +367,23 @@ document.addEventListener('DOMContentLoaded', () => {
     fill(chain[index], parent ? locations.filter(row => row.kind === kinds[index] && String(row.region_id) === region.value && (index === 1 || String(row.parent_id) === parent)) : [], 'Select a '+kinds[index]);
   }
   for (let index = 0; index < chain.length - 1; index++) chain[index].addEventListener('change', () => children(index + 1));
+  const isInScope = (ids, id) => ids == null || ids.some(value => String(value) === String(id));
   function associations() {
-    fill(associationName, window.TmisStore.records('tmis-farmer-associations').filter(row => row.status !== 'Inactive' && String(row.region_id) === region.value && String(row.org_id) === office.value).map(row => ({id:row.id,name:row.association_name})), 'Select an association', true);
+    fill(associationName, window.TmisStore.records('tmis-farmer-associations')
+      .filter(row => row.status === 'Active' && String(row.region_id) === region.value && String(row.org_id) === office.value)
+      .map(row => ({id:row.id,name:`${row.association_name} · ${row.office} · ${row.region}`})), 'Select an association', true);
     syncAssociationFields();
-    if (createAssociationButton) createAssociationButton.disabled = !office.value || !associationStatus.some(radio => radio.checked && radio.value === 'Yes');
   }
-  const visible = (selected, value) => selected === null || selected === undefined || selected.some(item => String(item) === String(value));
   region.addEventListener('change', () => {
-    const rows = data.offices.filter(row => String(row.region_id) === region.value && visible(data.registration.regionIds, row.region_id) && visible(data.registration.officeIds, row.org_id));
+    const rows = data.registration.offices.filter(row => String(row.region_id) === region.value && isInScope(data.registration.officeIds, row.org_id));
     fill(office, rows.map(row => ({id:row.org_id,name:row.name})), 'Select an office');
     if (rows.length === 1) office.value = String(rows[0].org_id);
     associations();
   });
   office.addEventListener('change', associations);
-  const regions = data.regions.filter(row => visible(data.registration.regionIds, row.region_id));
+  const regions = data.registration.regions.filter(row => isInScope(data.registration.regionIds, row.region_id));
   fill(region, regions.map(row => ({id:row.region_id,name:row.name})), 'Select a region');
   if (regions.length === 1) {region.value=String(regions[0].region_id);region.dispatchEvent(new Event('change',{bubbles:true}));}
-  const canCreateAssociation = data.permissions?.includes('associations.create') === true && data.permissions?.includes('associations.read') === true;
-  if (createAssociationButton) createAssociationButton.hidden = !canCreateAssociation;
-  const associationYear = document.querySelector('#newAssociationYear');
-  const associationDate = document.querySelector('#newAssociationDate');
-  if (associationDate) associationDate.value = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Manila'});
-  if (associationYear) {
-    const currentYear = new Date().getFullYear();
-    associationYear.replaceChildren(new Option('Select year', ''), ...Array.from({length: 27}, (_, index) => String(currentYear + 1 - index)).map(year => new Option(year, year, false, year === String(currentYear))));
-  }
-  const createAssociationModalElement = document.querySelector('#createFarmerAssociationModal');
-  associationStatus.forEach(radio => radio.addEventListener('change', () => {
-    if (createAssociationButton) createAssociationButton.disabled = !office.value || radio.value !== 'Yes' || !radio.checked;
-  }));
-  createAssociationButton?.addEventListener('click', () => {
-    if (!canCreateAssociation || createAssociationButton.disabled) return;
-    bootstrap.Modal.getOrCreateInstance(createAssociationModalElement).show();
-  });
-  createAssociationForm?.addEventListener('submit', async event => {
-    event.preventDefault();
-    const error = document.querySelector('#createFarmerAssociationError');
-    const submit = createAssociationForm.querySelector('[type="submit"]');
-    error.hidden = true;
-    if (!canCreateAssociation || !region.value || !office.value) return;
-    submit.disabled = true;
-    try {
-      const values = new FormData(createAssociationForm);
-      const name = String(values.get('association_name') || '').trim();
-      const association = {
-        id: `FA-${window.crypto?.randomUUID?.() || Date.now().toString(36)}`,
-        association_name: name,
-        short_name: String(values.get('short_name') || '').trim(),
-        organization_type: String(values.get('organization_type') || ''),
-        region_id: Number(region.value),
-        org_id: Number(office.value),
-        year_covered: String(values.get('year_covered') || ''),
-        registration_date: String(values.get('registration_date') || ''),
-        status: 'Active',
-      };
-      await window.TmisStore.saveRecord('tmis-farmer-associations', association);
-      associations();
-      associationName.value = association.id;
-      syncAssociationFields();
-      createAssociationForm.reset();
-      bootstrap.Modal.getOrCreateInstance(createAssociationModalElement).hide();
-    } catch (failure) {
-      error.textContent = failure.message || 'The association could not be created.';
-      error.hidden = false;
-    } finally {
-      submit.disabled = false;
-    }
-  });
   const birthDate = form.elements.namedItem('dob');
   if (birthDate) birthDate.max = data.dashboard.today || new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Manila'});
   updateWizard();

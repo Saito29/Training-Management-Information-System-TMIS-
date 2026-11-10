@@ -17,7 +17,7 @@ class BladePagesTest extends TestCase
     {
         $this->withoutMiddleware(EnsureEligibleUser::class);
 
-        if ($path === 'admin/administration/details/trash') {
+        if (in_array($path, ['admin/administration/details/trash', 'admin/notification/notification'], true)) {
             $this->actingAs(User::factory()->create());
         }
 

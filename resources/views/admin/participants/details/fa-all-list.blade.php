@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('body-attributes')
-class="layout-fixed"
+class="layout-fixed" data-fa-list-status="Active"
 @endsection
 
 @section('head')
@@ -56,12 +56,12 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/participants/details/all-status.css') }}"
+      href="{{ asset('src/css/participants/details/all-status.css?v=all-status-page-size-1') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/participants/details/fa-all-list.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
-    <title>DA-TMIS - Farmer Associations</title>
+    <title>DA-TMIS - All Farmer Associations</title>
     <link rel="stylesheet" href="{{ asset('src/css/shared/table-loading.css') }}" />
     <script src="{{ asset('src/js/shared/table-loading.js') }}" defer></script>
     <!-- Backend integration disabled for now. Uncomment when ready.
@@ -803,12 +803,12 @@ class="layout-fixed"
             <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item">Participants</li><li class="breadcrumb-item">Details</li><li class="breadcrumb-item active" aria-current="page">List of FA</li></ol></nav>
             <h4 class="content-header">Active Farmer Associations</h4><span class="content-info">Browse and manage active association registrations.</span>
           </div><div class="col-12 col-xl-4"><div class="card h-100"><div class="card-header"><h6 class="card-title mb-0">About this page</h6></div><div class="card-body"><div class="status-info-list">
-            <div class="status-info-item"><div class="status-info-badge info-scope"><i class="bi bi-list-check"></i></div><div class="status-info-content"><h6>Active associations</h6><p>Registered associations with Active status appear here.</p><div class="status-legend"><span class="status-badge status-active">Active</span></div></div></div>
+            <div class="status-info-item"><div class="status-info-badge info-scope"><i class="bi bi-list-check"></i></div><div class="status-info-content"><h6>Active associations</h6><p>Only active association registrations appear here.</p><div class="status-legend"><span class="status-badge status-active">Active</span></div></div></div>
             <div class="status-info-item"><div class="status-info-badge info-filter"><i class="bi bi-funnel-fill"></i></div><div class="status-info-content"><h6>Find an association</h6><p>Filter by year covered and location, search all fields, or choose which columns to show.</p></div></div>
-            <div class="status-info-item"><div class="status-info-badge info-actions"><i class="bi bi-eye-fill"></i></div><div class="status-info-content"><h6>Registration details</h6><p>View an association or edit and delete a saved record. Sample records are included.</p></div></div>
+            <div class="status-info-item"><div class="status-info-badge info-actions"><i class="bi bi-eye-fill"></i></div><div class="status-info-content"><h6>Registration details</h6><p>View, edit, or delete saved association records using the row actions.</p></div></div>
           </div></div></div></div></div></div></div></div>
           <div class="row second-row"><div class="col-12 mb-2"><section class="card for-review-table-card" aria-labelledby="forReviewTableTitle">
-            <header class="card-header for-review-table-header"><div><h5 class="for-review-table-title" id="forReviewTableTitle">Active Farmer Associations</h5><p class="for-review-table-description">Association registrations, including sample records and entries saved in this browser.</p></div><div class="table-header-actions">
+            <header class="card-header for-review-table-header"><div><h5 class="for-review-table-title" id="forReviewTableTitle">Active Farmer Associations</h5><p class="for-review-table-description">Active association records from TMIS. Refresh to load the latest changes.</p></div><div class="table-header-actions">
               <a class="btn table-icon-button" href="{{ route('admin.participants.create.fa-register') }}" aria-label="Register farmer association" title="Register FA"><i class="bi bi-plus-circle"></i></a>
               <button class="btn table-icon-button" type="button" id="columnFilterToggle" aria-expanded="false" aria-label="Show or hide columns" title="Show/Hide Columns"><i class="bi bi-layout-three-columns"></i></button>
               <button class="btn table-icon-button" type="button" id="refreshReviewTable" aria-label="Refresh associations" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
@@ -818,6 +818,7 @@ class="layout-fixed"
               <div class="column-filter-panel" id="columnFilterPanel" hidden><div class="column-filter-header"><h6><i class="bi bi-funnel-fill me-2"></i>Show/Hide Columns</h6><button type="button" class="btn-close btn-close-sm" id="closeColumnFilter" aria-label="Close"></button></div><div class="column-filter-body"><div class="row g-2"><div class="col-md-4 col-sm-6"><div class="form-check form-switch"><input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-actions" data-column="actions" checked disabled><label class="form-check-label" for="col-actions">Actions</label></div></div>
 <div class="col-md-4 col-sm-6"><div class="form-check form-switch"><input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-status" data-column="status" checked ><label class="form-check-label" for="col-status">Status</label></div></div>
 <div class="col-md-4 col-sm-6"><div class="form-check form-switch"><input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-id" data-column="id" checked ><label class="form-check-label" for="col-id">Farmer Association ID</label></div></div>
+<div class="col-md-4 col-sm-6"><div class="form-check form-switch"><input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-region" data-column="region" checked><label class="form-check-label" for="col-region">Region</label></div></div>
 <div class="col-md-4 col-sm-6"><div class="form-check form-switch"><input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-province" data-column="province" checked ><label class="form-check-label" for="col-province">Province</label></div></div>
 <div class="col-md-4 col-sm-6"><div class="form-check form-switch"><input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-district" data-column="district" checked ><label class="form-check-label" for="col-district">District</label></div></div>
 <div class="col-md-4 col-sm-6"><div class="form-check form-switch"><input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-municipality" data-column="municipality" checked ><label class="form-check-label" for="col-municipality">Municipality</label></div></div>
@@ -829,14 +830,15 @@ class="layout-fixed"
 <div class="col-md-4 col-sm-6"><div class="form-check form-switch"><input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-organization_type" data-column="organization_type"  ><label class="form-check-label" for="col-organization_type">Organization Type</label></div></div>
 <div class="col-md-4 col-sm-6"><div class="form-check form-switch"><input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-office" data-column="office"  ><label class="form-check-label" for="col-office">Office</label></div></div></div></div><div class="column-filter-footer"><button type="button" class="btn btn-sm btn-outline-secondary" id="showAllColumns">Show all</button><button type="button" class="btn btn-sm btn-outline-secondary" id="resetColumns">Reset to default</button><button type="button" class="btn btn-sm btn-success" id="applyColumnFilter">Done</button></div></div>
               <div class="review-table-summaries"><div class="review-table-summary"><i class="bi bi-people-fill summary-icon summary-total"></i><span>Active Associations</span><strong id="summaryTotalReview">0</strong></div><div class="review-table-summary"><i class="bi bi-table summary-icon summary-rows"></i><span>Rows per Page</span><strong id="summaryRowsPerPage">10</strong></div><div class="review-table-summary"><i class="bi bi-list-check summary-icon summary-visible"></i><span>Visible Associations</span><strong id="summaryVisibleRows">0</strong></div></div>
-              <div class="review-table-toolbar"><div class="toolbar-filter"><label for="yearCoveredFilter">Year Covered</label><select id="yearCoveredFilter" class="form-select"><option value="">All years</option></select></div>
+              <div class="review-table-toolbar"><div class="toolbar-filter"><label for="yearCoveredFilter">Year Covered</label><select id="yearCoveredFilter" class="form-select"><option value="">All years</option></select></div><div class="toolbar-filter"><label for="regionFilter">Region</label><select id="regionFilter" class="form-select"><option value="">All regions</option></select></div>
                 <div class="toolbar-filter"><label for="provinceFilter">Province</label><select id="provinceFilter" class="form-select"><option value="">All provinces</option></select></div><div class="toolbar-filter"><label for="districtFilter">District</label><select id="districtFilter" class="form-select"><option value="">All districts</option></select></div><div class="toolbar-filter"><label for="municipalityFilter">Municipality</label><select id="municipalityFilter" class="form-select"><option value="">All municipalities</option></select></div><div class="toolbar-filter"><label for="barangayFilter">Barangay</label><select id="barangayFilter" class="form-select"><option value="">All barangays</option></select></div>
                 <div class="fa-search-actions"><div class="toolbar-search fa-toolbar-search"><label for="reviewGlobalSearch">Search associations</label><div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input id="reviewGlobalSearch" class="form-control" type="search" placeholder="ID, name, or location" autocomplete="off"><button class="btn fa-search-clear" type="button" id="clearReviewSearch" aria-label="Clear search" title="Clear search"><i class="bi bi-x-lg"></i></button></div></div><button class="btn clear-filter-button" type="button" id="clearReviewFilters"><i class="bi bi-filter-circle me-1"></i>Clear filters</button></div>
               </div>
               <div class="review-pagination" id="reviewPaginationTop" aria-label="Top table pagination"></div>
-              <div class="table-responsive review-table-scroll" id="reviewTableScroll"><table class="table review-data-table align-middle" id="forReviewDataTable"><caption class="visually-hidden">Active farmer associations</caption><thead><tr><th scope="col" data-column="actions" >Actions</th>
+              <div class="table-responsive review-table-scroll" id="reviewTableScroll"><table class="table review-data-table align-middle" id="forReviewDataTable"><caption class="visually-hidden">All farmer associations</caption><thead><tr><th scope="col" data-column="actions" >Actions</th>
 <th scope="col" data-column="status" class="sortable-column" data-sort="status">Status<i class="bi bi-arrow-down-up"></i></th>
 <th scope="col" data-column="id" class="sortable-column" data-sort="id">Farmer Association ID<i class="bi bi-arrow-down-up"></i></th>
+<th scope="col" data-column="region" class="sortable-column" data-sort="region">Region<i class="bi bi-arrow-down-up"></i></th>
 <th scope="col" data-column="province" class="sortable-column" data-sort="province">Province<i class="bi bi-arrow-down-up"></i></th>
 <th scope="col" data-column="district" class="sortable-column" data-sort="district">District<i class="bi bi-arrow-down-up"></i></th>
 <th scope="col" data-column="municipality" class="sortable-column" data-sort="municipality">Municipality<i class="bi bi-arrow-down-up"></i></th>
@@ -849,6 +851,7 @@ class="layout-fixed"
 <th scope="col" data-column="office" class="sortable-column" data-sort="office">Office<i class="bi bi-arrow-down-up"></i></th></tr></thead><tbody id="forReviewTableBody"></tbody><tfoot><tr><th data-column="actions"></th>
 <th data-column="status"></th>
 <th data-column="id"><input class="form-control form-control-sm column-filter" data-column="id" type="search" aria-label="Filter Farmer Association ID" placeholder="Search"></th>
+<th data-column="region"><input class="form-control form-control-sm column-filter" data-column="region" type="search" aria-label="Filter Region" placeholder="Search"></th>
 <th data-column="province"><input class="form-control form-control-sm column-filter" data-column="province" type="search" aria-label="Filter Province" placeholder="Search"></th>
 <th data-column="district"><input class="form-control form-control-sm column-filter" data-column="district" type="search" aria-label="Filter District" placeholder="Search"></th>
 <th data-column="municipality"><input class="form-control form-control-sm column-filter" data-column="municipality" type="search" aria-label="Filter Municipality" placeholder="Search"></th>
@@ -1505,5 +1508,5 @@ class="layout-fixed"
     <!-- nav -->
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/participants/details/fa-all-list.js') }}"></script>
+    <script src="{{ asset('src/js/participants/details/fa-all-list.js?v=association-active-inactive-status-1') }}"></script>
 @endsection

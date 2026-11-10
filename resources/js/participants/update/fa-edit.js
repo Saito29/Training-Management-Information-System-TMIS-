@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const id = new URLSearchParams(location.search).get('faId');
+  const id = window.TmisStore.selectedId();
   const storageKey = 'tmis-farmer-associations';
   const editForm = document.getElementById('faEditForm');
   if (!editForm) return;
@@ -17,12 +17,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const district = document.getElementById('faEditDistrict');
   const municipality = document.getElementById('faEditMunicipality');
   const barangay = document.getElementById('faEditBarangay');
+  const regionSelect = document.getElementById('faEditRegion');
+  const officeSelect = document.getElementById('faEditOffice');
   const editMessage = document.getElementById('faEditMessage');
+  const pageData = window.TMIS_PAGE || {};
+  const registration = pageData.registration || {};
   const read = () => {
     try { const records = JSON.parse(window.TmisStore.getItem(storageKey) || '[]'); return Array.isArray(records) ? records : []; }
     catch { return []; }
   };
   const setMessage = (element, message, error = false) => { element.textContent = message; element.classList.toggle('is-error', error); };
+  const isInScope = (ids, id) => ids == null || ids.some(value => String(value) === String(id));
   const today = new Date();
   const todayValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   document.getElementById('faEditDate').max = todayValue;
@@ -43,6 +48,28 @@ document.addEventListener('DOMContentLoaded', () => {
     fill(district, Object.keys(locations[province.value] || {}), 'Choose district', record.district || '');
     fill(municipality, Object.keys(locations[province.value]?.[district.value] || {}), 'Choose municipality', record.municipality || '');
     fill(barangay, locations[province.value]?.[district.value]?.[municipality.value] || [], 'Choose barangay', record.barangay || '');
+  }
+  function setRegistrationLocation(record = {}) {
+    const regions = (registration.regions || []).filter(region => isInScope(registration.regionIds, region.region_id));
+    regionSelect.replaceChildren(new Option(regions.length ? 'Saved registration region' : 'Region unavailable', ''));
+    regionSelect.append(...regions.map(region => new Option(region.name, String(region.region_id))));
+    if (record.region_id && !regions.some(region => String(region.region_id) === String(record.region_id))) {
+      regionSelect.append(new Option(record.region || 'Saved region', String(record.region_id)));
+    }
+    regionSelect.value = String(record.region_id || '');
+
+    const offices = (registration.offices || []).filter(office =>
+      String(office.region_id) === regionSelect.value
+      && isInScope(registration.officeIds, office.org_id)
+    );
+    officeSelect.replaceChildren(new Option(offices.length ? 'Saved registration office' : 'Office unavailable', ''));
+    officeSelect.append(...offices.map(office => new Option(office.name, String(office.org_id))));
+    if (record.org_id && !offices.some(office => String(office.org_id) === String(record.org_id))) {
+      officeSelect.append(new Option(record.office || 'Saved office', String(record.org_id)));
+    }
+    officeSelect.value = String(record.org_id || '');
+    regionSelect.disabled = true;
+    officeSelect.disabled = true;
   }
   province.addEventListener('change', () => {
     fill(district, Object.keys(locations[province.value] || {}), 'Choose district');
@@ -66,9 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     document.getElementById('faEditId').value = record.id;
     editForm.querySelectorAll('[name]').forEach(control => {
-      if (['province', 'district', 'municipality', 'barangay'].includes(control.name)) return;
+      if (['region_id', 'org_id', 'province', 'district', 'municipality', 'barangay'].includes(control.name)) return;
       control.value = record[control.name] || (control.name === 'year_covered' ? String(record.registration_date || '').slice(0, 4) : '');
     });
+    setRegistrationLocation(record);
     setLocation(record);
     document.getElementById('faOverviewTitle').textContent = record.association_name || 'Farmer Association';
     const badge = document.getElementById('faOverviewStatus');
@@ -87,7 +115,9 @@ document.addEventListener('DOMContentLoaded', () => {
       setMessage(editMessage, 'Association information saved.');
       showRecord();
       window.dispatchEvent(new StorageEvent('storage', { key: storageKey }));
-    } catch { setMessage(editMessage, 'Could not save the association. Refresh and try again.', true); }
+    } catch (error) {
+      setMessage(editMessage, error instanceof Error ? error.message : 'Could not save the association. Refresh and try again.', true);
+    }
   });
   showRecord();
 });

@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const associationId = new URLSearchParams(location.search).get('faId');
+  const associationId = window.TmisStore.selectedId();
   const storageKey = 'tmis-farmer-associations';
   const read = () => {
     try { const records = JSON.parse(window.TmisStore.getItem(storageKey) || '[]'); return Array.isArray(records) ? records : []; }

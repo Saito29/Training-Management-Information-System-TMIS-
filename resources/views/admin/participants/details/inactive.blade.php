@@ -56,7 +56,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/participants/details/inactive.css') }}"
+      href="{{ asset('src/css/participants/details/inactive.css?v=page-size-filter-style-1') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
@@ -2027,5 +2027,5 @@ class="layout-fixed"
     <!-- nav -->
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/participants/details/inactive.js?v=participant-date-render-2') }}"></script>
+    <script src="{{ asset('src/js/participants/details/inactive.js?v=page-size-filter-style-1') }}"></script>
 @endsection

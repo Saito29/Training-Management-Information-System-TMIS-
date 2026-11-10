@@ -1,7 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
   const panel = document.getElementById('participants-panel');
   if (!panel) return;
-  const storageKey = 'tmis:training:TRN-000246:participants';
+  const training = window.TMIS_PAGE ? window.TmisStore.selected('tmis-trainings') : null;
+  const storageKey = `tmis:training:${training?.id || 'TRN-000246'}:participants`;
   const names = [
     ['Dela Cruz', 'Juan', 'Santos'], ['Reyes', 'Pedro', 'Garcia'], ['Mendoza', 'Carlo', 'Ramos'],
     ['Santos', 'Maria', 'Reyes'], ['Bautista', 'Rogelio', 'Cruz'], ['Ramos', 'Antonio', 'Lopez'],
@@ -24,41 +25,51 @@ document.addEventListener('DOMContentLoaded', () => {
     return {
       id: `FMR-2025-${String(index + 1).padStart(3, '0')}`,
       name: `${first} ${middle} ${last}`,
-      province: location[0], district: location[1], municipality: location[2], barangay: location[3],
+      province: location[0], district: location[1], municipality: location[2], barangay: location[3], region: 'Region IV-A',
     };
-  }));
+  })).map(record => {
+    const beneficiaries = record.beneficiaryOffices || [];
+    const trainingBeneficiary = beneficiaries.find(beneficiary =>
+      (!training?.region_id || String(beneficiary.region_id) === String(training.region_id)) &&
+      (!training?.org_id || String(beneficiary.org_id) === String(training.org_id)));
+    const primaryBeneficiary = beneficiaries.find(beneficiary => beneficiary.isPrimary);
+    return {
+      ...record,
+      region: trainingBeneficiary?.region || primaryBeneficiary?.region || record.region || '',
+      name: record.name || [record.firstName, record.middleName, record.lastName].filter(Boolean).join(' '),
+    };
+  });
   const knownIds = new Set(directory.map(record => record.id));
   const initialIds = directory.slice(0, 24).map(record => record.id);
   const $ = selector => panel.querySelector(selector);
-  const locationKeys = ['province', 'district', 'municipality', 'barangay'];
-  for (const type of ['Current', 'Available']) {
-    const province = $(`#edit${type}Province`);
-    province.dataset.locationFilter = 'province';
-    province.insertAdjacentHTML('afterend', `<select class="form-select" id="edit${type}District" data-location-filter="district" aria-label="Filter ${type.toLowerCase()} participants by district"><option value="">All districts</option></select>`);
-    if (type === 'Current') {
-      $(`#edit${type}District`).insertAdjacentHTML('afterend', `<select class="form-select" id="edit${type}Municipality" data-location-filter="municipality" aria-label="Filter current participants by municipality"><option value="">All municipalities</option></select>`);
-    } else {
-      $(`#edit${type}Municipality`).dataset.locationFilter = 'municipality';
-    }
-    $(`#edit${type}Municipality`).insertAdjacentHTML('afterend', `<select class="form-select" id="edit${type}Barangay" data-location-filter="barangay" aria-label="Filter ${type.toLowerCase()} participants by barangay"><option value="">All barangays</option></select>`);
-  }
+  const locationKeys = ['region', 'province', 'municipality'];
+  const normalized = value => String(value || '').trim().toLocaleLowerCase();
+  const trainingLocationMatches = record => ['province', 'municipality'].every(key =>
+    !training?.[key] || normalized(record[key]) === normalized(training[key]));
+  const eligibleForTraining = record => {
+    if (!window.TMIS_PAGE) return true;
+    if (record.status !== 'Active') return false;
+    return (record.beneficiaryOffices || []).some(beneficiary =>
+      String(beneficiary.region_id) === String(training?.region_id) &&
+      String(beneficiary.org_id) === String(training?.org_id));
+  };
   const escapeHtml = value => String(value).replace(/[&<>"']/g, char =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 
   function loadRoster() {
-    try {
-      const stored = JSON.parse(window.TmisStore.getItem(storageKey) || 'null');
-      if (Array.isArray(stored)) return new Set(stored.filter(id => knownIds.has(id)));
-    } catch { /* Use the sample roster when browser storage is unavailable. */ }
-    return new Set(initialIds);
+    const roster = window.TMIS_PAGE
+      ? window.TmisStore.selected('tmis-trainings')?.participants
+      : null;
+    if (Array.isArray(roster)) return new Set(roster.filter(id => knownIds.has(id)));
+    return new Set(window.TMIS_PAGE ? [] : initialIds);
   }
   let currentIds = loadRoster();
   const selectedIds = new Set();
   let activeTab = 'current';
   let feedback = '';
   const columns = [
-    ['id', 'Farmer ID'], ['name', 'Full name'], ['barangay', 'Barangay'],
-    ['municipality', 'Municipality / City'], ['province', 'Province'],
+    ['id', 'Farmer ID'], ['name', 'Full name'], ['region', 'Region'],
+    ['province', 'Province'], ['municipality', 'Municipality / City'], ['barangay', 'Barangay'],
   ];
   const tableState = {
     current: { page: 1, pageSize: 20, columns: {} },
@@ -127,9 +138,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function match(record, search) {
-    const term = search.trim().toLocaleLowerCase();
-    return !term || [record.id, record.name, record.barangay, record.municipality, record.district, record.province]
-      .some(value => value.toLocaleLowerCase().includes(term));
+    const term = normalized(search);
+    return !term || [record.id, record.name, record.region, record.barangay, record.municipality, record.province]
+      .some(value => normalized(value).includes(term));
   }
   function currentFiltered() {
     return directory.filter(record => currentIds.has(record.id) &&
@@ -139,36 +150,42 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function availableFiltered() {
     return directory.filter(record => !currentIds.has(record.id) &&
+      eligibleForTraining(record) &&
+      trainingLocationMatches(record) &&
       match(record, $('#editAvailableSearch').value) &&
       matchesLocation(record, 'Available') &&
       matchesColumns(record, 'available'));
   }
   function rowCells(record) {
-    return `<td>${escapeHtml(record.id)}</td><td><strong>${escapeHtml(record.name)}</strong></td><td>${escapeHtml(record.barangay)}</td><td>${escapeHtml(record.municipality)}</td><td>${escapeHtml(record.province)}</td>`;
+    return `<td>${escapeHtml(record.id)}</td><td><strong>${escapeHtml(record.name)}</strong></td><td>${escapeHtml(record.region || '—')}</td><td>${escapeHtml(record.province || '—')}</td><td>${escapeHtml(record.municipality || '—')}</td><td>${escapeHtml(record.barangay || '—')}</td>`;
   }
+  let filtersInitialized = false;
   function populateSelect(select, values, label) {
     const chosen = select.value;
+    const preferred = !filtersInitialized ? training?.[select.dataset.locationFilter] : '';
     select.replaceChildren(new Option(label, ''));
     [...new Set(values)].sort().forEach(value => select.add(new Option(value, value)));
-    select.value = [...select.options].some(option => option.value === chosen) ? chosen : '';
+    const desired = chosen || preferred;
+    select.value = [...select.options].some(option => normalized(option.value) === normalized(desired)) ? desired : '';
   }
   function matchesLocation(record, type) {
     return locationKeys.every(key => {
       const selected = $(`#edit${type}${key[0].toUpperCase()}${key.slice(1)}`).value;
-      return !selected || record[key] === selected;
+      return !selected || normalized(record[key]) === normalized(selected);
     });
   }
   function populateLocationFilters(type, records) {
     let scoped = records;
     locationKeys.forEach(key => {
       const select = $(`#edit${type}${key[0].toUpperCase()}${key.slice(1)}`);
-      populateSelect(select, scoped.map(record => record[key]), `All ${key === 'municipality' ? 'municipalities' : key === 'barangay' ? 'barangays' : `${key}s`}`);
-      if (select.value) scoped = scoped.filter(record => record[key] === select.value);
+      populateSelect(select, scoped.map(record => record[key]).filter(Boolean), `All ${key === 'municipality' ? 'municipalities' : `${key}s`}`);
+      if (select.value) scoped = scoped.filter(record => normalized(record[key]) === normalized(select.value));
     });
   }
   function updateFilters() {
     populateLocationFilters('Current', directory.filter(record => currentIds.has(record.id)));
-    populateLocationFilters('Available', directory.filter(record => !currentIds.has(record.id)));
+    populateLocationFilters('Available', directory.filter(record => !currentIds.has(record.id) && eligibleForTraining(record) && trainingLocationMatches(record)));
+    filtersInitialized = true;
   }
   function render() {
     updateFilters();
@@ -256,9 +273,9 @@ document.addEventListener('DOMContentLoaded', () => {
     currentIds.delete(record.id);
     try {
       await window.TmisStore.setItem(storageKey, JSON.stringify([...currentIds]));
-    } catch {
+    } catch (error) {
       currentIds.add(record.id);
-      feedback = 'Unable to save the roster in this browser.';
+      feedback = error.message || 'Unable to save the training roster.';
       render();
       return;
     }
@@ -270,9 +287,9 @@ document.addEventListener('DOMContentLoaded', () => {
     selectedIds.forEach(id => currentIds.add(id));
     try {
       await window.TmisStore.setItem(storageKey, JSON.stringify([...currentIds]));
-    } catch {
+    } catch (error) {
       selectedIds.forEach(id => currentIds.delete(id));
-      feedback = 'Unable to save the roster in this browser.';
+      feedback = error.message || 'Unable to save the training roster.';
       showTab('current');
       render();
       return;
@@ -284,21 +301,27 @@ document.addEventListener('DOMContentLoaded', () => {
     showTab('current');
     render();
   });
-  $('#editParticipantRefresh').addEventListener('click', () => {
-    currentIds = loadRoster();
-    selectedIds.clear();
-    feedback = 'Roster refreshed.';
-    render();
+  $('#editParticipantRefresh').addEventListener('click', async () => {
+    try {
+      if (window.TMIS_PAGE) await window.TmisStore.refresh();
+      currentIds = loadRoster();
+      selectedIds.clear();
+      feedback = 'Roster refreshed.';
+      render();
+    } catch (error) {
+      feedback = error.message || 'Unable to refresh the training roster.';
+      render();
+    }
   });
   $('#editParticipantExport').addEventListener('click', () => {
-    const heading = ['Farmer ID', 'Full Name', 'Barangay', 'Municipality / City', 'Province'];
+    const heading = ['Farmer ID', 'Full Name', 'Region', 'Province', 'Municipality / City', 'Barangay'];
     const quote = value => `"${String(value).replace(/"/g, '""')}"`;
     const rows = directory.filter(record => currentIds.has(record.id)).map(record =>
-      [record.id, record.name, record.barangay, record.municipality, record.province].map(quote).join(','));
+      [record.id, record.name, record.region, record.province, record.municipality, record.barangay].map(quote).join(','));
     const blob = new Blob([`\uFEFF${[heading.map(quote).join(','), ...rows].join('\r\n')}`], { type: 'text/csv;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = 'training-participants-TRN-000246.csv';
+    link.download = `training-participants-${training?.id || 'sample'}.csv`;
     document.body.append(link);
     link.click();
     link.remove();
@@ -316,4 +339,9 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#editAddPanel .edit-participants-intro p').textContent = 'Select farmers individually or select all filtered results across pages, then add them to this training.';
   showTab('current');
   render();
+  document.addEventListener('training:tabchange', event => {
+    if (event.detail.panel.id === 'participants-panel') {
+      requestAnimationFrame(render);
+    }
+  });
 });

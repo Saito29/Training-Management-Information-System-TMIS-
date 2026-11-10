@@ -2,33 +2,73 @@
 document.addEventListener('DOMContentLoaded',()=>{
   const form=document.querySelector('#officeRegistration');if(!form)return;
   const region=form.elements.region_id,button=form.querySelector('[type="submit"]');
-  let saving=false, page=1, editing=null;
+  let saving=false, page=1, editing=null, sortField='name', sortDirection='asc';
   const cancel=form.querySelector('[data-office-cancel]');
   function resetEdit(){editing=null;region.disabled=false;cancel.hidden=true;form.querySelector('[data-office-save-label]').textContent='Create office';form.elements.name.value='';form.elements.details.value='';}
   const offices=JSON.parse(document.querySelector('#registeredOfficesData').textContent);
   const search=document.querySelector('#registeredOfficeSearch'),filter=document.querySelector('#officeFilterRegion'),size=document.querySelector('#officePageSize');
   const previous=document.querySelector('[data-office-previous]'),next=document.querySelector('[data-office-next]');
-  const regionName=id=>[...region.options].find(option=>option.value===String(id))?.textContent||'Inactive region';
+  const deleteModalElement=document.querySelector('#settingsDeleteModal');
+  function confirmDelete(recordName) {
+    const modal=bootstrap.Modal.getOrCreateInstance(deleteModalElement);
+    deleteModalElement.querySelector('[data-settings-delete-record]').textContent='“'+recordName+'” will be permanently removed from the office directory.';
+    return new Promise(resolve=>{
+      const confirmButton=deleteModalElement.querySelector('[data-settings-delete-confirm]');
+      const finish=value=>{confirmButton.removeEventListener('click',onConfirm);deleteModalElement.removeEventListener('hidden.bs.modal',onDismiss);resolve(value);};
+      const onConfirm=()=>{finish(true);modal.hide();};
+      const onDismiss=()=>finish(false);
+      confirmButton.addEventListener('click',onConfirm,{once:true});deleteModalElement.addEventListener('hidden.bs.modal',onDismiss,{once:true});modal.show();
+    });
+  }
+  const regionName=id=>offices.find(office=>String(office.region_id)===String(id))?.region_name||[...region.options].find(option=>option.value===String(id))?.textContent||'Inactive region';
+  // Render sortable office records and their account/training coverage summaries.
   function render() {
     const query=search.value.trim().toLocaleLowerCase('en-PH');
-    const filtered=offices.filter(office=>(!filter.value||String(office.region_id)===filter.value)&&[office.name,regionName(office.region_id),office.details||''].join(' ').toLocaleLowerCase('en-PH').includes(query));
+    const filtered=offices.filter(office=>(!filter.value||String(office.region_id)===filter.value)&&[office.org_id,office.name,regionName(office.region_id),office.details||''].join(' ').toLocaleLowerCase('en-PH').includes(query));
+    const sortValues={org_id:office=>Number(office.org_id),name:office=>office.name,region:office=>regionName(office.region_id),account_count:office=>Number(office.account_count||0),training_count:office=>Number(office.training_count||0),updated_at:office=>office.updated_at||''};
+    const sortValue=sortValues[sortField]||sortValues.name;
+    filtered.sort((left,right)=>{
+      const first=sortValue(left),second=sortValue(right);
+      const comparison=typeof first==='number'&&typeof second==='number'?first-second:String(first).localeCompare(String(second),'en-PH',{numeric:true,sensitivity:'base'});
+      return sortDirection==='asc'?comparison:-comparison;
+    });
+    document.querySelectorAll('[data-office-sort]').forEach(control=>{
+      const selected=control.dataset.officeSort===sortField;control.closest('th')?.setAttribute('aria-sort',selected?(sortDirection==='asc'?'ascending':'descending'):'none');
+      const icon=control.querySelector('i');if(icon)icon.className='bi '+(selected?(sortDirection==='asc'?'bi-sort-up':'bi-sort-down'):'bi-arrow-down-up');
+    });
+    document.querySelector('[data-office-stat-total]').textContent=offices.length;
+    document.querySelector('[data-office-stat-regions]').textContent=new Set(offices.map(office=>String(office.region_id))).size;
+    document.querySelector('[data-office-stat-accounts]').textContent=offices.reduce((total,office)=>total+Number(office.account_count||0),0);
+    document.querySelector('[data-office-stat-trainings]').textContent=offices.reduce((total,office)=>total+Number(office.training_count||0),0);
     const count=Number(size.value),pages=Math.max(1,Math.ceil(filtered.length/count));
     page=Math.max(1,Math.min(page,pages));
     const start=(page-1)*count,body=document.querySelector('[data-office-rows]');body.replaceChildren();
     for(const office of filtered.slice(start,start+count)) {
       const row=document.createElement('tr');
-      for(const value of [office.name,regionName(office.region_id),office.details||'-']){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}
-      const actions=document.createElement('td');
-      for(const action of ['edit','delete']){const control=document.createElement('button');control.type='button';control.className='btn btn-sm me-1 btn-outline-'+(action==='edit'?'primary':'danger');control.dataset.officeAction=action;control.dataset.officeId=office.org_id;control.textContent=action==='edit'?'Edit':'Delete';actions.append(control);}row.append(actions);
+      const actions=document.createElement('td');actions.className='directory-row-actions';
+      for(const action of ['edit','delete']){const control=document.createElement('button');control.type='button';control.className='btn directory-icon-action '+(action==='edit'?'is-edit':'is-delete');control.dataset.officeAction=action;control.dataset.officeId=office.org_id;control.title=action==='edit'?'Edit '+office.name:'Delete '+office.name;control.setAttribute('aria-label',control.title);const icon=document.createElement('i');icon.className='bi '+(action==='edit'?'bi-pencil-square':'bi-trash3');icon.setAttribute('aria-hidden','true');control.append(icon);actions.append(control);}row.append(actions);
+      const id=document.createElement('td');id.className='directory-id';id.textContent='#'+office.org_id;row.append(id);
+      const name=document.createElement('td');name.className='directory-primary-cell';const nameText=document.createElement('strong');nameText.textContent=office.name;const sub=document.createElement('small');sub.textContent='Regional office';name.append(nameText,sub);row.append(name);
+      const regionCell=document.createElement('td');regionCell.textContent=regionName(office.region_id);row.append(regionCell);
+      const accounts=document.createElement('td');accounts.append(makeCount(office.account_count,'account'));row.append(accounts);
+      const trainings=document.createElement('td');trainings.append(makeCount(office.training_count,'training'));row.append(trainings);
+      const details=document.createElement('td');details.className='directory-details-cell';details.textContent=office.details||'No details provided';row.append(details);
+      const updated=document.createElement('td');updated.className='directory-date';updated.textContent=office.updated_at?formatDirectoryDate(office.updated_at):'Not recorded';row.append(updated);
+      const status=document.createElement('td');const badge=document.createElement('span');badge.className='directory-status '+(office.is_active?'is-active':'is-inactive');badge.textContent=office.is_active?'Active':'Inactive';status.append(badge);row.append(status);
       body.append(row);
     }
-    if(!filtered.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=4;cell.className='text-center py-4';cell.textContent=offices.length?'No offices match your search or region filter.':'No offices registered yet.';row.append(cell);body.append(row);}
-    document.querySelector('[data-office-summary]').textContent=filtered.length?'Showing '+(start+1)+'-'+Math.min(start+count,filtered.length)+' of '+filtered.length+' offices'+(filtered.length!==offices.length?' ('+offices.length+' total)':''):'Showing 0 of '+offices.length+' offices';
+    if(!filtered.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=9;cell.className='directory-empty';cell.textContent=offices.length?'No offices match your search or region filter.':'No offices registered yet.';row.append(cell);body.append(row);}
+    document.querySelector('[data-office-summary]').textContent=filtered.length?'Showing '+(start+1)+'-'+Math.min(start+count,filtered.length)+' of '+filtered.length+' matching offices; '+offices.length+' total':'Showing 0 of '+offices.length+' offices';
     document.querySelector('[data-office-page]').textContent='Page '+page+' of '+pages;
     previous.disabled=page===1;next.disabled=page===pages;
   }
+  // Format UTC database timestamps in the interface's fixed Philippine timezone.
+  function formatDirectoryDate(value){const normalized=value.endsWith('Z')||/[+-]\d\d:\d\d$/.test(value)?value:`${value.replace(' ','T')}Z`;return new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeZone:'Asia/Manila'}).format(new Date(normalized));}
+  // Keep count columns visually consistent while retaining a text label for screen readers.
+  function makeCount(value,label){const badge=document.createElement('span');badge.className='directory-count-badge';badge.textContent=Number(value||0).toLocaleString('en-PH');badge.setAttribute('aria-label',`${badge.textContent} ${label}${Number(value||0)===1?'':'s'}`);return badge;}
   for(const [control,event]of [[search,'input'],[filter,'change'],[size,'change']])control.addEventListener(event,()=>{page=1;render();});
   previous.addEventListener('click',()=>{page--;render();});next.addEventListener('click',()=>{page++;render();});
+  document.querySelectorAll('[data-office-sort]').forEach(control=>control.addEventListener('click',()=>{const nextField=control.dataset.officeSort;sortDirection=sortField===nextField&&sortDirection==='asc'?'desc':'asc';sortField=nextField;page=1;render();}));
   render();
   window.addEventListener('tmis:regions-updated',event=>{
     const selected=region.value;
@@ -42,7 +82,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     try {
       const result=await window.TmisStore.request(editing?form.action+'/'+editing.org_id:form.action,editing?Object.fromEntries(new FormData(form)):new FormData(form),editing?'PATCH':'POST');
       if(!result.office)throw new Error('The server did not return the saved office.');
-      const index=offices.findIndex(office=>office.org_id===result.office.org_id);if(index<0)offices.push(result.office);else offices[index]=result.office;
+      const index=offices.findIndex(office=>office.org_id===result.office.org_id);
+      if(index<0){result.office.account_count=0;result.office.training_count=0;result.office.region_name=regionName(result.office.region_id);offices.push(result.office);}
+      else{result.office.account_count=offices[index].account_count;result.office.training_count=offices[index].training_count;result.office.region_name=offices[index].region_name;result.office.region_is_active=offices[index].region_is_active;offices[index]=result.office;}
       resetEdit();
       // Reveal the saved office even when previous search criteria would hide it.
       search.value='';filter.value=String(result.office.region_id);page=Math.ceil(offices.filter(office=>String(office.region_id)===filter.value).length/Number(size.value))||1;
@@ -60,7 +102,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(control.dataset.officeAction==='edit'){
       editing=office;region.value=String(office.region_id);region.disabled=true;form.elements.name.value=office.name;form.elements.details.value=office.details||'';cancel.hidden=false;form.querySelector('[data-office-save-label]').textContent='Update office';form.scrollIntoView({block:'start',behavior:'smooth'});form.elements.name.focus();window.dispatchEvent(new Event('tmis:data-updated'));return;
     }
-    if(!confirm('Delete "'+office.name+'"? This cannot be undone.'))return;
+    if(!await confirmDelete(office.name))return;
     saving=true;control.disabled=true;
     try{const result=await window.TmisStore.request(form.action+'/'+office.org_id,{},'DELETE');offices.splice(offices.indexOf(office),1);if(editing?.org_id===office.org_id)resetEdit();render();window.TmisToast?.show(result.message,'success');}
     catch(error){window.TmisToast?.show(error.message,'error');}

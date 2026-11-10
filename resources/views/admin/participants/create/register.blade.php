@@ -1167,6 +1167,7 @@ class="layout-fixed"
                         <div class="col-12 col-lg-4 mb-3">
                           <label for="associate_name" class="form-label">Association Name</label>
                           <select name="associate_name" id="associate_name" class="form-select form-control" disabled><option value="">Loading database options...</option></select>
+                          <div class="form-text">Only active associations in the selected region and office are available.</div>
                           <button type="button" id="openCreateAssociation" class="btn btn-outline-success btn-sm mt-2" hidden><i class="bi bi-plus-circle" aria-hidden="true"></i> Create farmer association</button>
                         </div>
                         <div class="col-12 col-lg-4 mb-3">
@@ -1863,11 +1864,11 @@ class="layout-fixed"
 
     <dialog id="participantDuplicateDialog" class="participant-duplicate-dialog" aria-labelledby="participantDuplicateTitle">
       <div class="participant-duplicate-content">
-        <header><span><i class="bi bi-person-check" aria-hidden="true"></i></span><div><span class="participant-duplicate-kicker">POSSIBLE EXISTING RECORD</span><h2 id="participantDuplicateTitle">This farmer may already be registered</h2></div><button id="closeParticipantDuplicate" type="button" aria-label="Close"><i class="bi bi-x-lg" aria-hidden="true"></i></button></header>
-        <p class="participant-duplicate-intro">Review the matching farmer before creating another record. If this is the same person, add the current office as a beneficiary to keep one shared profile. Continue only if none of these matches is the farmer you are registering.</p>
+        <header><span><i class="bi bi-person-check" aria-hidden="true"></i></span><div><span class="participant-duplicate-kicker">FARMER ALREADY REGISTERED</span><h2 id="participantDuplicateTitle">This farmer is already registered</h2></div><button id="closeParticipantDuplicate" type="button" aria-label="Close"><i class="bi bi-x-lg" aria-hidden="true"></i></button></header>
+        <p class="participant-duplicate-intro">A farmer with the same first, middle, and last name is already registered for this region and office. Review the matching profile and office details below.</p>
         <div id="participantDuplicateList" class="participant-duplicate-list"></div>
-        <div id="participantDuplicateError" class="participant-duplicate-error" role="alert" hidden></div>
-        <footer><span><i class="bi bi-shield-check" aria-hidden="true"></i> Matches use name, date of birth, and sex. Confirm the identity before linking.</span><button id="cancelParticipantDuplicate" type="button" class="btn btn-outline-secondary">Back to registration</button><button id="createSeparateParticipant" type="button" class="btn btn-success">None match — create new profile</button></footer>
+        <aside class="participant-duplicate-guidance"><strong><i class="bi bi-lightbulb-fill" aria-hidden="true"></i> Add the farmer to another association</strong><p>To avoid creating a duplicate profile, open <b>Farmer Association</b>, choose the association, then select <b>Edit &gt; Farmer Members &gt; Add farmers</b>. The farmer profile will show the association membership and its region and office beneficiary information.</p></aside>
+        <footer><span><i class="bi bi-shield-check" aria-hidden="true"></i> Duplicate checks compare first, middle, and last name within the selected region and office.</span><button id="closeParticipantDuplicateFooter" type="button" class="btn btn-outline-secondary">Close</button></footer>
       </div>
     </dialog>
 
@@ -1897,5 +1898,5 @@ class="layout-fixed"
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <!-- Connect registration fieldsets with the wizard progress card. -->
-    <script src="{{ asset('src/js/participants/register/register.js?v=participant-year-association-5') }}"></script>
+    <script src="{{ asset('src/js/participants/register/register.js?v=farmer-duplicate-card-1') }}"></script>
 @endsection

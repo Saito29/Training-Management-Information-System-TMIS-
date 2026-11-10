@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const islandTowns = ['Jomalig', 'Patnanungan'];
-  const allRecords = (window.TMIS_PAGE ? window.TmisStore.records('tmis-farmers') : seed.map(
+  let allRecords = (window.TMIS_PAGE ? window.TmisStore.records('tmis-farmers') : seed.map(
     ([id, organization, role, lastName, firstName, middleName, sex, municipality, barangay, yearCovered], i) => ({
       id,
       organization,
@@ -79,9 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   ));
 
-  // This page lists active farmer profiles. Inactive profiles belong to the
-  // Inactive details page.
-  const records = allRecords.filter((r) => r.status === 'Active');
+  let records = [...allRecords];
 
   // ============================================================
   // Helpers and state
@@ -130,12 +128,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusBadgeClass = (status) =>
     ({
       Active: 'status-active',
+      Inactive: 'status-inactive',
+      Deceased: 'status-deceased',
+      Removed: 'status-neutral',
     })[status] || 'status-neutral';
 
   const date = (value) => {
-    if (!value) return 'Not recorded';
+    if (!value) return '—';
     const parsed = new Date(`${String(value).slice(0, 10)}T00:00:00`);
-    return Number.isNaN(parsed.getTime()) ? 'Not recorded' : new Intl.DateTimeFormat('en-PH', {timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric'}).format(parsed);
+    if (Number.isNaN(parsed.getTime())) return '—';
+    return new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' }).format(parsed);
   };
 
   const notify = (title, message, blocked = false) => {
@@ -193,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         geoLevels.every((k) => !state[k] || r[k] === state[k]) &&
         (!state.global || Object.values(r).join(' ').toLowerCase().includes(state.global)) &&
         Object.entries(state.columns).every(
-          ([k, v]) => !v || String(k === 'id' ? (r.farmerNumber || r.id) : r[k]).toLowerCase().includes(v.toLowerCase())
+          ([k, v]) => !v || String(r[k]).toLowerCase().includes(v.toLowerCase())
         )
     );
 
@@ -202,9 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!state.sort) return rows;
     const { key, dir } = state.sort;
     return [...rows].sort((a, b) => {
-      const first = key === 'id' ? (a.farmerNumber || a.id) : a[key];
-      const second = key === 'id' ? (b.farmerNumber || b.id) : b[key];
-      const n = String(first).localeCompare(String(second), undefined, { numeric: true, sensitivity: 'base' });
+      const n = String(a[key]).localeCompare(String(b[key]), undefined, { numeric: true, sensitivity: 'base' });
       return dir === 'asc' ? n : -n;
     });
   };
@@ -225,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
               `${i && n - nums[i - 1] > 1 ? '<span>…</span>' : ''}<button data-page="${n}" class="${n === state.page ? 'active' : ''}">${n}</button>`
           )
           .join('')}<button data-page="next" ${state.page === pages ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>`;
-    el.innerHTML = `<span>Showing ${start}–${end} of ${total} farmers</span><div class="pagination-controls"><label class="visually-hidden" for="${id}Rows">Rows per page</label><select id="${id}Rows" data-page-size><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="500">500</option><option value="1000">1000</option><option value="all">All</option></select>${controls}</div>`;
+    el.innerHTML = `<span>Showing ${start}–${end} of ${total} farmers</span><div class="pagination-controls"><label class="pagination-page-size" for="${id}Rows"><span>Rows per page</span><select class="form-select" id="${id}Rows" data-page-size><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="500">500</option><option value="1000">1000</option><option value="all">All</option></select></label>${controls}</div>`;
     $('[data-page-size]', el).value = state.perPage;
   };
 
@@ -236,8 +236,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const id = encodeURIComponent(r.id);
     return `<tr>
       <td data-column="actions"><div class="table-row-actions">
-        <a class="btn table-action-button view-action" href="../id/view-farmer?id=${id}" target="_blank" rel="noopener" title="View farmer profile" aria-label="View farmer profile"><i class="bi bi-eye-fill"></i></a>
-        <a class="btn table-action-button edit-action" href="../id/edit-farmer?id=${id}" target="_blank" rel="noopener" title="Edit farmer profile" aria-label="Edit farmer profile"><i class="bi bi-pencil-fill"></i></a>
+        <a class="btn table-action-button view-action" href="../id/view-farmer/${id}" target="_blank" rel="noopener" title="View farmer profile" aria-label="View farmer profile"><i class="bi bi-eye-fill"></i></a>
+        <a class="btn table-action-button edit-action" href="../id/edit-farmer/${id}" target="_blank" rel="noopener" title="Edit farmer profile" aria-label="Edit farmer profile"><i class="bi bi-pencil-fill"></i></a>
         <button type="button" class="btn table-action-button delete-action" data-delete="${esc(r.id)}" title="Delete farmer profile" aria-label="Delete farmer profile"><i class="bi bi-trash-fill"></i></button>
       </div></td>
       <td data-column="status"><span class="status-badge ${statusBadgeClass(r.status)}">${esc(r.status)}</span></td>
@@ -266,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <td data-column="dietaryRestriction">${esc(r.dietaryRestriction)}</td>
       <td data-column="seniorCitizen">${esc(r.seniorCitizen)}</td>
       <td data-column="yearCovered">${esc(r.yearCovered)}</td>
-      <td data-column="registered">${date(r.registered || r.createdAt)}</td>
+      <td data-column="registered">${date(r.registrationDate || r.registered || r.createdAt)}</td>
     </tr>`;
   };
 
@@ -385,15 +385,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // ============================================================
   // Refresh: reset filters, sorting and paging, then redraw the table
   // ============================================================
-  $('#refreshReviewTable').addEventListener('click', () => {
+  $('#refreshReviewTable').addEventListener('click', async () => {
     const icon = $('#refreshReviewTable i');
     icon.classList.add('spin');
     setTimeout(() => icon.classList.remove('spin'), 700);
-    resetFilters();
-    state.sort = null;
-    state.perPage = 10;
-    refresh();
-    notify('Farmer Profiles Refreshed', `Table reloaded with ${records.length} farmer profiles.`);
+    try {
+      if (window.TMIS_PAGE) {
+        await window.TmisStore.refresh();
+        allRecords = window.TmisStore.records('tmis-farmers');
+        records = [...allRecords];
+      }
+      resetFilters();
+      state.sort = null;
+      state.perPage = 10;
+      refresh();
+      notify('Farmer Profiles Refreshed', `Table reloaded with ${records.length} farmer profiles.`);
+    } catch (error) {
+      notify('Refresh Failed', error.message || 'The farmer list could not be refreshed.', true);
+    }
   });
 
   // ============================================================
@@ -405,7 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     const exportColumns = [
-      ['Farmer ID', 'farmerNumber'],
+      ['Farmer ID', 'id'],
       ['Status', 'status'],
       ['Region', 'region'],
       ['Province', 'province'],
@@ -433,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ['Year Covered', 'yearCovered'],
       ['Registration Date', 'registered'],
     ];
-    const rows = records.map((r) => Object.fromEntries(exportColumns.map(([label, key]) => [label, key === 'farmerNumber' ? (r.farmerNumber || r.id) : r[key]])));
+    const rows = records.map((r) => Object.fromEntries(exportColumns.map(([label, key]) => [label, r[key]])));
     const sheet = XLSX.utils.json_to_sheet(rows, { header: exportColumns.map(([label]) => label) });
     sheet['!cols'] = exportColumns.map(([label]) => ({ wch: Math.max(14, label.length + 4) }));
     const book = XLSX.utils.book_new();
@@ -517,7 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const farmer = records.find((r) => r.id === button.dataset.delete);
     if (!farmer) return;
     pendingDeleteId = farmer.id;
-    $('#deleteFarmerId').textContent = farmer.farmerNumber || farmer.id;
+    $('#deleteFarmerId').textContent = farmer.id;
     $('#deleteFarmerName').textContent = [`${farmer.lastName},`, farmer.firstName, farmer.middleName, farmer.suffix]
       .filter(Boolean)
       .join(' ');

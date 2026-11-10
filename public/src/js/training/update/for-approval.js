@@ -467,7 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
       q = encodeURIComponent(r.id);
     const pendingApproval = r.status === 'For Approval';
     const mayApprove = window.TMIS_PAGE?.administrator || window.TMIS_PAGE?.permissions?.includes('trainings.approve');
-    return `<td><div class="table-row-actions">${pendingApproval && mayApprove ? `<button type="button" class="btn table-action-button forward-action" data-approve="${id}" title="Move to For Acceptance" aria-label="Move ${id} to For Acceptance"><i class="bi bi-arrow-right-circle-fill"></i></button>` : ''}<a class="btn table-action-button view-action" href="../id/view-training?id=${q}" target="_blank" rel="noopener" title="View training (opens in a new tab)" aria-label="View ${id}"><i class="bi bi-eye-fill"></i></a><a class="btn table-action-button edit-action" href="../id/edit-training?id=${q}" target="_blank" rel="noopener" title="Edit training (opens in a new tab)" aria-label="Edit ${id}"><i class="bi bi-pencil-fill"></i></a>${pendingApproval && mayApprove ? `<button type="button" class="btn table-action-button remarks-action" data-reject="${id}" title="Revert status to For Review" aria-label="Revert ${id} to For Review"><i class="bi bi-arrow-counterclockwise"></i></button>` : ''}</div></td>`;
+    return `<td><div class="table-row-actions">${pendingApproval && mayApprove ? `<button type="button" class="btn table-action-button forward-action" data-approve="${id}" title="Move to For Acceptance" aria-label="Move ${id} to For Acceptance"><i class="bi bi-arrow-right-circle-fill"></i></button>` : ''}<a class="btn table-action-button view-action" href="../id/view-training/${q}" target="_blank" rel="noopener" title="View training (opens in a new tab)" aria-label="View ${id}"><i class="bi bi-eye-fill"></i></a><a class="btn table-action-button edit-action" href="../id/edit-training/${q}" target="_blank" rel="noopener" title="Edit training (opens in a new tab)" aria-label="Edit ${id}"><i class="bi bi-pencil-fill"></i></a>${pendingApproval && mayApprove ? `<button type="button" class="btn table-action-button remarks-action" data-reject="${id}" title="Revert status to For Review" aria-label="Revert ${id} to For Review"><i class="bi bi-arrow-counterclockwise"></i></button>` : ''}</div></td>`;
   };
   const render = () => {
     const all = sorted(),
@@ -739,7 +739,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ['Location and Venue', esc(`${r.venue}, ${r.location}`)],
       ]);
       $('#editTrainingLink').href =
-        `../id/edit-training?id=${encodeURIComponent(r.id)}`;
+        `../id/edit-training/${encodeURIComponent(r.id)}`;
       $('#editTrainingLink').hidden = false;
       $('#confirmForwardButton').innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Approve Training';
       renderAttachmentPreview(r);

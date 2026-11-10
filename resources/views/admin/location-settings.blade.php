@@ -93,5 +93,5 @@
     </article>
     <script type="application/json" id="registeredRegions">{!! Illuminate\Support\Js::encode($directoryRegions) !!}</script>
     <script type="application/json" id="registeredLocations">{!! Illuminate\Support\Js::encode($locations) !!}</script>
-    <script src="{{ asset('src/js/shared/location-settings.js?v=delete-confirm-modal-1') }}" defer></script>
+    <script src="{{ asset('src/js/shared/location-settings.js?v=directory-table-previous-design-1') }}" defer></script>
 </section>

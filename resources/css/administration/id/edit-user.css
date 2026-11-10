@@ -181,3 +181,19 @@
 .profile-remarks-field textarea { resize: vertical; min-height: 6rem; }
 .profile-optional { font-weight: 400; color: var(--color-text-secondary); }
 .profile-field-hint { margin: .4rem 0 0; font-size: .7rem; color: var(--color-text-secondary); line-height: 1.5; }
+.profile-credential-field { min-width:0; }
+.profile-credential-field[hidden] { display:none!important; }
+.profile-credential-field select { width:100%; }
+.profile-credential-summary { padding:.75rem .85rem; margin-top:.7rem; border:1px solid var(--color-border); border-radius:.7rem; background:var(--color-primary-surface); color:var(--color-text-secondary); font-size:.72rem; }
+.profile-credential-summary[hidden] { display:none!important; }
+.profile-credential-summary strong { display:block; margin-bottom:.35rem; color:var(--color-text-primary); font-size:.75rem; }
+.profile-credential-summary ul { display:grid; gap:.2rem; margin:0; padding-left:1rem; }
+.profile-credential-summary li.is-granted { color:var(--color-primary-dark); }
+.profile-credential-summary li.is-blocked { color:var(--color-danger); }
+.profile-credential-field { grid-column:1/-1; }
+.profile-credential-summary { padding:.85rem; background:var(--color-surface); }
+.profile-credential-summary ul { grid-template-columns:repeat(2,minmax(0,1fr)); padding:0; list-style:none; }
+.profile-credential-summary li { min-width:0; padding:.55rem .65rem; border:1px solid var(--color-border); border-radius:.55rem; background:var(--color-bg); font-size:.7rem; line-height:1.45; overflow-wrap:anywhere; }
+.profile-credential-summary li.is-granted { color:var(--color-primary-dark); border-left:3px solid var(--color-primary); }
+.profile-credential-summary li.is-blocked { color:var(--color-danger); border-left:3px solid var(--color-danger); }
+@media(max-width:575.98px) { .profile-credential-summary ul { grid-template-columns:minmax(0,1fr); } }

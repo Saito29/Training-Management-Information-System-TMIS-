@@ -23,6 +23,56 @@
   --theme-tooltip-color: #fff;
 }
 
+/* Keep dynamically opened desktop and mobile navigation surfaces in the active theme. */
+[data-theme='dark'] .app-header :is(
+  .header-collapse,
+  .header-collapse-menu,
+  .header-sub-collapse-menu,
+  .user-menu
+) {
+  color: var(--color-text-primary) !important;
+  background-color: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+}
+
+[data-theme='dark'] .app-header :is(
+  .header-collapse-item,
+  .header-sub-collapse-item,
+  .header-collapse-item span,
+  .header-sub-collapse-item span,
+  .header-collapse-item i,
+  .header-sub-collapse-item i
+) {
+  color: var(--color-text-primary) !important;
+}
+
+[data-theme='dark'] .app-header :is(
+  .header-collapse-item:hover,
+  .header-collapse-item:focus-visible,
+  .header-sub-collapse-item:hover,
+  .header-sub-collapse-item:focus-visible
+) {
+  color: var(--color-primary) !important;
+  background-color: var(--color-primary-surface) !important;
+}
+
+[data-theme='dark'] .app-mobile-menu,
+[data-theme='dark'] .app-mobile-menu .offcanvas-header,
+[data-theme='dark'] .app-mobile-menu .offcanvas-body {
+  color: var(--color-text-primary) !important;
+  background-color: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+}
+
+[data-theme='dark'] .app-mobile-menu .nav-link {
+  color: var(--color-text-primary) !important;
+}
+
+[data-theme='dark'] .app-mobile-menu .nav-link:is(:hover, :focus-visible) {
+  color: var(--color-primary) !important;
+  background-color: var(--color-primary-surface) !important;
+}
+
 body {
   color: var(--color-text-primary);
   background-color: var(--color-bg);
@@ -1876,6 +1926,46 @@ body {
   color: var(--color-primary);
 }
 
+/* Keep collapsed desktop navigation triggers transparent in dark mode after pointer or keyboard use. */
+[data-theme='dark'] .app-wrapper .app-header .app-navigation-bar .navbar-nav .nav-item > .nav-link[data-bs-toggle='collapse'] {
+  color: var(--color-text-primary) !important;
+  background-color: transparent !important;
+  box-shadow: none;
+}
+
+[data-theme='dark'] .app-wrapper .app-header .app-navigation-bar .navbar-nav .nav-item > .nav-link[data-bs-toggle='collapse']:is(
+  :hover,
+  :focus,
+  :focus-visible,
+  [aria-expanded='true']
+) {
+  color: var(--color-primary) !important;
+  background-color: var(--color-primary-surface) !important;
+}
+
+[data-theme='dark'] .app-wrapper .app-header .app-navigation-bar .navbar-nav .nav-item .header-collapse-menu :is(
+  .header-collapse-item[aria-expanded='false'],
+  .header-sub-collapse-item
+) {
+  color: var(--color-text-primary) !important;
+  background-color: transparent !important;
+}
+
+[data-theme='dark'] .app-wrapper .app-header .app-navigation-bar .navbar-nav .nav-item .header-collapse-menu :is(
+  .header-collapse-item[aria-expanded='false'],
+  .header-sub-collapse-item
+):is(:hover, :focus, :focus-visible, .active-page) {
+  color: var(--color-primary) !important;
+  background-color: var(--color-primary-surface) !important;
+}
+
+[data-theme='dark'] .app-wrapper .app-header .app-navigation-bar .navbar-nav .nav-item .header-collapse-menu :is(
+  .header-collapse-item[aria-expanded='false'],
+  .header-sub-collapse-item
+):is(:hover, :focus, :focus-visible, .active-page) :is(i, span) {
+  color: var(--color-primary) !important;
+}
+
 [data-theme='dark'] .app-mobile-menu {
   --bs-offcanvas-width: min(82vw, 21.25rem);
   width: min(82vw, 21.25rem);
@@ -2404,6 +2494,20 @@ body {
 [data-theme='dark'] .app-header .app-notification .notification-btn:is(:hover, :focus-visible, .show) {
   color: var(--color-primary);
   background-color: var(--color-primary-surface);
+}
+
+[class~='notification-count']:not(.is-ready) {
+  display: none !important;
+}
+
+[class~='status-acceptance'] {
+  color: #075c53;
+  background: #d9f3ee;
+}
+
+[data-theme='dark'] [class~='status-acceptance'] {
+  color: #a4e4d8;
+  background: #16433e;
 }
 
 [data-theme='dark'] .app-header .app-notification .notification-count {
@@ -4188,4 +4292,44 @@ html[data-page-loading='exit'] .app-main::after {
   .review-workflow-dialog .review-record-details dd {
     margin-bottom: 4px;
   }
+}
+
+/* Closed navigation parents return to the theme surface after Bootstrap collapses their menu. */
+[data-theme='dark'] .app-wrapper .app-header .app-navigation-bar .navbar-nav .nav-item > .nav-link[data-bs-toggle='collapse'] {
+  color: var(--color-text-primary) !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+[data-theme='dark'] .app-wrapper .app-header .app-navigation-bar .navbar-nav .nav-item > .nav-link[data-bs-toggle='collapse']:is(
+  :hover,
+  :focus,
+  :focus-visible,
+  [aria-expanded='true']
+) {
+  color: var(--color-primary) !important;
+  background-color: var(--color-primary-surface) !important;
+}
+
+[data-theme='dark'] .app-wrapper .app-header .app-navigation-bar .navbar-nav .nav-item :is(
+  .header-collapse-item,
+  .header-sub-collapse-item
+) {
+  color: var(--color-text-primary) !important;
+  background-color: transparent !important;
+}
+
+[data-theme='dark'] .app-wrapper .app-header .app-navigation-bar .navbar-nav .nav-item :is(
+  .header-collapse-item,
+  .header-sub-collapse-item
+):is(:hover, :focus, :focus-visible, .active-page, [aria-expanded='true']) {
+  color: var(--color-primary) !important;
+  background-color: var(--color-primary-surface) !important;
+}
+
+[data-theme='dark'] .app-wrapper .app-header .app-navigation-bar .navbar-nav .nav-item :is(
+  .header-collapse-item,
+  .header-sub-collapse-item
+):is(:hover, :focus, :focus-visible, .active-page, [aria-expanded='true']) :is(i, span) {
+  color: var(--color-primary) !important;
 }

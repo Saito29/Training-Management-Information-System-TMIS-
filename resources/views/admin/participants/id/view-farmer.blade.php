@@ -56,9 +56,10 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/participants/update/view-farmer.css?v=beneficiary-profile-tags-1') }}"
+      href="{{ asset('src/css/participants/update/view-farmer.css?v=farmer-association-memberships-1') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/shared/activity-logs.css?v=design-20261109-1') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
     <title>DA-TMIS - View Farmer</title>
     <meta name="description" content="View Farmer | DA-TMIS" />
@@ -954,6 +955,54 @@ class="layout-fixed"
                             <span class="farmer-detail-icon"><i class="bi bi-mailbox" aria-hidden="true"></i></span>
                             <div><span class="farmer-detail-label">Postal Code</span><strong>4331</strong></div>
                           </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-person" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">First Name</span><strong>Juan</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-person" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Middle Name</span><strong>Santos</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-person" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Last Name</span><strong>Dela Cruz</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-person-badge" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Extension</span><strong>Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-geo-alt" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Region</span><strong>Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-map" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">District</span><strong>Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-signpost" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Street / Purok</span><strong>Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-house" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">House / Building No.</span><strong>Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-person-check" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">TUPAD</span><strong>Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-person-heart" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Solo Parent</span><strong>Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Tribe Name</span><strong>Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Profile Updated</span><strong>No record updated</strong></div>
+                          </div>
                         </div>
                       </div>
                     </article>
@@ -965,43 +1014,24 @@ class="layout-fixed"
                         <div class="overview-heading">
                           <span class="overview-heading-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
                           <h5 class="title-card">Farmer Association / Organization</h5>
-                          <span class="overview-status">Active</span>
+                          <span class="overview-status" data-association-membership-count>0 associations</span>
                         </div>
                       </div>
                       <div class="card-body overview-card-body">
                         <div class="association-overview-content">
-                          <div class="association-detail-grid">
-                            <div class="farmer-detail">
-                              <span class="farmer-detail-icon"><i class="bi bi-card-text" aria-hidden="true"></i></span>
-                              <div><span class="farmer-detail-label">Association ID</span><strong>11921</strong></div>
-                            </div>
-                            <div class="farmer-detail">
-                              <span class="farmer-detail-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
-                              <div><span class="farmer-detail-label">Association Name</span><strong>Villa Manzano Norte Farmers</strong></div>
-                            </div>
-                            <div class="farmer-detail">
-                              <span class="farmer-detail-icon"><i class="bi bi-person-workspace" aria-hidden="true"></i></span>
-                              <div><span class="farmer-detail-label">Position / Role</span><strong>Member</strong></div>
-                            </div>
-                            <div class="farmer-detail">
-                              <span class="farmer-detail-icon"><i class="bi bi-calendar2-check" aria-hidden="true"></i></span>
-                              <div><span class="farmer-detail-label">Date Updated</span><strong>January 1, 2023</strong></div>
-                            </div>
-                            <div class="farmer-detail">
-                              <span class="farmer-detail-icon"><i class="bi bi-patch-check" aria-hidden="true"></i></span>
-                              <div><span class="farmer-detail-label">Status</span><strong>Active</strong></div>
-                            </div>
-                            <div class="farmer-detail">
-                              <span class="farmer-detail-icon"><i class="bi bi-geo-alt" aria-hidden="true"></i></span>
-                              <div><span class="farmer-detail-label">Location</span><strong>Alabat, Quezon</strong></div>
-                            </div>
-                          </div>
-                          <div id="farmerBeneficiaryOfficeTags" class="farmer-beneficiary-tags" hidden></div>
-                          <div class="association-emblem" id="farmerAssociationEmblem" aria-hidden="true">
-                            <span><i class="bi bi-people-fill"></i></span>
-                            <strong>VMNF</strong>
-                            <small>Farmers Association</small>
-                          </div>
+                          <details class="farmer-association-membership-panel">
+                            <summary>View association and role details</summary>
+                            <div class="farmer-association-membership-list" data-association-memberships aria-live="polite"></div>
+                            <p class="farmer-association-membership-empty" data-association-membership-empty>No association memberships are recorded.</p>
+                          </details>
+                          <section id="farmerBeneficiaryOfficeTags" class="farmer-beneficiary-office-panel" aria-labelledby="viewBeneficiaryOfficesTitle">
+                            <header class="farmer-beneficiary-office-heading">
+                              <div><h6 id="viewBeneficiaryOfficesTitle">Beneficiary offices</h6><p>Every region and office where this farmer is registered as a beneficiary.</p></div>
+                              <span class="farmer-beneficiary-office-count" data-beneficiary-office-count></span>
+                            </header>
+                            <div class="farmer-beneficiary-office-grid" data-beneficiary-offices aria-live="polite"></div>
+                            <p class="farmer-beneficiary-office-empty" data-beneficiary-office-empty>No beneficiary offices are recorded.</p>
+                          </section>
                         </div>
                       </div>
                     </article>
@@ -1024,7 +1054,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="modern-rice-production">
                           <span class="training-preview-art training-art-green"><i class="bi bi-flower1" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=modern-rice-production" target="_blank" rel="noopener">Modern Rice Production</a></strong><span class="training-type">Crop Production</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'modern-rice-production']) }}" target="_blank" rel="noopener">Modern Rice Production</a></strong><span class="training-type">Crop Production</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> May 22–24, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Los Baños, Laguna</small>
                             <span class="training-status">Completed</span>
@@ -1034,7 +1064,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="organic-vegetable-production">
                           <span class="training-preview-art training-art-blue"><i class="bi bi-flower2" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=organic-vegetable-production" target="_blank" rel="noopener">Organic Vegetable Production</a></strong><span class="training-type training-type-blue">Organic Agriculture</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'organic-vegetable-production']) }}" target="_blank" rel="noopener">Organic Vegetable Production</a></strong><span class="training-type training-type-blue">Organic Agriculture</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> May 27–29, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Benguet State Univ.</small>
                             <span class="training-status">Completed</span>
@@ -1044,7 +1074,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="farm-business-management">
                           <span class="training-preview-art training-art-orange"><i class="bi bi-briefcase" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=farm-business-management" target="_blank" rel="noopener">Farm Business Management</a></strong><span class="training-type training-type-orange">Agribusiness</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'farm-business-management']) }}" target="_blank" rel="noopener">Farm Business Management</a></strong><span class="training-type training-type-orange">Agribusiness</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> June 3–5, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> DA RFO VI, Iloilo</small>
                             <span class="training-status">Completed</span>
@@ -1054,7 +1084,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="climate-smart-agriculture">
                           <span class="training-preview-art training-art-purple"><i class="bi bi-leaf" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=climate-smart-agriculture" target="_blank" rel="noopener">Climate Smart Agriculture</a></strong><span class="training-type training-type-purple">Climate Smart Agriculture</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'climate-smart-agriculture']) }}" target="_blank" rel="noopener">Climate Smart Agriculture</a></strong><span class="training-type training-type-purple">Climate Smart Agriculture</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> June 10–12, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Isabela State Univ.</small>
                             <span class="training-status training-status-ongoing">Ongoing</span>
@@ -1064,7 +1094,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="soil-health-nutrient-management">
                           <span class="training-preview-art training-art-green"><i class="bi bi-tree" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=soil-health-nutrient-management" target="_blank" rel="noopener">Soil Health and Nutrient Management</a></strong><span class="training-type">Crop Production</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'soil-health-nutrient-management']) }}" target="_blank" rel="noopener">Soil Health and Nutrient Management</a></strong><span class="training-type">Crop Production</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> June 18–20, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Quezon Province</small>
                             <span class="training-status">Completed</span>
@@ -1074,7 +1104,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="efficient-water-management">
                           <span class="training-preview-art training-art-blue"><i class="bi bi-droplet" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=efficient-water-management" target="_blank" rel="noopener">Efficient Water Management</a></strong><span class="training-type training-type-blue">Farm Technology</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'efficient-water-management']) }}" target="_blank" rel="noopener">Efficient Water Management</a></strong><span class="training-type training-type-blue">Farm Technology</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> July 2–4, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Lucban, Quezon</small>
                             <span class="training-status">Completed</span>
@@ -1084,7 +1114,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="agricultural-financial-literacy">
                           <span class="training-preview-art training-art-orange"><i class="bi bi-cash-coin" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=agricultural-financial-literacy" target="_blank" rel="noopener">Agricultural Financial Literacy</a></strong><span class="training-type training-type-orange">Agribusiness</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'agricultural-financial-literacy']) }}" target="_blank" rel="noopener">Agricultural Financial Literacy</a></strong><span class="training-type training-type-orange">Agribusiness</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> July 15–17, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Sariaya, Quezon</small>
                             <span class="training-status">Completed</span>
@@ -1094,7 +1124,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="postharvest-handling-storage">
                           <span class="training-preview-art training-art-purple"><i class="bi bi-recycle" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=postharvest-handling-storage" target="_blank" rel="noopener">Postharvest Handling and Storage</a></strong><span class="training-type training-type-purple">Postharvest</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'postharvest-handling-storage']) }}" target="_blank" rel="noopener">Postharvest Handling and Storage</a></strong><span class="training-type training-type-purple">Postharvest</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> August 5–7, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Quezon City</small>
                             <span class="training-status">Completed</span>
@@ -1104,7 +1134,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="integrated-pest-management">
                           <span class="training-preview-art training-art-green"><i class="bi bi-bug" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=integrated-pest-management" target="_blank" rel="noopener">Integrated Pest Management</a></strong><span class="training-type">Crop Production</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'integrated-pest-management']) }}" target="_blank" rel="noopener">Integrated Pest Management</a></strong><span class="training-type">Crop Production</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> August 20–22, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Alabat, Quezon</small>
                             <span class="training-status">Completed</span>
@@ -1114,7 +1144,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="farmers-market-linkage">
                           <span class="training-preview-art training-art-blue"><i class="bi bi-shop" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=farmers-market-linkage" target="_blank" rel="noopener">Farmers' Market Linkage Workshop</a></strong><span class="training-type training-type-blue">Market Development</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'farmers-market-linkage']) }}" target="_blank" rel="noopener">Farmers' Market Linkage Workshop</a></strong><span class="training-type training-type-blue">Market Development</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> September 2–4, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Lucena City</small>
                             <span class="training-status">Completed</span>
@@ -1122,10 +1152,10 @@ class="layout-fixed"
                           <div class="training-preview-scores"><span>Pre-Test<strong>69.00%</strong></span><span>Post-Test<strong>87.00%</strong></span><span>Rating<strong><i class="bi bi-star-fill" aria-hidden="true"></i> 4.40 / 5</strong></span></div>
                         </article>
                       </div>
-                      <p class="training-carousel-empty" id="overviewTrainingEmpty" hidden>No training attended found for this farmer/participant.</p>
+                      <p class="training-carousel-empty" id="overviewTrainingEmpty" hidden>No training participated found yet.</p>
                     </div>
                     <div class="training-carousel-controls" id="overviewTrainingControls">
-                      <span class="training-carousel-count" id="overviewTrainingCount" aria-live="polite">1–4 of 10</span>
+                      <span class="training-carousel-count" id="overviewTrainingCount" aria-live="polite">No training participated found yet.</span>
                       <div>
                         <button class="training-carousel-button" type="button" id="overviewTrainingPrevious" aria-label="Show previous trainings" disabled><i class="bi bi-arrow-left" aria-hidden="true"></i></button>
                         <button class="training-carousel-button" type="button" id="overviewTrainingNext" aria-label="Show next trainings"><i class="bi bi-arrow-right" aria-hidden="true"></i></button>
@@ -1302,107 +1332,18 @@ class="layout-fixed"
                     </div>
                   </div>
 
-                  <!-- Association Info -->
-                  <div class="card mb-2">
-                    <div
-                      class="card-header d-flex align-items-center justify-content-start gap-2"
-                    >
-                      <i class="bi bi-person-vcard-fill"></i>
-                      <h5 class="title-card">
-                        Farmer Association / Organization
-                      </h5>
-                      <span class="badge rounded-pill bg-success">Active</span>
+                  <div class="card mb-2 farmer-association-membership-card">
+                    <div class="card-header d-flex align-items-center justify-content-start gap-2">
+                      <i class="bi bi-person-vcard-fill" aria-hidden="true"></i>
+                      <h5 class="title-card">Farmer Association / Organization</h5>
+                      <span class="badge rounded-pill bg-success" data-association-membership-count>0 associations</span>
                     </div>
                     <div class="card-body">
-                      <div class="row">
-                        <div class="hstack gap-3">
-                          <div class="col-4 col-lg-4 mb-2">
-                            <ul class="information-list">
-                              <li class="information-item">
-                                <i class="bi bi-geo-alt-fill"></i>
-                                <div class="item-group">
-                                  <div class="item-context">
-                                    <span class="item-text"
-                                      >Association ID</span
-                                    >
-                                    <span class="item-text">11921</span>
-                                  </div>
-                                </div>
-                              </li>
-                              <li class="information-item">
-                                <i class="bi bi-geo-alt-fill"></i>
-                                <div class="item-group">
-                                  <div class="item-context">
-                                    <span class="item-text"
-                                      >Association Name</span
-                                    >
-                                    <span class="item-text"
-                                      >Villa Manzano Norte Farmers</span
-                                    >
-                                  </div>
-                                </div>
-                              </li>
-                              <li class="information-item">
-                                <i class="bi bi-geo-alt-fill"></i>
-                                <div class="item-group">
-                                  <div class="item-context">
-                                    <span class="item-text"
-                                      >Position/ Role</span
-                                    >
-                                    <span class="item-text">Member</span>
-                                  </div>
-                                </div>
-                              </li>
-                            </ul>
-                          </div>
-                          <div class="vr"></div>
-                          <div class="col-4 col-lg-4 mb-2">
-                            <ul class="information-list">
-                              <li class="information-item">
-                                <i class="bi bi-geo-alt-fill"></i>
-                                <div class="item-group">
-                                  <div class="item-context">
-                                    <span class="item-text">Date Updated</span>
-                                    <span class="item-text"
-                                      >January 1, 2023</span
-                                    >
-                                  </div>
-                                </div>
-                              </li>
-                              <li class="information-item">
-                                <i class="bi bi-geo-alt-fill"></i>
-                                <div class="item-group">
-                                  <div class="item-context">
-                                    <span class="item-text">Status</span>
-                                    <span class="item-text badge rounded-pill"
-                                      >Active</span
-                                    >
-                                  </div>
-                                </div>
-                              </li>
-                            </ul>
-                          </div>
-                          <div class="vr"></div>
-                          <div class="col-4 col-lg-4 mb-2">
-                            <div class="card">
-                              <img
-                                src="#"
-                                alt="association_profile"
-                                class="card-img"
-                              />
-                              <div class="card-img-overlay">
-                                <h6 class="assocation-name">
-                                  Villa Manzano Norte Farmers
-                                </h6>
-                                <p class="card-short-name">VMNF</p>
-                                <p class="card-location">
-                                  Villa Manzano Norte, Perez, Quezon
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                      <details class="farmer-association-membership-panel">
+                        <summary>View association and role details</summary>
+                        <div class="farmer-association-membership-list" data-association-memberships aria-live="polite"></div>
+                        <p class="farmer-association-membership-empty" data-association-membership-empty>No association memberships are recorded.</p>
+                      </details>
                     </div>
                   </div>
 
@@ -3109,8 +3050,8 @@ class="layout-fixed"
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-profile-tabs.js?v=participated-training-history-2') }}"></script>
-    <script src="{{ asset('src/js/participants/update/farmer-training-table.js?v=attended-training-empty-3') }}"></script>
+    <script src="{{ asset('src/js/participants/update/farmer-training-table.js?v=attended-training-empty-4') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-intervention-table.js') }}"></script>
-    <script src="{{ asset('src/js/participants/update/farmer-activity-logs.js') }}"></script>
+    <script src="{{ asset('src/js/participants/update/farmer-activity-logs.js?v=actor-role-omission-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/attachment-manager.js') }}"></script>
 @endsection

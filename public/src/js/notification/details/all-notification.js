@@ -1,5 +1,5 @@
 import { showToast } from '../toast.js';
-import { renderMessage } from '../message-editor.js?v=role-access-message-templates-1';
+import { renderMessage } from '../message-editor.js';
 import { buildNotifications, safeNotificationLink } from './notification-data.js';
 function init() {
   const $ = id => document.getElementById(id);
@@ -10,12 +10,6 @@ function init() {
   const make=(tag,cls,text)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node;};
   const parse=(text,fallback)=>{try{return JSON.parse(text)||fallback;}catch{return fallback;}};
   const date=value=>{const parsed=value?window.TmisDate.parse(value):null;return !parsed||Number.isNaN(parsed.getTime())?'Date not recorded':new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Manila'}).format(parsed);};
-  const systemReference=item=>{
-    const reference=String(item.reference||'');
-    const roleAccessNotice=/role|permission|access profile/i.test(String(item.title||''));
-    if(roleAccessNotice)return /^TMIS-[A-Z0-9]{12}$/.test(reference)?reference:'';
-    return /^\d+$/.test(reference)?'':reference;
-  };
   function day(value){const parsed=window.TmisDate.parse(value);if(!value||Number.isNaN(parsed.getTime()))return '';return new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Asia/Manila'}).format(parsed);}
   function group(value){const today=day(Date.now()),yesterday=day(Date.now()-86400000),current=day(value);return current===today?'Today':current===yesterday?'Yesterday':'Earlier';}
   const stateKey=()=>`tmis-notification-state:${user?.id}`;
@@ -36,8 +30,7 @@ function init() {
     $('inboxDetailsTitle').textContent=item.title;renderMessage($('inboxDetailsMessage'),item.message);$('inboxDetailsType').textContent=`${types[item.type]||'System'} notification`;
     const icon=make('i',`bi ${icons[item.type]||icons.system}`);$('inboxDetailsIcon').replaceChildren(icon);
     $('inboxDetailsBadge').textContent=archived(item)?'Archived':read(item)?'Read':'Unread';
-    const reference=systemReference(item);
-    const fields=[['Received',date(item.date)],...(item.type==='training'&&item.changedBy?[['Status changed by',item.changedBy],['Their role',item.actorRole||'Not recorded'],['Their office',item.actorOffice||'Not recorded'],['Their region',item.actorRegion||'Not recorded'],['Training office / organization',item.office||'Not recorded'],['Training region',item.region||'Not recorded']]:[]),...(reference?[['Reference',reference]]:[]),['Category',types[item.type]||'System'],['Priority',item.priority==='high'?'Important':'Normal']];
+    const fields=[['Received',date(item.date)],...(item.type==='training'?[['Status changed by',item.changedBy||'Not recorded'],['Their office',item.actorOffice||'Not recorded'],['Training office / organization',item.office||'Not recorded']]:[]),['Reference',item.reference||'Not recorded'],['Category',types[item.type]||'System'],['Priority',item.priority==='high'?'Important':'Normal']];
     $('inboxDetailsFields').replaceChildren(...fields.map(([label,value])=>{const row=make('div','');row.append(make('dt','',label),make('dd','',value));return row;}));
     const href=safeNotificationLink(item.href,adminRoot);
     $('inboxDetailsLink').hidden=!href;if(href){$('inboxDetailsLink').href=href;$('inboxDetailsLink').textContent=item.action||'View related page';}else $('inboxDetailsLink').removeAttribute('href');
@@ -60,7 +53,7 @@ function init() {
       const body=make('div','inbox-item-body'),button=make('button','inbox-open');button.type='button';button.setAttribute('aria-label',`Open ${read(item)?'read':'unread'} notification: ${item.title}`);
       const top=make('div','inbox-item-top');top.append(make('span','inbox-category',`${types[item.type]||'System'}`));if(item.priority==='high')top.append(make('span','inbox-important','Important'));if(!read(item)){const dot=make('span','inbox-unread-dot');dot.setAttribute('aria-label','Unread');top.append(dot);}
       const title=make('h4','',item.title),message=make('p','',item.message);renderMessage(message,item.summary||item.message.slice(0,240));button.append(top,title,message);button.addEventListener('click',async ()=>await open(item));body.append(button);
-      const meta=make('div','inbox-item-meta'),time=make('time','',date(item.date));if(item.date&&!Number.isNaN(Date.parse(item.date)))time.dateTime=item.date;meta.append(time);const reference=systemReference(item);if(reference)meta.append(make('span','inbox-reference',reference));body.append(meta);
+      const meta=make('div','inbox-item-meta'),time=make('time','',date(item.date));if(item.date&&!Number.isNaN(Date.parse(item.date)))time.dateTime=item.date;meta.append(time);if(item.reference)meta.append(make('span','inbox-reference',item.reference));body.append(meta);
       const actions=make('div','inbox-item-actions');if(!archived(item))actions.append(iconButton(read(item)?'bi-envelope':'bi-envelope-open',read(item)?'Mark as unread':'Mark as read',async ()=>await mark(item,read(item))));
       actions.append(iconButton(archived(item)?'bi-arrow-counterclockwise':'bi-archive',archived(item)?'Restore notification':'Archive notification',async ()=>await archive(item,archived(item))));
       card.append(symbol,body,actions);nodes.push(card);
@@ -71,7 +64,6 @@ function init() {
     $('inboxEmptyText').textContent=query||type?'Try another search or notification type.':view==='unread'?'There are no unread notifications in this inbox.':view==='archived'?'Archived notifications will stay here until you restore them.':'Notifications addressed to your account will appear here.';
     $('inboxPageLabel').textContent=`Page ${page} of ${pages}`;$('inboxPrevious').disabled=page<=1;$('inboxNext').disabled=page>=pages;
   }
-  // Refresh this recipient's inbox and format their name the same way as the account navigation.
   function refresh(){
     try{
       user=window.TmisActivity?.actor()||null;
@@ -79,9 +71,7 @@ function init() {
       notifications=buildNotifications(user,users,feed);
       const saved=user?parse(window.TmisStore.getItem(stateKey()),{}):{};
       state=saved&&typeof saved==='object'&&!Array.isArray(saved)?saved:{};
-      const middle=String(user?.middleName||'').trim().split(/\s+/).filter(Boolean).map(part=>`${part.charAt(0).toUpperCase()}.`).join(' ');
-      const navigationName=user?[user.firstName,middle,user.lastName,user.suffix].filter(Boolean).join(' '):'';
-      $('inboxIdentity').textContent=user?`Updates for ${navigationName}.`:'Your user-table identity is not connected. Other users\' notifications are not displayed.';
+      $('inboxIdentity').textContent=user?`Updates for ${[user.firstName,user.lastName].filter(Boolean).join(' ')}.`:'Your user-table identity is not connected. Other users\' notifications are not displayed.';
       render();
     }catch{feedback('Notifications could not be loaded from this browser.',true);}
   }

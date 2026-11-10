@@ -170,3 +170,19 @@
 @media (max-width: 575.98px) {
   .user-toast-container { top: 64px; }
 }
+.user-credential-summary,.profile-credential-summary { padding:.75rem .85rem; margin-top:.7rem; border:1px solid var(--color-border); border-radius:.7rem; background:var(--color-primary-surface); color:var(--color-text-secondary); font-size:.72rem; }
+.user-credential-summary[hidden],.profile-credential-summary[hidden] { display:none!important; }
+.user-credential-summary strong,.profile-credential-summary strong { display:block; margin-bottom:.35rem; color:var(--color-text-primary); font-size:.75rem; }
+.user-credential-summary ul,.profile-credential-summary ul { display:grid; gap:.2rem; margin:0; padding-left:1rem; }
+.user-credential-summary li.is-granted,.profile-credential-summary li.is-granted { color:var(--color-primary-dark); }
+.user-credential-summary li.is-blocked,.profile-credential-summary li.is-blocked { color:var(--color-danger); }
+.user-credential-summary { background:var(--color-surface); }
+.user-credential-split { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; }
+.user-credential-access { min-width:0; padding:.75rem; border:1px solid var(--color-border); border-radius:.65rem; background:var(--color-bg); }
+.user-credential-access h6 { display:flex; align-items:center; gap:.4rem; margin:0 0 .55rem; color:var(--color-text-primary); font-size:.72rem; font-weight:750; }
+.user-credential-access.is-granted h6,.user-credential-access.is-granted li { color:var(--color-primary-dark); }
+.user-credential-access.is-blocked h6,.user-credential-access.is-blocked li { color:var(--color-danger); }
+.user-credential-access ul { display:grid; gap:.35rem; margin:0; padding:0; list-style:none; }
+.user-credential-access li { padding:.4rem .5rem; border:1px solid var(--color-border); border-radius:.45rem; background:var(--color-surface); font-size:.68rem; line-height:1.4; overflow-wrap:anywhere; }
+.user-credential-empty { margin:0; color:var(--color-text-secondary); font-size:.67rem; line-height:1.45; }
+@media(max-width:575.98px) { .user-credential-split { grid-template-columns:minmax(0,1fr); } }

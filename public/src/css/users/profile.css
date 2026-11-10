@@ -190,5 +190,3 @@
 .self-edit-fields label { font-size: .75rem; font-weight: 600; }
 .self-edit-fields input { font-size: .8125rem; color: var(--color-text-primary); background: var(--color-surface); border-color: var(--color-border); }
 @media(max-width:575.98px) { .self-edit-fields { grid-template-columns: 1fr; } }
-
-
