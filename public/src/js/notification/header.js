@@ -3,42 +3,18 @@ import { NOTIFICATION_TYPES } from './notification-data.js';
 
 // The header and inbox read the same recipient-scoped local notifications.
 function refresh() {
-  const count = document.querySelector('.notification-count');
-  const pageLoaded = document.readyState === 'complete';
-  if (!pageLoaded && count) {
-    count.textContent = '0';
-    count.hidden = true;
-  }
-
   const user = window.TmisActivity?.actor();
-  if (!user?.id) {
-    if (pageLoaded && count) {
-      count.textContent = '0';
-      count.hidden = true;
-      count.classList.add('is-ready');
-    }
-    return;
-  }
+  if (!user?.id) return;
   const list = document.querySelector('.notification-menu-list');
-  if (!list) {
-    if (pageLoaded && count) {
-      count.textContent = '0';
-      count.hidden = true;
-      count.classList.add('is-ready');
-    }
-    return;
-  }
+  if (!list) return;
   try {
     const stateKey = `tmis-notification-state:${user.id}`;
     const state = JSON.parse(window.TmisStore.getItem(stateKey) || '{}');
     const items = buildNotifications(user, JSON.parse(window.TmisStore.getItem('tmis-users') || '[]'), JSON.parse(window.TmisStore.getItem('tmis-notifications') || '[]'))
       .map(item => ({ ...item, ...state[item.id] })).filter(item => !item.archivedAt);
     const unread = items.filter(item => !item.readAt).length;
-    if (count) {
-      count.textContent = pageLoaded ? unread : '0';
-      count.hidden = !pageLoaded || !unread;
-      if (pageLoaded) count.classList.add('is-ready');
-    }
+    const count = document.querySelector('.notification-count');
+    if (count) { count.textContent = unread; count.hidden = !unread; }
     const subtitle = document.querySelector('.notification-menu-subtitle');
     if (subtitle) subtitle.textContent = `${unread} unread updates`;
     list.replaceChildren(...items.slice(0, 10).map(item => {
@@ -63,15 +39,8 @@ function refresh() {
       return button;
     }));
     if (!items.length) { const empty = document.createElement('p'); empty.className = 'notification-empty-state'; empty.textContent = 'No notifications for your account.'; list.append(empty); }
-  } catch {
-    if (pageLoaded && count) {
-      count.textContent = '0';
-      count.hidden = true;
-      count.classList.add('is-ready');
-    }
-  }
+  } catch { /* Keep the current header if browser storage is unavailable. */ }
 }
-window.addEventListener('load', refresh, { once: true });
 window.addEventListener('tmis:activity-ready', refresh);
 window.addEventListener('tmis:notifications-updated', refresh);
 window.addEventListener('tmis:data-updated', refresh);

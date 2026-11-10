@@ -31,3 +31,6 @@
 .app-legacy-toast[data-toast-kind=warning] { --toast-color:var(--color-warning,#b58105); }
 .app-legacy-toast[data-toast-kind=error] { --toast-color:var(--color-danger,#dc3545); }
 :is(.compose-toast,.app-legacy-toast).is-resetting::after { animation:none; }
+.compose-toast-actions { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.65rem; }
+.compose-toast .compose-toast-action { width:auto; min-width:4rem; height:auto; min-height:2rem; padding:.3rem .65rem; border:1px solid var(--toast-color); border-radius:.4rem; color:var(--toast-color); font-size:.72rem; font-weight:650; }
+.compose-toast .compose-toast-action-primary { background:var(--toast-color); color:#fff; }

@@ -54,6 +54,10 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::post('/system/nationalities', [SystemSettingsController::class, 'storeNationality'])->name('system.nationalities.store');
     Route::patch('/system/nationalities/{option}', [SystemSettingsController::class, 'updateNationality'])->whereNumber('option')->name('system.nationalities.update');
     Route::delete('/system/nationalities/{option}', [SystemSettingsController::class, 'deleteNationality'])->whereNumber('option')->name('system.nationalities.destroy');
+    Route::get('/system/training-types', [SystemSettingsController::class, 'trainingTypes'])->name('system.training-types.index');
+    Route::post('/system/training-types', [SystemSettingsController::class, 'storeTrainingType'])->name('system.training-types.store');
+    Route::patch('/system/training-types/{option}', [SystemSettingsController::class, 'updateTrainingType'])->whereNumber('option')->name('system.training-types.update');
+    Route::delete('/system/training-types/{option}', [SystemSettingsController::class, 'deleteTrainingType'])->whereNumber('option')->name('system.training-types.destroy');
     Route::patch('/system/offices/{id}', [SystemSettingsController::class, 'updateOffice'])->whereNumber('id')->name('system.offices.update');
     Route::delete('/system/offices/{id}', [SystemSettingsController::class, 'deleteOffice'])->whereNumber('id')->name('system.offices.destroy');
     Route::post('/system/offices', [SystemSettingsController::class, 'office'])->name('system.offices.store');
@@ -132,10 +136,17 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::view('/app/admin/participants/details/fa-all-list', 'admin.participants.details.fa-all-list')->name('admin.participants.details.fa-all-list');
     Route::view('/app/admin/participants/details/fa-inactive', 'admin.participants.details.fa-inactive')->name('admin.participants.details.fa-inactive');
     Route::view('/app/admin/participants/details/inactive', 'admin.participants.details.inactive')->name('admin.participants.details.inactive');
+<<<<<<< HEAD
     Route::view('/app/admin/participants/id/edit-fa', 'admin.participants.id.edit-fa')->name('admin.participants.id.edit-fa');
     Route::view('/app/admin/participants/id/edit-farmer/{farmer?}', 'admin.participants.id.edit-farmer')->where('farmer', '[0-9]{8,}')->name('admin.participants.id.edit-farmer');
     Route::view('/app/admin/participants/id/view-fa', 'admin.participants.id.view-fa')->name('admin.participants.id.view-fa');
     Route::view('/app/admin/participants/id/view-farmer/{farmer?}', 'admin.participants.id.view-farmer')->where('farmer', '[0-9]{8,}')->name('admin.participants.id.view-farmer');
+=======
+    Route::view('/app/admin/participants/id/edit-fa/{id?}', 'admin.participants.id.edit-fa')->where('id', '[A-Za-z0-9:_-]+')->name('admin.participants.id.edit-fa');
+    Route::view('/app/admin/participants/id/edit-farmer/{id?}', 'admin.participants.id.edit-farmer')->name('admin.participants.id.edit-farmer');
+    Route::view('/app/admin/participants/id/view-fa/{id?}', 'admin.participants.id.view-fa')->where('id', '[A-Za-z0-9:_-]+')->name('admin.participants.id.view-fa');
+    Route::view('/app/admin/participants/id/view-farmer/{id?}', 'admin.participants.id.view-farmer')->name('admin.participants.id.view-farmer');
+>>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
     Route::view('/app/admin/training/create/register', 'admin.training.create.register')->name('admin.training.create.register');
     Route::view('/app/admin/training/create/rp-register', 'admin.training.create.rp-register')->name('admin.training.create.rp-register');
     Route::view('/app/admin/training/details/all-status', 'admin.training.details.all-status')->name('admin.training.details.all-status');
@@ -145,9 +156,9 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::view('/app/admin/training/details/rp-inactive', 'admin.training.details.rp-inactive')->name('admin.training.details.rp-inactive');
     Route::view('/app/admin/training/details/rp-list', 'admin.training.details.rp-list')->name('admin.training.details.rp-list');
     Route::view('/app/admin/training/id/edit-rp', 'admin.training.id.edit-rp')->name('admin.training.id.edit-rp');
-    Route::view('/app/admin/training/id/edit-training', 'admin.training.id.edit-training')->name('admin.training.id.edit-training');
+    Route::view('/app/admin/training/id/edit-training/{id?}', 'admin.training.id.edit-training')->name('admin.training.id.edit-training');
     Route::view('/app/admin/training/id/view-rp', 'admin.training.id.view-rp')->name('admin.training.id.view-rp');
-    Route::view('/app/admin/training/id/view-training', 'admin.training.id.view-training')->name('admin.training.id.view-training');
+    Route::view('/app/admin/training/id/view-training/{id?}', 'admin.training.id.view-training')->name('admin.training.id.view-training');
     Route::view('/app/admin/training/update/for-approval', 'admin.training.update.for-approval')->name('admin.training.update.for-approval');
     Route::view('/app/admin/training/update/for-acceptance', 'admin.training.update.for-acceptance')->name('admin.training.update.for-acceptance');
     Route::view('/app/admin/training/update/for-review', 'admin.training.update.for-review')->name('admin.training.update.for-review');
@@ -195,9 +206,17 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::get('/app/admin/participants/details/fa-all-list.html', fn (Request $request) => redirect()->route('admin.participants.details.fa-all-list', $request->query(), 301));
     Route::get('/app/admin/participants/details/fa-inactive.html', fn (Request $request) => redirect()->route('admin.participants.details.fa-inactive', $request->query(), 301));
     Route::get('/app/admin/participants/details/inactive.html', fn (Request $request) => redirect()->route('admin.participants.details.inactive', $request->query(), 301));
-    Route::get('/app/admin/participants/id/edit-fa.html', fn (Request $request) => redirect()->route('admin.participants.id.edit-fa', $request->query(), 301));
+    Route::get('/app/admin/participants/id/edit-fa.html', fn (Request $request) => redirect()->route(
+        'admin.participants.id.edit-fa',
+        $request->filled('faId') ? ['id' => $request->query('faId')] : $request->query(),
+        301,
+    ));
     Route::get('/app/admin/participants/id/edit-farmer.html', fn (Request $request) => redirect()->route('admin.participants.id.edit-farmer', $request->query(), 301));
-    Route::get('/app/admin/participants/id/view-fa.html', fn (Request $request) => redirect()->route('admin.participants.id.view-fa', $request->query(), 301));
+    Route::get('/app/admin/participants/id/view-fa.html', fn (Request $request) => redirect()->route(
+        'admin.participants.id.view-fa',
+        $request->filled('faId') ? ['id' => $request->query('faId')] : $request->query(),
+        301,
+    ));
     Route::get('/app/admin/participants/id/view-farmer.html', fn (Request $request) => redirect()->route('admin.participants.id.view-farmer', $request->query(), 301));
     Route::get('/app/admin/training/create/register.html', fn (Request $request) => redirect()->route('admin.training.create.register', $request->query(), 301));
     Route::get('/app/admin/training/create/rp-register.html', fn (Request $request) => redirect()->route('admin.training.create.rp-register', $request->query(), 301));

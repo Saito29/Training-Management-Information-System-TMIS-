@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const end = Math.min(start + visibleCount, visibleCards.length);
       trainingCount.textContent = visibleCards.length
         ? `${start + 1}–${end} of ${visibleCards.length}`
-        : '0 trainings';
+        : 'No training participated found yet.';
       trainingPrevious.disabled = trainingCarousel.scrollLeft <= 1;
       trainingNext.disabled =
         trainingCarousel.scrollLeft + trainingCarousel.clientWidth >=

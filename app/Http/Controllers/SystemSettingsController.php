@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -369,6 +370,7 @@ class SystemSettingsController
                 ])
                 ->orderBy('label')
                 ->get(),
+            'trainingTypeOptions' => $this->trainingTypeOptions(),
             'grants' => $isSuperAdministrator
                 ? DB::table('role_permissions')->get()->groupBy('role_id')->map(fn ($permissions) => ModuleAccess::normalizePermissionRows($permissions))
                 : collect(),
@@ -796,6 +798,132 @@ class SystemSettingsController
         });
 
         return response()->json(['message' => 'Nationality deleted.']);
+    }
+
+    public function trainingTypes(Request $request): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+
+        return response()->json(['options' => $this->trainingTypeOptions()]);
+    }
+
+    public function storeTrainingType(Request $request): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $data = $request->validate(['name' => ['required', 'string', 'max:100']]);
+        $name = trim($data['name']);
+
+        $option = DB::transaction(function () use ($request, $name): array {
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            if ($name === '' || DB::table('participant_options')->where('field', 'training_type')->whereRaw('LOWER(value) = ?', [mb_strtolower($name)])->exists()) {
+                throw ValidationException::withMessages(['name' => 'Enter a unique training type.']);
+            }
+
+            $id = DB::table('participant_options')->insertGetId([
+                'field' => 'training_type',
+                'value' => $name,
+                'label' => $name,
+                'is_active' => true,
+            ]);
+            AuditTrail::record($request, 'training_type_created_'.$id, $request->user(), category: 'settings');
+
+            return ['id' => $id, 'field' => 'training_type', 'value' => $name, 'label' => $name, 'is_active' => true, 'training_count' => 0];
+        });
+
+        return response()->json(['option' => $option, 'message' => 'Training type added.'], 201);
+    }
+
+    public function updateTrainingType(Request $request, int $option): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $data = $request->validate(['name' => ['required', 'string', 'max:100']]);
+        $name = trim($data['name']);
+
+        $updated = DB::transaction(function () use ($request, $option, $name): array {
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            $existing = DB::table('participant_options')
+                ->where('id', $option)
+                ->where('field', 'training_type')
+                ->lockForUpdate()
+                ->first();
+            abort_unless($existing, 404);
+            if ($name === '' || DB::table('participant_options')->where('field', 'training_type')->where('id', '!=', $option)->whereRaw('LOWER(value) = ?', [mb_strtolower($name)])->exists()) {
+                throw ValidationException::withMessages(['name' => 'Enter a unique training type.']);
+            }
+
+            $trainings = DB::table('trainings')
+                ->where('training_type', $existing->value)
+                ->lockForUpdate()
+                ->get(['id', 'ui_data']);
+            DB::table('participant_options')->where('id', $option)->update(['value' => $name, 'label' => $name]);
+            DB::table('trainings')->where('training_type', $existing->value)->update([
+                'training_type' => $name,
+                'updated_at' => now(),
+                'version' => DB::raw('version + 1'),
+                'ui_version' => DB::raw('ui_version + 1'),
+            ]);
+            foreach ($trainings as $training) {
+                $metadata = OriginalInterfaceData::unpack($training->ui_data);
+                foreach (['training_type', 'type'] as $field) {
+                    if (array_key_exists($field, $metadata)) {
+                        $metadata[$field] = $name;
+                    }
+                }
+                DB::table('trainings')->where('id', $training->id)->update([
+                    'ui_data' => Crypt::encryptString(json_encode($metadata, JSON_THROW_ON_ERROR)),
+                ]);
+            }
+            AuditTrail::record($request, 'training_type_updated_'.$option, $request->user(), category: 'settings');
+
+            return [
+                'id' => $option,
+                'field' => 'training_type',
+                'value' => $name,
+                'label' => $name,
+                'is_active' => (bool) $existing->is_active,
+                'training_count' => $trainings->count(),
+            ];
+        });
+
+        return response()->json(['option' => $updated, 'message' => 'Training type updated.']);
+    }
+
+    public function deleteTrainingType(Request $request, int $option): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        DB::transaction(function () use ($request, $option): void {
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            $existing = DB::table('participant_options')
+                ->where('id', $option)
+                ->where('field', 'training_type')
+                ->lockForUpdate()
+                ->first();
+            abort_unless($existing, 404);
+            abort_if(
+                DB::table('trainings')->where('training_type', $existing->value)->exists(),
+                409,
+                'This training type is used by saved trainings and cannot be deleted.',
+            );
+
+            DB::table('participant_options')->where('id', $option)->delete();
+            AuditTrail::record($request, 'training_type_deleted_'.$option, $request->user(), category: 'settings');
+        });
+
+        return response()->json(['message' => 'Training type deleted.']);
+    }
+
+    private function trainingTypeOptions(): Collection
+    {
+        return DB::table('participant_options')
+            ->where('field', 'training_type')
+            ->select('participant_options.*')
+            ->addSelect([
+                'training_count' => DB::table('trainings')
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('trainings.training_type', 'participant_options.value'),
+            ])
+            ->orderBy('label')
+            ->get();
     }
 
     public function role(Request $request, ?int $role = null): RedirectResponse|JsonResponse

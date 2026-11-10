@@ -12,10 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   function feedback(message, error = false) { $('journalFeedback').textContent = message; $('journalFeedback').hidden = !message; $('journalFeedback').dataset.type = error ? 'error' : 'info'; }
   let selectedReference = '';
-  // Show the server-authored change sentence instead of exposing a raw field-name list.
   function details(entry) {
     $('activityDetailsTitle').textContent = entry.title;
-    $('activityDetailsDescription').textContent = 'A server-recorded event. See the change summary below.';
+    $('activityDetailsDescription').textContent = entry.description || 'No additional description was recorded for this event.';
     $('activityDetailsArea').textContent = modules[entry.module] || entry.module;
     const status = ['success','info','warning','error'].includes(entry.status) ? entry.status : 'info';
     $('activityDetailsResult').className = `journal-result ${status}`;
@@ -24,13 +23,24 @@ document.addEventListener('DOMContentLoaded', () => {
     $('activityDetailsActor').textContent = entry.actor || 'Actor not recorded';
     $('activityDetailsAvatar').textContent = String(entry.actor || 'User').split(/\s+/).filter(Boolean).slice(0,2).map(part=>part.charAt(0)).join('').toUpperCase();
     $('activityDetailsWhen').textContent = date(entry.date);
-    const changes=make('section','journal-change-summary');
-    changes.append(make('h3','','What changed'));
-    changes.append(make('p','',entry.description || 'The TMIS server recorded this action, but did not retain a field-level summary.'));
-    $('activityDetailsFields').replaceChildren(changes);
-    $('activityDetailsNote').textContent = entry.account_email
-      ? `Account: ${entry.account_email}. Field values are not shown in this activity view.`
-      : 'Field values are not shown in this activity view.';
+    const groups = [
+      ['Event context', 'bi-journal-text', [['Action', entry.action.charAt(0).toUpperCase()+entry.action.slice(1)], ['Reference', entry.reference || 'Not recorded'], ['Account email', entry.account_email || 'Not recorded'], ['Source', 'Server-recorded activity']]],
+      ['Record information', 'bi-fingerprint', [['Date & time', date(entry.date)]]],
+    ];
+    $('activityDetailsFields').replaceChildren(...groups.map(([title,icon,fields])=>{
+      const section=make('section','journal-modal-group'),heading=make('h3','');
+      const symbol=make('i',`bi ${icon}`);symbol.setAttribute('aria-hidden','true');heading.append(symbol,document.createTextNode(title));
+      const list=make('dl','');
+      fields.forEach(([label,value])=>{const row=make('div','');row.append(make('dt','',label),make('dd','',value));list.append(row);});
+      section.append(heading,list);return section;
+    }));
+    const changes=make('section','journal-modal-group journal-modal-changes');
+    changes.append(make('h3','','Changed fields'));
+    const list=make('div','journal-field-tags');
+    if(entry.fields?.length) entry.fields.forEach(field=>list.append(make('span','',field.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/_/g,' '))));
+    else list.append(make('p','','No field-level changes were recorded for this activity.'));
+    changes.append(list);$('activityDetailsFields').append(changes);
+    $('activityDetailsNote').textContent = 'This event was recorded by the TMIS server.';
     selectedReference=entry.reference || '';
     $('copyActivityReference').disabled=!selectedReference;
     $('activityCopyFeedback').textContent='';

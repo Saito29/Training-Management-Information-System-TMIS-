@@ -8,13 +8,9 @@ export const RELATED_PAGES = {
   participants:{href:'participants/details/all-with-status',label:'Participant list'},
   questionnaires:{href:'evaluation/details/list-questionnaire',label:'Questionnaires'},
 };
-// Keep sample rows and inactive accounts visible to admins, but never eligible for delivery.
 export function activeRecipients(users) {
   if(!Array.isArray(users))return [];
-  return [...new Map(users.filter(user=>{
-    const active=user?.activeStatus===true||user?.activeStatus===1||user?.activeStatus==='1';
-    return user?.id&&!user.isNotificationSample&&active&&String(user.status||'').trim().toLowerCase()==='approved & accepted';
-  }).map(user=>[user.id,user])).values()];
+  return [...new Map(users.filter(user=>user?.id && /^(active|approved|accepted|approved\s*&\s*accepted)$/i.test(String(user.status||'').trim())).map(user=>[user.id,user])).values()];
 }
 export function resolveRecipients(data, users) {
   const eligible=activeRecipients(users);

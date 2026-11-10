@@ -52,7 +52,8 @@
 .journal-empty { text-align: center; padding: 2rem 1rem; color: var(--color-text-secondary); }
 .journal-empty > i { font-size: 1.8rem; }
 .journal-empty h3 { font-size: .9rem; margin: .7rem 0 .3rem; color: var(--color-text-primary); }
-.journal-empty p { font-size: .73rem; }
+.journal-empty p,.journal-note { font-size: .73rem; }
+.journal-note { margin: 1rem 0 0; padding-top: 1rem; border-top: 1px solid var(--color-border); color: var(--color-text-secondary); }
 .journal-dialog { width: min(580px,calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); padding: 0; border: 1px solid var(--color-border); border-radius: 1rem; background: var(--color-surface); color: var(--color-text-primary); box-shadow: 0 1.5rem 5rem #0003; }
 .journal-dialog::backdrop { background: #14251c88; }
 .journal-dialog header { display: flex; align-items: center; gap: 1rem; justify-content: space-between; padding: 1.1rem 1.25rem; border-bottom: 1px solid var(--color-border); }
@@ -72,7 +73,7 @@
 @media(max-width:575.98px) { .journal-summary { gap: .6rem; } .journal-summary article { padding: .8rem; gap: .5rem; } .journal-stat-icon { flex-basis: 2rem; height: 2rem; font-size: 1rem; } .journal-summary strong { font-size: 1.2rem; } .journal-filters { grid-template-columns: 1fr; } .journal-card-body { padding: 1rem; } .journal-dialog-body dl { grid-template-columns: 1fr; } .journal-pagination > label { width: 100%; } }
 
 /* Activity inspection dialog: summary, actor, context and record metadata. */
-.journal-dialog { width: min(640px,calc(100vw - 2rem)); border-radius: 1.2rem; overflow: hidden; }
+.journal-dialog { width: min(920px,calc(100vw - 2rem)); max-width: 920px; max-height: min(88dvh, 860px); border-radius: 1.2rem; overflow: hidden; }
 .journal-dialog[open] { animation: journal-dialog-enter .18s ease-out; }
 .journal-dialog > form { display: flex; flex-direction: column; max-height: calc(100dvh - 2rem); }
 .journal-dialog header { flex-shrink: 0; padding: 1.2rem 1.3rem; background: linear-gradient(110deg,var(--color-primary-surface),var(--color-surface)); }
@@ -100,6 +101,10 @@
 .journal-field-tags { display: flex; flex-wrap: wrap; gap: .4rem; }
 .journal-field-tags span { padding: .2rem .55rem; border-radius: .4rem; background: var(--color-primary-surface); color: var(--color-primary-dark); font-size: .675rem; }
 .journal-field-tags p { margin: 0; font-size: .73rem; color: var(--color-text-secondary); }
+.journal-change-summary { margin: 0 0 1rem; padding: 1rem 1.1rem; border: 1px solid color-mix(in srgb,var(--color-primary) 25%,var(--color-border)); border-radius: .8rem; background: color-mix(in srgb,var(--color-primary-surface) 55%,var(--color-surface)); }
+.journal-change-summary h3 { display: flex; align-items: center; gap: .45rem; margin: 0 0 .5rem; color: var(--color-primary-dark); font-size: .76rem; font-weight: 700; }
+.journal-change-summary h3::before { content: '✓'; display: grid; width: 1.1rem; height: 1.1rem; place-items: center; border-radius: 50%; background: var(--color-primary); color: #fff; font-size: .7rem; }
+.journal-change-summary p { margin: 0; color: var(--color-text-primary); font-size: .9rem; font-weight: 550; line-height: 1.7; overflow-wrap: anywhere; }
 .journal-modal-note { display: flex; align-items: flex-start; gap: .5rem; padding: .8rem; border-radius: .65rem; background: var(--color-primary-surface); color: var(--color-text-secondary); }
 .journal-modal-note > i { flex-shrink: 0; margin-top: .05rem; }
 .journal-modal-note p { font-size: .7rem; line-height: 1.65; margin: 0; }
@@ -108,5 +113,5 @@
 .journal-modal-done { padding: .5rem .9rem; border-radius: .55rem; background: var(--color-primary); color: #fff; font-size: .8rem; border: 1px solid var(--color-primary); }
 .journal-modal-done:hover { color: #fff; background: var(--color-primary-dark); }
 @keyframes journal-dialog-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@media(max-width:575.98px) { .journal-dialog header,.journal-dialog-body { padding: 1rem; } .journal-modal-heading p { max-width: 13rem; } #activityCopyFeedback:not(:empty) { flex-basis: 100%; } }
+@media(max-width:575.98px) { .journal-dialog { width: calc(100vw - 1rem); max-height: calc(100dvh - 1rem); }.journal-dialog header,.journal-dialog-body { padding: 1rem; } .journal-modal-heading p { max-width: 13rem; } #activityCopyFeedback:not(:empty) { flex-basis: 100%; } }
 @media(prefers-reduced-motion:reduce) { .journal-dialog[open] { animation: none; } }

@@ -2,12 +2,40 @@ document.addEventListener('DOMContentLoaded', () => {
   const dialog = document.querySelector('#profileVisibilityDialog');
   if (!dialog) return;
 
+  document.querySelectorAll('.user-menu').forEach(menu => {
+    if (menu.querySelector('[data-open-profile-visibility]')) return;
+
+    const logsItem = [...menu.querySelectorAll('.dropdown-item')]
+      .find(item => item.textContent.trim() === 'Logs')
+      ?.closest('li');
+    const listItem = document.createElement('li');
+    const button = document.createElement('button');
+    const icon = document.createElement('i');
+    const label = document.createElement('span');
+
+    button.type = 'button';
+    button.className = 'dropdown-item';
+    button.dataset.openProfileVisibility = '';
+    icon.className = 'bi bi-globe2';
+    icon.setAttribute('aria-hidden', 'true');
+    label.textContent = 'Data visibility';
+    button.append(icon, label);
+    listItem.append(button);
+
+    if (logsItem) {
+      logsItem.after(listItem);
+    } else {
+      menu.querySelector('.dropdown-divider')?.closest('li')?.before(listItem);
+    }
+  });
+
   const regionsContainer = document.querySelector('#profileVisibilityRegions');
   const officesContainer = document.querySelector('#profileVisibilityOffices');
   const regionSearch = document.querySelector('#profileVisibilityRegionSearch');
   const officeSearch = document.querySelector('#profileVisibilityOfficeSearch');
   const error = document.querySelector('#profileVisibilityError');
   const saveButton = document.querySelector('#saveProfileVisibility');
+  let visibilityTrigger = null;
   let regions = [];
   let offices = [];
   let selectedRegions = new Set();
@@ -143,10 +171,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function close() {
     if (dialog.open) dialog.close();
-    document.querySelector('[data-open-profile-visibility]')?.focus();
+    const dropdownToggle = visibilityTrigger?.closest('.app-profile')?.querySelector('.profile-button');
+    (dropdownToggle || visibilityTrigger)?.focus();
   }
   document.addEventListener('click', async event => {
-    if (!event.target.closest('[data-open-profile-visibility]')) return;
+    const trigger = event.target.closest('[data-open-profile-visibility]');
+    if (!trigger) return;
+    visibilityTrigger = trigger;
+    const dropdownToggle = trigger.closest('.app-profile')?.querySelector('[data-bs-toggle="dropdown"]');
+    window.bootstrap?.Dropdown?.getInstance(dropdownToggle)?.hide();
     error.hidden = true;
     dialog.showModal();
     try {

@@ -71,12 +71,16 @@ document.addEventListener('DOMContentLoaded', () => {
         statusRemarks: status === 'Active' ? '' : remarksInput.value.trim(),
         remarks: status === 'Active' ? '' : remarksInput.value.trim(),
       };
-      await window.TmisStore.saveRecord('tmis-farmers', updated);
+      const savedFarmer = await window.TmisStore.saveRecord('tmis-farmers', updated);
 
       const pill = document.querySelector('.farmer-status-pill');
       if (pill) {
         pill.classList.toggle('active-status', status === 'Active');
         pill.innerHTML = `<i class="bi ${status === 'Active' ? 'bi-patch-check-fill' : 'bi-exclamation-circle-fill'}" aria-hidden="true"></i> ${window.TmisStore.escape(status)}`;
+      }
+      const updatedDate = document.getElementById('displayUpdatedDate');
+      if (updatedDate) {
+        updatedDate.textContent = savedFarmer?.updatedAt ? window.TmisDate.format(savedFarmer.updatedAt, { dateStyle: 'long' }) : 'No record updated';
       }
       document.querySelectorAll('.overview-status').forEach((element) => { element.textContent = status; });
       bootstrap.Modal.getOrCreateInstance(modalElement).hide();

@@ -4,10 +4,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const storageKey = 'tmis-farmer-associations';
   const listStatus = document.body.dataset.faListStatus === 'Inactive' ? 'Inactive' : 'Active';
   const statusLabel = listStatus.toLowerCase();
-  const columns = ['actions', 'status', 'id', 'province', 'district', 'municipality', 'barangay', 'association_name', 'short_name', 'registration_date', 'year_covered', 'organization_type', 'office'];
-  const defaults = columns.slice(0, 11);
-  const labels = { id: 'Farmer Association ID', association_name: 'Name', short_name: 'Shortened Name', organization_type: 'Organization Type', office: 'Office', province: 'Province', district: 'District', municipality: 'Municipality', barangay: 'Barangay', registration_date: 'Registration Date', year_covered: 'Year Covered', status: 'Status' };
-  const geo = ['province', 'district', 'municipality', 'barangay'];
+  const columns = ['actions', 'status', 'id', 'region', 'province', 'district', 'municipality', 'barangay', 'association_name', 'short_name', 'registration_date', 'year_covered', 'organization_type', 'office'];
+  const defaults = columns.slice(0, 12);
+  const labels = { id: 'Farmer Association ID', association_name: 'Name', short_name: 'Shortened Name', organization_type: 'Organization Type', office: 'Office', region: 'Region', province: 'Province', district: 'District', municipality: 'Municipality', barangay: 'Barangay', registration_date: 'Registration Date', year_covered: 'Year Covered', status: 'Status' };
+  const geo = ['region', 'province', 'district', 'municipality', 'barangay'];
   const seeds = [
     { id: 'FA-2025-001', association_name: 'Jomalig Farmers Association', short_name: 'JFA', organization_type: 'Association', office: 'Municipal Agriculture Office', province: 'Quezon', district: '1st District', municipality: 'Jomalig', barangay: 'Apad', registration_date: '2025-03-14', year_covered: '2025', status: 'Active' },
     { id: 'FA-2025-002', association_name: 'Tanauan Growers Cooperative', short_name: 'TGC', organization_type: 'Cooperative', office: 'Provincial Agriculture Office', province: 'Batangas', district: '3rd District', municipality: 'Tanauan City', barangay: 'Darasa', registration_date: '2025-06-21', year_covered: '2025', status: 'Active' },
@@ -16,7 +16,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const inactiveSeed = { id: 'FA-2024-004', association_name: 'Alabat Agricultural Cooperative', short_name: 'AAC', organization_type: 'Cooperative', office: 'Municipal Agriculture Office', province: 'Quezon', district: '2nd District', municipality: 'Alabat', barangay: 'Villa Esperanza', registration_date: '2024-07-12', year_covered: '2024', status: 'Inactive' };
   const body = $('#forReviewTableBody');
   if (!body) return;
-  const state = { page: 1, size: 10, search: '', year: '', province: '', district: '', municipality: '', barangay: '', filters: {}, sort: null };
+  const state = { page: 1, size: 10, search: '', year: '', region: '', province: '', district: '', municipality: '', barangay: '', filters: {}, sort: null };
+  const table = $('#forReviewDataTable');
   const visible = new Set(defaults);
   const deleteModal = new bootstrap.Modal($('#faDeleteModal'));
   let selectedId = '';
@@ -26,6 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const read = () => { try { const data = JSON.parse(window.TmisStore.getItem(storageKey) || '[]'); return Array.isArray(data) ? data.map(record => ({ ...record, year_covered: String(record.year_covered || String(record.registration_date || '').slice(0, 4)) })) : []; } catch { return []; } };
   const save = async (data) => { try { await window.TmisStore.setItem(storageKey, JSON.stringify(data)); return true; } catch { return false; } };
   let records = read();
+  let recordsSnapshot = JSON.stringify(records);
   try {
     if (!window.TmisStore.getItem('tmis-fa-samples-added')) {
       const ids = new Set(records.map(record => record.id));
@@ -42,7 +44,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       await window.TmisStore.setItem('tmis-fa-inactive-sample-added', '1');
     }
   } catch { if (!records.some(record => record.id === inactiveSeed.id)) records.push(inactiveSeed); }
-  const statusRows = () => records.filter(record => (record.status || 'Active') === listStatus);
+  recordsSnapshot = JSON.stringify(records);
+  const associationStatus = record => record.status === 'Active' ? 'Active' : 'Inactive';
+  const statusRows = () => records.filter(record => associationStatus(record) === listStatus);
   const optionList = (select, values, placeholder, value) => {
     select.replaceChildren(new Option(placeholder, ''), ...values.map(item => new Option(item, item)));
     select.value = values.includes(value) ? value : '';
@@ -82,22 +86,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       [['view', 'eye', 'View'], ['edit', 'pencil-square', 'Edit'], ['delete', 'trash', 'Delete']].forEach(([action, icon, label]) => {
         const control = action === 'delete' ? document.createElement('button') : document.createElement('a');
         if (action === 'delete') control.type = 'button';
-        else { control.href = `../id/${action}-fa?faId=${encodeURIComponent(record.id)}`; control.target = '_blank'; control.rel = 'noopener noreferrer'; }
+        else { control.href = `../id/${action}-fa/${encodeURIComponent(record.id)}`; control.target = '_blank'; control.rel = 'noopener noreferrer'; }
         control.className = 'btn btn-sm fa-row-action'; control.dataset.action = action; control.dataset.id = record.id;
         control.title = action === 'delete' ? label : `${label} in a new tab`; control.setAttribute('aria-label', `${label} ${record.association_name}${action === 'delete' ? '' : ' in a new tab'}`);
         const image = document.createElement('i'); image.className = `bi bi-${icon}`; image.setAttribute('aria-hidden', 'true'); control.append(image); td.append(control);
       });
     } else if (field === 'status') {
-      const badge = document.createElement('span'); badge.className = `status-badge status-${statusLabel}`; badge.textContent = record.status || listStatus; td.append(badge);
+      const status = associationStatus(record);
+      const badge = document.createElement('span'); badge.className = `status-badge ${status === 'Active' ? 'status-active' : 'status-inactive'}`; badge.textContent = status; td.append(badge);
     } else td.textContent = record[field] || '—';
     row.append(td);
   }
   function pagination(container, total, pages, from, to) {
     const summary = document.createElement('span'); summary.textContent = `Showing ${from}–${to} of ${total} associations`;
     const controls = document.createElement('div'); controls.className = 'pagination-controls';
-    const size = document.createElement('select'); size.dataset.pageSize = ''; size.setAttribute('aria-label', 'Rows per page');
+    const sizeLabel = document.createElement('label'); sizeLabel.className = 'pagination-page-size';
+    const label = document.createElement('span'); label.textContent = 'Rows per page';
+    const size = document.createElement('select'); size.className = 'form-select'; size.dataset.pageSize = ''; size.setAttribute('aria-label', 'Rows per page');
     [10, 20, 50, 100, 'all'].forEach(value => size.add(new Option(value === 'all' ? 'All' : value, value)));
-    size.value = String(state.size); controls.append(size);
+    size.value = String(state.size); sizeLabel.append(label, size); controls.append(sizeLabel);
     const button = (label, page, disabled) => { const node = document.createElement('button'); node.type = 'button'; node.dataset.page = page; node.textContent = label; node.disabled = disabled; if (Number(page) === state.page) { node.classList.add('active'); node.setAttribute('aria-current', 'page'); } controls.append(node); };
     button('‹', 'prev', state.page === 1);
     for (let page = 1; page <= pages; page++) if (pages <= 7 || page === 1 || page === pages || Math.abs(page - state.page) <= 1) button(String(page), String(page), false);
@@ -123,6 +130,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     applyColumns();
   }
   const refresh = () => { state.page = 1; syncFilters(); render(); };
+  const reloadRecords = (showPlaceholder = false) => {
+    records = read();
+    const snapshot = JSON.stringify(records);
+    if (snapshot === recordsSnapshot) return false;
+    recordsSnapshot = snapshot;
+    if (showPlaceholder) window.TmisTableLoading?.start(table);
+    refresh();
+    return true;
+  };
   const panel = open => { $('#columnFilterPanel').hidden = !open; $('#columnFilterToggle').setAttribute('aria-expanded', String(open)); };
   $('#columnFilterToggle').addEventListener('click', () => panel($('#columnFilterPanel').hidden));
   $('#closeColumnFilter').addEventListener('click', () => panel(false));
@@ -141,7 +157,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     container.addEventListener('click', event => { const button = event.target.closest('[data-page]'); if (!button || button.disabled) return; const pages = state.size === 'all' ? 1 : Math.max(1, Math.ceil(filtered().length / state.size)); state.page = button.dataset.page === 'prev' ? Math.max(1, state.page - 1) : button.dataset.page === 'next' ? Math.min(pages, state.page + 1) : Number(button.dataset.page); render(); });
     container.addEventListener('change', event => { if (event.target.matches('[data-page-size]')) { state.size = event.target.value === 'all' ? 'all' : Number(event.target.value); refresh(); } });
   });
-  $('#refreshReviewTable').addEventListener('click', () => { records = read(); refresh(); });
+  $('#refreshReviewTable').addEventListener('click', async () => {
+    try {
+      if (window.TMIS_PAGE) await window.TmisStore.refresh();
+      records = read();
+      recordsSnapshot = JSON.stringify(records);
+      refresh();
+    } catch (error) {
+      window.alert(`The farmer association list could not be refreshed: ${error.message}`);
+    }
+  });
   $('#exportReviewTable').addEventListener('click', () => { if (!window.XLSX) { alert('Excel export is unavailable. Check your connection and try again.'); return; } const rows = filtered().map(record => Object.fromEntries(columns.slice(1).map(field => [labels[field], record[field] || '']))); const book = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(rows), 'Farmer Associations'); XLSX.writeFile(book, `farmer_associations_${new Date().toISOString().slice(0, 10)}.xlsx`); });
   body.addEventListener('click', event => {
     const button = event.target.closest('button[data-action="delete"]');
@@ -178,6 +203,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     records = latest; endUndo(); refresh();
   });
-  window.addEventListener('storage', event => { if (event.key === storageKey) { records = read(); refresh(); } });
+  window.addEventListener('tmis:data-updated', () => reloadRecords(true));
+  window.addEventListener('storage', event => {
+    if (event.key === storageKey) reloadRecords(true);
+  });
   syncFilters(); render();
 });

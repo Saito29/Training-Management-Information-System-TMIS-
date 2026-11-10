@@ -3,8 +3,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const $ = (id) => document.getElementById(id);
   const key = 'tmis-users';
   const form = $('userUpdateForm');
+<<<<<<< HEAD
   form.elements.role.querySelector('option[value="System Administrator"]')?.remove();
   const editableFields = ['firstName', 'middleName', 'lastName', 'suffix', 'dateOfBirth', 'email', 'phone', 'role', 'credentialTypeId', 'region', 'office', 'position', 'status'];
+=======
+  const editableFields = ['firstName', 'middleName', 'lastName', 'suffix', 'dateOfBirth', 'email', 'phone', 'role', 'region', 'office', 'position', 'status'];
+>>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
   const officeTypes = ['DA Regional Field Office', 'DA-SAAD', 'DA-AMIA', 'DA-Livestock', 'DA-HVCDP', 'DA-Rice Program', 'DA-Corn Program', 'DA-ATI'];
   let loadedSnapshot = null;
   form.elements.dateOfBirth.max = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -34,57 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (/^rejected$/i.test(value)) return ['Rejected', 'rejected'];
     return [value || 'Not specified', 'inactive'];
   };
-  let credentialTypes = {};
-  const permissionLabel = (permission) => permission.split('.').map(part => part.replaceAll('_', ' ')).join(' / ');
-  function updateCredentialSummary() {
-    const summary = $('updateCredentialSummary');
-    const selected = (credentialTypes[form.elements.role.value] || []).find(item => String(item.id) === form.elements.credentialTypeId.value);
-    summary.replaceChildren();
-    summary.hidden = !selected;
-    if (!selected) return;
-    const heading = document.createElement('strong');
-    heading.textContent = `${selected.name} profile adjustments`;
-    summary.append(heading);
-    const permissions = [
-      ...(selected.permissions || []).map(permission => ['Added by profile', permission]),
-      ...(selected.deniedPermissions || []).map(permission => ['Blocked by profile', permission]),
-    ];
-    if (!permissions.length) {
-      const empty = document.createElement('span');
-      empty.textContent = 'No profile changes. The role permissions still apply.';
-      summary.append(empty);
-      return;
-    }
-    const list = document.createElement('ul');
-    for (const [type, permission] of permissions) {
-      const item = document.createElement('li');
-      item.className = type.startsWith('Blocked') ? 'is-blocked' : 'is-granted';
-      item.textContent = `${type}: ${permissionLabel(permission)}`;
-      list.append(item);
-    }
-    summary.append(list);
-  }
-  function syncCredentialTypes(selectedId = '', selectedName = '') {
-    const select = form.elements.credentialTypeId;
-    const options = credentialTypes[form.elements.role.value] || [];
-    select.replaceChildren(new Option('No profile - role permissions only', ''), ...options.map(credential => {
-      const option = new Option(credential.name, credential.id);
-      option.dataset.credentialName = credential.name;
-      return option;
-    }));
-    const retained = options.find(credential => String(credential.id) === String(selectedId))
-      || options.find(credential => credential.name === selectedName);
-    if (!retained && selectedId && selectedName) {
-      const fallback = new Option(selectedName, selectedId);
-      fallback.dataset.credentialName = selectedName;
-      select.add(fallback);
-      select.value = String(selectedId);
-    } else {
-      select.value = retained ? String(retained.id) : '';
-    }
-    $('updateCredentialField').hidden = options.length === 0 && !retained && !selectedId;
-    updateCredentialSummary();
-  }
   const formatDate = (value, withTime = true) => {
     if (!value) return 'Not recorded';
     // Keep a date-only birthday independent of time zone conversion.
@@ -126,14 +79,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!user) { unavailable('User unavailable', 'This registration was removed or is not available in this browser.'); return; }
       $('profileUnavailable').hidden = true; $('userProfileContent').hidden = false;
       $('profileName').textContent = fullName(user); $('profileAvatar').textContent = initials(user);
-      const credentialName = user.credentialType || user.credential || '';
-      $('profileEmail').textContent = user.email || 'No email provided'; $('profileRole').textContent = [user.role, credentialName].filter(Boolean).join(' - ') || 'Role not assigned';
+      $('profileEmail').textContent = user.email || 'No email provided'; $('profileRole').textContent = user.role || 'Role not assigned';
       $('profileOffice').textContent = user.office || 'Office not assigned'; badge('profileStatus', user);
       $('profileUserId').textContent = user.id;
       $('profileRegistered').textContent = formatDate(user.createdAt); $('profileUpdated').textContent = formatDate(user.updatedAt);
       $('editUserProfile').href = `view-user?id=${encodeURIComponent(user.id)}`;
-      editableFields.forEach((field) => { if (field !== 'office' && field !== 'credentialTypeId') form.elements[field].value = user[field] || ''; });
-      syncCredentialTypes(user.credentialTypeId || '', credentialName);
+      editableFields.forEach((field) => { if (field !== 'office') form.elements[field].value = user[field] || ''; });
       form.elements.status.value = /^(approved|accepted|approved\s*&\s*accepted)$/i.test(user.status || '') ? 'Approved & Accepted' : /^inactive$/i.test(user.status || '') ? 'Inactive' : '';
       syncOffices(user.office || '');
       form.elements.remarks.value = user.status === 'Inactive' ? String(user.remarks || '') : '';
@@ -149,17 +100,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch { unavailable('Unable to load profile', 'Registration data could not be read. Reload the page and try again.'); feedback('The user profile could not be loaded.', 'error'); }
   }
   form.elements.status.addEventListener('change', syncRemarks);
-  form.elements.role.addEventListener('change', () => {
-    const hadProfile = Boolean(form.elements.credentialTypeId.value);
-    syncCredentialTypes();
-    const profileWasCleared = hadProfile && !form.elements.credentialTypeId.value;
-    $('updateAccessProfileReset').hidden = !profileWasCleared;
-    if (profileWasCleared) $('updateCredentialField').hidden = false;
-  });
-  form.elements.credentialTypeId.addEventListener('change', () => {
-    $('updateAccessProfileReset').hidden = true;
-    updateCredentialSummary();
-  });
   form.elements.region.addEventListener('change', () => syncOffices());
   $('resetUserUpdate').addEventListener('click', () => { load(); feedback('Changes reset to the saved registration.'); });
   form.addEventListener('submit', async (event) => {
@@ -171,24 +111,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!user) { load(); feedback('This registration is no longer available.', 'warning'); return; }
       if (JSON.stringify(user) !== loadedSnapshot) { feedback('This account changed in another tab. Reset changes to load the latest details before saving.', 'warning'); return; }
       const updates = Object.fromEntries(editableFields.map((field) => [field, form.elements[field].value.trim()]));
-      const selectedCredential = form.elements.credentialTypeId.selectedOptions[0];
-      updates.credentialType = selectedCredential?.dataset.credentialName || '';
-      const selectedCredentialDetails = (credentialTypes[updates.role] || []).find(item => String(item.id) === updates.credentialTypeId);
-      updates.credentialPermissions = selectedCredentialDetails?.permissions || [];
-      updates.deniedCredentialPermissions = selectedCredentialDetails?.deniedPermissions || [];
       updates.email = updates.email.toLowerCase();
       updates.remarks = updates.status === 'Inactive' ? form.elements.remarks.value.trim() : '';
       if (!updates.firstName || !updates.lastName || !updates.dateOfBirth || !updates.email || !updates.region || !updates.office) { feedback('Complete all required registration fields.', 'warning'); return; }
       if (!['Data Encoder', 'Program Administrator', 'Program Head'].includes(updates.role)
         || !['Approved & Accepted', 'Inactive'].includes(updates.status)) { feedback('Select a valid role and account status.', 'warning'); return; }
       if (users.some((item) => item?.id !== id && String(item?.email || '').toLowerCase() === updates.email)) { feedback('This work email is already registered to another user.', 'warning'); form.elements.email.focus(); return; }
-      const changed = Object.keys(updates).filter(field => {
-        const next = updates[field] ?? '';
-        const previous = user[field] ?? (Array.isArray(next) ? [] : '');
-        return Array.isArray(previous) || Array.isArray(next)
-          ? JSON.stringify(previous) !== JSON.stringify(next)
-          : String(previous) !== String(next);
-      });
+      const changed = Object.keys(updates).filter(field => String(user[field] || '') !== updates[field]);
       const timestamp = new Date().toISOString();
       const activityLogs = Array.isArray(user.activityLogs) ? [...user.activityLogs] : [];
       let actorId = null;
@@ -197,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const actor = actorUser ? [actorUser.firstName, actorUser.middleName, actorUser.lastName, actorUser.suffix].filter(Boolean).join(' ') : 'System user';
       const base = { actor, actorId, date: timestamp, reference: user.id };
       const profileChanges = changed.filter(field => field !== 'status' && field !== 'remarks');
-      if (profileChanges.length) activityLogs.push({ ...base, category: 'profile', title: 'User profile updated', description: `Updated ${profileChanges.map(field => ({ firstName: 'first name', middleName: 'middle name', lastName: 'last name', dateOfBirth: 'date of birth', suffix: 'extension', credentialTypeId: 'access profile', credentialPermissions: 'access profile grants', deniedCredentialPermissions: 'profile blocked permissions' }[field] || field)).join(', ')}.`, status: 'Updated' });
+      if (profileChanges.length) activityLogs.push({ ...base, category: 'profile', title: 'User profile updated', description: `Updated ${profileChanges.map(field => ({ firstName: 'first name', middleName: 'middle name', lastName: 'last name', dateOfBirth: 'date of birth', suffix: 'extension' }[field] || field)).join(', ')}.`, status: 'Updated' });
       if (changed.includes('status') || changed.includes('remarks')) activityLogs.push({ ...base, category: 'status', title: changed.includes('status') ? 'Account status updated' : 'Inactive remarks updated', description: changed.includes('status') ? `Account status changed from ${user.status || 'Not specified'} to ${updates.status}.` : 'The optional inactive account remarks were updated.', status: updates.status });
       Object.assign(user, updates, { updatedAt: timestamp, activityLogs });
       await window.TmisStore.setItem(key, JSON.stringify(users));
@@ -249,18 +178,5 @@ document.addEventListener('DOMContentLoaded', () => {
   const positionToast = () => region?.style.setProperty('--account-toast-top', `${Math.max(0, header?.getBoundingClientRect().bottom || 0)}px`);
   positionToast(); window.addEventListener('resize', positionToast); window.addEventListener('scroll', positionToast, { passive: true });
   if (header && globalThis.ResizeObserver) new ResizeObserver(positionToast).observe(header);
-  fetch(form.dataset.optionsUrl, { headers: { Accept: 'application/json' } })
-    .then(async response => {
-      if (!response.ok || response.redirected) throw new Error('Access profile options could not be loaded.');
-      const data = await response.json();
-      credentialTypes = data.credentialTypes || {};
-      form.elements.role.replaceChildren(new Option('Select a role', ''), ...data.roles.map(role => new Option(role, role)));
-      load();
-    })
-    .catch(() => {
-      form.elements.credentialTypeId.disabled = true;
-      form.elements.role.disabled = true;
-      load();
-      feedback('Access profile details could not be loaded. Existing assignment is preserved; try reloading before editing it.', 'error');
-    });
+  load();
 });

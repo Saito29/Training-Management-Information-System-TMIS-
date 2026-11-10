@@ -440,7 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const id = esc(r.id),
       q = encodeURIComponent(r.id);
     const inReview = r.status === 'For Review';
-    return `<td><div class="table-row-actions">${inReview ? `<button type="button" class="btn table-action-button forward-action" data-approve="${id}" title="Review and submit for approval" aria-label="Submit ${id} for approval"><i class="bi bi-send-fill"></i></button>` : ''}<a class="btn table-action-button view-action" href="../id/view-training?id=${q}" target="_blank" rel="noopener" title="View training (opens in a new tab)" aria-label="View ${id}"><i class="bi bi-eye-fill"></i></a><a class="btn table-action-button edit-action" href="../id/edit-training?id=${q}" target="_blank" rel="noopener" title="Edit training (opens in a new tab)" aria-label="Edit ${id}"><i class="bi bi-pencil-fill"></i></a>${inReview ? `<button type="button" class="btn table-action-button reject-action" data-reject="${id}" title="Reject training" aria-label="Reject ${id}"><i class="bi bi-x-circle-fill"></i></button>` : ''}</div></td>`;
+    return `<td><div class="table-row-actions">${inReview ? `<button type="button" class="btn table-action-button forward-action" data-approve="${id}" title="Review and submit for approval" aria-label="Submit ${id} for approval"><i class="bi bi-send-fill"></i></button>` : ''}<a class="btn table-action-button view-action" href="../id/view-training/${q}" target="_blank" rel="noopener" title="View training (opens in a new tab)" aria-label="View ${id}"><i class="bi bi-eye-fill"></i></a><a class="btn table-action-button edit-action" href="../id/edit-training/${q}" target="_blank" rel="noopener" title="Edit training (opens in a new tab)" aria-label="Edit ${id}"><i class="bi bi-pencil-fill"></i></a>${inReview ? `<button type="button" class="btn table-action-button reject-action" data-reject="${id}" title="Reject training" aria-label="Reject ${id}"><i class="bi bi-x-circle-fill"></i></button>` : ''}</div></td>`;
   };
   const render = () => {
     const all = sorted(),
@@ -620,7 +620,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ['Location and Venue', esc(`${r.venue}, ${r.location}`)],
       ]);
       $('#editTrainingLink').href =
-        `../id/edit-training?id=${encodeURIComponent(r.id)}`;
+        `../id/edit-training/${encodeURIComponent(r.id)}`;
       renderDesignCheck(r);
       approveModal.show();
     } else if (rj) {

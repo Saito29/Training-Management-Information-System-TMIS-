@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const icon = document.createElement('span'); icon.className = 'rp-training-icon'; icon.innerHTML = '<i class="bi bi-mortarboard" aria-hidden="true"></i>';
     const titleBlock = document.createElement('div');
     const title = document.createElement('h3');
-    const titleLink = document.createElement('a'); titleLink.href = `view-training?id=${encodeURIComponent(item.id || 'TRN-000246')}`;
+    const titleLink = document.createElement('a'); titleLink.href = `view-training/${encodeURIComponent(item.id || 'TRN-000246')}`;
     titleLink.textContent = item.training_title || 'Untitled training';
     title.append(titleLink);
     const type = document.createElement('span'); type.className = 'rp-training-type'; type.textContent = item.training_type || 'Training type not provided';
@@ -225,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const row = document.createElement('tr');
     const titleCell = document.createElement('td');
     const titleLink = document.createElement('a');
-    titleLink.href = `view-training?id=${encodeURIComponent(entry.training.id || 'TRN-000246')}`;
+    titleLink.href = `view-training/${encodeURIComponent(entry.training.id || 'TRN-000246')}`;
     titleLink.textContent = entry.training.training_title || 'Untitled training';
     titleCell.append(titleLink);
     const locationCell = document.createElement('td');

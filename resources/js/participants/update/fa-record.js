@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const root = document.querySelector('[data-fa-mode]');
   if (!root) return;
   const editing = root.dataset.faMode === 'edit';
-  const id = new URLSearchParams(location.search).get('faId');
+  const id = window.TmisStore.selectedId();
   const key = 'tmis-farmer-associations';
   const form = document.getElementById('faDetailForm');
   const fields = document.getElementById('faDetailFields');
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     status.textContent = record.status || 'Active';
     status.classList.toggle('is-inactive', record.status === 'Inactive');
     const editLink = document.getElementById('faEditLink');
-    if (editLink) editLink.href = `edit-fa?faId=${encodeURIComponent(record.id)}`;
+    if (editLink) editLink.href = `edit-fa/${encodeURIComponent(record.id)}`;
     fields.replaceChildren();
     labels.forEach(([name, title]) => {
       const wrapper = document.createElement('div'); wrapper.className = 'col-12 col-md-6';

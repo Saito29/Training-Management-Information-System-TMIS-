@@ -50,20 +50,10 @@ class RegistrationReferences
         $data = $request->validate($rules);
         $data['yearCovered'] = isset($data['yearCovered']) ? (int) $data['yearCovered'] : (int) now()->format('Y');
         $user = $request->user();
-        if (ModuleAccess::isAdministrator($user)) {
-            $scope = DB::table('user_data_scopes')->where('user_id', $user->user_id)->first();
-            $allowedRegionIds = $scope
-                ? ($scope->region_ids === null ? null : json_decode($scope->region_ids, true, 512, JSON_THROW_ON_ERROR))
-                : ($user->region_id === null ? [] : [(int) $user->region_id]);
-            $allowedOfficeIds = $scope
-                ? ($scope->office_ids === null ? null : json_decode($scope->office_ids, true, 512, JSON_THROW_ON_ERROR))
-                : ($user->org_id === null ? [] : [(int) $user->org_id]);
-            $regionIsAllowed = $allowedRegionIds === null || in_array((int) $data['region_id'], array_map('intval', $allowedRegionIds), true);
-            $officeIsAllowed = $allowedOfficeIds === null || in_array((int) $data['org_id'], array_map('intval', $allowedOfficeIds), true);
-            abort_unless($regionIsAllowed && $officeIsAllowed, 403, 'The selected region or office is outside your data visibility settings.');
-        } else {
-            abort_unless((int) $data['region_id'] === (int) $user->region_id && (int) $data['org_id'] === (int) $user->org_id, 403);
-        }
+        $scope = ModuleAccess::registrationScope($user);
+        $regionIsAllowed = $scope['regionIds'] === null || in_array((int) $data['region_id'], $scope['regionIds'], true);
+        $officeIsAllowed = $scope['officeIds'] === null || in_array((int) $data['org_id'], $scope['officeIds'], true);
+        abort_unless($regionIsAllowed && $officeIsAllowed, 403, 'The selected region or office is outside your data visibility settings.');
         $parent = null;
         foreach (['province', 'district', 'municipality', 'barangay'] as $kind) {
             $location = DB::table('geographic_locations')->where('id', $data[$kind.'_id'])->where('kind', $kind)->where('region_id', $data['region_id'])->where('parent_id', $parent)->where('is_active', true)->first();

@@ -56,9 +56,10 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/participants/update/edit-farmer.css') }}"
+      href="{{ asset('src/css/participants/update/edit-farmer.css?v=farmer-association-memberships-1') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/shared/activity-logs.css?v=design-20261109-1') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
     <title>DA-TMIS - Edit Farmer</title>
     <meta name="description" content="Edit Farmer | DA-TMIS" />
@@ -891,7 +892,7 @@ class="layout-fixed"
                               <span class="farmer-status-pill active-status">
                                 <i class="bi bi-patch-check-fill"></i> Active
                               </span>
-                              <button type="button" class="btn btn-outline-success btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#farmerStatusModal"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> Update status</button>
+                              <button type="button" class="btn farmer-status-action mt-2" data-bs-toggle="modal" data-bs-target="#farmerStatusModal"><i class="bi bi-arrow-left-right" aria-hidden="true"></i><span>Update status</span><i class="bi bi-arrow-right ms-auto" aria-hidden="true"></i></button>
                             </div>
                           </div>
                           <div class="farmer-meta-items">
@@ -901,7 +902,7 @@ class="layout-fixed"
                             </div>
                             <div class="farmer-meta-item">
                               <span class="farmer-meta-label"><i class="bi bi-clock-history text-success"></i> Updated Date:</span>
-                              <strong class="farmer-meta-value" id="displayUpdatedDate">January 1, 2023</strong>
+                              <strong class="farmer-meta-value" id="displayUpdatedDate">No record updated</strong>
                             </div>
                           </div>
                         </div>
@@ -1044,6 +1045,14 @@ class="layout-fixed"
                             <div class="col-12 col-md-7"><label for="farmer_association_id" class="form-label">Association</label><select class="form-select" id="farmer_association_id" name="association_id"><option value="">No association</option></select></div>
                             <div class="col-12 col-md-5"><label for="farmer_associate_role" class="form-label">Position / Role</label><input class="form-control" id="farmer_associate_role" name="associate_role" maxlength="255"></div>
                           </div>
+                          <section class="farmer-beneficiary-office-panel" aria-labelledby="editBeneficiaryOfficesTitle">
+                            <header class="farmer-beneficiary-office-heading">
+                              <div><h6 id="editBeneficiaryOfficesTitle">Beneficiary offices</h6><p>All regions and offices where this farmer is registered as a beneficiary.</p></div>
+                              <span class="farmer-beneficiary-office-count" data-beneficiary-office-count></span>
+                            </header>
+                            <div class="farmer-beneficiary-office-grid" data-beneficiary-offices aria-live="polite"></div>
+                            <p class="farmer-beneficiary-office-empty" data-beneficiary-office-empty>No beneficiary offices are recorded.</p>
+                          </section>
 
                           <!-- Section 2: Address Information -->
                           <div class="form-section-divider">
@@ -1149,42 +1158,16 @@ class="layout-fixed"
                         <div class="overview-heading">
                           <span class="overview-heading-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
                           <h5 class="title-card">Farmer Association / Organization</h5>
-                          <span class="overview-status">Active</span>
+                          <span class="overview-status" data-association-membership-count>0 associations</span>
                         </div>
                       </div>
                       <div class="card-body overview-card-body">
                         <div class="association-overview-content">
-                          <div class="association-detail-grid">
-                            <div class="farmer-detail">
-                              <span class="farmer-detail-icon"><i class="bi bi-card-text" aria-hidden="true"></i></span>
-                              <div><span class="farmer-detail-label">Association ID</span><strong>11921</strong></div>
-                            </div>
-                            <div class="farmer-detail">
-                              <span class="farmer-detail-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
-                              <div><span class="farmer-detail-label">Association Name</span><strong>Villa Manzano Norte Farmers</strong></div>
-                            </div>
-                            <div class="farmer-detail">
-                              <span class="farmer-detail-icon"><i class="bi bi-person-workspace" aria-hidden="true"></i></span>
-                              <div><span class="farmer-detail-label">Position / Role</span><strong>Member</strong></div>
-                            </div>
-                            <div class="farmer-detail">
-                              <span class="farmer-detail-icon"><i class="bi bi-calendar2-check" aria-hidden="true"></i></span>
-                              <div><span class="farmer-detail-label">Date Updated</span><strong>January 1, 2023</strong></div>
-                            </div>
-                            <div class="farmer-detail">
-                              <span class="farmer-detail-icon"><i class="bi bi-patch-check" aria-hidden="true"></i></span>
-                              <div><span class="farmer-detail-label">Status</span><strong>Active</strong></div>
-                            </div>
-                            <div class="farmer-detail">
-                              <span class="farmer-detail-icon"><i class="bi bi-geo-alt" aria-hidden="true"></i></span>
-                              <div><span class="farmer-detail-label">Location</span><strong>Alabat, Quezon</strong></div>
-                            </div>
-                          </div>
-                          <div class="association-emblem" aria-hidden="true">
-                            <span><i class="bi bi-people-fill"></i></span>
-                            <strong>VMNF</strong>
-                            <small>Farmers Association</small>
-                          </div>
+                          <details class="farmer-association-membership-panel">
+                            <summary>View association and role details</summary>
+                            <div class="farmer-association-membership-list" data-association-memberships aria-live="polite"></div>
+                            <p class="farmer-association-membership-empty" data-association-membership-empty>No association memberships are recorded.</p>
+                          </details>
                         </div>
                       </div>
                     </article>
@@ -1207,7 +1190,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="modern-rice-production">
                           <span class="training-preview-art training-art-green"><i class="bi bi-flower1" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=modern-rice-production" target="_blank" rel="noopener">Modern Rice Production</a></strong><span class="training-type">Crop Production</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'modern-rice-production']) }}" target="_blank" rel="noopener">Modern Rice Production</a></strong><span class="training-type">Crop Production</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> May 22&ndash;24, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Los BaÃ±os, Laguna</small>
                             <span class="training-status">Completed</span>
@@ -1217,7 +1200,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="organic-vegetable-production">
                           <span class="training-preview-art training-art-blue"><i class="bi bi-flower2" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=organic-vegetable-production" target="_blank" rel="noopener">Organic Vegetable Production</a></strong><span class="training-type training-type-blue">Organic Agriculture</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'organic-vegetable-production']) }}" target="_blank" rel="noopener">Organic Vegetable Production</a></strong><span class="training-type training-type-blue">Organic Agriculture</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> May 27&ndash;29, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Benguet State Univ.</small>
                             <span class="training-status">Completed</span>
@@ -1227,7 +1210,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="farm-business-management">
                           <span class="training-preview-art training-art-orange"><i class="bi bi-briefcase" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=farm-business-management" target="_blank" rel="noopener">Farm Business Management</a></strong><span class="training-type training-type-orange">Agribusiness</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'farm-business-management']) }}" target="_blank" rel="noopener">Farm Business Management</a></strong><span class="training-type training-type-orange">Agribusiness</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> June 3&ndash;5, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> DA RFO VI, Iloilo</small>
                             <span class="training-status">Completed</span>
@@ -1237,7 +1220,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="climate-smart-agriculture">
                           <span class="training-preview-art training-art-purple"><i class="bi bi-leaf" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=climate-smart-agriculture" target="_blank" rel="noopener">Climate Smart Agriculture</a></strong><span class="training-type training-type-purple">Climate Smart Agriculture</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'climate-smart-agriculture']) }}" target="_blank" rel="noopener">Climate Smart Agriculture</a></strong><span class="training-type training-type-purple">Climate Smart Agriculture</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> June 10&ndash;12, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Isabela State Univ.</small>
                             <span class="training-status training-status-ongoing">Ongoing</span>
@@ -1247,7 +1230,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="soil-health-nutrient-management">
                           <span class="training-preview-art training-art-green"><i class="bi bi-tree" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=soil-health-nutrient-management" target="_blank" rel="noopener">Soil Health and Nutrient Management</a></strong><span class="training-type">Crop Production</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'soil-health-nutrient-management']) }}" target="_blank" rel="noopener">Soil Health and Nutrient Management</a></strong><span class="training-type">Crop Production</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> June 18&ndash;20, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Quezon Province</small>
                             <span class="training-status">Completed</span>
@@ -1257,7 +1240,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="efficient-water-management">
                           <span class="training-preview-art training-art-blue"><i class="bi bi-droplet" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=efficient-water-management" target="_blank" rel="noopener">Efficient Water Management</a></strong><span class="training-type training-type-blue">Farm Technology</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'efficient-water-management']) }}" target="_blank" rel="noopener">Efficient Water Management</a></strong><span class="training-type training-type-blue">Farm Technology</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> July 2&ndash;4, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Lucban, Quezon</small>
                             <span class="training-status">Completed</span>
@@ -1267,7 +1250,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="agricultural-financial-literacy">
                           <span class="training-preview-art training-art-orange"><i class="bi bi-cash-coin" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=agricultural-financial-literacy" target="_blank" rel="noopener">Agricultural Financial Literacy</a></strong><span class="training-type training-type-orange">Agribusiness</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'agricultural-financial-literacy']) }}" target="_blank" rel="noopener">Agricultural Financial Literacy</a></strong><span class="training-type training-type-orange">Agribusiness</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> July 15&ndash;17, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Sariaya, Quezon</small>
                             <span class="training-status">Completed</span>
@@ -1277,7 +1260,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="postharvest-handling-storage">
                           <span class="training-preview-art training-art-purple"><i class="bi bi-recycle" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=postharvest-handling-storage" target="_blank" rel="noopener">Postharvest Handling and Storage</a></strong><span class="training-type training-type-purple">Postharvest</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'postharvest-handling-storage']) }}" target="_blank" rel="noopener">Postharvest Handling and Storage</a></strong><span class="training-type training-type-purple">Postharvest</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> August 5&ndash;7, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Quezon City</small>
                             <span class="training-status">Completed</span>
@@ -1287,7 +1270,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="integrated-pest-management">
                           <span class="training-preview-art training-art-green"><i class="bi bi-bug" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=integrated-pest-management" target="_blank" rel="noopener">Integrated Pest Management</a></strong><span class="training-type">Crop Production</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'integrated-pest-management']) }}" target="_blank" rel="noopener">Integrated Pest Management</a></strong><span class="training-type">Crop Production</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> August 20&ndash;22, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Alabat, Quezon</small>
                             <span class="training-status">Completed</span>
@@ -1297,7 +1280,7 @@ class="layout-fixed"
                         <article class="training-preview-card" data-training-id="farmers-market-linkage">
                           <span class="training-preview-art training-art-blue"><i class="bi bi-shop" aria-hidden="true"></i></span>
                           <div class="training-preview-main">
-                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training') }}?trainingId=farmers-market-linkage" target="_blank" rel="noopener">Farmers' Market Linkage Workshop</a></strong><span class="training-type training-type-blue">Market Development</span>
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'farmers-market-linkage']) }}" target="_blank" rel="noopener">Farmers' Market Linkage Workshop</a></strong><span class="training-type training-type-blue">Market Development</span>
                             <small><i class="bi bi-calendar3" aria-hidden="true"></i> September 2&ndash;4, 2025</small>
                             <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Lucena City</small>
                             <span class="training-status">Completed</span>
@@ -1305,10 +1288,10 @@ class="layout-fixed"
                           <div class="training-preview-scores"><span>Pre-Test<strong>69.00%</strong></span><span>Post-Test<strong>87.00%</strong></span><span>Rating<strong><i class="bi bi-star-fill" aria-hidden="true"></i> 4.40 / 5</strong></span></div>
                         </article>
                       </div>
-                      <p class="training-carousel-empty" id="overviewTrainingEmpty" hidden>No training attended found for this farmer/participant.</p>
+                      <p class="training-carousel-empty" id="overviewTrainingEmpty" hidden>No training participated found yet.</p>
                     </div>
                     <div class="training-carousel-controls" id="overviewTrainingControls">
-                      <span class="training-carousel-count" id="overviewTrainingCount" aria-live="polite">1&ndash;4 of 10</span>
+                      <span class="training-carousel-count" id="overviewTrainingCount" aria-live="polite">No training participated found yet.</span>
                       <div>
                         <button class="training-carousel-button" type="button" id="overviewTrainingPrevious" aria-label="Show previous trainings" disabled><i class="bi bi-arrow-left" aria-hidden="true"></i></button>
                         <button class="training-carousel-button" type="button" id="overviewTrainingNext" aria-label="Show next trainings"><i class="bi bi-arrow-right" aria-hidden="true"></i></button>
@@ -2125,12 +2108,43 @@ class="layout-fixed"
       </div>
     </div>
 
-    <div class="modal fade" id="farmerStatusModal" tabindex="-1" aria-labelledby="farmerStatusModalTitle" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
+    <div class="modal fade farmer-status-modal" id="farmerStatusModal" tabindex="-1" aria-labelledby="farmerStatusModalTitle" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered farmer-status-dialog">
         <form class="modal-content" id="farmerStatusForm">
-          <div class="modal-header"><div><span class="text-success small fw-semibold">PROFILE MANAGEMENT</span><h2 class="modal-title fs-5" id="farmerStatusModalTitle">Update farmer status</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
-          <div class="modal-body"><p class="text-secondary">Record the participant’s current standing. Supporting documents are optional for inactive, removed, or deceased status.</p><div class="mb-3"><label class="form-label" for="farmerStatusSelect">Status</label><select class="form-select" id="farmerStatusSelect" name="status" required><option value="Active">Active</option><option value="Inactive">Inactive</option><option value="Removed">Removed</option><option value="Deceased">Deceased</option></select></div><div id="farmerStatusReasonFields" hidden><div class="mb-3"><label class="form-label" for="farmerStatusRemarks">Remarks <span class="text-secondary">(optional)</span></label><textarea class="form-control" id="farmerStatusRemarks" name="remarks" rows="3" maxlength="1000" placeholder="Add context for this status change"></textarea></div><div class="mb-3"><label class="form-label" for="farmerStatusDocument">Supporting file <span class="text-secondary">(optional, PDF or image, up to 10 MB)</span></label><input class="form-control" id="farmerStatusDocument" name="file" type="file" accept="application/pdf,image/*"><div class="form-text">Accepted formats: PDF, PNG, JPG, JPEG, WEBP, or GIF.</div></div></div><div id="farmerStatusError" class="alert alert-danger py-2" role="alert" hidden></div></div>
-          <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success" id="saveFarmerStatus">Save status</button></div>
+          <div class="modal-header">
+            <span class="farmer-status-modal-icon"><i class="bi bi-person-gear" aria-hidden="true"></i></span>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <span class="farmer-status-modal-eyebrow">PROFILE MANAGEMENT</span>
+            <h2 id="farmerStatusModalTitle">Update farmer status</h2>
+            <p>Record the participant’s current standing. Supporting documents are optional for inactive, removed, or deceased status.</p>
+            <div class="mb-3">
+              <label class="form-label" for="farmerStatusSelect">Status</label>
+              <select class="form-select" id="farmerStatusSelect" name="status" required>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Removed">Removed</option>
+                <option value="Deceased">Deceased</option>
+              </select>
+            </div>
+            <div id="farmerStatusReasonFields" hidden>
+              <div class="mb-3">
+                <label class="form-label" for="farmerStatusRemarks">Remarks <span class="text-secondary">(optional)</span></label>
+                <textarea class="form-control" id="farmerStatusRemarks" name="remarks" rows="3" maxlength="1000" placeholder="Add context for this status change"></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="farmerStatusDocument">Supporting file <span class="text-secondary">(optional, PDF or image, up to 10 MB)</span></label>
+                <input class="form-control" id="farmerStatusDocument" name="file" type="file" accept="application/pdf,image/*">
+                <div class="form-text">Accepted formats: PDF, PNG, JPG, JPEG, WEBP, or GIF.</div>
+              </div>
+            </div>
+            <div id="farmerStatusError" class="alert alert-danger py-2" role="alert" hidden></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn farmer-status-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn farmer-status-modal-save" id="saveFarmerStatus"><i class="bi bi-check2" aria-hidden="true"></i> Save status</button>
+          </div>
         </form>
       </div>
     </div>
@@ -2573,9 +2587,9 @@ class="layout-fixed"
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-profile-tabs.js') }}"></script>
-    <script src="{{ asset('src/js/participants/update/farmer-training-table.js?v=attended-training-empty-3') }}"></script>
+    <script src="{{ asset('src/js/participants/update/farmer-training-table.js?v=attended-training-empty-4') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-intervention-table.js') }}"></script>
-    <script src="{{ asset('src/js/participants/update/farmer-activity-logs.js') }}"></script>
+    <script src="{{ asset('src/js/participants/update/farmer-activity-logs.js?v=actor-role-omission-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/attachment-manager.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/edit-farmer.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-status.js?v=status-supporting-file-1') }}"></script>

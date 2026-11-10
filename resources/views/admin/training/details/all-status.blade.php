@@ -614,7 +614,7 @@ class="layout-fixed"
                 <i class="bi bi-bell-fill"></i>
                 <span
                   class="position-absolute top-0 start-100 translate-middle badge rounded-pill notification-count"
-                  >3</span
+                  ></span
                 >
               </button>
               <!-- Notification Dropdown -->
@@ -626,7 +626,7 @@ class="layout-fixed"
                   <div>
                     <span class="notification-menu-title">Notifications</span>
                     <span class="notification-menu-subtitle"
-                      >3 unread updates</span
+                      ></span
                     >
                   </div>
                   <div class="notification-menu-actions">
@@ -779,7 +779,7 @@ class="layout-fixed"
                     <span>Logs</span>
                   </a>
                 </li>
-                
+
                 <li>
                   <hr class="dropdown-divider" />
                 </li>
@@ -1861,7 +1861,7 @@ class="layout-fixed"
               <span>Logs</span>
             </a>
           </li>
-          
+
           <li class="mobile-list-navigation">
             <a href="{{ route('login') }}" class="nav-link sign-out-item">
               <i class="bi bi-box-arrow-right"></i>
@@ -2012,5 +2012,5 @@ class="layout-fixed"
     <!-- nav -->
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/training/details/all-status.js') }}"></script>
+    <script src="{{ asset('src/js/training/details/all-status.js?v=training-id-path-1') }}"></script>
 @endsection

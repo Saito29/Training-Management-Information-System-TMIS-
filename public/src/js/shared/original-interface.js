@@ -10,9 +10,17 @@
 
   const stable = value => JSON.stringify(value, (key, item) => item && !Array.isArray(item) && typeof item === 'object' ? Object.fromEntries(Object.entries(item).sort(([a],[b]) => a.localeCompare(b))) : item);
 
+<<<<<<< HEAD
   const requestedId = () => { const query = new URLSearchParams(location.search); return query.get('id') || query.get('faId') || query.get('farmerId') || ''; };
 
   const farmerNumberFromPath = () => location.pathname.match(/\/participants\/id\/(?:view|edit)-farmer\/(\d+)\/?$/)?.[1] || '';
+=======
+  const selectedId = () => {
+    const query = new URLSearchParams(location.search);
+    const path = location.pathname.match(/\/(?:participants\/id\/(?:view|edit)-fa|participants\/id\/(?:view|edit)-farmer|training\/id\/(?:view|edit)-training)\/([^/]+)\/?$/);
+    return query.get('id') || query.get('faId') || query.get('farmerId') || (path ? decodeURIComponent(path[1]) : '');
+  };
+>>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
 
   const records = key => clone(stores[key] || []);
 
@@ -38,7 +46,8 @@
 
     if (!response.ok) {
       const error = new Error(Object.values(result.errors || {}).flat()[0] || result.message || 'The server could not save this change.');
-      error.response = result;
+      error.status = response.status;
+      error.data = result;
       throw error;
     }
 
@@ -54,11 +63,17 @@
 
   }
 
+  async function refresh() {
+    const result = await request('/ui/data', null, 'GET');
+    if (!result.stores) throw new Error('The server did not return refreshed records.');
+    publish(result);
+    return result;
+  }
+
   const sampleMarker = key => /samples?-|sample.*added|samples.*initialized/.test(key);
 
   const section = key => key.startsWith('tmis:training:') ? key.split(':').at(-1) : null;
 
-  // Read page bootstrap data and account-scoped notification drafts from the server read model.
   function getItem(key) {
 
     if (Object.hasOwn(stores,key)) return JSON.stringify(stores[key]);
@@ -81,7 +96,7 @@
 
     if (/notification-state:/.test(key)) return '{}';
 
-    if (/notification-drafts?:/.test(key)) return null;
+    if (/notification-draft:/.test(key)) return null;
 
     if (/(columns|theme|page-size|table-state|filters|navigation)/.test(key)) return localStorage.getItem(key);
 
@@ -89,7 +104,6 @@
 
   }
 
-  // Persist records and both single and administrator notification-draft collections through authenticated endpoints.
   async function setItem(key, serialized) {
 
     let value = JSON.parse(serialized);
@@ -126,7 +140,7 @@
 
     }
 
-    if (key.startsWith('tmis-notification-draft')) { await request('/ui/draft',{key,value}); stores[key]=value; return; }
+    if (key.startsWith('tmis-notification-draft:')) { await request('/ui/draft',{key,value}); stores[key]=value; return; }
 
     if (key.startsWith('tmis-notification-state:')) {
 
@@ -175,14 +189,15 @@
 
     if (!upserts.length && !deletes.length) return;
 
-    publish(await request('/ui/sync',{key,upserts,deletes}));
+    const result = await request('/ui/sync',{key,upserts,deletes});
+    publish(result);
+    return result;
 
   }
 
-  // Remove only supported notification drafts; other record deletion uses dedicated APIs.
   async function removeItem(key) {
 
-    if (key.startsWith('tmis-notification-draft')) { await request('/ui/draft',{key,value:null}); delete stores[key]; return; }
+    if (key.startsWith('tmis-notification-draft:')) { await request('/ui/draft',{key,value:null}); delete stores[key]; return; }
 
     throw new Error('Use the record deletion action.');
 
@@ -221,7 +236,7 @@
   }
 
   const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[character]);
-  window.TmisStore = {escape,getItem,setItem,removeItem,records,selected,request,publish,selectedId,saveRecord,upload,documentAction};
+  window.TmisStore = {escape,getItem,setItem,removeItem,records,selected,request,publish,refresh,selectedId,saveRecord,upload,documentAction};
 
   window.TMIS_SESSION = {source:'database',userId:String(window.TMIS_PAGE.actor.id),user:{...window.TMIS_PAGE.actor,id:String(window.TMIS_PAGE.actor.id)}};
 
@@ -296,6 +311,72 @@
   }
   window.TmisDashboard={...dashboard,reports};
   function setSelect(control,value){if(!control)return;if(control.tagName!=='SELECT'){control.value=value??'';return;}const normalize=text=>String(text??'').replace(/\s*\(.*\)/,'').trim().toLowerCase();let option=[...control.options].find(option=>option.value===String(value)||normalize(option.textContent)===normalize(value));if(!option&&value){option=new Option(String(value),String(value));control.add(option);}control.value=option?.value||'';}
+  function renderBeneficiaryOffices(assignments){
+    const offices=Array.isArray(assignments)?assignments:[];
+    document.querySelectorAll('[data-beneficiary-offices]').forEach(container=>{
+      container.replaceChildren();
+      for(const assignment of offices){
+        const card=document.createElement('article');card.className='farmer-beneficiary-office-item';
+        const icon=document.createElement('span');icon.className='farmer-beneficiary-office-icon';icon.setAttribute('aria-hidden','true');icon.innerHTML='<i class="bi bi-building"></i>';
+        const details=document.createElement('div');details.className='farmer-beneficiary-office-details';
+        for(const[label,value]of [['Region',assignment.region],['Office',assignment.office]]){
+          const field=document.createElement('div');field.className='farmer-beneficiary-office-field';
+          const fieldLabel=document.createElement('span');fieldLabel.className='farmer-beneficiary-office-label';fieldLabel.textContent=label;
+          const fieldValue=document.createElement('strong');fieldValue.className='farmer-beneficiary-office-value';fieldValue.textContent=value||'Not recorded';
+          field.append(fieldLabel,fieldValue);details.append(field);
+        }
+        const badge=document.createElement('span');badge.className='farmer-beneficiary-office-badge';badge.textContent=assignment.isPrimary?'Primary office':'Additional office';
+        details.append(badge);card.append(icon,details);container.append(card);
+      }
+      const panel=container.closest('.farmer-beneficiary-office-panel');
+      const count=panel?.querySelector('[data-beneficiary-office-count]');
+      if(count)count.textContent=offices.length+' '+(offices.length===1?'office':'offices');
+      const empty=panel?.querySelector('[data-beneficiary-office-empty]');
+      if(empty)empty.hidden=offices.length>0;
+    });
+  }
+  function renderAssociationMemberships(memberships){
+    const records=Array.isArray(memberships)?memberships:[];
+    document.querySelectorAll('[data-association-memberships]').forEach(container=>{
+      container.replaceChildren();
+      for(const membership of records){
+        const card=document.createElement('article');card.className='farmer-association-membership-item';
+        const heading=document.createElement('header');heading.className='farmer-association-membership-heading';
+        const name=document.createElement('h6');name.textContent=membership.name||'Association not recorded';
+        heading.append(name);
+        if(membership.isPrimary){
+          const primary=document.createElement('span');primary.className='farmer-association-membership-primary';primary.textContent='Primary';
+          heading.append(primary);
+        }
+        const details=document.createElement('div');details.className='farmer-association-membership-details';
+        const fields=[
+          ['Association ID',membership.id],
+          ['Position / Role',membership.role],
+          ['Organization Type',membership.organizationType],
+          ['Region',membership.region],
+          ['Office',membership.office],
+          ['Location',membership.location],
+          ['Registration Date',membership.registrationDate],
+          ['Year Covered',membership.yearCovered],
+          ['Association Status',membership.status],
+          ['Member Since',membership.memberSince?.slice(0,10)],
+        ];
+        for(const[label,value]of fields){
+          const field=document.createElement('div');field.className='farmer-association-membership-field';
+          const fieldLabel=document.createElement('span');fieldLabel.className='farmer-association-membership-label';fieldLabel.textContent=label;
+          const fieldValue=document.createElement('strong');fieldValue.className='farmer-association-membership-value';fieldValue.textContent=value||'Not recorded';
+          field.append(fieldLabel,fieldValue);details.append(field);
+        }
+        card.append(heading,details);container.append(card);
+      }
+      const card=container.closest('.association-overview-card, .farmer-association-membership-card');
+      const count=card?.querySelector('[data-association-membership-count]');
+      if(count)count.textContent=records.length+' '+(records.length===1?'association':'associations');
+      const empty=container.parentElement?.querySelector('[data-association-membership-empty]');
+      if(empty)empty.hidden=records.length>0;
+      card?.classList.toggle('has-no-association',records.length===0);
+    });
+  }
   function bind(){
     const path=location.pathname;
     if(!window.TMIS_PAGE.administrator)document.querySelectorAll('a[href]').forEach(link=>{if(new URL(link.href,location.href).pathname==='/system/settings')link.remove();});
@@ -333,10 +414,9 @@
 
     }
     if(path.includes('/participants/id/')&&farmer){
-      const yearCoveredSelect=document.querySelector('#farmer_year_covered');if(yearCoveredSelect){const currentYear=new Date().getFullYear();yearCoveredSelect.replaceChildren(new Option('Select year',''),...Array.from({length:27},(_,index)=>String(currentYear+1-index)).map(year=>new Option(year,year)));}
-      const associationSelect=document.querySelector('#farmer_association_id');if(associationSelect){const associations=store.records('tmis-farmer-associations').filter(item=>String(item.region_id)===String(farmer.region_id)&&String(item.org_id)===String(farmer.org_id)&&item.status!=='Inactive');associationSelect.replaceChildren(new Option('No association',''),...associations.map(item=>new Option(item.association_name||item.name,String(item._db_id??item.id))));}
-      const fields={first_name:farmer.firstName,middle_name:farmer.middleName,last_name:farmer.lastName,extension:farmer.suffix,dob:farmer.birthDate,gender:farmer.sex,civil_status:farmer.civil_status,tupad:farmer.tupad,solo_parent:farmer.soloParent,nationality:farmer.nationality,place_of_birth:farmer.placeOfBirth||farmer.place_of_birth,four_ps:farmer.fourPs,pwd:farmer.pwd,senior_citizen:farmer.seniorCitizen,indigenous_group:farmer.indigenousGroup,tribe_name:farmer.tribeName,dietary_restriction:farmer.dietaryRestriction,allergies_on:farmer.allergies_on,region:farmer.region,district:farmer.district,province:farmer.province,municipality:farmer.municipality,barangay:farmer.barangay,postal_code:farmer.postal_code,mobile_no:farmer.phone,email:farmer.email,street_purok_sitio:farmer.street_purok_sitio_name,house_building_number:farmer.house_building_number,tel_number:farmer.telephone,yearCovered:farmer.yearCovered,registration_date:farmer.registrationDate,association_id:farmer.association_id,associate_role:farmer.role};
+      const fields={first_name:farmer.firstName,middle_name:farmer.middleName,last_name:farmer.lastName,extension:farmer.suffix,dob:farmer.birthDate,gender:farmer.sex,civil_status:farmer.civil_status,tupad:farmer.tupad,solo_parent:farmer.soloParent,nationality:farmer.nationality,place_of_birth:farmer.placeOfBirth||farmer.place_of_birth,four_ps:farmer.fourPs,pwd:farmer.pwd,senior_citizen:farmer.seniorCitizen,indigenous_group:farmer.indigenousGroup,tribe_name:farmer.tribeName,dietary_restriction:farmer.dietaryRestriction,allergies_on:farmer.allergies_on,region:farmer.region,district:farmer.district,province:farmer.province,municipality:farmer.municipality,barangay:farmer.barangay,postal_code:farmer.postal_code,mobile_no:farmer.phone,email:farmer.email,street_purok_sitio:farmer.street_purok_sitio_name,house_building_number:farmer.house_building_number,tel_number:farmer.telephone};
       const form=document.getElementById('editFarmerPersonalForm');if(form)for(const[name,value]of Object.entries(fields)){const control=form.elements.namedItem(name);setSelect(control,value);if(control?.tagName==='SELECT')control.dispatchEvent(new Event('change',{bubbles:true}));}
+<<<<<<< HEAD
       const details={'Farmer ID':farmer.farmerNumber||farmer.id,'Full Name':farmer.name,'Mobile Number':farmer.phone,'Address':[farmer.barangay,farmer.municipality,farmer.province].filter(Boolean).join(', '),'Sex':farmer.sex,'Date of Birth':farmer.birthDate,'Year Covered':farmer.yearCovered,'Nationality':farmer.nationality,'Place of Birth':farmer.placeOfBirth,'Farmer Association':farmer.organization,'4Ps Beneficiary':farmer.fourPs,'Person with Disability':farmer.pwd};
       const yearCoveredDisplay=document.querySelector('#farmerYearCovered');if(yearCoveredDisplay)yearCoveredDisplay.textContent=farmer.yearCovered||'Not recorded';
       const publicFarmerId=farmer.farmerNumber||farmer.id;
@@ -357,6 +437,34 @@
       document.querySelectorAll('.overview-status').forEach(item=>item.textContent=farmer.status);
       document.querySelectorAll('a[href$="/participants/id/edit-farmer"],a[href$="/participants/id/view-farmer"]').forEach(link=>{const action=link.href.endsWith('/edit-farmer')?'edit':'view';link.href=`/app/admin/participants/id/${action}-farmer/${encodeURIComponent(publicFarmerId)}`;});
       document.querySelectorAll('.farmer-detail').forEach(item=>{const label=item.querySelector('.farmer-detail-label')?.textContent.trim(),value=item.querySelector('strong');if(['Association ID','Association Name','Position / Role','Date Updated','Status','Location'].includes(label)&&!hasAssociation){item.hidden=true;return;}if(value&&Object.hasOwn(details,label))value.textContent=details[label]||'Not recorded';});
+=======
+      const associationSelect=form?.elements.namedItem('association_id');
+      if(associationSelect){
+        const memberships=farmer.associationMemberships||[];
+        const primaryMembership=memberships.find(membership=>membership.isPrimary);
+        const primaryId=String(primaryMembership?.id||farmer.association_id||'');
+        const options=new Map(memberships.map(membership=>[
+          String(membership.id),
+          `${membership.name||membership.id} · ${membership.office||'Office not recorded'} · ${membership.region||'Region not recorded'}`,
+        ]));
+        for(const item of store.records('tmis-farmer-associations')){
+          options.set(String(item.id),`${item.association_name||item.name||item.id} · ${item.office||'Office not recorded'} · ${item.region||'Region not recorded'}`);
+        }
+        const noAssociation=new Option('No association','',primaryId==='',primaryId==='');
+        associationSelect.replaceChildren(noAssociation,...[...options].map(([id,name])=>new Option(name,id,id===primaryId,id===primaryId)));
+        setSelect(associationSelect,primaryId);
+      }
+      const associationRole=form?.elements.namedItem('associate_role');if(associationRole){associationRole.value=farmer.role||'';associationRole.defaultValue=farmer.role||'';}
+      const profileUpdatedLog=(farmer.activityLogs||[]).find(item=>item.title==='Farmer Profile Updated');
+      const updatedDate=profileUpdatedLog?.date?window.TmisDate.format(profileUpdatedLog.date,{dateStyle:'long'}):'No record updated';
+      const details={'Farmer ID':farmer.farmerNumber||farmer.id,'Full Name':farmer.name,'First Name':farmer.firstName,'Middle Name':farmer.middleName,'Last Name':farmer.lastName,'Extension':farmer.suffix,'Mobile Number':farmer.phone,'Telephone Number':farmer.telephone,'Email Address':farmer.email,'Address':[farmer.house_building_number,farmer.street_purok_sitio_name,farmer.barangay,farmer.municipality,farmer.district,farmer.province,farmer.region,farmer.postal_code].filter(Boolean).join(', '),'Region':farmer.region,'District':farmer.district,'Province':farmer.province,'Municipality':farmer.municipality,'Barangay':farmer.barangay,'Street / Purok':farmer.street_purok_sitio_name,'House / Building No.':farmer.house_building_number,'Postal Code':farmer.postal_code,'Sex':farmer.sex,'Gender':farmer.sex,'Date of Birth':farmer.birthDate,'Year Covered':farmer.yearCovered,'Nationality':farmer.nationality,'Civil Status':farmer.civil_status||farmer.csv,'Place of Birth':farmer.placeOfBirth,'Farmer Association':farmer.organization,'Position / Role':farmer.role,'4Ps Beneficiary':farmer.fourPs,'4Ps':farmer.fourPs,'TUPAD':farmer.tupad,'Solo Parent':farmer.soloParent,'Person With Disability':farmer.pwd,'Indigenous Group':farmer.indigenousGroup,'Tribe Name':farmer.tribeName,'Dietary Restrictions':farmer.dietaryRestriction,'Allergies':farmer.allergies_on,'Senior Citizen':farmer.seniorCitizen,'Profile Updated':updatedDate};
+      const updatedDateDisplay=document.querySelector('#displayUpdatedDate');if(updatedDateDisplay)updatedDateDisplay.textContent=updatedDate;
+      const association=store.records('tmis-farmer-associations').find(item=>String(item.id)===String(farmer.association_id));
+      const associationLocation=[association?.barangay,association?.municipality,association?.district,association?.province].filter(Boolean).join(', ');
+      Object.assign(details,{'Association ID':farmer.associationNumber||association?.id,'Association Name':farmer.organization||association?.association_name,'Organization Type':association?.organization_type,'Association Region':association?.region,'Association Office':association?.office,'Association Short Name':association?.short_name,'Association Location':associationLocation,'Location':associationLocation,'Association Registration Date':association?.registration_date,'Association Year Covered':association?.year_covered,'Position / Role':farmer.role,'Date Updated':updatedDate,'Status':association?.status||farmer.status});
+      renderBeneficiaryOffices(farmer.beneficiaryOffices);
+      renderAssociationMemberships(farmer.associationMemberships);
+>>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
       const trainingTrack=document.querySelector('#overviewTrainingTrack');
       const trainingCarousel=document.querySelector('#overviewTrainingCarousel');
       const trainingEmpty=document.querySelector('#overviewTrainingEmpty');
@@ -367,6 +475,7 @@
         const formatTrainingDate=value=>{if(!value)return '';const parsed=new Date(`${String(value).slice(0,10)}T00:00:00`);return Number.isNaN(parsed.getTime())?'':new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeZone:'Asia/Manila'}).format(parsed);};
         trainingTrack.replaceChildren();
         if(template&&attendedTrainings.length){
+          trainingTrack.hidden=false;
           for(const training of attendedTrainings){
             const card=template.cloneNode(true);card.hidden=false;card.dataset.trainingId=training.id;
             const titleLink=card.querySelector('.training-title-link');if(titleLink){titleLink.textContent=training.title||training.name||'Training';const target=new URL(titleLink.href,location.href);target.search='';target.searchParams.set('trainingId',training.id);titleLink.href=target.href;}
@@ -380,10 +489,12 @@
           }
           trainingCarousel.hidden=false;trainingEmpty.hidden=true;trainingControls.hidden=false;
         }else{
-          trainingCarousel.hidden=true;trainingEmpty.hidden=false;trainingControls.hidden=true;
+          trainingTrack.hidden=true;trainingCarousel.hidden=false;trainingEmpty.hidden=false;trainingControls.hidden=true;
         }
         window.dispatchEvent(new Event('tmis:farmer-training-history-updated'));
       }
+      document.querySelectorAll('a[href$="/participants/id/edit-farmer"]').forEach(link=>link.search='?id='+encodeURIComponent(farmer.id));
+      document.querySelectorAll('.farmer-detail').forEach(item=>{const label=item.querySelector('.farmer-detail-label')?.textContent.trim(),value=item.querySelector('strong');if(value&&Object.hasOwn(details,label))value.textContent=details[label]||'Not recorded';});
     }
     if(path.includes('/administration/id/')){
       const account=store.records('tmis-users').find(item=>item.id===store.selectedId());
@@ -403,7 +514,7 @@
       for(const[key,count]of [['activities',trainings.length],['participants',farmers.length],['fca',associations.length]]){const button=document.querySelector('[data-report-key="'+key+'"]');const card=button?.closest('.card-header-wrapper');const value=card?.querySelector('.card-header-context');if(value)value.textContent=count;}
       const upcoming=dashboard.upcoming;
       const wrapper=document.querySelector('.card-upcoming-training .card-body .row'),template=wrapper?.querySelector('.card-wrapper')?.cloneNode(true);
-      if(wrapper&&template){wrapper.replaceChildren(...(upcoming.length?upcoming:[null]).map(item=>{const card=template.cloneNode(true),date=item?new Date(item.startDate+'T00:00:00'):null;card.querySelector('.card-month').textContent=date?date.toLocaleDateString('en-PH',{month:'short'}):'';card.querySelector('.card-date-text').textContent=date?String(date.getDate()).padStart(2,'0'):'';const title=card.querySelector('.card-text-title');title.textContent=item?.title||'No upcoming trainings';title.href=item?'/app/admin/training/id/view-training?id='+encodeURIComponent(item.id):'#';card.querySelector('.card-range-date').textContent=item?[item.startDate,item.endDate].map(value=>new Date(value+'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})).join(' - '):'No upcoming date';card.querySelector('.card-location-text').textContent=item?.venue||'';card.querySelector('.slot-number').textContent=item?.target_participants||'0';return card;}));}
+      if(wrapper&&template){wrapper.replaceChildren(...(upcoming.length?upcoming:[null]).map(item=>{const card=template.cloneNode(true),date=item?new Date(item.startDate+'T00:00:00'):null;card.querySelector('.card-month').textContent=date?date.toLocaleDateString('en-PH',{month:'short'}):'';card.querySelector('.card-date-text').textContent=date?String(date.getDate()).padStart(2,'0'):'';const title=card.querySelector('.card-text-title');title.textContent=item?.title||'No upcoming trainings';title.href=item?'/app/admin/training/id/view-training/'+encodeURIComponent(item.id):'#';card.querySelector('.card-range-date').textContent=item?[item.startDate,item.endDate].map(value=>new Date(value+'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})).join(' - '):'No upcoming date';card.querySelector('.card-location-text').textContent=item?.venue||'';card.querySelector('.slot-number').textContent=item?.target_participants||'0';return card;}));}
       const date=document.querySelector('.app-left-content-date');if(date)date.textContent=dashboard.humanDate;const day=document.querySelector('.app-left-content-day');if(day)day.textContent=dashboard.weekday;const title=document.querySelector('.app-left-main-content-title');if(title)title.textContent=upcoming[0]?.title||'No upcoming training';
     }
   }

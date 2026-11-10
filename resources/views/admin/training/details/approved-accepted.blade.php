@@ -1999,5 +1999,5 @@ class="layout-fixed"
     <!-- nav -->
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/training/details/approved-accepted.js') }}"></script>
+    <script src="{{ asset('src/js/training/details/approved-accepted.js?v=training-id-path-1') }}"></script>
 @endsection

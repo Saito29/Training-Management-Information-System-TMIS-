@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const associationId = new URLSearchParams(location.search).get('faId') || 'FA-2025-001';
+  const associationId = window.TmisStore.selectedId() || 'FA-2025-001';
   const readAssociation = () => {
     try {
       const records = JSON.parse(window.TmisStore.getItem('tmis-farmer-associations') || '[]');
@@ -312,7 +312,10 @@ document.addEventListener('DOMContentLoaded', () => {
       top.append(heading, make('span', 'activity-log-status', log.status || 'Updated'));
       content.append(top, make('p', 'activity-log-entry-description', log.description || ''));
       const meta = make('div', 'activity-log-entry-meta');
-      meta.append(make('span', 'activity-log-actor', log.actor || 'TMIS'), make('span', 'activity-log-reference', log.reference || associationId), make('time', 'activity-log-timestamp', log.date || ''));
+      const parsedDate = log.date ? window.TmisDate?.parse(log.date) : null;
+      const timestamp = make('time', 'activity-log-timestamp', log.date ? window.TmisDate?.format(log.date) || log.date : 'Date not recorded');
+      if (parsedDate instanceof Date && !Number.isNaN(parsedDate.getTime())) timestamp.dateTime = parsedDate.toISOString();
+      meta.append(make('span', 'activity-log-actor', log.actor || 'TMIS'), make('span', 'activity-log-reference', log.reference || associationId), timestamp);
       content.append(meta);
       card.append(marker, content);
       logList.append(card);

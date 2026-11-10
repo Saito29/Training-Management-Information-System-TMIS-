@@ -82,6 +82,7 @@
     }
     return [...document.querySelectorAll('table')].filter(isVisible);
   }
+  window.TmisTableLoading = { start };
   document.addEventListener('click', (event) => {
     const button = event.target.closest('button, a[role="button"], input[type="button"]');
     if (!button) return;

@@ -39,6 +39,114 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (!window.TMIS_PAGE || !window.TmisStore) return;
+
+  const training = window.TmisStore.selected('tmis-trainings');
+  if (!training) return;
+
+  const field = name => document.querySelector(`[data-training-field="${name}"]`);
+  const text = (name, value, fallback = 'Not recorded') => {
+    const element = field(name);
+    if (element) element.textContent = value || fallback;
+  };
+  const displayDate = value => {
+    if (!value) return '';
+    const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+    return Number.isNaN(date.getTime())
+      ? ''
+      : new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium' }).format(date);
+  };
+  const startDate = displayDate(training.start_date || training.startDate);
+  const endDate = displayDate(training.end_date || training.endDate);
+  const schedule = [startDate, endDate].filter(Boolean).join(' – ');
+  const participants = Array.isArray(training.participants) ? training.participants : [];
+  const farmers = window.TmisStore.records('tmis-farmers')
+    .filter(farmer => participants.includes(farmer.id));
+  const maleCount = farmers.filter(farmer => farmer.sex === 'Male' || farmer.gender === 'Male').length;
+  const femaleCount = farmers.filter(farmer => farmer.sex === 'Female' || farmer.gender === 'Female').length;
+  const location = [training.barangay, training.municipality, training.province]
+    .filter(Boolean)
+    .join(', ');
+  const resources = Array.isArray(training.trainers) ? training.trainers : [];
+  const target = training.target_participants || training.targetParticipants;
+  const budget = Number(training.budget ?? training.training_budget);
+  const statusElement = field('status');
+
+  text('title', training.training_title || training.title || training.name);
+  text('subtitle', [training.training_type || training.type, training.delivery_mode].filter(Boolean).join(' · '), 'Training record overview');
+  text('id', training.id);
+  text('type', training.training_type || training.type);
+  text('delivery', training.delivery_mode);
+  text('schedule', schedule);
+  text('participantCount', `${participants.length} enrolled`, '0 enrolled');
+  text('participantCountShort', String(participants.length), '0');
+  text('office', training.office);
+  text('region', training.region);
+  text('venue', training.venue_location || training.venue);
+  text('location', location);
+  text('partner', training.partner_organization);
+  text('target', target ? `${target} participants` : '');
+  text('budget', Number.isFinite(budget)
+    ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(budget)
+    : '');
+  text('resources', resources.map(resource => resource.name).filter(Boolean).join(', '), 'No resource persons recorded');
+  text('description', training.training_description || training.description, 'No training description has been recorded.');
+  text('genderSummary', `${maleCount} male · ${femaleCount} female`, 'No participant demographics recorded');
+
+  if (statusElement) {
+    statusElement.textContent = training.status || 'Status not recorded';
+    statusElement.dataset.status = String(training.status || '').toLowerCase().replace(/[^a-z]+/g, '-');
+  }
+
+  const chart = document.querySelector('[data-gender-chart]');
+  if (chart) chart.setAttribute('aria-label', `${maleCount} male and ${femaleCount} female participants`);
+  document.querySelectorAll('[data-gender-count]').forEach(element => {
+    const count = element.dataset.genderCount === 'Male' ? maleCount : femaleCount;
+    element.textContent = `${count} participants`;
+  });
+
+  const renderList = (element, items, fallback) => {
+    if (!element) return;
+    const values = Array.isArray(items) ? items.filter(item => typeof item === 'string' && item.trim()) : [];
+    element.replaceChildren(...(values.length
+      ? values.map(item => {
+        const row = document.createElement('li');
+        row.textContent = item;
+        return row;
+      })
+      : [Object.assign(document.createElement('li'), { textContent: fallback })]));
+  };
+  renderList(document.getElementById('overviewHighlights'), training.bullets?.[0], 'No highlights recorded.');
+  renderList(document.getElementById('overviewWaysForward'), training.bullets?.[1], 'No next steps recorded.');
+
+  const resourceList = document.getElementById('overviewResourcePersons');
+  if (resourceList) {
+    resourceList.replaceChildren(...(resources.length
+      ? resources.map(resource => {
+        const row = document.createElement('div');
+        row.className = 'person-row';
+        const initials = document.createElement('span');
+        initials.className = 'avatar';
+        initials.textContent = String(resource.name || 'RP').split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase();
+        const details = document.createElement('span');
+        const name = document.createElement('strong');
+        name.textContent = resource.name || 'Resource person';
+        const role = document.createElement('small');
+        role.textContent = resource.role || 'Resource Person';
+        details.append(name, role);
+        row.append(initials, details);
+        return row;
+      })
+      : [Object.assign(document.createElement('p'), { className: 'training-overview-empty', textContent: 'No resource persons recorded.' })]));
+  }
+
+  const editLink = document.querySelector('.training-edit');
+  if (editLink) {
+    editLink.href = `${editLink.pathname.replace(/\/$/, '')}/${encodeURIComponent(training.id)}`;
+  }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
   const charts = new Map();
   const assessments = window.trainingAssessments;
   const pretest = assessments?.summary('pretest') || { count: 0, totalItems: 0, averageCorrect: null, percentage: null };

@@ -114,11 +114,35 @@ class OriginalInterfaceData
             ->get(['beneficiary.participant_id', 'beneficiary.region_id', 'beneficiary.org_id', 'beneficiary.is_primary', 'beneficiary_offices.name as office_name', 'beneficiary_regions.name as region_name'])
             ->groupBy('participant_id');
 
-        $participantAssociations = DB::table('participants as scoped_participants')
-            ->join('associations as participant_associations', 'participant_associations.id', '=', 'scoped_participants.association_id')
-            ->whereIn('scoped_participants.id', self::query($user, 'participants')->select('id'))
-            ->get(['scoped_participants.id as participant_id', 'participant_associations.name', 'participant_associations.ui_id'])
-            ->keyBy('participant_id');
+        $participantAssociationMemberships = DB::table('participant_association_memberships as membership')
+            ->join('associations as participant_associations', 'participant_associations.id', '=', 'membership.association_id')
+            ->join('region as association_regions', 'association_regions.region_id', '=', 'participant_associations.region_id')
+            ->join('organization as association_offices', 'association_offices.org_id', '=', 'participant_associations.org_id')
+            ->whereIn('membership.participant_id', self::query($user, 'participants')->select('id'))
+            ->whereNull('participant_associations.deleted_at')
+            ->orderByDesc('membership.is_primary')
+            ->orderBy('participant_associations.name')
+            ->get([
+                'membership.participant_id',
+                'membership.association_id',
+                'membership.role',
+                'membership.is_primary',
+                'membership.created_at as member_since',
+                'participant_associations.ui_id',
+                'participant_associations.name',
+                'participant_associations.short_name',
+                'participant_associations.organization_type',
+                'participant_associations.is_active',
+                'participant_associations.province',
+                'participant_associations.district',
+                'participant_associations.municipality',
+                'participant_associations.barangay',
+                'participant_associations.registration_date',
+                'participant_associations.year_covered',
+                'association_regions.name as region_name',
+                'association_offices.name as office_name',
+            ])
+            ->groupBy('participant_id');
 
         $trainingMembers = DB::table('training_participant')->whereIn('training_id', self::query($user, 'trainings')->select('id'))->join('participants', 'training_participant.participant_id', '=', 'participants.id')->get(['training_id', 'participants.id', 'participants.ui_id'])->groupBy('training_id');
 
@@ -126,6 +150,7 @@ class OriginalInterfaceData
 
         $trainingQuestionnaires = DB::table('training_questionnaire')->whereIn('training_id', self::query($user, 'trainings')->select('id'))->join('questionnaires', 'training_questionnaire.questionnaire_id', '=', 'questionnaires.id')->whereNull('questionnaires.deleted_at')->get(['training_id', 'questionnaires.id', 'questionnaires.ui_id', 'questionnaires.kind'])->groupBy('training_id');
         $trainingResources = DB::table('training_resource_person')->whereIn('training_id', self::query($user, 'trainings')->select('id'))->join('resource_persons', 'training_resource_person.resource_person_id', '=', 'resource_persons.id')->whereNull('resource_persons.deleted_at')->get(['training_id', 'resource_persons.id', 'resource_persons.ui_id', 'resource_persons.name', 'resource_persons.title'])->groupBy('training_id');
+<<<<<<< HEAD
         $page = (string) request()->header('X-TMIS-PAGE', '');
         parse_str((string) parse_url($page, PHP_URL_QUERY), $pageQuery);
         $pagePath = ltrim((string) parse_url($page, PHP_URL_PATH), '/');
@@ -134,6 +159,15 @@ class OriginalInterfaceData
         $currentId = $selectedFarmer
             ? (string) ($selectedFarmer->ui_id ?? $selectedFarmer->id)
             : (string) request()->query('id', $pageQuery['id'] ?? $pageQuery['faId'] ?? '');
+=======
+        $page = (string) request()->header('X-TMIS-PAGE', request()->fullUrl());
+        parse_str((string) parse_url($page, PHP_URL_QUERY), $pageQuery);
+        $pagePath = (string) parse_url($page, PHP_URL_PATH);
+        $pathId = preg_match('~/(?:participants/id/(?:view|edit)-fa|participants/id/(?:view|edit)-farmer|training/id/(?:view|edit)-training)/([^/]+)$~', $pagePath, $matches) === 1
+            ? rawurldecode($matches[1])
+            : '';
+        $currentId = (string) request()->query('id', $pageQuery['id'] ?? $pageQuery['faId'] ?? $pathId);
+>>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
         $selectedRecords = [];
         if ($selectedFarmer && ModuleAccess::allows($user, 'participants.read')) {
             $selectedRecords['participants'] = $selectedFarmer;
@@ -149,19 +183,20 @@ class OriginalInterfaceData
         foreach ($selectedRecords as $logModule => $selectedRecord) {
             $activityByModule[$logModule] = DB::table('users_log')
                 ->leftJoin('users as activity_actors', 'activity_actors.user_id', '=', 'users_log.actor_user_id')
+                ->leftJoin('user_roles as activity_roles', 'activity_roles.role_id', '=', 'activity_actors.role_id')
                 ->leftJoin('organization as activity_offices', 'activity_offices.org_id', '=', 'activity_actors.org_id')
                 ->leftJoin('region as activity_regions', 'activity_regions.region_id', '=', 'activity_actors.region_id')
                 ->where('users_log.category', $logModule)
                 ->where('users_log.event', 'like', '%'.$selectedRecord->id)
                 ->orderByDesc('users_log.id')
                 ->limit(500)
-                ->get(['users_log.*', 'activity_actors.first_name', 'activity_actors.middle_name', 'activity_actors.last_name', 'activity_actors.extension_name', 'activity_offices.name as activity_office', 'activity_regions.name as activity_region'])
+                ->get(['users_log.*', 'activity_actors.first_name as actor_first_name', 'activity_actors.middle_name as actor_middle_name', 'activity_actors.last_name as actor_last_name', 'activity_actors.extension_name as actor_extension_name', 'activity_roles.name as actor_role', 'activity_offices.name as activity_office', 'activity_regions.name as activity_region'])
                 ->filter(fn ($log): bool => str_ends_with($log->event, '_'.$selectedRecord->id))
                 ->map(function ($log) use ($logModule, $selectedRecord): array {
-                    $actorName = trim(implode(' ', array_filter([$log->first_name, $log->middle_name, $log->last_name, $log->extension_name]))) ?: 'System user';
-                    $actorOffice = $log->activity_office ?: 'Office not assigned';
-                    $actorRegion = $log->activity_region ?: 'Region not assigned';
+                    $actorName = trim(implode(' ', array_filter([$log->actor_first_name ?? null, $log->actor_middle_name ?? null, $log->actor_last_name ?? null, $log->actor_extension_name ?? null]))) ?: 'Authorized system user';
+                    $actorRole = $log->actor_role ?: 'Authorized system user';
                     $isFarmerCreation = $logModule === 'participants' && $log->event === 'participants_created_'.$selectedRecord->id;
+<<<<<<< HEAD
                     $recordName = match ($logModule) {
                         'participants' => 'Farmer profile',
                         'associations' => 'Farmer association',
@@ -197,13 +232,103 @@ class OriginalInterfaceData
                         'status' => ucfirst($log->outcome),
                         'reference' => $logModule === 'participants' ? self::farmerNumber($selectedRecord) : (string) ($selectedRecord->ui_id ?? $selectedRecord->id),
                         'icon' => $isFarmerCreation ? 'bi-person-plus' : 'bi-clock-history',
+=======
+                    $recordLabel = match ($logModule) {
+                        'participants' => 'Farmer Profile',
+                        'associations' => 'Farmer Association',
+                        'resource_persons' => 'Resource Person',
+                        default => 'Training',
+                    };
+                    $managementLabel = match ($logModule) {
+                        'participants' => 'Profile Management',
+                        'associations' => 'Association Management',
+                        'resource_persons' => 'Resource Person Management',
+                        default => 'Training Management',
+                    };
+                    $action = match (true) {
+                        str_contains($log->event, '_created_') => 'created',
+                        str_contains($log->event, '_deleted_'), str_contains($log->event, '_removed_') => 'removed',
+                        str_contains($log->event, '_restored_') => 'restored',
+                        str_contains($log->event, '_updated_') => 'updated',
+                        default => 'recorded',
+                    };
+                    $actionLabel = match ($action) {
+                        'created' => 'Record Creation',
+                        'removed' => 'Record Removal',
+                        'restored' => 'Record Restoration',
+                        'updated' => 'Information Update',
+                        default => 'Record Activity',
+                    };
+                    $isFarmerProfileUpdate = $logModule === 'participants'
+                        && $log->event === 'participants_updated_'.$selectedRecord->id;
+                    $omitActorRole = $isFarmerCreation || $isFarmerProfileUpdate;
+                    $isBeneficiaryChange = str_contains($log->event, 'beneficiary');
+                    $isAttachmentChange = str_contains($log->event, 'document');
+                    $category = $isAttachmentChange
+                        ? 'attachment'
+                        : ($isBeneficiaryChange
+                            ? 'membership'
+                            : ($logModule === 'trainings'
+                                ? (str_contains($log->event, 'enrollment') ? 'participant' : 'training')
+                                : 'profile'));
+                    $farmerName = trim(implode(' ', array_filter([$selectedRecord->first_name ?? null, $selectedRecord->middle_name ?? null, $selectedRecord->last_name ?? null, $selectedRecord->suffix ?? null]))) ?: 'the farmer';
+                    $title = $isFarmerCreation ? 'Farmer Profile Created' : ($isBeneficiaryChange ? 'Beneficiary Office Updated' : $recordLabel.' '.ucfirst($action));
+                    $description = match (true) {
+                        $isFarmerCreation => 'A new farmer profile was successfully registered for '.$farmerName.'.',
+                        $isFarmerProfileUpdate => 'Farmer Profile information was updated.',
+                        $isBeneficiaryChange => 'The beneficiary office assignment for '.$recordLabel.' was updated by '.$actorRole.'.',
+                        $action === 'created' => 'A new '.$recordLabel.' record was successfully registered by '.$actorRole.'.',
+                        $action === 'removed' => 'The '.$recordLabel.' record was removed by '.$actorRole.'.',
+                        $action === 'restored' => 'The '.$recordLabel.' record was restored by '.$actorRole.'.',
+                        $action === 'updated' => $recordLabel.' information was updated by '.$actorRole.'.',
+                        default => $recordLabel.' activity was recorded by '.$actorRole.'.',
+                    };
+
+                    return [
+                        'category' => $category,
+                        'context' => $managementLabel.' · '.$actionLabel,
+                        'title' => $title,
+                        'description' => $description,
+                        'actor' => $actorName,
+                        ...($omitActorRole ? [] : ['actorRole' => $actorRole]),
+                        'actorOffice' => $log->activity_office ?: 'Office not recorded',
+                        'actorRegion' => $log->activity_region ?: 'Region not recorded',
+                        'date' => $log->created_at,
+                        'status' => $log->outcome === 'success' ? 'Success' : ucfirst($log->outcome),
+                        'icon' => match ($category) {
+                            'attachment' => 'bi-paperclip',
+                            'membership' => 'bi-building-check',
+                            'participant' => 'bi-people',
+                            default => $isFarmerCreation ? 'bi-person-plus' : 'bi-clock-history',
+                        },
+>>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
                     ];
                 })
                 ->values()
                 ->all();
         }
         $currentTraining = $currentId !== '' ? self::find($user, 'trainings', $currentId) : null;
-        $trainingHistory = $currentTraining && ModuleAccess::allows($user, 'trainings.read') ? DB::table('training_status_changes')->where('training_id', $currentTraining->id)->orderByDesc('id')->get()->map(fn ($change): array => ['category' => 'status', 'title' => 'Training moved to '.$change->to_status, 'description' => $change->from_status.' to '.$change->to_status.($change->reason ? ': '.$change->reason : ''), 'date' => $change->created_at, 'icon' => 'bi-arrow-left-right'])->all() : [];
+        $trainingHistory = $currentTraining && ModuleAccess::allows($user, 'trainings.read') ? DB::table('training_status_changes')
+            ->leftJoin('users as status_actors', 'status_actors.user_id', '=', 'training_status_changes.actor_user_id')
+            ->leftJoin('user_roles as status_roles', 'status_roles.role_id', '=', 'status_actors.role_id')
+            ->leftJoin('organization as status_offices', 'status_offices.org_id', '=', 'status_actors.org_id')
+            ->leftJoin('region as status_regions', 'status_regions.region_id', '=', 'status_actors.region_id')
+            ->where('training_status_changes.training_id', $currentTraining->id)
+            ->orderByDesc('training_status_changes.id')
+            ->get(['training_status_changes.*', 'status_actors.first_name', 'status_actors.middle_name', 'status_actors.last_name', 'status_actors.extension_name', 'status_roles.name as actor_role', 'status_offices.name as actor_office', 'status_regions.name as actor_region'])
+            ->map(fn ($change): array => [
+                'category' => 'status',
+                'context' => 'Training Management · Status Change',
+                'title' => 'Training Status Updated',
+                'description' => 'Training status changed from '.$change->from_status.' to '.$change->to_status.'.',
+                'actor' => trim(implode(' ', array_filter([$change->first_name, $change->middle_name, $change->last_name, $change->extension_name]))) ?: 'Authorized system user',
+                'actorRole' => $change->actor_role ?: 'Authorized system user',
+                'actorOffice' => $change->actor_office ?: 'Office not recorded',
+                'actorRegion' => $change->actor_region ?: 'Region not recorded',
+                'date' => $change->created_at,
+                'status' => 'Success',
+                'icon' => 'bi-arrow-left-right',
+            ])->all() : [];
 
         $documents = static function ($items, string $module, string $id): array {
 
@@ -248,8 +373,24 @@ class OriginalInterfaceData
 
                     $sensitive = $record->protected_details ? self::unpack($record->protected_details) : [];
 
-                    $participantAssociation = $participantAssociations[$record->id] ?? null;
-                    $item = array_replace($item, ['name' => $record->name, 'farmerNumber' => self::farmerNumber($record), 'beneficiaryOffices' => collect($participantBeneficiaries[$record->id] ?? [])->map(fn ($office): array => ['region_id' => $office->region_id, 'org_id' => $office->org_id, 'region' => $office->region_name, 'office' => $office->office_name, 'isPrimary' => (bool) $office->is_primary])->values()->all(), 'firstName' => $record->first_name, 'middleName' => $record->middle_name, 'lastName' => $record->last_name, 'suffix' => $record->suffix, 'fname' => $record->first_name, 'mname' => $record->middle_name, 'lname' => $record->last_name, 'sex' => $record->sex, 'gender' => $record->sex, 'nationality' => $record->nationality, 'placeOfBirth' => $record->place_of_birth, 'postal_code' => $record->postal_code, 'house_building_number' => $record->house_number, 'street_purok_sitio_name' => $record->street, 'telephone' => $record->telephone, 'birthDate' => $record->date_of_birth, 'birthday' => $record->date_of_birth, 'dob' => $record->date_of_birth, 'phone' => $record->phone, 'email' => $record->email, 'province' => $record->province, 'municipality' => $record->municipality, 'district' => $record->district, 'barangay' => $record->barangay, 'organization' => $participantAssociation?->name ?? '', 'association' => $participantAssociation?->name ?? '', 'associationNumber' => $participantAssociation?->ui_id ?? ($participantAssociation ? (string) $record->association_id : ''), 'association_id' => $record->association_id, 'role' => $record->association_role, 'registrationDate' => $item['registration_date'] ?? substr((string) $record->created_at, 0, 10), 'profileStatus' => $item['status'] === 'Active' ? 'Active' : 'Inactive', 'inactiveReason' => $item['status'] === 'Active' ? '' : ($item['status'] === 'Removed' ? 'Removed' : $item['status']), 'yearCovered' => $item['yearCovered'] ?? $item['year_covered'] ?? '', 'tupad' => $sensitive['tupad'] ?? '', 'soloParent' => $sensitive['solo_parent'] ?? '', 'fourPs' => $sensitive['four_ps'] ?? '', 'pwd' => $sensitive['disability'] ?? '', 'indigenousGroup' => $sensitive['indigenous_group'] ?? '', 'tribeName' => $sensitive['tribe'] ?? '', 'dietaryRestriction' => $sensitive['dietary_restriction'] ?? '', 'allergies_on' => $sensitive['allergies'] ?? '', 'seniorCitizen' => $sensitive['senior_citizen'] ?? '']);
+                    $membershipDetails = collect($participantAssociationMemberships[$record->id] ?? [])->map(fn ($membership): array => [
+                        'databaseId' => (string) $membership->association_id,
+                        'id' => $membership->ui_id ?? (string) $membership->association_id,
+                        'name' => $membership->name,
+                        'shortName' => $membership->short_name,
+                        'organizationType' => $membership->organization_type,
+                        'region' => $membership->region_name,
+                        'office' => $membership->office_name,
+                        'location' => implode(', ', array_filter([$membership->barangay, $membership->municipality, $membership->district, $membership->province])),
+                        'registrationDate' => $membership->registration_date,
+                        'yearCovered' => $membership->year_covered,
+                        'status' => $membership->is_active ? 'Active' : 'Inactive',
+                        'role' => $membership->role,
+                        'isPrimary' => (bool) $membership->is_primary,
+                        'memberSince' => $membership->member_since,
+                    ])->values();
+                    $primaryMembership = $membershipDetails->first(fn (array $membership): bool => $membership['isPrimary']) ?? $membershipDetails->first();
+                    $item = array_replace($item, ['name' => $record->name, 'farmerNumber' => self::farmerNumber($record), 'beneficiaryOffices' => collect($participantBeneficiaries[$record->id] ?? [])->map(fn ($office): array => ['region_id' => $office->region_id, 'org_id' => $office->org_id, 'region' => $office->region_name, 'office' => $office->office_name, 'isPrimary' => (bool) $office->is_primary])->values()->all(), 'associationMemberships' => $membershipDetails->all(), 'firstName' => $record->first_name, 'middleName' => $record->middle_name, 'lastName' => $record->last_name, 'suffix' => $record->suffix, 'fname' => $record->first_name, 'mname' => $record->middle_name, 'lname' => $record->last_name, 'sex' => $record->sex, 'gender' => $record->sex, 'nationality' => $record->nationality, 'placeOfBirth' => $record->place_of_birth, 'postal_code' => $record->postal_code, 'house_building_number' => $record->house_number, 'street_purok_sitio_name' => $record->street, 'telephone' => $record->telephone, 'birthDate' => $record->date_of_birth, 'birthday' => $record->date_of_birth, 'dob' => $record->date_of_birth, 'phone' => $record->phone, 'email' => $record->email, 'province' => $record->province, 'municipality' => $record->municipality, 'district' => $record->district, 'barangay' => $record->barangay, 'organization' => $primaryMembership['name'] ?? '', 'association' => $primaryMembership['name'] ?? '', 'associationNumber' => $primaryMembership['id'] ?? '', 'association_id' => $primaryMembership['id'] ?? null, 'association_db_id' => $primaryMembership['databaseId'] ?? null, 'role' => $primaryMembership['role'] ?? '', 'registrationDate' => $item['registration_date'] ?? substr((string) $record->created_at, 0, 10), 'profileStatus' => $item['status'] === 'Active' ? 'Active' : 'Inactive', 'inactiveReason' => $item['status'] === 'Active' ? '' : ($item['status'] === 'Removed' ? 'Waived from Farmer Association' : $item['status']), 'yearCovered' => $item['yearCovered'] ?? $item['year_covered'] ?? '', 'tupad' => $sensitive['tupad'] ?? '', 'soloParent' => $sensitive['solo_parent'] ?? '', 'fourPs' => $sensitive['four_ps'] ?? '', 'pwd' => $sensitive['disability'] ?? '', 'indigenousGroup' => $sensitive['indigenous_group'] ?? '', 'tribeName' => $sensitive['tribe'] ?? '', 'dietaryRestriction' => $sensitive['dietary_restriction'] ?? '', 'allergies_on' => $sensitive['allergies'] ?? '', 'seniorCitizen' => $sensitive['senior_citizen'] ?? '']);
 
                     $item['attachments'] = $documents($participantDocuments[$record->id] ?? [], $module, $id);
 
@@ -300,10 +441,27 @@ class OriginalInterfaceData
 
         }
 
+        $membersByAssociation = [];
+        foreach ($stores['tmis-farmers'] as $farmer) {
+            foreach ($farmer['associationMemberships'] ?? [] as $membership) {
+                $membersByAssociation[$membership['databaseId']][] = [
+                    'farmer_id' => $farmer['id'],
+                    'farmerNumber' => $farmer['farmerNumber'],
+                    'status' => $farmer['status'],
+                    'last_name' => $farmer['lastName'],
+                    'first_name' => $farmer['firstName'],
+                    'middle_name' => $farmer['middleName'],
+                    'sex' => $farmer['sex'],
+                    'position' => $membership['role'],
+                    'province' => $farmer['province'],
+                    'municipality' => $farmer['municipality'],
+                    'barangay' => $farmer['barangay'],
+                ];
+            }
+        }
+
         foreach ($stores['tmis-farmer-associations'] as &$association) {
-
-            $association['members'] = array_values(array_map(fn (array $farmer): array => ['farmer_id' => $farmer['id'], 'last_name' => $farmer['lastName'], 'first_name' => $farmer['firstName'], 'middle_name' => $farmer['middleName'], 'sex' => $farmer['sex'], 'position' => $farmer['role'], 'province' => $farmer['province'], 'municipality' => $farmer['municipality'], 'barangay' => $farmer['barangay']], array_filter($stores['tmis-farmers'], fn (array $farmer): bool => $farmer['association_id'] === $association['_db_id'])));
-
+            $association['members'] = $membersByAssociation[(string) $association['_db_id']] ?? [];
         }
 
         unset($association);
@@ -435,15 +593,39 @@ class OriginalInterfaceData
         }
 
         $isAdministrator = ModuleAccess::isAdministrator($user);
-        $savedScope = $isAdministrator ? DB::table('user_data_scopes')->where('user_id', $user->user_id)->first() : null;
-        $registrationRegionIds = $savedScope
-            ? ($savedScope->region_ids === null ? null : json_decode($savedScope->region_ids, true, 512, JSON_THROW_ON_ERROR))
-            : ($user->region_id === null ? [] : [(int) $user->region_id]);
-        $registrationOfficeIds = $savedScope
-            ? ($savedScope->office_ids === null ? null : json_decode($savedScope->office_ids, true, 512, JSON_THROW_ON_ERROR))
-            : ($user->org_id === null ? [] : [(int) $user->org_id]);
+        $registrationScope = ModuleAccess::registrationScope($user);
+        $registrationRegions = DB::table('region')->where('is_active', 1)
+            ->when($registrationScope['regionIds'] !== null, fn ($query) => $query->whereIn('region_id', $registrationScope['regionIds']))
+            ->orderBy('name')
+            ->get(['region_id', 'name']);
+        $registrationOffices = DB::table('organization')->where('is_active', 1)
+            ->when($registrationScope['regionIds'] !== null, fn ($query) => $query->whereIn('region_id', $registrationScope['regionIds']))
+            ->when($registrationScope['officeIds'] !== null, fn ($query) => $query->whereIn('org_id', $registrationScope['officeIds']))
+            ->orderBy('name')
+            ->get(['org_id', 'region_id', 'name']);
 
+<<<<<<< HEAD
         return ['registration' => app(RegistrationReferences::class)->choices() + ['regionId' => $user->region_id, 'officeId' => $user->org_id, 'regionIds' => $registrationRegionIds, 'officeIds' => $registrationOfficeIds], 'dashboard' => app(DashboardData::class)->build($stores), 'roles' => $isAdministrator ? DB::table('user_roles')->where('is_active', 1)->where('name', '<>', 'System Administrator')->pluck('name')->all() : [], 'stores' => $stores, 'actor' => (new AccountDisplay)->forUser($user), 'regions' => DB::table('region')->where('is_active', 1)->get(['region_id', 'name']), 'offices' => DB::table('organization')->where('is_active', 1)->get(['org_id', 'region_id', 'name']), 'permissions' => array_values(array_filter(ModuleAccess::permissions(), fn (string $permission): bool => ModuleAccess::allows($user, $permission))), 'administrator' => $isAdministrator];
+=======
+        return [
+            'registration' => app(RegistrationReferences::class)->choices() + [
+                'regionId' => $user->region_id,
+                'officeId' => $user->org_id,
+                'regionIds' => $registrationScope['regionIds'],
+                'officeIds' => $registrationScope['officeIds'],
+                'regions' => $registrationRegions,
+                'offices' => $registrationOffices,
+            ],
+            'dashboard' => app(DashboardData::class)->build($stores),
+            'roles' => $isAdministrator ? DB::table('user_roles')->where('is_active', 1)->pluck('name')->all() : [],
+            'stores' => $stores,
+            'actor' => (new AccountDisplay)->forUser($user),
+            'regions' => DB::table('region')->get(['region_id', 'name']),
+            'offices' => DB::table('organization')->get(['org_id', 'region_id', 'name']),
+            'permissions' => array_values(array_filter(ModuleAccess::permissions(), fn (string $permission): bool => ModuleAccess::allows($user, $permission))),
+            'administrator' => $isAdministrator,
+        ];
+>>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
 
     }
 }

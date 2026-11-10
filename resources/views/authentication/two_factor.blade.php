@@ -44,7 +44,11 @@
               <p id="code-validity" class="field-hint" role="timer" aria-live="off">Code expires in <strong id="code-validity-countdown">05:00</strong></p>
               <p id="code-error" class="code-error" role="alert" @if(! $errors->any()) hidden @endif>{{ $errors->first() }}</p>
             </div>
-            <button type="submit" class="form-submit" id="verify-code-button">Verify and sign in <span aria-hidden="true">→</span></button>
+            <button type="submit" class="form-submit" id="verify-code-button" aria-busy="false">
+              <span id="verify-code-spinner" class="submit-spinner" aria-hidden="true" hidden></span>
+              <span id="verify-code-label">Verify and sign in</span>
+              <span id="verify-code-arrow" aria-hidden="true">→</span>
+            </button>
           </form>
           <p id="verification-status" tabindex="-1" class="auth-service-message" role="status" aria-live="polite">{{ session('status') }}</p>
           <div class="resend-panel" @if(!empty($authenticatorChallenge)) hidden @endif>
@@ -62,7 +66,6 @@
     </main>
   </body>
 </html>
-
 
 
 

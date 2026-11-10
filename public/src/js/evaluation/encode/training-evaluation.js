@@ -28,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedFarmer = null;
   const draftId = new URLSearchParams(location.search).get('draft');
   const resumedDraft = existingRecord || (draftId ? read('tmis-training-evaluation-encoded').find(r => r.id === draftId && r.status === 'draft') : null);
-  window.TMIS_ENCODED_RECORD = resumedDraft || existingRecord || null;
   let currentPage = 1;
   let activeDraftId = resumedDraft?.id || null;
   let farmerRenderTimer;
@@ -118,12 +117,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (recordMode === 'edit') draft = false;
     const q = selectedQuestionnaire();
     if (ratingsLoading) { notify('Wait for the questionnaire ratings to finish loading.', 'error'); return; }
-    if (!draft && !$('trainingId').value) { notify('Select one approved training to link to this evaluation.', 'error'); return; }
     if (!draft && (!selectedFarmer || !q)) { notify('Select a farmer and training evaluation questionnaire before saving.', 'error'); return; }
     if (!draft && !q.questions.length) { notify('The selected questionnaire has no questions to rate.', 'error'); return; }
     if (!draft && !form.reportValidity()) return;
     const ratings = (q?.questions || []).map((question, index) => ({ question: typeof question === 'string' ? question : String(question.text || ''), rating: Number(form.querySelector(`input[name="rating_${index}"]:checked`)?.value) || null }));
-    const record = { id: activeDraftId || crypto.randomUUID(), trainingId: $('trainingId').value || '', trainingTitle: $('trainingTitleValue').value || '', trainingLocation: $('trainingLocationValue').value || '', trainingVenue: $('trainingVenueValue').value || '', trainingOrganization: $('trainingOrganizationValue').value || '', trainingStartDate: window.TMIS_TRAINING_PICKER?.selectedTraining()?.startDate || resumedDraft?.trainingStartDate || '', trainingEndDate: window.TMIS_TRAINING_PICKER?.selectedTraining()?.endDate || resumedDraft?.trainingEndDate || '', questionnaireId: q?.id || '', questionnaireName: q?.questionnaireName || '', implementingOffice: q?.office || '', farmerId: selectedFarmer?.id || '', farmerName: selectedFarmer?.name || '', farmerAssociation: selectedFarmer?.association || '', farmerLocation: selectedFarmer?.location || '', farmerBirthday: selectedFarmer?.birthday || '', farmerSex: selectedFarmer?.sex || '', date: $('testDate').value, ratings, comments: $('comments').value.trim(), status: draft ? 'draft' : 'complete', savedAt: existingRecord?.savedAt || new Date().toISOString(), updatedAt: recordMode === 'edit' ? new Date().toISOString() : undefined };
+    const record = { id: activeDraftId || crypto.randomUUID(), questionnaireId: q?.id || '', questionnaireName: q?.questionnaireName || '', implementingOffice: q?.office || '', farmerId: selectedFarmer?.id || '', farmerName: selectedFarmer?.name || '', farmerAssociation: selectedFarmer?.association || '', farmerLocation: selectedFarmer?.location || '', farmerBirthday: selectedFarmer?.birthday || '', farmerSex: selectedFarmer?.sex || '', date: $('testDate').value, ratings, comments: $('comments').value.trim(), status: draft ? 'draft' : 'complete', savedAt: existingRecord?.savedAt || new Date().toISOString(), updatedAt: recordMode === 'edit' ? new Date().toISOString() : undefined };
     try { const records = read('tmis-training-evaluation-encoded'), index = records.findIndex(item => item.id === record.id); if (index >= 0) records[index] = record; else records.push(record); await window.TmisStore.setItem('tmis-training-evaluation-encoded', JSON.stringify(records)); if (draft) { activeDraftId = record.id; $('summaryStatus').textContent = 'Draft saved'; } else if (recordMode !== 'edit') clearEntry(); notify(recordMode === 'edit' ? 'Training evaluation updated.' : draft ? 'Training evaluation draft saved.' : 'Training evaluation saved.'); }
     catch { notify('Unable to save this training evaluation. Refresh and try again.', 'error'); }
   }

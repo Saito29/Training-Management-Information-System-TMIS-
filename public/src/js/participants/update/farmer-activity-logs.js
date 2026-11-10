@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const logs = (window.TMIS_PAGE ? window.TmisStore.selected('tmis-farmers')?.activityLogs||[] : [
+  const demoLogs = [
     {
       category: 'attachment',
       title: 'Proof of farm ownership added',
@@ -88,7 +88,11 @@ document.addEventListener('DOMContentLoaded', () => {
       reference: 'Profile information',
       icon: 'bi-person-vcard',
     },
-  ]);
+  ];
+  const readLogs = () => window.TMIS_PAGE
+    ? window.TmisStore.selected('tmis-farmers')?.activityLogs || []
+    : demoLogs;
+  let logs = readLogs();
 
   const list = document.getElementById('activityLogList');
   const search = document.getElementById('activityLogSearch');
@@ -100,10 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!list || !search || !empty || !resultCount || !filterButtons.length) return;
 
   let activeFilter = 'all';
-  const dateTime = new Intl.DateTimeFormat('en-PH', {timeZone: 'Asia/Manila', 
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
+  const dateFormatter = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium' });
+  const timeFormatter = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', timeStyle: 'short' });
 
   const makeElement = (tag, className, text) => {
     const element = document.createElement(tag);
@@ -125,18 +127,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const top = makeElement('div', 'activity-log-entry-top');
     const heading = makeElement('div', 'activity-log-entry-title-group');
     const title = makeElement('h3', 'activity-log-entry-title', log.title);
-    const category = makeElement(
-      'span',
-      `activity-log-category activity-log-category-${log.category}`,
-      log.category
-    );
+    const categoryNames = { attachment: 'Attachment', membership: 'Membership', status: 'Status', profile: 'Profile' };
+    const category = makeElement('span', 'activity-log-context', categoryNames[log.category] || 'Activity');
+    category.dataset.category = log.category || 'profile';
+    if (log.context) category.title = log.context;
     heading.append(title, category);
 
-    const status = makeElement(
-      'span',
-      'activity-log-status',
-      log.status
-    );
+    const status = makeElement('span', `activity-log-status ${log.status === 'Success' ? 'is-success' : ''}`, log.status || 'Recorded');
     top.append(heading, status);
 
     const description = makeElement(
@@ -145,23 +142,31 @@ document.addEventListener('DOMContentLoaded', () => {
       log.description
     );
     const meta = makeElement('div', 'activity-log-entry-meta');
-    const actor = makeElement('span', 'activity-log-actor');
-    const actorIcon = makeElement('i', 'bi bi-person-circle');
-    actorIcon.setAttribute('aria-hidden', 'true');
-    actor.append(actorIcon, document.createTextNode(log.actor));
 
-    const reference = makeElement('span', 'activity-log-reference');
-    const referenceIcon = makeElement('i', 'bi bi-link-45deg');
-    referenceIcon.setAttribute('aria-hidden', 'true');
-    reference.append(referenceIcon, document.createTextNode(log.reference));
+    const addMeta = (label, value, detail, icon, className = '') => {
+      const item = makeElement('div', `activity-log-meta-item ${className}`.trim());
+      const iconElement = makeElement('i', `bi ${icon}`);
+      iconElement.setAttribute('aria-hidden', 'true');
+      const copy = makeElement('span', 'activity-log-meta-copy');
+      copy.append(makeElement('small', '', label), makeElement('strong', '', value));
+      if (detail) copy.append(makeElement('span', 'activity-log-meta-detail', detail));
+      item.append(iconElement, copy);
+      meta.append(item);
+      return item;
+    };
 
-    const timestamp = makeElement(
-      'time',
-      'activity-log-timestamp',
-      dateTime.format(window.TmisDate.parse(log.date))
-    );
-    timestamp.dateTime = log.date;
-    meta.append(actor, reference, timestamp);
+    const actorDetails = [
+      log.actorRole,
+      log.actorOffice || 'Office not recorded',
+      log.actorRegion || 'Region not recorded',
+    ].filter(Boolean).join(' · ');
+    addMeta('Performed by', log.actor || 'Authorized system user', actorDetails, 'bi-person-check');
+    const timestamp = addMeta('Date & Time', '', '', 'bi-clock');
+    const date = window.TmisDate.parse(log.date);
+    const hasDate = date instanceof Date && !Number.isNaN(date.getTime());
+    const dateValue = makeElement('time', 'activity-log-date-value', hasDate ? `${dateFormatter.format(date)} · ${timeFormatter.format(date)}` : 'Date not recorded');
+    if (hasDate) dateValue.dateTime = log.date;
+    timestamp.querySelector('strong').replaceWith(dateValue);
     content.append(top, description, meta);
     article.append(marker, content);
     return article;
@@ -191,8 +196,11 @@ document.addEventListener('DOMContentLoaded', () => {
           log.title,
           log.description,
           log.actor,
+          log.actorRole,
+          log.actorOffice,
+          log.actorRegion,
           log.status,
-          log.reference,
+          log.context,
           log.category,
         ]
           .join(' ')
@@ -219,6 +227,23 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   search.addEventListener('input', render);
+  window.addEventListener('tmis:data-updated', () => {
+    logs = readLogs();
+    const farmer = window.TmisStore.selected('tmis-farmers');
+    const heading = document.querySelector('.activity-log-heading p');
+    if (heading) {
+      heading.textContent = farmer
+        ? `Recent updates and actions recorded for ${farmer.name}'s profile.`
+        : 'Recent updates and actions recorded for this profile.';
+    }
+    updateCounts();
+    render();
+  });
+  const initialFarmer = window.TMIS_PAGE ? window.TmisStore.selected('tmis-farmers') : null;
+  const description = document.querySelector('.activity-log-heading p');
+  if (description && initialFarmer) {
+    description.textContent = `Recent updates and actions recorded for ${initialFarmer.name}'s profile.`;
+  }
   updateCounts();
   render();
 });
