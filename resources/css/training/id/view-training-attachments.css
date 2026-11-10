@@ -1,0 +1,69 @@
+#attachments-panel { display:grid; gap:16px; }
+.training-document-card { overflow:hidden; border-radius:16px; }
+.training-document-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; padding:20px 24px; border-bottom:1px solid var(--color-border); background:linear-gradient(120deg,color-mix(in srgb,var(--color-primary-surface) 46%,var(--color-surface)),var(--color-surface) 70%); }
+.training-document-heading { display:flex; align-items:center; gap:13px; }
+.training-document-icon,.training-file-icon { display:grid; place-items:center; flex:none; width:46px; height:46px; border-radius:13px; color:var(--color-primary-dark); background:var(--color-primary-surface); font-size:20px; }
+.training-document-header h2 { margin:0; color:var(--color-text-primary); font-size:17px; font-weight:750; }
+.training-document-header p { margin:4px 0 0; color:var(--color-text-secondary); font-size:12px; }
+.training-add-attachment,#trainingSaveAttachments { display:inline-flex; align-items:center; gap:7px; min-height:38px; padding:8px 14px; border:1px solid var(--color-primary); border-radius:9px; color:#fff; background:var(--color-primary); font-size:12px; font-weight:650; }
+.training-add-attachment:hover,#trainingSaveAttachments:hover:not(:disabled) { background:var(--color-primary-dark); }
+#trainingSaveAttachments:disabled { opacity:.5; cursor:not-allowed; }
+.training-document-body { padding:20px 24px; }
+.training-document-empty { display:grid; justify-items:center; gap:8px; padding:45px 16px; border:1px dashed var(--color-border); border-radius:12px; color:var(--color-text-secondary); text-align:center; }
+.training-document-empty i { font-size:32px; color:var(--color-primary); }
+.training-document-empty strong { color:var(--color-text-primary); font-size:14px; }
+.training-document-empty p { margin:0; font-size:12px; }
+.training-document-item { display:flex; align-items:center; gap:14px; min-width:0; padding:14px; border:1px solid var(--color-border); border-radius:12px; margin-bottom:10px; }
+.training-file-info { flex:1; min-width:0; display:grid; gap:3px; }
+.training-file-info strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--color-text-primary); font-size:13px; }
+.training-file-info span,.training-file-info small { color:var(--color-text-secondary); font-size:11px; }
+.training-file-actions { display:flex; gap:5px; }
+.training-file-actions button,.training-file-actions a,.training-queue-remove { display:grid; place-items:center; width:32px; height:32px; border:1px solid var(--color-border); border-radius:8px; color:var(--color-text-secondary); background:var(--color-surface); text-decoration:none; }
+.training-file-actions button:hover,.training-file-actions a:hover,.training-queue-remove:hover { color:var(--color-primary-dark); background:var(--color-primary-surface); }
+.training-queue-table { margin:0; color:var(--color-text-primary); font-size:12px; }
+.training-queue-table th { color:var(--color-text-secondary); font-size:11px; font-weight:700; white-space:nowrap; }
+.training-queue-table td { min-width:90px; vertical-align:middle; }
+.training-queue-table td:first-child { min-width:190px; }
+.training-queue-table .form-control,.training-queue-table .form-select { min-width:120px; border-color:var(--color-border); color:var(--color-text-primary); background-color:var(--color-surface); font-size:12px; }
+.training-queue-preview { display:flex; align-items:center; gap:9px; min-width:0; }
+.training-queue-preview i { font-size:22px; color:var(--color-primary); }
+.training-queue-preview span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px; }
+.training-queue-status { padding:5px 8px; border-radius:999px; color:var(--color-danger); background:color-mix(in srgb,var(--color-danger) 12%,var(--color-surface)); font-size:11px; font-weight:650; }
+.training-queue-status.ready { color:var(--color-success); background:color-mix(in srgb,var(--color-success) 12%,var(--color-surface)); }
+.training-queue-empty td { padding:24px; color:var(--color-text-secondary); text-align:center; }
+.training-queue-footer { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:12px; padding-top:16px; color:var(--color-text-secondary); font-size:12px; }
+#trainingQueueFeedback { margin-right:auto; color:var(--color-success); }
+@media (max-width:600px) { .training-document-header,.training-document-body { padding:16px; } .training-add-attachment { width:100%; justify-content:center; } .training-document-item { flex-wrap:wrap; } .training-file-actions { margin-left:auto; } }
+
+.training-carousel-body { padding:20px 24px 24px; }
+.training-carousel-stage { display:grid; place-items:center; height:min(54vh,480px); min-height:280px; overflow:hidden; border-radius:12px; background:var(--color-bg); }
+.training-carousel-stage img,.training-carousel-stage iframe { width:100%; height:100%; border:0; object-fit:contain; }
+.training-carousel-details { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 2px; }
+.training-carousel-file { display:flex; align-items:center; gap:12px; min-width:0; }
+.training-carousel-file > i { color:var(--color-primary); font-size:26px; }
+.training-carousel-file > div { display:grid; gap:3px; min-width:0; }
+.training-carousel-file strong { overflow-wrap:anywhere; color:var(--color-text-primary); font-size:13px; }
+.training-carousel-file span,.training-carousel-file small { color:var(--color-text-secondary); font-size:11px; }
+.training-carousel-controls { display:flex; align-items:center; justify-content:center; gap:16px; padding:4px 0 16px; color:var(--color-text-secondary); font-size:12px; }
+.training-carousel-controls button { display:grid; place-items:center; width:34px; height:34px; border:1px solid var(--color-border); border-radius:50%; color:var(--color-text-primary); background:var(--color-surface); }
+.training-carousel-controls button:disabled { opacity:.4; cursor:default; }
+.training-carousel-thumbnails { display:flex; gap:10px; overflow-x:auto; padding:2px 2px 8px; }
+.training-carousel-thumbnails button { display:flex; align-items:center; gap:8px; flex:0 0 auto; max-width:220px; padding:6px 10px; border:1px solid var(--color-border); border-radius:9px; color:var(--color-text-secondary); background:var(--color-surface); font-size:11px; }
+.training-carousel-thumbnails button.is-active { border-color:var(--color-primary); color:var(--color-primary-dark); background:var(--color-primary-surface); }
+.training-carousel-thumbnails img { width:34px; height:34px; border-radius:5px; object-fit:cover; }
+.training-carousel-thumbnails i { font-size:26px; }
+.training-carousel-thumbnails span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.training-carousel-empty { color:var(--color-text-secondary); font-size:13px; }
+.training-attachment-preview-modal .modal-body { display:grid; place-items:center; height:min(78vh,850px); padding:12px; background:var(--color-bg); }
+.training-attachment-preview-modal .modal-body img,.training-attachment-preview-modal .modal-body iframe { width:100%; height:100%; border:0; object-fit:contain; }
+@media (max-width:600px) { .training-carousel-body { padding:16px; } .training-carousel-stage { height:45vh; min-height:220px; } .training-carousel-details { align-items:flex-start; flex-direction:column; } }
+.training-edit-modal .modal-content { border:1px solid var(--color-border); border-radius:14px; color:var(--color-text-primary); background:var(--color-surface); }
+.training-edit-modal .modal-header { align-items:flex-start; background:var(--color-primary-surface); border-bottom-color:var(--color-border); }
+.training-edit-modal .modal-header small { color:var(--color-primary-dark); font-size:11px; font-weight:700; }
+.training-edit-modal .modal-header p { margin:5px 0 0; color:var(--color-text-secondary); font-size:12px; }
+.training-edit-modal .modal-footer { border-top-color:var(--color-border); }
+.training-edit-modal .form-label { font-size:12px; font-weight:650; }
+.training-edit-modal .form-control,.training-edit-modal .form-select { border-color:var(--color-border); color:var(--color-text-primary); background-color:var(--color-surface); font-size:13px; }
+#trainingEditHint { color:var(--color-text-secondary); font-size:11px; }
+.training-edit-save { color:#fff; background:var(--color-primary); border-color:var(--color-primary); }
+.training-edit-save:hover:not(:disabled) { color:#fff; background:var(--color-primary-dark); }

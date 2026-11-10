@@ -1,0 +1,3057 @@
+@extends('layouts.admin')
+
+@section('body-attributes')
+class="layout-fixed"
+@endsection
+
+@section('head')
+<meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="{{ asset('src/js/shared/page-loading.js') }}"></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://db.onlinewebfonts.com/c/07e0cde7ae44d7e3cdc61a55fe9af110?family=Blanka"
+      rel="stylesheet"
+    />
+    <!-- Box icons -->
+    <!-- Basic Icons -->
+    <link
+      href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css"
+      rel="stylesheet"
+    />
+    <!-- Filled Icons -->
+    <link
+      href="https://cdn.boxicons.com/3.0.8/fonts/filled/boxicons-filled.min.css"
+      rel="stylesheet"
+    />
+    <!-- Brand Icons -->
+    <link
+      href="https://cdn.boxicons.com/3.0.8/fonts/brands/boxicons-brands.min.css"
+      rel="stylesheet"
+    />
+    <!-- AdminLTE 4 Template -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/styles/overlayscrollbars.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/admin-lte@4.8.4/dist/css/adminlte.min.css"
+    />
+    <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
+    <link
+      rel="stylesheet"
+      href="{{ asset('src/css/participants/update/view-farmer.css?v=farmer-association-memberships-1') }}"
+    />
+    <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/shared/activity-logs.css?v=design-20261109-1') }}" />
+    <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
+    <title>DA-TMIS - View Farmer</title>
+    <meta name="description" content="View Farmer | DA-TMIS" />
+    <link rel="stylesheet" href="{{ asset('src/css/shared/table-loading.css') }}" />
+    <script src="{{ asset('src/js/shared/table-loading.js') }}" defer></script>
+    <!-- Backend integration disabled for now. Uncomment when ready.
+
+-->
+      <script type="module" src="{{ asset('src/js/shared/activity-log.js') }}"></script>
+  <link rel="stylesheet" href="{{ asset('src/css/shared/toast.css') }}">
+    <script src="{{ asset('src/js/shared/toast.js') }}" defer></script>
+@endsection
+
+@section('content')
+<div class="app-wrapper">
+      <nav class="app-header navbar navbar-expand">
+        <div
+          class="app-header-main d-flex justify-content-between align-items-center"
+        >
+          <!-- logo and TMIS -->
+          <div
+            class="app-header-left d-flex align-items-center justify-content-start"
+          >
+            <!-- Hide in large size -->
+            <button
+              class="btn app-mobile-toggle d-lg-none"
+              type="button"
+              data-bs-toggle="offcanvas"
+              data-bs-target="#mobileNavMenu"
+              aria-controls="mobileNavMenu"
+            >
+              <i class="bi bi-list"></i>
+            </button>
+            <!-- Bootstrap hides the logo below sm to keep the mobile header compact. -->
+            <div
+              class="app-logo d-none d-sm-flex align-items-center justify-content-start"
+            >
+              <a
+                href="{{ route('admin.dashboard.dashboard') }}"
+                class="text-decoration-none"
+              >
+                <img
+                  src="{{ asset('assets/logo/DA Logo/DA logo_120519.png') }}"
+                  alt="App_logo"
+                  class="image-logo"
+                />
+              </a>
+              <div
+                class="app-logo-text d-flex align-items-center justify-content-start"
+              >
+                <!-- Bootstrap hides the TMIS wordmark below sm (576px), preserving space for mobile navigation. -->
+                <h3 class="app-name d-none d-sm-block">TMIS</h3>
+                <!-- <span class="text-logo-name">Training Management Information System</span> -->
+              </div>
+            </div>
+          </div>
+          <!-- Navigation Bar -->
+          <div
+            class="app-navigation-bar d-none d-lg-flex justify-content-center"
+          >
+            <ul class="navbar-nav">
+              <li class="nav-item">
+                <a href="{{ route('admin.dashboard.dashboard') }}" class="nav-link">
+                  <i class="bi bi-columns-gap"></i>
+                  <span class="text-icon-active">Dashboard</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a
+                  href="#"
+                  class="nav-link active-page"
+                  role="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#participantHeaderCollapse"
+                  aria-expanded="false"
+                  aria-controls="participantHeaderCollapse"
+                >
+                  <i class="bi bi-people-fill"></i>
+                  <span class="text-icon">Participants</span>
+                  <i class="bi bi-chevron-down ms-2"></i>
+                </a>
+                <div
+                  class="collapse header-collapse"
+                  id="participantHeaderCollapse"
+                >
+                  <div class="header-collapse-menu">
+                  <div class="participant-nav-section-label">Individual</div>
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#createParticipantHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-plus-circle"></i>
+                      <span>Create</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div class="collapse" id="createParticipantHeaderCollapse">
+                      <div class="header-sub-collapse-menu">
+                        <a
+                          href="{{ route('admin.participants.create.register') }}"
+                          class="header-sub-collapse-item"
+                        >
+                          <i class="bi bi-person-fill-add"></i>
+                          <span>Register</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#detailsParticipantHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span>Details</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div class="collapse" id="detailsParticipantHeaderCollapse">
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.participants.details.all-with-status') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-list-check"></i>
+                          <span>List of Farmers</span>
+                        </a>
+                        <a href="{{ route('admin.participants.details.inactive') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-person-walking"></i>
+                          <span>Inactive</span>
+                        </a>
+                      </div>
+                    </div>
+                  <div class="participant-nav-section-label">Farmer Association</div>
+                  <a href="#" class="header-collapse-item" role="button" data-bs-toggle="collapse" data-bs-target="#createFarmerAssociationHeaderCollapse" aria-expanded="false" aria-controls="createFarmerAssociationHeaderCollapse">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Create</span>
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                  </a>
+                  <div class="collapse" id="createFarmerAssociationHeaderCollapse">
+                    <div class="header-sub-collapse-menu">
+                      <a href="{{ route('admin.participants.create.fa-register') }}" class="header-sub-collapse-item">
+                        <i class="bi bi-building-add"></i>
+                        <span>Register</span>
+                      </a>
+                    </div>
+                  </div>
+                  <a href="#" class="header-collapse-item" role="button" data-bs-toggle="collapse" data-bs-target="#detailsFarmerAssociationHeaderCollapse" aria-expanded="false" aria-controls="detailsFarmerAssociationHeaderCollapse">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Details</span>
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                  </a>
+                  <div class="collapse" id="detailsFarmerAssociationHeaderCollapse">
+                    <div class="header-sub-collapse-menu">
+                      <a href="{{ route('admin.participants.details.fa-all-list') }}" class="header-sub-collapse-item">
+                        <i class="bi bi-list-ul"></i>
+                        <span>List of FA</span>
+                      </a>
+                      <a href="{{ route('admin.participants.details.fa-inactive') }}" class="header-sub-collapse-item">
+                        <i class="bi bi-x-circle-fill"></i>
+                        <span>Inactive</span>
+                      </a>
+                    </div>
+                  </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item">
+                <a
+                  href="#"
+                  class="nav-link"
+                  role="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#trainingHeaderCollapse"
+                  aria-expanded="false"
+                  aria-controls="trainingHeaderCollapse"
+                >
+                  <i class="bi bi-book-fill"></i>
+                  <span class="text-icon">Training</span>
+                  <i class="bi bi-chevron-down ms-2"></i>
+                </a>
+                <div
+                  class="collapse header-collapse"
+                  id="trainingHeaderCollapse"
+                >
+                  <div class="header-collapse-menu">
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#createTrainingHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-plus-circle"></i>
+                      <span>Create</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div class="collapse" id="createTrainingHeaderCollapse">
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.training.create.register') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-clipboard-plus-fill"></i>
+                          <span>Register</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#updateTrainingHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-arrow-repeat"></i>
+                      <span>Update</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div class="collapse" id="updateTrainingHeaderCollapse">
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.training.update.for-review') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-clipboard2-check-fill"></i>
+                          <span>For Review</span>
+                          <span class="badge badge-review">34</span>
+                        </a>
+                        <a href="{{ route('admin.training.update.for-approval') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-clipboard2-check-fill"></i>
+                          <span>For Approval</span>
+                          <span class="badge badge-approval">23</span>
+                        </a>
+                        <a href="{{ route('admin.training.update.for-acceptance') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-patch-check-fill"></i>
+                          <span>For Acceptance</span>
+                          <span class="badge badge-acceptance">0</span>
+                        </a>
+
+                      </div>
+                    </div>
+
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#detailsTrainingHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span>Details</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div class="collapse" id="detailsTrainingHeaderCollapse">
+                      <div class="header-sub-collapse-menu">
+                        <a
+                          href="{{ route('admin.training.details.all-status') }}"
+                          class="header-sub-collapse-item"
+                        >
+                          <i class="bi bi-person-video3"></i>
+                          <span>All Status</span>
+                        </a>
+                        <a
+                          href="{{ route('admin.training.details.approved-accepted') }}"
+                          class="header-sub-collapse-item"
+                        >
+                          <i class="bi bi-person-workspace"></i>
+                          <span>Approved & Accepted</span>
+                        </a>
+                        <a
+                          href="{{ route('admin.training.details.incomplete') }}"
+                          class="header-sub-collapse-item"
+                        >
+                          <i class="bi bi-person-fill-gear"></i>
+                          <span>Incomplete</span>
+                        </a>
+                        <a
+                          href="{{ route('admin.training.details.inactive') }}"
+                          class="header-sub-collapse-item"
+                        >
+                          <i class="bi bi-envelope-exclamation-fill"></i>
+                          <span>Inactive</span>
+                        </a>
+                      </div>
+                    </div>
+                  <div class="training-nav-section-label">Facilitator / Resource Person</div>
+                  <a href="#" class="header-collapse-item" role="button" data-bs-toggle="collapse" data-bs-target="#createFacilitatorRpHeaderCollapse" aria-expanded="false" aria-controls="createFacilitatorRpHeaderCollapse">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Create</span>
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                  </a>
+                  <div class="collapse" id="createFacilitatorRpHeaderCollapse">
+                    <div class="header-sub-collapse-menu">
+                      <a href="{{ route('admin.training.create.rp-register') }}" class="header-sub-collapse-item">
+                        <i class="bi bi-person-fill-add"></i>
+                        <span>Register</span>
+                      </a>
+                    </div>
+                  </div>
+                  <a href="#" class="header-collapse-item" role="button" data-bs-toggle="collapse" data-bs-target="#detailsFacilitatorRpHeaderCollapse" aria-expanded="false" aria-controls="detailsFacilitatorRpHeaderCollapse">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Details</span>
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                  </a>
+                  <div class="collapse" id="detailsFacilitatorRpHeaderCollapse">
+                    <div class="header-sub-collapse-menu">
+                      <a href="{{ route('admin.training.details.rp-list') }}" class="header-sub-collapse-item">
+                        <i class="bi bi-list-ul"></i>
+                        <span>List of RP</span>
+                      </a>
+                      <a href="{{ route('admin.training.details.rp-inactive') }}" class="header-sub-collapse-item">
+                        <i class="bi bi-x-circle-fill"></i>
+                        <span>Inactive</span>
+                      </a>
+                    </div>
+                  </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item">
+                <a
+                  href="#"
+                  class="nav-link"
+                  role="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#evaluationHeaderCollapse"
+                  aria-expanded="false"
+                  aria-controls="evaluationHeaderCollapse"
+                >
+                  <i class="bi bi-file-earmark-check"></i>
+                  <span class="text-icon">Evaluation</span>
+                  <i class="bi bi-chevron-down ms-2"></i>
+                </a>
+                <div
+                  class="collapse header-collapse"
+                  id="evaluationHeaderCollapse"
+                >
+                  <div class="header-collapse-menu">
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#createEvaluationHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-plus-circle"></i>
+                      <span>Create</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div class="collapse" id="createEvaluationHeaderCollapse">
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.evaluation.create.pre-test-register') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-text"></i>
+                          <span>Pre-test Questionaire</span>
+                        </a>
+                        <a href="{{ route('admin.evaluation.create.post-test-register') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-text"></i>
+                          <span>Post-test Questionaire</span>
+                        </a>
+                        <a href="{{ route('admin.evaluation.create.training-evaluation-register') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-text"></i>
+                          <span>Training Evaluation</span>
+                        </a>
+                        <a href="{{ route('admin.evaluation.create.rp-evaluation-register') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-text"></i>
+                          <span>Resource Person Evaluation</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#encodeEvaluationHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-code-slash"></i>
+                      <span>Encode</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div class="collapse" id="encodeEvaluationHeaderCollapse">
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.evaluation.encode.pre-test') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-ruled"></i>
+                          <span>Pre-test Evaluation</span>
+                        </a>
+                        <a href="{{ route('admin.evaluation.encode.post-test') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-ruled"></i>
+                          <span>Post-test Evaluation</span>
+                        </a>
+                        <a href="{{ route('admin.evaluation.encode.training-evaluation') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-ruled"></i>
+                          <span>Training Evaluation</span>
+                        </a>
+                        <a href="{{ route('admin.evaluation.encode.rp-evaluation') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-ruled"></i>
+                          <span>Resource Person Evaluation</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#detailsEvaluationHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span>Details</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div class="collapse" id="detailsEvaluationHeaderCollapse">
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.evaluation.details.list-questionnaire') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-journal-text"></i>
+                          <span>List Questionnaire</span>
+                        </a>
+                        <a href="{{ route('admin.evaluation.details.draft-questionnaire') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-text"></i>
+                          <span>Draft Questionnaires</span>
+                        </a>
+                        <a href="{{ route('admin.evaluation.details.inactive') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-journal-x"></i>
+                          <span>Inactive</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item">
+                <a
+                  href="#"
+                  class="nav-link"
+                  role="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#administrationHeaderCollapse"
+                  aria-expanded="false"
+                  aria-controls="administrationHeaderCollapse"
+                >
+                  <i class="bi bi-sliders"></i>
+                  <span class="text-icon">Administration</span>
+                  <i class="bi bi-chevron-down ms-2"></i>
+                </a>
+                <div
+                  class="collapse header-collapse"
+                  id="administrationHeaderCollapse"
+                >
+                  <div class="header-collapse-menu">
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#createAdministrationHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-plus-circle"></i>
+                      <span>Create</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div
+                      class="collapse"
+                      id="createAdministrationHeaderCollapse"
+                    >
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.administration.create.register') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-person-add"></i>
+                          <span>Register</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#updateAdministrationHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-arrow-repeat"></i>
+                      <span>Update</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div
+                      class="collapse"
+                      id="updateAdministrationHeaderCollapse"
+                    >
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.administration.update.for-approval') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-person-check"></i>
+                          <span>For approval</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#detailsAdministrationHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span>Details</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div
+                      class="collapse"
+                      id="detailsAdministrationHeaderCollapse"
+                    >
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.administration.details.all-status') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-person-arms-up"></i>
+                          <span>All status</span>
+                        </a>
+                        <a href="{{ route('admin.administration.details.approved-accepted') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-person-hearts"></i>
+                          <span>Approved & accepted</span>
+                        </a>
+                        <a href="{{ route('admin.administration.details.inactive') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-person-fill-gear"></i>
+                          <span>Inactive</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Notification & User profile -->
+          <div class="app-noti-profile d-flex align-items-center">
+            <!-- Notification menu stays end-aligned so its wide content cannot enlarge the mobile layout. -->
+            <div class="app-notification dropdown">
+              <button
+                class="notification-btn position-relative"
+                type="button"
+                id="notificationDropdown"
+                data-bs-toggle="dropdown"
+                data-bs-auto-close="outside"
+                aria-expanded="false"
+                aria-label="Open notifications"
+              >
+                <i class="bi bi-bell-fill"></i>
+                <span
+                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill notification-count"
+                  >3</span
+                >
+              </button>
+              <!-- Notification Dropdown -->
+              <div
+                class="dropdown-menu dropdown-menu-end notification-menu"
+                aria-labelledby="notificationDropdown"
+              >
+                <div class="notification-menu-header">
+                  <div>
+                    <span class="notification-menu-title">Notifications</span>
+                    <span class="notification-menu-subtitle"
+                      >3 unread updates</span
+                    >
+                  </div>
+                  <div class="notification-menu-actions">
+                    <button type="button" class="notification-mark-read">
+                      Mark all read
+                    </button>
+                    <button type="button" class="notification-clear-all">
+                      Clear all
+                    </button>
+                  </div>
+                </div>
+                <div class="notification-menu-list">
+                  <button
+                    type="button"
+                    class="notification-menu-item is-unread"
+                    data-bs-toggle="modal"
+                    data-bs-target="#notificationDetailModal"
+                    data-notification-type="Approval required"
+                    data-notification-time="Today, 9:20 PM"
+                    data-notification-title="Training proposal review needed"
+                    data-notification-description="The Advanced Data Analysis training proposal submitted by John Doe is ready for your review. Your feedback is required before it can proceed to approval."
+                    data-notification-action="Review proposal"
+                  >
+                    <span
+                      class="notification-item-icon notification-item-icon--approval"
+                      ><i class="bi bi-clipboard2-check"></i
+                    ></span>
+                    <span class="notification-item-copy">
+                      <span class="notification-item-title"
+                        >Training proposal review needed</span
+                      >
+                      <span class="notification-item-summary"
+                        >Advanced Data Analysis needs your feedback.</span
+                      >
+                      <span class="notification-item-time">Today, 9:20 PM</span>
+                    </span>
+                    <span
+                      class="notification-unread-dot"
+                      aria-label="Unread"
+                    ></span>
+                  </button>
+                  <button
+                    type="button"
+                    class="notification-menu-item is-unread"
+                    data-bs-toggle="modal"
+                    data-bs-target="#notificationDetailModal"
+                    data-notification-type="Budget update"
+                    data-notification-time="Today, 2:45 PM"
+                    data-notification-title="District allocation records updated"
+                    data-notification-description="The beneficiary district allocation records have been updated. Open this notification to review the updated district entries."
+                    data-notification-action="View allocation records"
+                  >
+                    <span
+                      class="notification-item-icon notification-item-icon--budget"
+                      ><i class="bi bi-wallet2"></i
+                    ></span>
+                    <span class="notification-item-copy">
+                      <span class="notification-item-title"
+                        >District allocation records updated</span
+                      >
+                      <span class="notification-item-summary"
+                        >Beneficiary district entries are ready to review.</span
+                      >
+                      <span class="notification-item-time">Today, 2:45 PM</span>
+                    </span>
+                    <span
+                      class="notification-unread-dot"
+                      aria-label="Unread"
+                    ></span>
+                  </button>
+                  <button
+                    type="button"
+                    class="notification-menu-item is-unread"
+                    data-bs-toggle="modal"
+                    data-bs-target="#notificationDetailModal"
+                    data-notification-type="Participant update"
+                    data-notification-time="Yesterday, 4:10 PM"
+                    data-notification-title="Participant registration approved"
+                    data-notification-description="A participant registration has been approved and is now included in the beneficiary record for its assigned district."
+                    data-notification-action="View participant"
+                  >
+                    <span
+                      class="notification-item-icon notification-item-icon--participant"
+                      ><i class="bi bi-person-check"></i
+                    ></span>
+                    <span class="notification-item-copy">
+                      <span class="notification-item-title"
+                        >Participant registration approved</span
+                      >
+                      <span class="notification-item-summary"
+                        >A new beneficiary record is now active.</span
+                      >
+                      <span class="notification-item-time"
+                        >Yesterday, 4:10 PM</span
+                      >
+                    </span>
+                    <span
+                      class="notification-unread-dot"
+                      aria-label="Unread"
+                    ></span>
+                  </button>
+                </div>
+                <button type="button" class="notification-view-all">
+                  View all notifications <i class="bi bi-arrow-right"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- User profile and role -->
+            <div class="app-profile dropdown-center">
+              <a
+                href="#"
+                class="nav-link dropdown-toggle profile-button"
+                role="button"
+                data-bs-auto-close="outside"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <!-- User profile -->
+                <span class="user-avatar-wrap">
+                  @include('layouts.account-avatar')
+                  <span class="user-status-dot"></span>
+                </span>
+
+                <!-- User name -->
+                <div class="profile-meta">
+                  <span class="profile-name">{{ $accountDisplay['navigationName'] }}</span>
+                  <small class="profile-role">{{ $accountDisplay['role'] ?? 'Role not assigned' }}</small>
+                </div>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end user-menu">
+                <li>
+                  <h6 class="dropdown-header user-menu-header">{{ $accountDisplay['navigationName'] }}</h6>
+                </li>
+                <li>
+                  <span class="dropdown-item-text">{{ $accountDisplay['role'] ?? 'Role not assigned' }}</span>
+                </li>
+                <li>
+                  <hr class="dropdown-divider" />
+                </li>
+                <li>
+                  <a href="{{ route('admin.users.profile') }}" class="dropdown-item">
+                    <i class="bi bi-person-fill-gear"></i>
+                    <span>Profile</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="{{ route('admin.users.logs') }}" class="dropdown-item">
+                    <i class="bi bi-substack"></i>
+                    <span>Logs</span>
+                  </a>
+                </li>
+                
+                <li>
+                  <hr class="dropdown-divider" />
+                </li>
+                <li>
+                  <a href="{{ route('login') }}" class="dropdown-item sign-out-item">
+                    <i class="bi bi-box-arrow-in-right"></i>
+                    <span>Sign out</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Main Body page  -->
+      <main class="app-main">
+        <!-- Bootstrap container and grid keep dashboard cards fluid on every viewport. -->
+        <div class="app-main-body container-fluid px-3 px-md-4">
+          <!-- first row: navigation header -->
+          <div class="row first-row">
+            <div class="col-12 app-content-header m-0 p-0">
+              <div class="container-fluid p-0">
+                <div class="row g-3 align-items-stretch">
+                  <!-- breadcrumbs navigation -->
+                  <div class="col-12 col-xl-8">
+                    <nav aria-label="breadcrumb">
+                      <ol class="breadcrumb">
+                        <li class="breadcrumb-item">Participants</li>
+                        <li class="breadcrumb-item">Details</li>
+                        <li class="breadcrumb-item active" aria-current="page">
+                          View Farmer Information
+                        </li>
+                      </ol>
+                    </nav>
+                    <h4 class="content-header">View Farmer Information</h4>
+                    <span class="content-info"
+                      >View this farmer's personal, association, and training
+                      information.</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- FOR REVIEW TABLE MODULE: filters, workflow actions, pagination, and modal markup -->
+          <div class="row second-row">    
+            <div class="col-12 mb-2">
+              <!-- Navigation tabs -->
+              <div class="card-navigation">
+                <div class="card-body">
+                  <ul class="nav profile-tabs" role="tablist" aria-label="Farmer profile sections">
+                    <li class="profile-tab is-current" role="presentation">
+                      <a href="#farmer-info" class="nav-link active" id="farmer-info-tab" role="tab" aria-controls="farmer-info" aria-selected="true">
+                        Overview
+                      </a>
+                    </li>
+                    <li class="profile-tab" role="presentation">
+                      <a href="#trainings-info" class="nav-link" id="trainings-info-tab" role="tab" aria-controls="trainings-info" aria-selected="false" tabindex="-1">
+                        Trainings
+                      </a>
+                    </li>
+                    <li class="profile-tab" role="presentation">
+                      <a href="#attachments" class="nav-link" id="attachments-tab" role="tab" aria-controls="attachments" aria-selected="false" tabindex="-1">
+                        Documents
+                      </a>
+                    </li>
+                    <li class="profile-tab" role="presentation">
+                      <a href="#interventions" class="nav-link" id="interventions-tab" role="tab" aria-controls="interventions" aria-selected="false" tabindex="-1">
+                        Intervention
+                      </a>
+                    </li>
+                    <li class="profile-tab" role="presentation">
+                      <a href="#footprints" class="nav-link" id="activity-logs-tab" role="tab" aria-controls="footprints" aria-selected="false" tabindex="-1">
+                        Activity Logs
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section content of each tab  -->
+            <section class="info-wrapper" id="farmer-info" role="tabpanel" aria-labelledby="farmer-info-tab">
+              <div class="farmer-overview-layout">
+                <div class="row g-3 farmer-overview-grid">
+                  <div class="col-12 col-xl-7">
+                    <article class="card overview-card h-100">
+                      <div class="card-header overview-card-header">
+                        <div class="overview-heading">
+                          <span class="overview-heading-icon"><i class="bi bi-person-vcard" aria-hidden="true"></i></span>
+                          <h5 class="title-card">Personal Information</h5>
+                          <span class="overview-status">Active</span>
+                        </div>
+                      </div>
+                      <div class="card-body overview-card-body">
+                        <div class="farmer-detail-grid">
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-person-badge" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Farmer ID</span><strong id="displayFarmerId">271901</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-telephone" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Mobile Number</span><strong>09092308202</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-geo-alt" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Address</span><strong>Villa Jesus Weste, Alabat, Quezon</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-person" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Full Name</span><strong>Juan Dela Cruz</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-envelope" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Email Address</span><strong>None</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-calendar3" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Date of Birth</span><strong>January 1, 1990</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-calendar2-week" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Year Covered</span><strong id="farmerYearCovered">Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-flag" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Nationality</span><strong>Filipino</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-gender-male" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Gender</span><strong>Male</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-heart" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Civil Status</span><strong>Married</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-geo" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Place of Birth</span><strong>Gumaca, Quezon</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">4Ps</span><strong>No</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-universal-access" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Person With Disability</span><strong>No</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-person-hearts" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Indigenous Group</span><strong>No</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-egg" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Dietary Restrictions</span><strong>None</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-bandaid" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Allergies</span><strong>None</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-person-check" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Senior Citizen</span><strong>No</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-telephone" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Telephone Number</span><strong>None</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-mailbox" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Postal Code</span><strong>4331</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-person" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">First Name</span><strong>Juan</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-person" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Middle Name</span><strong>Santos</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-person" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Last Name</span><strong>Dela Cruz</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-person-badge" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Extension</span><strong>Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-geo-alt" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Region</span><strong>Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-map" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">District</span><strong>Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-signpost" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Street / Purok</span><strong>Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-house" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">House / Building No.</span><strong>Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-person-check" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">TUPAD</span><strong>Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-person-heart" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Solo Parent</span><strong>Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Tribe Name</span><strong>Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Profile Updated</span><strong>No record updated</strong></div>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  </div>
+
+                  <div class="col-12 col-xl-5">
+                    <article class="card overview-card association-overview-card h-100">
+                      <div class="card-header overview-card-header">
+                        <div class="overview-heading">
+                          <span class="overview-heading-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
+                          <h5 class="title-card">Farmer Association / Organization</h5>
+                          <span class="overview-status" data-association-membership-count>0 associations</span>
+                        </div>
+                      </div>
+                      <div class="card-body overview-card-body">
+                        <div class="association-overview-content">
+                          <details class="farmer-association-membership-panel">
+                            <summary>View association and role details</summary>
+                            <div class="farmer-association-membership-list" data-association-memberships aria-live="polite"></div>
+                            <p class="farmer-association-membership-empty" data-association-membership-empty>No association memberships are recorded.</p>
+                          </details>
+                          <section id="farmerBeneficiaryOfficeTags" class="farmer-beneficiary-office-panel" aria-labelledby="viewBeneficiaryOfficesTitle">
+                            <header class="farmer-beneficiary-office-heading">
+                              <div><h6 id="viewBeneficiaryOfficesTitle">Beneficiary offices</h6><p>Every region and office where this farmer is registered as a beneficiary.</p></div>
+                              <span class="farmer-beneficiary-office-count" data-beneficiary-office-count></span>
+                            </header>
+                            <div class="farmer-beneficiary-office-grid" data-beneficiary-offices aria-live="polite"></div>
+                            <p class="farmer-beneficiary-office-empty" data-beneficiary-office-empty>No beneficiary offices are recorded.</p>
+                          </section>
+                        </div>
+                      </div>
+                    </article>
+                  </div>
+                </div>
+
+                <article class="card overview-card overview-training-card">
+                  <div class="card-header overview-card-header training-overview-header">
+                    <div class="overview-heading">
+                      <span class="overview-heading-icon"><i class="bi bi-mortarboard" aria-hidden="true"></i></span>
+                      <h5 class="title-card">Trainings Participated</h5>
+                    </div>
+                    <a class="view-all-trainings" href="#trainings-info" data-view-all-trainings>
+                      View All Trainings <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                    </a>
+                  </div>
+                  <div class="card-body overview-training-body">
+                      <div class="training-carousel" id="overviewTrainingCarousel" aria-label="Farmer training history">
+                      <div class="training-carousel-track" id="overviewTrainingTrack" aria-live="polite">
+                        <article class="training-preview-card" data-training-id="modern-rice-production">
+                          <span class="training-preview-art training-art-green"><i class="bi bi-flower1" aria-hidden="true"></i></span>
+                          <div class="training-preview-main">
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'modern-rice-production']) }}" target="_blank" rel="noopener">Modern Rice Production</a></strong><span class="training-type">Crop Production</span>
+                            <small><i class="bi bi-calendar3" aria-hidden="true"></i> May 22–24, 2025</small>
+                            <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Los Baños, Laguna</small>
+                            <span class="training-status">Completed</span>
+                          </div>
+                          <div class="training-preview-scores"><span>Pre-Test<strong>68.00%</strong></span><span>Post-Test<strong>86.00%</strong></span><span>Rating<strong><i class="bi bi-star-fill" aria-hidden="true"></i> 4.50 / 5</strong></span></div>
+                        </article>
+                        <article class="training-preview-card" data-training-id="organic-vegetable-production">
+                          <span class="training-preview-art training-art-blue"><i class="bi bi-flower2" aria-hidden="true"></i></span>
+                          <div class="training-preview-main">
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'organic-vegetable-production']) }}" target="_blank" rel="noopener">Organic Vegetable Production</a></strong><span class="training-type training-type-blue">Organic Agriculture</span>
+                            <small><i class="bi bi-calendar3" aria-hidden="true"></i> May 27–29, 2025</small>
+                            <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Benguet State Univ.</small>
+                            <span class="training-status">Completed</span>
+                          </div>
+                          <div class="training-preview-scores"><span>Pre-Test<strong>72.00%</strong></span><span>Post-Test<strong>88.00%</strong></span><span>Rating<strong><i class="bi bi-star-fill" aria-hidden="true"></i> 4.20 / 5</strong></span></div>
+                        </article>
+                        <article class="training-preview-card" data-training-id="farm-business-management">
+                          <span class="training-preview-art training-art-orange"><i class="bi bi-briefcase" aria-hidden="true"></i></span>
+                          <div class="training-preview-main">
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'farm-business-management']) }}" target="_blank" rel="noopener">Farm Business Management</a></strong><span class="training-type training-type-orange">Agribusiness</span>
+                            <small><i class="bi bi-calendar3" aria-hidden="true"></i> June 3–5, 2025</small>
+                            <small><i class="bi bi-geo-alt" aria-hidden="true"></i> DA RFO VI, Iloilo</small>
+                            <span class="training-status">Completed</span>
+                          </div>
+                          <div class="training-preview-scores"><span>Pre-Test<strong>60.00%</strong></span><span>Post-Test<strong>82.00%</strong></span><span>Rating<strong><i class="bi bi-star-fill" aria-hidden="true"></i> 4.00 / 5</strong></span></div>
+                        </article>
+                        <article class="training-preview-card" data-training-id="climate-smart-agriculture">
+                          <span class="training-preview-art training-art-purple"><i class="bi bi-leaf" aria-hidden="true"></i></span>
+                          <div class="training-preview-main">
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'climate-smart-agriculture']) }}" target="_blank" rel="noopener">Climate Smart Agriculture</a></strong><span class="training-type training-type-purple">Climate Smart Agriculture</span>
+                            <small><i class="bi bi-calendar3" aria-hidden="true"></i> June 10–12, 2025</small>
+                            <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Isabela State Univ.</small>
+                            <span class="training-status training-status-ongoing">Ongoing</span>
+                          </div>
+                          <div class="training-preview-scores"><span>Pre-Test<strong>—</strong></span><span>Post-Test<strong>—</strong></span><span>Rating<strong>—</strong></span></div>
+                        </article>
+                        <article class="training-preview-card" data-training-id="soil-health-nutrient-management">
+                          <span class="training-preview-art training-art-green"><i class="bi bi-tree" aria-hidden="true"></i></span>
+                          <div class="training-preview-main">
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'soil-health-nutrient-management']) }}" target="_blank" rel="noopener">Soil Health and Nutrient Management</a></strong><span class="training-type">Crop Production</span>
+                            <small><i class="bi bi-calendar3" aria-hidden="true"></i> June 18–20, 2025</small>
+                            <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Quezon Province</small>
+                            <span class="training-status">Completed</span>
+                          </div>
+                          <div class="training-preview-scores"><span>Pre-Test<strong>75.00%</strong></span><span>Post-Test<strong>90.00%</strong></span><span>Rating<strong><i class="bi bi-star-fill" aria-hidden="true"></i> 4.60 / 5</strong></span></div>
+                        </article>
+                        <article class="training-preview-card" data-training-id="efficient-water-management">
+                          <span class="training-preview-art training-art-blue"><i class="bi bi-droplet" aria-hidden="true"></i></span>
+                          <div class="training-preview-main">
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'efficient-water-management']) }}" target="_blank" rel="noopener">Efficient Water Management</a></strong><span class="training-type training-type-blue">Farm Technology</span>
+                            <small><i class="bi bi-calendar3" aria-hidden="true"></i> July 2–4, 2025</small>
+                            <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Lucban, Quezon</small>
+                            <span class="training-status">Completed</span>
+                          </div>
+                          <div class="training-preview-scores"><span>Pre-Test<strong>70.00%</strong></span><span>Post-Test<strong>84.00%</strong></span><span>Rating<strong><i class="bi bi-star-fill" aria-hidden="true"></i> 4.30 / 5</strong></span></div>
+                        </article>
+                        <article class="training-preview-card" data-training-id="agricultural-financial-literacy">
+                          <span class="training-preview-art training-art-orange"><i class="bi bi-cash-coin" aria-hidden="true"></i></span>
+                          <div class="training-preview-main">
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'agricultural-financial-literacy']) }}" target="_blank" rel="noopener">Agricultural Financial Literacy</a></strong><span class="training-type training-type-orange">Agribusiness</span>
+                            <small><i class="bi bi-calendar3" aria-hidden="true"></i> July 15–17, 2025</small>
+                            <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Sariaya, Quezon</small>
+                            <span class="training-status">Completed</span>
+                          </div>
+                          <div class="training-preview-scores"><span>Pre-Test<strong>66.00%</strong></span><span>Post-Test<strong>85.00%</strong></span><span>Rating<strong><i class="bi bi-star-fill" aria-hidden="true"></i> 4.10 / 5</strong></span></div>
+                        </article>
+                        <article class="training-preview-card" data-training-id="postharvest-handling-storage">
+                          <span class="training-preview-art training-art-purple"><i class="bi bi-recycle" aria-hidden="true"></i></span>
+                          <div class="training-preview-main">
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'postharvest-handling-storage']) }}" target="_blank" rel="noopener">Postharvest Handling and Storage</a></strong><span class="training-type training-type-purple">Postharvest</span>
+                            <small><i class="bi bi-calendar3" aria-hidden="true"></i> August 5–7, 2025</small>
+                            <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Quezon City</small>
+                            <span class="training-status">Completed</span>
+                          </div>
+                          <div class="training-preview-scores"><span>Pre-Test<strong>71.00%</strong></span><span>Post-Test<strong>89.00%</strong></span><span>Rating<strong><i class="bi bi-star-fill" aria-hidden="true"></i> 4.50 / 5</strong></span></div>
+                        </article>
+                        <article class="training-preview-card" data-training-id="integrated-pest-management">
+                          <span class="training-preview-art training-art-green"><i class="bi bi-bug" aria-hidden="true"></i></span>
+                          <div class="training-preview-main">
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'integrated-pest-management']) }}" target="_blank" rel="noopener">Integrated Pest Management</a></strong><span class="training-type">Crop Production</span>
+                            <small><i class="bi bi-calendar3" aria-hidden="true"></i> August 20–22, 2025</small>
+                            <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Alabat, Quezon</small>
+                            <span class="training-status">Completed</span>
+                          </div>
+                          <div class="training-preview-scores"><span>Pre-Test<strong>74.00%</strong></span><span>Post-Test<strong>91.00%</strong></span><span>Rating<strong><i class="bi bi-star-fill" aria-hidden="true"></i> 4.70 / 5</strong></span></div>
+                        </article>
+                        <article class="training-preview-card" data-training-id="farmers-market-linkage">
+                          <span class="training-preview-art training-art-blue"><i class="bi bi-shop" aria-hidden="true"></i></span>
+                          <div class="training-preview-main">
+                            <strong><a class="training-title-link" href="{{ route('admin.training.id.view-training', ['id' => 'farmers-market-linkage']) }}" target="_blank" rel="noopener">Farmers' Market Linkage Workshop</a></strong><span class="training-type training-type-blue">Market Development</span>
+                            <small><i class="bi bi-calendar3" aria-hidden="true"></i> September 2–4, 2025</small>
+                            <small><i class="bi bi-geo-alt" aria-hidden="true"></i> Lucena City</small>
+                            <span class="training-status">Completed</span>
+                          </div>
+                          <div class="training-preview-scores"><span>Pre-Test<strong>69.00%</strong></span><span>Post-Test<strong>87.00%</strong></span><span>Rating<strong><i class="bi bi-star-fill" aria-hidden="true"></i> 4.40 / 5</strong></span></div>
+                        </article>
+                      </div>
+                      <p class="training-carousel-empty" id="overviewTrainingEmpty" hidden>No training participated found yet.</p>
+                    </div>
+                    <div class="training-carousel-controls" id="overviewTrainingControls">
+                      <span class="training-carousel-count" id="overviewTrainingCount" aria-live="polite">No training participated found yet.</span>
+                      <div>
+                        <button class="training-carousel-button" type="button" id="overviewTrainingPrevious" aria-label="Show previous trainings" disabled><i class="bi bi-arrow-left" aria-hidden="true"></i></button>
+                        <button class="training-carousel-button" type="button" id="overviewTrainingNext" aria-label="Show next trainings"><i class="bi bi-arrow-right" aria-hidden="true"></i></button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              </div>
+
+              <div class="row d-none">
+                <!-- personal info -->
+                <div class="col-12 col-lg-12 mb-2">
+                  <!-- Personal Information -->
+                  <div class="card mb-2">
+                    <div
+                      class="card-header d-flex align-items-center justify-content-start gap-3"
+                    >
+                      <i class="bi bi-person-fill-check"></i>
+                      <h5 class="title-card">Personal Information</h5>
+                      <span class="badge rounded-pill bg-success">Active</span>
+                    </div>
+                    <div class="card-body">
+                      <div class="row">
+                        <div class="hstack gap-2">
+                          <div class="col-4 col-lg-4 mb-2">
+                            <ul class="information-list">
+                              <li class="information-item">
+                                <div class="item-group">
+                                  <i class="bi bi-journal-bookmark-fill"></i>
+                                  <div class="item-context">
+                                    <span class="item-text">Farmer ID</span>
+                                    <span class="item-text" id="mobileFarmerId">271901</span>
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <div class="item-group">
+                                  <i class="bi bi-person-fill"></i>
+                                  <div class="item-context">
+                                    <span class="item-text">Full Name</span>
+                                    <span class="item-text"
+                                      >Juan Dela Cruz</span
+                                    >
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <div class="item-group">
+                                  <i class="bi bi-calendar-week"></i>
+                                  <div class="item-context">
+                                    <span class="item-text">Date of Birth</span>
+                                    <span class="item-text"
+                                      >January 1, 1990</span
+                                    >
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <div class="item-group">
+                                  <i class="bi bi-gender-male"></i>
+                                  <div class="item-context">
+                                    <span class="item-text">Gender</span>
+                                    <span class="item-text">Male</span>
+                                  </div>
+                                </div>
+                              </li>
+                            </ul>
+                          </div>
+                          <div class="vr"></div>
+                          <div class="col-4 col-lg-4 mb-2">
+                            <ul class="information-list">
+                              <li class="information-item">
+                                <div class="item-group">
+                                  <i class="bi bi-journal-bookmark-fill"></i>
+                                  <div class="item-context">
+                                    <span class="item-text">Civil Status</span>
+                                    <span class="item-text">Married</span>
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <div class="item-group">
+                                  <i class="bi bi-person-fill"></i>
+                                  <div class="item-context">
+                                    <span class="item-text">Nationality</span>
+                                    <span class="item-text">Filipino</span>
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <div class="item-group">
+                                  <i class="bi bi-calendar-week"></i>
+                                  <div class="item-context">
+                                    <span class="item-text"
+                                      >Place of Birth</span
+                                    >
+                                    <span class="item-text"
+                                      >Gumaca, Quezon</span
+                                    >
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <div class="item-group">
+                                  <i class="bi bi-gender-male"></i>
+                                  <div class="item-context">
+                                    <span class="item-text">4Ps</span>
+                                    <span class="item-text">No</span>
+                                  </div>
+                                </div>
+                              </li>
+                            </ul>
+                          </div>
+                          <div class="vr"></div>
+                          <div class="col-4 col-lg-4 mb-2">
+                            <ul class="information-list">
+                              <li class="information-item">
+                                <div class="item-group">
+                                  <i class="bi bi-journal-bookmark-fill"></i>
+                                  <div class="item-context">
+                                    <span class="item-text"
+                                      >Person With Disability</span
+                                    >
+                                    <span class="item-text">No</span>
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <div class="item-group">
+                                  <i class="bi bi-person-fill"></i>
+                                  <div class="item-context">
+                                    <span class="item-text"
+                                      >Indegenous Group</span
+                                    >
+                                    <span class="item-text">No</span>
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <div class="item-group">
+                                  <i class="bi bi-calendar-week"></i>
+                                  <div class="item-context">
+                                    <span class="item-text"
+                                      >Dietary Restrictions</span
+                                    >
+                                    <span class="item-text">None</span>
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <div class="item-group">
+                                  <i class="bi bi-gender-male"></i>
+                                  <div class="item-context">
+                                    <span class="item-text">Allergies</span>
+                                    <span class="item-text">None</span>
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <div class="item-group">
+                                  <i class="bi bi-gender-male"></i>
+                                  <div class="item-context">
+                                    <span class="item-text"
+                                      >Senior Citizen</span
+                                    >
+                                    <span class="item-text">No</span>
+                                  </div>
+                                </div>
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="card mb-2 farmer-association-membership-card">
+                    <div class="card-header d-flex align-items-center justify-content-start gap-2">
+                      <i class="bi bi-person-vcard-fill" aria-hidden="true"></i>
+                      <h5 class="title-card">Farmer Association / Organization</h5>
+                      <span class="badge rounded-pill bg-success" data-association-membership-count>0 associations</span>
+                    </div>
+                    <div class="card-body">
+                      <details class="farmer-association-membership-panel">
+                        <summary>View association and role details</summary>
+                        <div class="farmer-association-membership-list" data-association-memberships aria-live="polite"></div>
+                        <p class="farmer-association-membership-empty" data-association-membership-empty>No association memberships are recorded.</p>
+                      </details>
+                    </div>
+                  </div>
+
+                  <!-- Address Information -->
+                  <div class="card mb-2">
+                    <div
+                      class="card-header d-flex align-items-center justify-content-start gap-3"
+                    >
+                      <i class="bi bi-person-fill-check"></i>
+                      <h5 class="title-card">Address Information</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row">
+                        <div class="hstack gap-3">
+                          <div class="col-4 col-lg-4 mb-2">
+                            <ul class="information-list">
+                              <li class="information-item">
+                                <i class="bi bi-geo-alt-fill"></i>
+                                <div class="item-group">
+                                  <div class="item-context">
+                                    <span class="item-text">Region</span>
+                                    <span class="item-text">4A</span>
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <i class="bi bi-geo-alt-fill"></i>
+                                <div class="item-group">
+                                  <div class="item-context">
+                                    <span class="item-text">District</span>
+                                    <span class="item-text">4th</span>
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <i class="bi bi-geo-alt-fill"></i>
+                                <div class="item-group">
+                                  <div class="item-context">
+                                    <span class="item-text">Province</span>
+                                    <span class="item-text">Quezon</span>
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <i class="bi bi-geo-alt-fill"></i>
+                                <div class="item-group">
+                                  <div class="item-context">
+                                    <span class="item-text">Municipality</span>
+                                    <span class="item-text">Alabat</span>
+                                  </div>
+                                </div>
+                              </li>
+                            </ul>
+                          </div>
+                          <div class="vr"></div>
+                          <div class="col-4 col-lg-4 mb-2">
+                            <ul class="information-list">
+                              <li class="information-item">
+                                <i class="bi bi-geo-alt-fill"></i>
+                                <div class="item-group">
+                                  <div class="item-context">
+                                    <span class="item-text">Barangay</span>
+                                    <span class="item-text"
+                                      >Villa Jesus Weste</span
+                                    >
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <i class="bi bi-geo-alt-fill"></i>
+                                <div class="item-group">
+                                  <div class="item-context">
+                                    <span class="item-text"
+                                      >House/ Building No.</span
+                                    >
+                                    <span class="item-text">None</span>
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <i class="bi bi-geo-alt-fill"></i>
+                                <div class="item-group">
+                                  <div class="item-context">
+                                    <span class="item-text"
+                                      >Street/ Purok/ Sitio</span
+                                    >
+                                    <span class="item-text">None</span>
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <i class="bi bi-geo-alt-fill"></i>
+                                <div class="item-group">
+                                  <div class="item-context">
+                                    <span class="item-text">Postal Code</span>
+                                    <span class="item-text">4331</span>
+                                  </div>
+                                </div>
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Contact Information -->
+                  <div class="card mb-2">
+                    <div
+                      class="card-header d-flex align-items-center justify-content-start gap-3"
+                    >
+                      <i class="bi bi-person-fill-check"></i>
+                      <h5 class="title-card">Contact Information</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row">
+                        <div class="hstack gap-3">
+                          <div class="col-4 col-lg-4 mb-2">
+                            <ul class="information-list">
+                              <li class="information-item">
+                                <i class="bi bi-geo-alt-fill"></i>
+                                <div class="item-group">
+                                  <div class="item-context">
+                                    <span class="item-text">Mobile Number</span>
+                                    <span class="item-text">09092308202</span>
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <i class="bi bi-geo-alt-fill"></i>
+                                <div class="item-group">
+                                  <div class="item-context">
+                                    <span class="item-text"
+                                      >Telephone Number</span
+                                    >
+                                    <span class="item-text">None</span>
+                                  </div>
+                                </div>
+                              </li>
+                              <li class="information-item">
+                                <i class="bi bi-geo-alt-fill"></i>
+                                <div class="item-group">
+                                  <div class="item-context">
+                                    <span class="item-text">Email Address</span>
+                                    <span class="item-text">None</span>
+                                  </div>
+                                </div>
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Trainings participated -->
+                <div class="col-12 col-lg-12 mb-2">
+                  <div class="card">
+                    <div class="card-header">
+                      <i class="bi bi-book-fill"></i>
+                      <h5 class="title-card">Trainings Participated</h5>
+                    </div>
+                    <div class="card-body">
+                      <!-- card list of trainings participated -->
+                      <div class="row">
+                        <div class="col-3 col-lg-3 mb-2">
+                          <div class="card-trainings">
+                            <div class="card-body">
+                              <div class="card-content-wrapper">
+                                <div class="card-icon-bg">
+                                  <i class="bi bi-flower3"></i>
+                                </div>
+                                <div class="card-content">
+                                  <h5 class="card-training-title">
+                                    Retooling on Basic Bookkeeping
+                                  </h5>
+                                  <span
+                                    class="card-type-badge badge rounded-pill"
+                                    >Workshop</span
+                                  >
+                                  <div class="card-dates">
+                                    <i class="bi bi-calendar2-week"></i>
+                                    <span class="date-text"
+                                      >June 15, 2023 - June 20, 2023</span
+                                    >
+                                  </div>
+                                  <div class="card-location">
+                                    <i class="bi bi-geo-alt-fill"></i>
+                                    <span class="location-text"
+                                      >Villa Manzano Norte, Alabat</span
+                                    >
+                                  </div>
+                                  <div
+                                    class="card-status-badge badge rounded-pill"
+                                  >
+                                    Completed
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="card-footer">
+                              <div class="hstack gap-3">
+                                <div class="col-4">
+                                  <span class="header-text"> Pre-Test </span>
+                                  <span class="percentage">68.00%</span>
+                                </div>
+                                <div class="col-4">
+                                  <span class="header-text"> Post-Test </span>
+                                  <span class="percentage">86.00%</span>
+                                </div>
+                                <div class="col-4">
+                                  <span class="header-text"> Rating </span>
+                                  <span class="percentage"
+                                    ><span class="start-text"
+                                      ><i class="bi bi-star-fill"></i
+                                    ></span>
+                                    4.50 / 5.00</span
+                                  >
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-3 col-lg-3 mb-2">
+                          <div class="card-trainings">
+                            <div class="card-body">
+                              <div class="card-content-wrapper">
+                                <div class="card-icon-bg">
+                                  <i class="bi bi-flower3"></i>
+                                </div>
+                                <div class="card-content">
+                                  <h5 class="card-training-title">
+                                    Retooling on Basic Bookkeeping
+                                  </h5>
+                                  <span
+                                    class="card-type-badge badge rounded-pill"
+                                    >Workshop</span
+                                  >
+                                  <div class="card-dates">
+                                    <i class="bi bi-calendar2-week"></i>
+                                    <span class="date-text"
+                                      >June 15, 2023 - June 20, 2023</span
+                                    >
+                                  </div>
+                                  <div class="card-location">
+                                    <i class="bi bi-geo-alt-fill"></i>
+                                    <span class="location-text"
+                                      >Villa Manzano Norte, Alabat</span
+                                    >
+                                  </div>
+                                  <div
+                                    class="card-status-badge badge rounded-pill"
+                                  >
+                                    Completed
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="card-footer">
+                              <div class="hstack gap-3">
+                                <div class="col-4">
+                                  <span class="header-text"> Pre-Test </span>
+                                  <span class="percentage">68.00%</span>
+                                </div>
+                                <div class="col-4">
+                                  <span class="header-text"> Post-Test </span>
+                                  <span class="percentage">86.00%</span>
+                                </div>
+                                <div class="col-4">
+                                  <span class="header-text"> Rating </span>
+                                  <span class="percentage"
+                                    ><span class="start-text"
+                                      ><i class="bi bi-star-fill"></i
+                                    ></span>
+                                    4.50 / 5.00</span
+                                  >
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-3 col-lg-3 mb-2">
+                          <div class="card-trainings">
+                            <div class="card-body">
+                              <div class="card-content-wrapper">
+                                <div class="card-icon-bg">
+                                  <i class="bi bi-flower3"></i>
+                                </div>
+                                <div class="card-content">
+                                  <h5 class="card-training-title">
+                                    Retooling on Basic Bookkeeping
+                                  </h5>
+                                  <span
+                                    class="card-type-badge badge rounded-pill"
+                                    >Workshop</span
+                                  >
+                                  <div class="card-dates">
+                                    <i class="bi bi-calendar2-week"></i>
+                                    <span class="date-text"
+                                      >June 15, 2023 - June 20, 2023</span
+                                    >
+                                  </div>
+                                  <div class="card-location">
+                                    <i class="bi bi-geo-alt-fill"></i>
+                                    <span class="location-text"
+                                      >Villa Manzano Norte, Alabat</span
+                                    >
+                                  </div>
+                                  <div
+                                    class="card-status-badge badge rounded-pill"
+                                  >
+                                    Completed
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="card-footer">
+                              <div class="hstack gap-3">
+                                <div class="col-4">
+                                  <span class="header-text"> Pre-Test </span>
+                                  <span class="percentage">68.00%</span>
+                                </div>
+                                <div class="col-4">
+                                  <span class="header-text"> Post-Test </span>
+                                  <span class="percentage">86.00%</span>
+                                </div>
+                                <div class="col-4">
+                                  <span class="header-text"> Rating </span>
+                                  <span class="percentage"
+                                    ><span class="start-text"
+                                      ><i class="bi bi-star-fill"></i
+                                    ></span>
+                                    4.50 / 5.00</span
+                                  >
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-3 col-lg-3 mb-2">
+                          <div class="card-trainings">
+                            <div class="card-body">
+                              <div class="card-content-wrapper">
+                                <div class="card-icon-bg">
+                                  <i class="bi bi-flower3"></i>
+                                </div>
+                                <div class="card-content">
+                                  <h5 class="card-training-title">
+                                    Retooling on Basic Bookkeeping
+                                  </h5>
+                                  <span
+                                    class="card-type-badge badge rounded-pill"
+                                    >Workshop</span
+                                  >
+                                  <div class="card-dates">
+                                    <i class="bi bi-calendar2-week"></i>
+                                    <span class="date-text"
+                                      >June 15, 2023 - June 20, 2023</span
+                                    >
+                                  </div>
+                                  <div class="card-location">
+                                    <i class="bi bi-geo-alt-fill"></i>
+                                    <span class="location-text"
+                                      >Villa Manzano Norte, Alabat</span
+                                    >
+                                  </div>
+                                  <div
+                                    class="card-status-badge badge rounded-pill"
+                                  >
+                                    Completed
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="card-footer">
+                              <div class="hstack gap-3">
+                                <div class="col-4">
+                                  <span class="header-text"> Pre-Test </span>
+                                  <span class="percentage">68.00%</span>
+                                </div>
+                                <div class="col-4">
+                                  <span class="header-text"> Post-Test </span>
+                                  <span class="percentage">86.00%</span>
+                                </div>
+                                <div class="col-4">
+                                  <span class="header-text"> Rating </span>
+                                  <span class="percentage"
+                                    ><span class="start-text"
+                                      ><i class="bi bi-star-fill"></i
+                                    ></span>
+                                    4.50 / 5.00</span
+                                  >
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-3 col-lg-3 mb-2">
+                          <div class="card-trainings">
+                            <div class="card-body">
+                              <div class="card-content-wrapper">
+                                <div class="card-icon-bg">
+                                  <i class="bi bi-flower3"></i>
+                                </div>
+                                <div class="card-content">
+                                  <h5 class="card-training-title">
+                                    Retooling on Basic Bookkeeping
+                                  </h5>
+                                  <span
+                                    class="card-type-badge badge rounded-pill"
+                                    >Workshop</span
+                                  >
+                                  <div class="card-dates">
+                                    <i class="bi bi-calendar2-week"></i>
+                                    <span class="date-text"
+                                      >June 15, 2023 - June 20, 2023</span
+                                    >
+                                  </div>
+                                  <div class="card-location">
+                                    <i class="bi bi-geo-alt-fill"></i>
+                                    <span class="location-text"
+                                      >Villa Manzano Norte, Alabat</span
+                                    >
+                                  </div>
+                                  <div
+                                    class="card-status-badge badge rounded-pill"
+                                  >
+                                    Completed
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="card-footer">
+                              <div class="hstack gap-3">
+                                <div class="col-4">
+                                  <span class="header-text"> Pre-Test </span>
+                                  <span class="percentage">68.00%</span>
+                                </div>
+                                <div class="col-4">
+                                  <span class="header-text"> Post-Test </span>
+                                  <span class="percentage">86.00%</span>
+                                </div>
+                                <div class="col-4">
+                                  <span class="header-text"> Rating </span>
+                                  <span class="percentage"
+                                    ><span class="start-text"
+                                      ><i class="bi bi-star-fill"></i
+                                    ></span>
+                                    4.50 / 5.00</span
+                                  >
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Trainings participated -->
+            <section class="info-wrapper d-none" id="trainings-info" role="tabpanel" aria-labelledby="trainings-info-tab" hidden>
+              <div class="card training-data-panel">
+                <div class="card-header training-data-panel-header">
+                  <div class="overview-heading">
+                    <span class="overview-heading-icon"><i class="bi bi-mortarboard" aria-hidden="true"></i></span>
+                    <h5 class="title-card">Trainings Participated Data</h5>
+                  </div>
+                </div>
+                <div class="card-body training-data-panel-body">
+                  <section class="training-table-card" aria-labelledby="allTrainingTitle">
+                    <header class="training-table-header">
+                      <h6 id="allTrainingTitle">All Trainings Participated</h6>
+                      <div class="training-table-actions">
+                        <label class="visually-hidden" for="trainingGlobalSearch">Search all training fields</label>
+                        <div class="input-group training-search">
+                          <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                          <input class="form-control" id="trainingGlobalSearch" type="search" placeholder="Search trainings" />
+                        </div>
+                        <button class="btn training-clear-button" id="clearTrainingFilters" type="button"><i class="bi bi-filter-circle me-1" aria-hidden="true"></i>Clear</button>
+                        <button class="btn training-export-button" id="exportTrainingTable" type="button"><i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i>Export XLSX</button>
+                      </div>
+                    </header>
+                    <div class="training-table-content">
+                      <div class="review-pagination training-pagination" id="trainingPaginationTop" aria-label="Top training table pagination"></div>
+                      <div class="table-responsive review-table-scroll training-table-scroll">
+                        <table class="table review-data-table training-data-table align-middle" id="trainingDataTable">
+                          <caption class="visually-hidden">Training records for this farmer</caption>
+                          <thead>
+                            <tr>
+                              <th scope="col" class="training-sortable" data-sort="title" tabindex="0">Training Name <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                              <th scope="col" class="training-sortable" data-sort="category" tabindex="0">Category <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                              <th scope="col" class="training-sortable" data-sort="date" tabindex="0">Dates <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                              <th scope="col" class="training-sortable" data-sort="location" tabindex="0">Location <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                              <th scope="col" class="training-sortable" data-sort="organizer" tabindex="0">Organizer <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                              <th scope="col" class="training-sortable" data-sort="preTest" tabindex="0">Pre-Test <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                              <th scope="col" class="training-sortable" data-sort="postTest" tabindex="0">Post-Test <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                              <th scope="col" class="training-sortable" data-sort="rating" tabindex="0">Rating <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                            </tr>
+                            <tr class="training-filter-row">
+                              <th><label class="visually-hidden" for="trainingFilterTitle">Filter by training name</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterTitle" data-column="title" type="search" placeholder="Filter name" /></th>
+                              <th><label class="visually-hidden" for="trainingFilterCategory">Filter by category</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterCategory" data-column="category" type="search" placeholder="Filter category" /></th>
+                              <th><label class="visually-hidden" for="trainingFilterDate">Filter by date</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterDate" data-column="date" type="search" placeholder="Filter dates" /></th>
+                              <th><label class="visually-hidden" for="trainingFilterLocation">Filter by location</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterLocation" data-column="location" type="search" placeholder="Filter location" /></th>
+                              <th><label class="visually-hidden" for="trainingFilterOrganizer">Filter by organizer</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterOrganizer" data-column="organizer" type="search" placeholder="Filter organizer" /></th>
+                              <th><label class="visually-hidden" for="trainingFilterPreTest">Filter by pre-test score</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterPreTest" data-column="preTest" type="search" placeholder="Filter score" /></th>
+                              <th><label class="visually-hidden" for="trainingFilterPostTest">Filter by post-test score</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterPostTest" data-column="postTest" type="search" placeholder="Filter score" /></th>
+                              <th><label class="visually-hidden" for="trainingFilterRating">Filter by rating</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterRating" data-column="rating" type="search" placeholder="Filter rating" /></th>
+                            </tr>
+                          </thead>
+                          <tbody id="trainings-table-body"></tbody>
+                        </table>
+                      </div>
+                      <div class="training-table-empty" id="trainingTableEmpty" hidden><i class="bi bi-search" aria-hidden="true"></i><strong>No training records match the current filters.</strong></div>
+                      <div class="review-pagination training-pagination" id="trainingPaginationBottom" aria-label="Bottom training table pagination"></div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </section>
+
+            <!-- attachment documents -->
+            <section class="info-wrapper d-none" id="attachments" role="tabpanel" aria-labelledby="attachments-tab" hidden>
+              <div class="row">
+                <div class="col-12 col-lg-12 mb-2">
+                  <div class="card attachment-documents-card">
+                    <div class="card-header">
+                      <div class="attachment-documents-heading">
+                        <span class="attachment-documents-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span>
+                        <div>
+                          <h5 class="title-card">Attachment Documents</h5>
+                          <span class="card-context">Manage and view all attached documents for this farmer.</span>
+                        </div>
+                      </div>
+                      <button class="btn attachment-add-button" type="button" title="Add attachments unavailable in view mode" aria-label="Add attachments unavailable in view mode" disabled>
+                        <i class="bi bi-plus-circle" aria-hidden="true"></i>
+                        <span>Add Attachments</span>
+                      </button>
+                    </div>
+                    <div class="card-body">
+                      <div id="attachmentList" class="attachment-list" aria-live="polite">
+                        <div class="attachment-empty-state" id="attachmentEmptyState">
+                          <i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>
+                          <p>No attachments yet. Add images or PDFs to build this farmer's document library.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="card attachment-queue-card mt-3" id="attachmentQueueSection">
+                <div class="card-header">
+                  <div>
+                    <h5 class="title-card">Attachment upload queue</h5>
+                    <span class="card-context">Review the file type and year, then add complete rows to the document library.</span>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table attachment-queue-table align-middle">
+                      <thead>
+                        <tr>
+                          <th scope="col">Preview</th>
+                          <th scope="col">Type</th>
+                          <th scope="col">Year</th>
+                          <th scope="col">Remarks</th>
+                          <th scope="col">Status</th>
+                          <th scope="col">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody id="attachmentQueueBody">
+                        <tr class="attachment-queue-empty"><td colspan="6">No files are waiting to be uploaded.</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="attachment-queue-footer">
+                    <span id="attachmentQueueSummary">0 files staged</span>
+                    <span id="attachmentFeedback" role="status" aria-live="polite"></span>
+                    <button type="button" class="btn attachment-submit-button" id="saveStagedAttachments" disabled>
+                      <i class="bi bi-cloud-arrow-up me-1" aria-hidden="true"></i>Save attachments
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="info-wrapper d-none" id="interventions" role="tabpanel" aria-labelledby="interventions-tab" hidden>
+              <div class="card intervention-panel">
+                <div class="card-header intervention-table-header">
+                  <div class="intervention-table-heading">
+                    <span class="intervention-heading-icon"><i class="bi bi-box-seam" aria-hidden="true"></i></span>
+                    <div>
+                      <h5 class="title-card">Farmer Interventions</h5>
+                      <p>Review support and services provided to this farmer.</p>
+                    </div>
+                  </div>
+                  <div class="intervention-table-actions">
+                    <button class="btn intervention-action-button" id="refreshInterventions" type="button" title="Refresh intervention records">
+                      <i class="bi bi-arrow-clockwise" aria-hidden="true"></i><span class="visually-hidden">Refresh</span>
+                    </button>
+                    <button class="btn intervention-export-button" id="exportInterventions" type="button" title="Export Excel file">
+                      <i class="bi bi-file-earmark-excel" aria-hidden="true"></i><span class="visually-hidden">Export XLSX</span>
+                    </button>
+                    <button class="btn intervention-add-button" type="button" title="Add intervention unavailable in view mode" aria-label="Add intervention unavailable in view mode" disabled>
+                      <i class="bi bi-plus-lg" aria-hidden="true"></i><span class="visually-hidden">Add Intervention</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body intervention-table-body">
+                  <div class="intervention-table-meta">
+                    <span id="interventionFarmerReference"><i class="bi bi-info-circle" aria-hidden="true"></i> Intervention records for Farmer ID 271901</span>
+                    <span id="interventionRecordCount" aria-live="polite">0 records</span>
+                  </div>
+                  <div class="intervention-table-toolbar">
+                    <label class="visually-hidden" for="interventionGlobalSearch">Search all intervention fields</label>
+                    <div class="input-group intervention-search">
+                      <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                      <input class="form-control" id="interventionGlobalSearch" type="search" placeholder="Search interventions" />
+                    </div>
+                    <button class="btn intervention-clear-button" id="clearInterventionFilters" type="button">
+                      <i class="bi bi-filter-circle" aria-hidden="true"></i><span>Clear filters</span>
+                    </button>
+                  </div>
+                  <div class="review-pagination intervention-pagination" id="interventionPaginationTop" aria-label="Top intervention table pagination"></div>
+                  <div class="table-responsive intervention-table-scroll">
+                    <table class="table intervention-data-table align-middle" id="interventionDataTable">
+                      <caption class="visually-hidden">Interventions provided to this farmer</caption>
+                      <thead>
+                        <tr>
+                          <th scope="col" class="intervention-sortable" data-sort="title" tabindex="0">Intervention <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                          <th scope="col" class="intervention-sortable" data-sort="office" tabindex="0">Office <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                          <th scope="col" class="intervention-sortable" data-sort="yearCovered" tabindex="0">Year Covered <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                          <th scope="col" class="intervention-sortable" data-sort="action" tabindex="0">Actions <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                          <th scope="col" class="intervention-sortable" data-sort="type" tabindex="0">Type <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                          <th scope="col" class="intervention-sortable" data-sort="unit" tabindex="0">Unit <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                          <th scope="col" class="intervention-sortable" data-sort="qty" tabindex="0">Qty <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                          <th scope="col" class="intervention-sortable" data-sort="remarks" tabindex="0">Remarks <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                        </tr>
+                        <tr class="intervention-filter-row">
+                          <th><label class="visually-hidden" for="filterInterventionTitle">Filter interventions</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionTitle" data-column="title" type="search" placeholder="Filter intervention" /></th>
+                          <th><label class="visually-hidden" for="filterInterventionOffice">Filter office</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionOffice" data-column="office" type="search" placeholder="Filter office" /></th>
+                          <th><label class="visually-hidden" for="filterInterventionYear">Filter year covered</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionYear" data-column="yearCovered" type="search" placeholder="Filter year" /></th>
+                          <th><label class="visually-hidden" for="filterInterventionAction">Filter delivery action</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionAction" data-column="action" type="search" placeholder="Filter action" /></th>
+                          <th><label class="visually-hidden" for="filterInterventionType">Filter intervention type</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionType" data-column="type" type="search" placeholder="Filter type" /></th>
+                          <th><label class="visually-hidden" for="filterInterventionUnit">Filter unit</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionUnit" data-column="unit" type="search" placeholder="Filter unit" /></th>
+                          <th><label class="visually-hidden" for="filterInterventionQty">Filter quantity</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionQty" data-column="qty" type="search" placeholder="Filter qty" /></th>
+                          <th><label class="visually-hidden" for="filterInterventionRemarks">Filter remarks</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionRemarks" data-column="remarks" type="search" placeholder="Filter remarks" /></th>
+                        </tr>
+                      </thead>
+                      <tbody id="interventionTableBody">
+                        <tr><td colspan="8" class="intervention-empty-cell">Loading intervention records…</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="review-pagination intervention-pagination" id="interventionPaginationBottom" aria-label="Bottom intervention table pagination"></div>
+                  <p class="intervention-feedback" id="interventionFeedback" role="status" aria-live="polite"></p>
+                </div>
+              </div>
+            </section>
+
+            <section class="info-wrapper d-none" id="footprints" role="tabpanel" aria-labelledby="activity-logs-tab" hidden>
+              <section class="card activity-log-panel" aria-labelledby="activityLogTitle">
+                <header class="activity-log-header">
+                  <div class="activity-log-heading">
+                    <span class="activity-log-heading-icon" aria-hidden="true"><i class="bi bi-activity"></i></span>
+                    <div>
+                      <h2 id="activityLogTitle">Activity Logs</h2>
+                      <p>Recent updates and actions recorded for Juan Dela Cruz’s profile.</p>
+                    </div>
+                  </div>
+                  <div class="activity-log-search input-group">
+                    <label class="visually-hidden" for="activityLogSearch">Search activity logs</label>
+                    <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                    <input class="form-control" id="activityLogSearch" type="search" placeholder="Search activity" autocomplete="off" />
+                  </div>
+                </header>
+                <div class="activity-log-toolbar">
+                  <nav class="activity-log-filters" aria-label="Filter activity logs">
+                    <button class="activity-log-filter is-active" type="button" data-activity-filter="all" aria-pressed="true">All activity <span data-activity-count="all">0</span></button>
+                    <button class="activity-log-filter" type="button" data-activity-filter="attachment" aria-pressed="false"><i class="bi bi-paperclip" aria-hidden="true"></i>Attachments <span data-activity-count="attachment">0</span></button>
+                    <button class="activity-log-filter" type="button" data-activity-filter="membership" aria-pressed="false"><i class="bi bi-people" aria-hidden="true"></i>Membership <span data-activity-count="membership">0</span></button>
+                    <button class="activity-log-filter" type="button" data-activity-filter="status" aria-pressed="false"><i class="bi bi-arrow-left-right" aria-hidden="true"></i>Status changes <span data-activity-count="status">0</span></button>
+                    <button class="activity-log-filter" type="button" data-activity-filter="profile" aria-pressed="false"><i class="bi bi-person-vcard" aria-hidden="true"></i>Profile changes <span data-activity-count="profile">0</span></button>
+                  </nav>
+                  <p class="activity-log-result-count" id="activityLogResultCount" aria-live="polite"></p>
+                </div>
+                <div class="activity-log-list" id="activityLogList" aria-live="polite"></div>
+                <div class="activity-log-empty" id="activityLogEmpty" hidden>
+                  <i class="bi bi-search" aria-hidden="true"></i>
+                  <strong>No matching activity</strong>
+                  <span>Try another search or activity filter.</span>
+                </div>
+              </section>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Offcanvas side navigation bar in mobile -->
+    <div
+      class="offcanvas offcanvas-start app-mobile-menu"
+      tabindex="-1"
+      id="mobileNavMenu"
+      aria-labelledby="mobileNavMenuLabel"
+    >
+      <!-- header -->
+      <div class="offcanvas-header">
+        <!-- Image logo and title -->
+        <div class="offcanvas-brand">
+          <img
+            src="{{ asset('assets/logo/DA SAAD LOGO FULL - GREEN TEXT.png') }}"
+            alt="DA-logo"
+            class="image-logo"
+          />
+          <div class="title-wrapper">
+            <h5 class="offcanvas-title" id="mobileNavMenuLabel">TMIS</h5>
+            <small>Training Management Information System</small>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="btn offcanvas-close-btn"
+          data-bs-dismiss="offcanvas"
+          aria-label="Close"
+        >
+          <i class="bi bi-x-octagon-fill"></i>
+          <span class="close-btn">Close</span>
+        </button>
+      </div>
+      <!-- Offcanvas body -->
+      <div class="offcanvas-body">
+        <div class="mobile-user-panel">
+          @include('layouts.account-avatar')
+          <div class="mobile-user-name-role">
+            <strong class="user-name">{{ $accountDisplay['navigationName'] }}</strong>
+            <small class="user-role">{{ $accountDisplay['role'] ?? 'Role not assigned' }}</small>
+          </div>
+        </div>
+        <!-- User list navigation bar -->
+        <ul class="mobile-nav">
+          <li class="mobile-list-navigation">
+            <a href="{{ route('admin.dashboard.dashboard') }}" class="nav-link">
+              <i class="bi bi-columns-gap"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li class="mobile-list-navigation">
+            <a
+              href="#"
+              class="nav-link"
+              data-bs-toggle="collapse"
+              data-bs-target="#participantMobile"
+              aria-controls="participantMobile"
+              aria-expanded="false"
+            >
+              <i class="bi bi-people-fill"></i>
+              <span>Participants</span>
+              <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul class="collapse mobile-subnav" id="participantMobile">
+              <li class="mobile-subnav-section-label">Individual</li>
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#createParticipantMobile"
+                  aria-controls="createParticipantMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-plus-circle"></i>
+                  <span>Create</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul
+                  class="collapse mobile-submenu"
+                  id="createParticipantMobile"
+                >
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.participants.create.register') }}" class="nav-link">
+                      <i class="bi bi-person-fill-add"></i>
+                      <span>Register</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#detailsParticipantMobile"
+                  aria-controls="detailsParticipantMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-file-earmark-text"></i>
+                  <span>Details</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul
+                  class="collapse mobile-submenu"
+                  id="detailsParticipantMobile"
+                >
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.participants.details.all-with-status') }}" class="nav-link">
+                      <i class="bi bi-list-check"></i>
+                      <span>List of Farmers</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.participants.details.inactive') }}" class="nav-link">
+                      <i class="bi bi-x-circle-fill"></i>
+                      <span>Inactive</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-subnav-section-label">Farmer Association</li>
+              <li class="mobile-list-navigation">
+                <a href="#" class="nav-link" data-bs-toggle="collapse" data-bs-target="#createFarmerAssociationMobile" aria-controls="createFarmerAssociationMobile" aria-expanded="false">
+                  <i class="bi bi-plus-circle"></i>
+                  <span>Create</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="createFarmerAssociationMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.participants.create.fa-register') }}" class="nav-link">
+                      <i class="bi bi-building-add"></i>
+                      <span>Register</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a href="#" class="nav-link" data-bs-toggle="collapse" data-bs-target="#detailsFarmerAssociationMobile" aria-controls="detailsFarmerAssociationMobile" aria-expanded="false">
+                  <i class="bi bi-file-earmark-text"></i>
+                  <span>Details</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="detailsFarmerAssociationMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.participants.details.fa-all-list') }}" class="nav-link">
+                      <i class="bi bi-list-ul"></i>
+                      <span>List of FA</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.participants.details.fa-inactive') }}" class="nav-link">
+                      <i class="bi bi-x-circle-fill"></i>
+                      <span>Inactive</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li class="mobile-list-navigation">
+            <a
+              href="#"
+              class="nav-link"
+              data-bs-toggle="collapse"
+              data-bs-target="#trainingMobile"
+              aria-controls="trainingMobile"
+              aria-expanded="false"
+            >
+              <i class="bi bi-book-fill"></i>
+              <span>Training</span>
+              <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul class="collapse mobile-subnav" id="trainingMobile">
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#createTrainingMobile"
+                  aria-controls="createTrainingMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-plus-circle"></i>
+                  <span>Create</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="createTrainingMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.create.register') }}" class="nav-link">
+                      <i class="bi bi-pencil-square"></i>
+                      <span>Register</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#updateTrainingMobile"
+                  aria-controls="updateTrainingMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-arrow-repeat"></i>
+                  <span>Update</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="updateTrainingMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.update.for-review') }}" class="nav-link">
+                      <i class="bi bi-person-fill-check"></i>
+                      <span>For review</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.update.for-approval') }}" class="nav-link">
+                      <i class="bi bi-person-fill-check"></i>
+                      <span>For approval</span>
+                    </a>
+                    <a href="{{ route('admin.training.update.for-acceptance') }}" class="nav-link">
+                      <i class="bi bi-patch-check-fill"></i>
+                      <span>For acceptance</span>
+                    </a>
+                  </li>
+
+
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#detailsTrainingMobile"
+                  aria-controls="detailsTrainingMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-file-earmark-text"></i>
+                  <span>Details</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="detailsTrainingMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.details.all-status') }}" class="nav-link">
+                      <i class="bi bi-list-check"></i>
+                      <span>All status</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.details.approved-accepted') }}" class="nav-link">
+                      <i class="bi bi-check-circle-fill"></i>
+                      <span>Approved & accepted</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.details.incomplete') }}" class="nav-link">
+                      <i class="bi bi-exclamation-circle-fill"></i>
+                      <span>Incomplete</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.details.inactive') }}" class="nav-link">
+                      <i class="bi bi-x-circle-fill"></i>
+                      <span>Inactive</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-subnav-section-label">Facilitator / Resource Person</li>
+              <li class="mobile-list-navigation">
+                <a href="#" class="nav-link" data-bs-toggle="collapse" data-bs-target="#createFacilitatorRpMobile" aria-controls="createFacilitatorRpMobile" aria-expanded="false">
+                  <i class="bi bi-plus-circle"></i>
+                  <span>Create</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="createFacilitatorRpMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.create.rp-register') }}" class="nav-link">
+                      <i class="bi bi-person-fill-add"></i>
+                      <span>Register</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a href="#" class="nav-link" data-bs-toggle="collapse" data-bs-target="#detailsFacilitatorRpMobile" aria-controls="detailsFacilitatorRpMobile" aria-expanded="false">
+                  <i class="bi bi-file-earmark-text"></i>
+                  <span>Details</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="detailsFacilitatorRpMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.details.rp-list') }}" class="nav-link">
+                      <i class="bi bi-list-ul"></i>
+                      <span>List of RP</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.details.rp-inactive') }}" class="nav-link">
+                      <i class="bi bi-x-circle-fill"></i>
+                      <span>Inactive</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li class="mobile-list-navigation">
+            <a
+              href="#"
+              class="nav-link"
+              data-bs-toggle="collapse"
+              data-bs-target="#evaluationMobile"
+              aria-controls="evaluationMobile"
+              aria-expanded="false"
+            >
+              <i class="bi bi-file-earmark-check"></i>
+              <span>Evaluation</span>
+              <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul class="collapse mobile-subnav" id="evaluationMobile">
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#createEvaluationMobile"
+                  aria-controls="createEvaluationMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-plus-circle"></i>
+                  <span>Create</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="createEvaluationMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.create.pre-test-register') }}" class="nav-link">
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span>Pre-test Questionaire</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.create.post-test-register') }}" class="nav-link">
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span>Post-test Questionaire</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.create.training-evaluation-register') }}" class="nav-link">
+                      <i class="bi bi-file-earmark-check"></i>
+                      <span>Training Evaluation</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.create.rp-evaluation-register') }}" class="nav-link">
+                      <i class="bi bi-star-fill"></i>
+                      <span>Resource Person Evaluation</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#encodeEvaluationMobile"
+                  aria-controls="encodeEvaluationMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-pencil-square"></i>
+                  <span>Encode</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="encodeEvaluationMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.encode.pre-test') }}" class="nav-link">
+                      <i class="bi bi-pencil-square"></i>
+                      <span>Pre-test Evaluation</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.encode.post-test') }}" class="nav-link">
+                      <i class="bi bi-pencil-square"></i>
+                      <span>Post-test Evaluation</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.encode.training-evaluation') }}" class="nav-link">
+                      <i class="bi bi-pencil-square"></i>
+                      <span>Training Evaluation</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.encode.rp-evaluation') }}" class="nav-link">
+                      <i class="bi bi-pencil-square"></i>
+                      <span>Resource Person Evaluation</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#detailsEvaluationMobile"
+                  aria-controls="detailsEvaluationMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-file-earmark-text"></i>
+                  <span>Details</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul
+                  class="collapse mobile-submenu"
+                  id="detailsEvaluationMobile"
+                >
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.details.list-questionnaire') }}" class="nav-link">
+                      <i class="bi bi-list-check"></i>
+                      <span>List Questionnaire</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.details.draft-questionnaire') }}" class="nav-link">
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span>Draft Questionnaires</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.details.inactive') }}" class="nav-link">
+                      <i class="bi bi-x-circle-fill"></i>
+                      <span>Inactive</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li class="mobile-list-navigation">
+            <a
+              href="#"
+              class="nav-link"
+              data-bs-toggle="collapse"
+              data-bs-target="#administrationMobile"
+              aria-controls="administrationMobile"
+              aria-expanded="false"
+            >
+              <i class="bi bi-sliders"></i>
+              <span>Administration</span>
+              <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul class="collapse mobile-subnav" id="administrationMobile">
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#createAdministrationMobile"
+                  aria-controls="createAdministrationMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-plus-circle"></i>
+                  <span>Create</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul
+                  class="collapse mobile-submenu"
+                  id="createAdministrationMobile"
+                >
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.administration.create.register') }}" class="nav-link">
+                      <i class="bi bi-pencil-square"></i>
+                      <span>Register</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#updateAdministrationMobile"
+                  aria-controls="updateAdministrationMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-arrow-repeat"></i>
+                  <span>Update</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul
+                  class="collapse mobile-submenu"
+                  id="updateAdministrationMobile"
+                >
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.administration.update.for-approval') }}" class="nav-link">
+                      <i class="bi bi-person-fill-check"></i>
+                      <span>For approval</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#detailsAdministrationMobile"
+                  aria-controls="detailsAdministrationMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-file-earmark-text"></i>
+                  <span>Details</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul
+                  class="collapse mobile-submenu"
+                  id="detailsAdministrationMobile"
+                >
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.administration.details.all-status') }}" class="nav-link">
+                      <i class="bi bi-list-check"></i>
+                      <span>All status</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.administration.details.approved-accepted') }}" class="nav-link">
+                      <i class="bi bi-check-circle-fill"></i>
+                      <span>Approved & accepted</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.administration.details.inactive') }}" class="nav-link">
+                      <i class="bi bi-x-circle-fill"></i>
+                      <span>Inactive</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li class="mobile-list-navigation">
+            <a href="{{ route('admin.users.profile') }}" class="nav-link">
+              <i class="bi bi-person-circle"></i>
+              <span>Profile</span>
+            </a>
+          </li>
+          <li class="mobile-list-navigation">
+            <a href="{{ route('admin.users.logs') }}" class="nav-link">
+              <i class="bi bi-journal-text"></i>
+              <span>Logs</span>
+            </a>
+          </li>
+          
+          <li class="mobile-list-navigation">
+            <a href="{{ route('login') }}" class="nav-link sign-out-item">
+              <i class="bi bi-box-arrow-right"></i>
+              <span>Sign Out</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Notification detail modal -->
+    <div
+      class="modal fade"
+      id="notificationDetailModal"
+      aria-labelledby="notificationDetailModalLabel"
+      aria-hidden="true"
+    >
+      <div
+        class="modal-dialog modal-dialog-centered modal-dialog-scrollable notification-detail-dialog"
+      >
+        <div class="modal-content notification-detail-modal">
+          <div class="modal-header notification-detail-header">
+            <span class="notification-detail-icon"
+              ><i class="bi bi-bell-fill"></i
+            ></span>
+            <button
+              type="button"
+              class="btn btn-modal"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            >
+              <i class="bi bi-x-octagon"></i>
+            </button>
+          </div>
+          <div class="modal-body notification-detail-body">
+            <div class="notification-detail-meta">
+              <span id="notificationDetailType">Approval required</span>
+              <time id="notificationDetailTime">Today, 9:20 PM</time>
+            </div>
+            <h5 id="notificationDetailModalLabel">
+              Training proposal review needed
+            </h5>
+            <p id="notificationDetailDescription"></p>
+          </div>
+          <div class="modal-footer notification-detail-footer">
+            <button
+              type="button"
+              class="btn notification-detail-dismiss"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              class="btn notification-detail-action"
+              id="notificationDetailAction"
+            >
+              Review proposal
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Farmer profile review modals -->
+    <div
+      class="modal fade"
+      id="aboutReviewWorkflowModal"
+      tabindex="-1"
+      aria-labelledby="aboutReviewWorkflowModalLabel"
+      aria-hidden="true"
+    >
+      <div
+        class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable review-workflow-dialog"
+      >
+        <div class="modal-content review-modal-content">
+          <div class="modal-header review-modal-header">
+            <div class="review-modal-heading">
+              <div>
+                <span class="review-modal-eyebrow"
+                  >Farmer profile workflow</span
+                >
+                <h5 class="modal-title" id="aboutReviewWorkflowModalLabel">
+                  About Review Workflow
+                </h5>
+                <p>Each farmer profile progresses through these three steps.</p>
+              </div>
+            </div>
+            <div class="review-modal-header-actions">
+              <span class="review-modal-icon" aria-hidden="true"
+                ><i class="bi bi-info-circle-fill"></i
+              ></span>
+              <button
+                type="button"
+                class="btn review-modal-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+              >
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+          <div class="modal-body review-modal-body">
+            <div class="workflow-transition">
+              <span class="status-badge status-review">For Review</span
+              ><i class="bi bi-arrow-right"></i
+              ><span class="status-badge status-approval">For Approval</span
+              ><i class="bi bi-arrow-right"></i
+              ><span class="status-badge status-approved">Approved</span>
+            </div>
+            <dl class="review-record-details">
+              <dt>For Review</dt>
+              <dd>
+                The farmer profile has been submitted and is awaiting
+                verification of encoded information and supporting details.
+              </dd>
+              <dt>For Approval</dt>
+              <dd>
+                The profile has passed initial review and is awaiting approval.
+              </dd>
+              <dt>Approved</dt>
+              <dd>
+                The farmer profile has completed the approval process and is
+                finalized in the system.
+              </dd>
+            </dl>
+          </div>
+          <div class="modal-footer review-modal-footer">
+            <div>
+              <button
+                type="button"
+                class="btn review-modal-dismiss"
+                data-bs-dismiss="modal"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="modal fade"
+      id="reviewForwardModal"
+      tabindex="-1"
+      aria-labelledby="reviewForwardModalLabel"
+      aria-hidden="true"
+    >
+      <div
+        class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable review-workflow-dialog"
+      >
+        <div class="modal-content review-modal-content">
+          <div class="modal-header review-modal-header">
+            <div class="review-modal-heading">
+              <span class="review-modal-icon"
+                ><i class="bi bi-person-vcard-fill"></i
+              ></span>
+              <div>
+                <span class="review-modal-eyebrow">Farmer profile</span>
+                <h5 class="modal-title" id="reviewForwardModalLabel">
+                  Farmer Profile Details
+                </h5>
+                <p>Review the submitted farmer profile information.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="btn review-modal-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            >
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <div class="modal-body review-modal-body">
+            <dl class="review-record-details" id="reviewForwardDetails"></dl>
+          </div>
+          <div class="modal-footer review-modal-footer">
+            <span
+              ><i class="bi bi-shield-check"></i> Status updates after
+              confirmation</span
+            >
+            <div>
+              <button
+                type="button"
+                class="btn review-modal-dismiss"
+                data-bs-dismiss="modal"
+              >
+                Close</button
+              ><button
+                type="button"
+                class="btn forward-confirm-button"
+                id="confirmForwardButton"
+              >
+                <i class="bi bi-send-check-fill me-1"></i>Submit for Approval
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="addInterventionModal" tabindex="-1" aria-labelledby="addInterventionModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable intervention-form-dialog">
+        <div class="modal-content review-modal-content intervention-modal">
+          <form id="addInterventionForm">
+            <div class="modal-header review-modal-header">
+              <div class="review-modal-heading">
+                <span class="review-modal-icon" aria-hidden="true"><i class="bi bi-box-seam"></i></span>
+                <div>
+                  <span class="review-modal-eyebrow">Farmer support</span>
+                  <h5 class="modal-title" id="addInterventionModalLabel">Add intervention</h5>
+                  <p>Record an intervention, delivery status, and quantity provided to this farmer.</p>
+                </div>
+              </div>
+              <button type="button" class="btn review-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+            </div>
+            <div class="modal-body review-modal-body intervention-form-body">
+              <div class="row g-3 mt-0">
+                <div class="col-12">
+                  <label class="form-label" for="interventionTitle">Intervention</label>
+                  <input class="form-control" id="interventionTitle" name="title" type="text" maxlength="120" placeholder="e.g. Certified rice seeds distribution" required />
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="interventionOffice">Office</label>
+                  <input class="form-control" id="interventionOffice" name="office" type="text" maxlength="120" placeholder="e.g. DA RFO IV-A" required />
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="interventionYear">Year covered</label>
+                  <input class="form-control" id="interventionYear" name="yearCovered" type="number" min="1900" max="2100" step="1" value="2026" required />
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="interventionAction">Delivery action</label>
+                  <select class="form-select" id="interventionAction" name="action" required>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Not Delivered">Not Delivered</option>
+                  </select>
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="interventionType">Type</label>
+                  <input class="form-control" id="interventionType" name="type" type="text" maxlength="80" placeholder="e.g. Seeds, fertilizer, training" required />
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="interventionUnit">Unit</label>
+                  <input class="form-control" id="interventionUnit" name="unit" type="text" maxlength="40" placeholder="e.g. kg, bags, units" />
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="interventionQty">Quantity</label>
+                  <input class="form-control" id="interventionQty" name="qty" type="number" min="0" step="any" placeholder="Enter quantity" />
+                </div>
+                <div class="col-12">
+                  <label class="form-label" for="interventionRemarks">Remarks <span class="intervention-optional-label">(optional)</span></label>
+                  <textarea class="form-control" id="interventionRemarks" name="remarks" rows="3" maxlength="500" placeholder="Add delivery notes or other details"></textarea>
+                </div>
+              </div>
+              <p class="intervention-form-error" id="interventionFormError" role="alert"></p>
+            </div>
+            <div class="modal-footer review-modal-footer">
+              <span><i class="bi bi-shield-check me-1" aria-hidden="true"></i>Details are saved for this browser.</span>
+              <div>
+                <button type="button" class="btn review-modal-dismiss" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn intervention-save-button"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Save intervention</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <!-- Modal toast notification -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+      <div
+        id="reviewToast"
+        class="toast review-toast"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-bs-delay="6000"
+      >
+        <div class="toast-header">
+          <i id="reviewToastIcon" class="bi bi-check-circle-fill me-2"></i
+          ><strong id="reviewToastTitle" class="me-2"
+            >Farmer Profile Submitted</strong
+          ><small id="reviewToastTime" class="text-body-secondary me-auto"
+            >Now</small
+          ><button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="toast"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div id="reviewToastMessage" class="toast-body">
+          Farmer profile submitted for approval.
+        </div>
+      </div>
+      <div
+        id="attachmentToast"
+        class="toast attachment-toast"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-bs-delay="6000"
+      >
+        <div class="toast-header">
+          <i id="attachmentToastIcon" class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+          <strong id="attachmentToastTitle" class="me-2">Attachments staged</strong>
+          <small id="attachmentToastTime" class="text-body-secondary me-auto">Now</small>
+          <button type="button" class="btn attachment-toast-close" data-bs-dismiss="toast" aria-label="Close notification">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div id="attachmentToastMessage" class="toast-body"></div>
+      </div>
+    </div>
+
+    <!-- Add attachment dialog -->
+    <div class="modal fade" id="addDocumentModal" tabindex="-1" aria-labelledby="addDocumentModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable attachment-form-dialog">
+        <div class="modal-content review-modal-content attachment-modal">
+          <form id="addAttachmentForm" class="attachment-form">
+            <div class="modal-header review-modal-header">
+              <div class="review-modal-heading">
+                <span class="review-modal-icon" aria-hidden="true"><i class="bi bi-file-earmark-plus"></i></span>
+                <div>
+                  <span class="review-modal-eyebrow">Farmer documents</span>
+                  <h5 class="modal-title" id="addDocumentModalLabel">Upload attachments</h5>
+                  <p>Choose image or PDF files. Set each file's type and year in the queue before saving.</p>
+                </div>
+              </div>
+              <button type="button" class="btn review-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+            </div>
+            <div class="modal-body review-modal-body">
+              <label class="form-label" for="attachmentFiles">Choose files</label>
+              <input class="form-control" id="attachmentFiles" name="attachmentFiles" type="file" accept=".pdf,.jpg,.jpeg,.png,image/jpeg,image/png,application/pdf" multiple />
+              <div class="form-text">Accepted formats: PDF, JPG, and PNG. Files are staged for review before being added to the library.</div>
+              <div class="form-text text-danger" id="uploadAttachmentFeedback" role="alert"></div>
+            </div>
+            <div class="modal-footer review-modal-footer">
+              <span><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Files are staged before they are added.</span>
+              <div>
+                <button type="button" class="btn review-modal-dismiss" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn attachment-submit-button"><i class="bi bi-list-check me-1" aria-hidden="true"></i>Stage files</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit attachment dialog -->
+    <div class="modal fade" id="editAttachmentModal" tabindex="-1" aria-labelledby="editAttachmentModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable attachment-form-dialog">
+        <div class="modal-content review-modal-content attachment-modal">
+          <form id="editAttachmentForm" class="attachment-form">
+            <div class="modal-header review-modal-header">
+              <div class="review-modal-heading">
+                <span class="review-modal-icon" aria-hidden="true"><i class="bi bi-pencil-square"></i></span>
+                <div>
+                  <span class="review-modal-eyebrow">Farmer documents</span>
+                  <h5 class="modal-title" id="editAttachmentModalLabel">Edit attachment details</h5>
+                  <p>Update the document category and year covered, and adjust the optional remarks.</p>
+                </div>
+              </div>
+              <button type="button" class="btn review-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+            </div>
+            <div class="modal-body review-modal-body">
+              <label class="form-label" for="editAttachmentType">Tagged selection</label>
+              <select class="form-select" id="editAttachmentType" required>
+                <option value="Profile Form">Profile Form</option>
+                <option value="Profile Picture">Profile Picture</option>
+                <option value="ID">ID</option>
+                <option value="Other Files">Other Files</option>
+              </select>
+              <label class="form-label mt-3" for="editAttachmentYear">Year covered</label>
+              <select class="form-select" id="editAttachmentYear" required></select>
+              <label class="form-label mt-3" for="editAttachmentRemarks">Remarks <span class="attachment-optional-label">(optional)</span></label>
+              <textarea class="form-control" id="editAttachmentRemarks" rows="4" maxlength="500" placeholder="Add a note about this attachment"></textarea>
+            </div>
+            <div class="modal-footer review-modal-footer">
+              <span id="editAttachmentChangeHint" class="attachment-edit-hint" aria-live="polite"><i class="bi bi-shield-check me-1" aria-hidden="true"></i><span id="editAttachmentChangeText">No changes to save.</span></span>
+              <div>
+                <button type="button" class="btn review-modal-dismiss" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn attachment-submit-button" id="saveAttachmentChanges" disabled><i class="bi bi-check2 me-1" aria-hidden="true"></i>Save changes</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attachment viewer -->
+    <div class="modal fade attachment-viewer-modal" id="attachmentViewerModal" tabindex="-1" aria-labelledby="attachmentViewerTitle" aria-hidden="true">
+      <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+          <div class="modal-header attachment-viewer-header">
+            <div class="attachment-viewer-heading">
+              <h5 class="modal-title" id="attachmentViewerTitle">Attachment</h5>
+              <span id="attachmentViewerMeta"></span>
+            </div>
+            <div class="attachment-viewer-actions">
+              <button type="button" class="btn btn-light btn-sm" id="viewerDownload" title="Download attachment"><i class="bi bi-download" aria-hidden="true"></i><span class="visually-hidden">Download attachment</span></button>
+              <button type="button" class="btn btn-light btn-sm" id="viewerZoomOut" title="Zoom out"><i class="bi bi-zoom-out" aria-hidden="true"></i><span class="visually-hidden">Zoom out</span></button>
+              <button type="button" class="btn btn-light btn-sm" id="viewerZoomIn" title="Zoom in"><i class="bi bi-zoom-in" aria-hidden="true"></i><span class="visually-hidden">Zoom in</span></button>
+              <button type="button" class="btn btn-light btn-sm" id="viewerReset" title="Reset view"><i class="bi bi-arrows-fullscreen" aria-hidden="true"></i><span class="visually-hidden">Reset view</span></button>
+              <button type="button" class="btn btn-light btn-sm" id="viewerOpenNewTab" title="Open in new tab"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i><span class="visually-hidden">Open in new tab</span></button>
+              <button type="button" class="btn btn-light btn-sm" id="viewerEdit" title="Edit attachment"><i class="bi bi-pencil" aria-hidden="true"></i><span class="visually-hidden">Edit attachment</span></button>
+              <button type="button" class="btn btn-light btn-sm text-danger" id="viewerDelete" title="Delete attachment"><i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">Delete attachment</span></button>
+              <button type="button" class="btn-close ms-1" data-bs-dismiss="modal" aria-label="Close attachment viewer"></button>
+            </div>
+          </div>
+          <div class="modal-body attachment-viewer-body">
+            <button type="button" class="attachment-viewer-nav attachment-viewer-prev" id="viewerPrevious" aria-label="Previous attachment"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+            <div class="attachment-viewer-stage" id="attachmentViewerStage">
+              <img id="attachmentViewerImage" alt="" hidden />
+              <iframe id="attachmentViewerPdf" title="PDF attachment preview" hidden></iframe>
+            </div>
+            <button type="button" class="attachment-viewer-nav attachment-viewer-next" id="viewerNext" aria-label="Next attachment"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="attachment-delete-notice" id="attachmentDeleteNotice" role="status" aria-live="polite" hidden>
+      <div class="attachment-delete-copy">
+        <i class="bi bi-trash3" aria-hidden="true"></i>
+        <span id="attachmentDeleteMessage">Attachment deletion scheduled.</span>
+        <strong id="attachmentDeleteCountdown">10</strong>
+      </div>
+      <button type="button" class="btn btn-sm btn-light" id="cancelAttachmentDelete">Undo</button>
+    </div>
+
+    <!-- Scripts -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+      crossorigin="anonymous"
+    ></script>
+
+    <!-- AdminLTE 4 Template -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/browser/overlayscrollbars.browser.es6.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.8.4/dist/js/adminlte.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- nav -->
+    <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
+    <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
+    <script src="{{ asset('src/js/participants/update/farmer-profile-tabs.js?v=participated-training-history-2') }}"></script>
+    <script src="{{ asset('src/js/participants/update/farmer-training-table.js?v=attended-training-empty-4') }}"></script>
+    <script src="{{ asset('src/js/participants/update/farmer-intervention-table.js') }}"></script>
+    <script src="{{ asset('src/js/participants/update/farmer-activity-logs.js?v=actor-role-omission-1') }}"></script>
+    <script src="{{ asset('src/js/participants/update/attachment-manager.js') }}"></script>
+@endsection

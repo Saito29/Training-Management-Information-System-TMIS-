@@ -1,0 +1,111 @@
+#attachments-panel { display:grid; }
+.training-documents-card { overflow:hidden; border-radius:16px; }
+.training-documents-header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 20px; border-bottom:1px solid var(--color-border); background:var(--color-surface); }
+.training-documents-heading { display:flex; align-items:center; gap:12px; min-width:0; }
+.training-documents-icon { display:grid; place-items:center; flex:none; width:40px; height:40px; border-radius:11px; color:var(--color-primary-dark); background:var(--color-primary-surface); font-size:19px; }
+.training-documents-heading h2 { margin:0; color:var(--color-text-primary); font-size:16px; font-weight:700; }
+.training-documents-heading p { margin:4px 0 0; color:var(--color-text-secondary); font-size:12px; }
+.training-documents-add { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:40px; padding:9px 14px; border:1px solid var(--color-primary); border-radius:8px; color:#fff; background:var(--color-primary); font-size:12px; font-weight:600; white-space:nowrap; }
+.training-documents-add:disabled { opacity:.5; cursor:not-allowed; }
+.training-documents-add:not(:disabled):hover { background:var(--color-primary-dark); }
+.training-documents-body { padding:16px 20px 20px; }
+.training-attachment-carousel { display:grid; grid-template-columns:40px minmax(0,1fr) 40px; align-items:stretch; gap:12px; max-width:1320px; margin:auto; }
+.training-attachment-nav { display:grid; place-items:center; align-self:center; width:40px; height:40px; border:1px solid var(--color-border); border-radius:50%; color:var(--color-primary-dark); background:var(--color-surface); }
+.training-attachment-nav:hover:not(:disabled) { color:#fff; background:var(--color-primary); }
+.training-attachment-nav:disabled { opacity:.4; cursor:not-allowed; }
+.training-attachment-track { display:grid; grid-template-columns:repeat(var(--visible),minmax(0,1fr)); align-items:stretch; gap:12px; min-width:0; }
+.training-attachment-card { display:flex; flex-direction:column; min-width:0; overflow:hidden; border:1px solid var(--color-border); border-radius:13px; background:var(--color-surface); box-shadow:0 5px 16px rgba(38,50,56,.05); }
+.training-attachment-card:hover { border-color:var(--color-primary); box-shadow:0 10px 22px rgba(38,50,56,.09); }
+.training-attachment-preview { position:relative; display:grid; place-items:center; width:100%; height:160px; flex:none; overflow:hidden; padding:12px; border:0; background:var(--color-bg); cursor:zoom-in; }
+.training-attachment-preview img { width:100%; height:100%; border-radius:7px; object-fit:cover; transition:transform .2s; }
+.training-attachment-preview:hover img { transform:scale(1.04); }
+.training-attachment-pdf { display:grid; place-items:center; gap:3px; width:76px; height:96px; border:1px solid #ecd8d6; border-radius:9px; color:#b3261e; background:#fff8f7; }
+.training-attachment-pdf i { font-size:36px; }
+.training-attachment-pdf strong { font-size:10px; }
+.training-attachment-kind { position:absolute; top:9px; left:9px; padding:4px 7px; border-radius:20px; color:#34423a; background:rgba(255,255,255,.9); font-size:9px; font-weight:700; }
+.training-attachment-overlay { position:absolute; inset:0; display:grid; place-items:center; color:#fff; background:rgba(20,42,27,.52); font-size:11px; font-weight:700; opacity:0; }
+.training-attachment-preview:hover .training-attachment-overlay,.training-attachment-preview:focus-visible .training-attachment-overlay { opacity:1; }
+.training-attachment-info { display:grid; align-content:start; gap:9px; min-width:0; padding:12px; }
+.training-attachment-info > strong { min-height:34px; overflow-wrap:anywhere; color:var(--color-text-primary); font-size:12px; }
+.training-attachment-category { width:fit-content; max-width:100%; overflow:hidden; padding:5px 8px; border-radius:20px; color:var(--color-primary-dark); background:var(--color-primary-surface); font-size:12px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+.training-attachment-category i { margin-right:6px; }
+.training-attachment-meta { display:flex; align-items:center; justify-content:space-between; gap:5px; color:var(--color-text-secondary); font-size:10px; }
+.training-attachment-meta span { padding:5px 7px; border:1px solid var(--color-border); border-radius:9px; white-space:nowrap; }
+.training-attachment-meta i { margin-right:5px; }
+.training-attachment-meta small { font-size:10px; text-align:right; }
+.training-attachment-actions { display:flex; gap:7px; margin-top:2px; }
+.training-attachment-actions button,.training-attachment-actions a { display:inline-flex; flex:1; align-items:center; justify-content:center; gap:5px; min-height:31px; padding:5px 6px; border:1px solid var(--color-border); border-radius:7px; color:var(--color-primary-dark); background:var(--color-surface); font-size:10px; font-weight:600; text-decoration:none; }
+.training-attachment-actions button:hover,.training-attachment-actions a:hover { background:var(--color-primary-surface); }
+.training-document-viewer .modal-header { display:flex; gap:16px; }
+.training-document-viewer .modal-header small { color:var(--color-text-secondary); }
+.training-document-viewer-actions { display:flex; align-items:center; gap:6px; margin-left:auto; }
+.training-document-viewer .modal-body { display:grid; place-items:center; min-height:0; padding:12px; background:var(--color-bg); }
+.training-document-viewer .modal-body img,.training-document-viewer .modal-body iframe { width:100%; height:100%; max-height:calc(100vh - 100px); border:0; object-fit:contain; }
+@media (max-width:600px) { .training-documents-header { flex-wrap:wrap; } .training-documents-body { padding:12px; } .training-attachment-carousel { grid-template-columns:32px minmax(0,1fr) 32px; gap:6px; } .training-attachment-nav { width:32px; height:32px; } .training-document-viewer-actions .btn { padding:5px; } }
+.training-attachment-actions [data-delete] { color:#b3261e; }
+.training-attachment-actions [data-delete]:hover { background:#fff5f4; }
+.training-attachment-empty { grid-column:1/-1; padding:40px 16px; border:1px dashed var(--color-border); border-radius:12px; color:var(--color-text-secondary); text-align:center; }
+#editAttachmentModal .attachment-form-dialog { max-width:560px; }
+#editAttachmentModal .attachment-modal { overflow:hidden; border:0; border-radius:16px; }
+#editAttachmentModal .review-modal-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:24px 28px; border-bottom:1px solid var(--color-border); background:var(--color-surface); }
+#editAttachmentModal .review-modal-heading { display:flex; align-items:center; gap:14px; }
+#editAttachmentModal .review-modal-icon { display:grid; place-items:center; flex:none; width:46px; height:46px; border-radius:12px; color:var(--color-primary-dark); background:var(--color-primary-surface); font-size:21px; }
+#editAttachmentModal .review-modal-eyebrow { color:var(--color-primary-dark); font-size:11px; font-weight:700; text-transform:uppercase; }
+#editAttachmentModal .review-modal-heading h5 { margin:2px 0; color:var(--color-text-primary); font-size:20px; font-weight:700; }
+#editAttachmentModal .review-modal-heading p { margin:0; color:var(--color-text-secondary); font-size:12px; }
+#editAttachmentModal .review-modal-close { display:grid; place-items:center; flex:none; width:36px; height:36px; border:1px solid var(--color-border); border-radius:10px; color:var(--color-text-secondary); background:var(--color-bg); }
+#editAttachmentModal .review-modal-body { padding:22px 28px; background:var(--color-surface); }
+#editAttachmentModal .review-modal-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 28px; border-top:1px solid var(--color-border); background:var(--color-bg); }
+#editAttachmentModal .review-modal-footer > div { display:flex; gap:8px; }
+#editAttachmentModal .attachment-edit-hint { color:var(--color-text-secondary); font-size:12px; }
+#editAttachmentModal .attachment-edit-hint.is-dirty { color:var(--color-primary-dark); }
+#editAttachmentModal .attachment-submit-button { border:1px solid var(--color-primary); border-radius:8px; color:#fff; background:var(--color-primary); font-size:12px; font-weight:600; }
+#editAttachmentModal .attachment-submit-button:disabled { opacity:.5; }
+@media (max-width:600px) { #editAttachmentModal .review-modal-header,#editAttachmentModal .review-modal-body,#editAttachmentModal .review-modal-footer { padding:16px; } #editAttachmentModal .review-modal-footer { align-items:flex-start; flex-direction:column; } }
+.training-attachment-queue { overflow:hidden; margin-top:16px; border-radius:16px; }
+.training-attachment-queue > header { padding:18px 20px; border-bottom:1px solid var(--color-border); background:var(--color-surface); }
+.training-attachment-queue h2 { margin:0; color:var(--color-text-primary); font-size:16px; font-weight:700; }
+.training-attachment-queue p { margin:4px 0 0; color:var(--color-text-secondary); font-size:12px; }
+.training-attachment-queue-body { padding:16px 20px 20px; }
+.training-queue-table { margin:0; color:var(--color-text-primary); font-size:12px; }
+.training-queue-table th { color:var(--color-text-secondary); font-size:11px; white-space:nowrap; }
+.training-queue-table td { min-width:84px; vertical-align:middle; }
+.training-queue-table td:first-child { min-width:190px; }
+.training-queue-table .form-control,.training-queue-table .form-select { min-width:120px; border-color:var(--color-border); color:var(--color-text-primary); background:var(--color-surface); font-size:12px; }
+.training-queue-preview { display:flex; align-items:center; gap:8px; min-width:0; }
+.training-queue-preview i { color:var(--color-primary); font-size:22px; }
+.training-queue-preview span { max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.training-queue-status { padding:5px 8px; border-radius:999px; color:var(--color-danger); background:color-mix(in srgb,var(--color-danger) 12%,var(--color-surface)); font-size:11px; }
+.training-queue-status.ready { color:var(--color-success); background:color-mix(in srgb,var(--color-success) 12%,var(--color-surface)); }
+.training-queue-remove { width:32px; height:32px; border:1px solid var(--color-border); border-radius:8px; color:var(--color-text-secondary); background:var(--color-surface); }
+.training-queue-empty td { padding:24px; color:var(--color-text-secondary); text-align:center; }
+.training-queue-footer { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:12px; padding-top:16px; color:var(--color-text-secondary); font-size:12px; }
+#trainingQueueFeedback { margin-right:auto; color:var(--color-success); }
+#trainingSaveAttachments { display:inline-flex; align-items:center; gap:7px; min-height:38px; padding:8px 14px; border:1px solid var(--color-primary); border-radius:9px; color:#fff; background:var(--color-primary); font-size:12px; font-weight:650; }
+#trainingSaveAttachments:disabled { opacity:.5; cursor:not-allowed; }
+#addDocumentModal .attachment-form-dialog { max-width:560px; }
+#addDocumentModal .attachment-modal { overflow:hidden; border:0; border-radius:16px; }
+#addDocumentModal .review-modal-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:24px 28px; border-bottom:1px solid var(--color-border); background:var(--color-surface); }
+#addDocumentModal .review-modal-heading { display:flex; align-items:center; gap:14px; }
+#addDocumentModal .review-modal-icon { display:grid; place-items:center; flex:none; width:46px; height:46px; border-radius:12px; color:var(--color-primary-dark); background:var(--color-primary-surface); font-size:21px; }
+#addDocumentModal .review-modal-eyebrow { color:var(--color-primary-dark); font-size:11px; font-weight:700; text-transform:uppercase; }
+#addDocumentModal .review-modal-heading h5 { margin:2px 0; color:var(--color-text-primary); font-size:20px; font-weight:700; }
+#addDocumentModal .review-modal-heading p { margin:0; color:var(--color-text-secondary); font-size:12px; }
+#addDocumentModal .review-modal-close { display:grid; place-items:center; flex:none; width:36px; height:36px; border:1px solid var(--color-border); border-radius:10px; color:var(--color-text-secondary); background:var(--color-bg); }
+#addDocumentModal .review-modal-body { padding:22px 28px; background:var(--color-surface); }
+#addDocumentModal .review-modal-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 28px; border-top:1px solid var(--color-border); background:var(--color-bg); }
+#addDocumentModal .review-modal-footer > span { color:var(--color-text-secondary); font-size:12px; }
+#addDocumentModal .review-modal-footer > div { display:flex; gap:8px; }
+#addDocumentModal .attachment-submit-button { border:1px solid var(--color-primary); border-radius:8px; color:#fff; background:var(--color-primary); font-size:12px; font-weight:600; }
+@media (max-width:600px) { .training-attachment-queue-body,#addDocumentModal .review-modal-header,#addDocumentModal .review-modal-body,#addDocumentModal .review-modal-footer { padding:16px; } #addDocumentModal .review-modal-footer { align-items:flex-start; flex-direction:column; } }
+.attachment-delete-notice { position:fixed; z-index:1080; right:24px; bottom:24px; display:flex; align-items:center; justify-content:space-between; gap:16px; width:min(440px,calc(100vw - 32px)); padding:13px 16px; border:1px solid var(--color-border); border-radius:12px; color:var(--color-text-primary); background:var(--color-surface); box-shadow:0 12px 32px rgba(0,0,0,.18); font-size:12px; }
+.attachment-delete-notice[hidden] { display:none; }
+.attachment-delete-copy { display:flex; align-items:center; gap:9px; min-width:0; }
+.attachment-delete-copy > i { color:var(--color-danger); font-size:17px; }
+.attachment-delete-copy span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.attachment-delete-copy strong { color:var(--color-danger); font-size:15px; }
+.attachment-delete-notice button { flex:none; border:1px solid var(--color-border); color:var(--color-primary-dark); font-weight:700; }
+.attachment-delete-actions { display:flex; flex:none; gap:6px; }
+.attachment-delete-actions .btn-danger { border-color:#b3261e; color:#fff; background:#b3261e; }
+.attachment-delete-actions .btn-danger:hover { background:#8f1d17; }
+@media (max-width:600px) { .attachment-delete-notice { right:16px; bottom:16px; } }

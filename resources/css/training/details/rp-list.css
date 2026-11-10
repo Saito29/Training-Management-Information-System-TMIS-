@@ -1,0 +1,44 @@
+#rpColumns[hidden], #rpEmpty[hidden] { display: none !important; }
+#rpPaginationTop, #rpPaginationBottom { gap: .35rem; flex-wrap: wrap; }
+#rpTable td { vertical-align: middle; }
+.rp-row-actions { white-space: nowrap; }
+.rp-row-actions .btn + .btn { margin-left: .35rem; }
+.rp-row-actions .btn { min-width: 2rem; min-height: 2rem; display: inline-flex; align-items: center; justify-content: center; }
+#rpColumnFilters th { min-width: 110px; padding: .5rem; color: var(--color-text-primary); background: var(--color-primary-surface); border-color: var(--color-border); }
+#rpColumnFilters th:first-child { min-width: 120px; }
+#rpColumnFilters input { min-width: 100px; }
+.rp-page-links { display: flex; flex-wrap: wrap; gap: .5rem; }
+.rp-page-links .btn { border-radius: 9px; }
+
+[data-theme='dark'] .app-main .app-main-body #rpTable thead th {
+  color: var(--color-text-primary);
+  background-color: var(--color-primary-surface);
+  border-color: var(--color-border);
+}
+
+[data-theme='dark'] .app-main .app-main-body #rpTable #rpColumnFilters th {
+  color: var(--color-text-primary);
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+[data-theme='dark'] .app-main .app-main-body #rpTable tbody td {
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+[data-theme='dark'] .app-main .app-main-body #rpTable #rpColumnFilters input {
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  border-color: var(--color-border);
+}
+
+[data-theme='dark'] .app-main .app-main-body #rpTable #rpColumnFilters input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+[data-theme='dark'] .app-main .app-main-body #rpTable .rp-row-actions .btn-outline-success { color: #a7dfb1; border-color: #4c8a58; }
+[data-theme='dark'] .app-main .app-main-body #rpTable .rp-row-actions .btn-outline-primary { color: #a7c7f4; border-color: #6b94cf; }
+[data-theme='dark'] .app-main .app-main-body #rpTable .rp-row-actions .btn-outline-danger { color: #f3aaaa; border-color: #ba6666; }
+[data-theme='dark'] .app-main .app-main-body #rpTable .rp-row-actions .btn:hover { color: #fff; }

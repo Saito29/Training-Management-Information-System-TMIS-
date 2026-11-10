@@ -1,0 +1,8 @@
+.card-form form .fa-wizard-step[hidden] { display:none; }
+.card-form form .fa-wizard-step { width:100%; padding:12px 8px; border-bottom:0; }
+.fa-step-help { margin:0 0 18px; color:var(--color-text-secondary,#64736b); font-size:13px; }
+.fa-step-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:10px; margin-top:8px; }
+.fa-step-actions .btn { display:inline-flex; align-items:center; gap:6px; min-height:42px; }
+.fa-back-button { border:1px solid var(--color-border,#d6ded8); color:var(--color-text-primary,#263238); background:var(--color-surface,#fff); }
+.fa-back-button:hover { border-color:#185e20; color:#185e20; }
+.fa-form-status { margin:14px 0 0; color:#185e20; font-size:12px; }

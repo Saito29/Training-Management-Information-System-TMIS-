@@ -1,0 +1,33 @@
+#pretest-panel .pretest-results-card { overflow:hidden; border-radius:15px; }
+#pretest-panel h2 { margin:4px 0; color:var(--color-text-primary); font-size:18px; font-weight:750; }
+.pretest-select-wrap { display:grid; gap:6px; min-width:min(330px,100%); }
+.pretest-select-wrap label { color:var(--color-text-secondary); font-size:11px; font-weight:700; }
+.pretest-select-wrap .form-select { min-height:39px; border-color:var(--color-border); border-radius:9px; color:var(--color-text-primary); background-color:var(--color-surface); font-size:12px; font-weight:650; }
+.pretest-selected-heading { display:flex; align-items:center; gap:11px; padding:16px 24px 0; }
+.pretest-selected-icon { display:grid; place-items:center; flex:none; width:42px; height:42px; border-radius:10px; color:var(--color-primary-dark); background:var(--color-primary-surface); font-size:20px; }
+.pretest-selected-heading > div { display:grid; gap:3px; flex:1; }
+.pretest-selected-heading strong { color:var(--color-text-primary); font-size:13px; }
+.pretest-selected-heading small { color:var(--color-text-secondary); font-size:11px; }
+.pretest-table-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:2px 24px 15px; }
+.pretest-table-toolbar h3 { margin:0; color:var(--color-text-primary); font-size:13px; font-weight:700; }
+.pretest-table-toolbar p { margin:4px 0 0; color:var(--color-text-secondary); font-size:11px; }
+.pretest-search { position:relative; display:block; width:min(270px,100%); }
+.pretest-search i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--color-text-secondary); font-size:13px; }
+.pretest-search .form-control { min-height:38px; padding-left:34px; border-color:var(--color-border); border-radius:9px; color:var(--color-text-primary); background:var(--color-surface); font-size:12px; }
+.pretest-date-filter,.pretest-association-filter { display:grid; gap:4px; margin-left:auto; color:var(--color-text-secondary); font-size:10px; font-weight:650; }
+.pretest-association-filter { margin-left:0; }
+.pretest-date-filter .form-select,.pretest-association-filter .form-select { min-height:38px; border-color:var(--color-border); border-radius:9px; color:var(--color-text-primary); background-color:var(--color-surface); font-size:12px; }
+.pretest-results-table { min-width:900px; margin:0; color:var(--color-text-primary); font-size:12px; }
+.pretest-results-table thead th { padding:12px; border-bottom:1px solid var(--color-border); color:var(--color-text-secondary); background:var(--color-bg); font-size:11px; font-weight:700; }
+.pretest-results-table tbody th,.pretest-results-table tbody td { padding:11px 12px; border-bottom:1px solid var(--color-border); vertical-align:middle; }
+.pretest-results-table tbody th { color:var(--color-text-primary); font-weight:500; }
+.pretest-results-table tbody th > span:last-child { display:inline-grid; gap:3px; vertical-align:middle; }
+.pretest-results-table tbody th strong { font-size:12px; font-weight:650; }
+.pretest-results-table tbody th small { color:var(--color-text-secondary); font-size:10px; }
+.pretest-results-table tbody tr:hover { background:color-mix(in srgb,var(--color-primary-surface) 60%,var(--color-surface)); }
+.pretest-row-number { display:inline-grid; place-items:center; width:29px; height:29px; margin-right:10px; border-radius:8px; color:var(--color-primary-dark); background:var(--color-primary-surface); font-size:10px; font-weight:750; vertical-align:middle; }
+.pretest-score { display:inline-block; min-width:55px; padding:6px 9px; border-radius:8px; color:var(--color-primary-dark); background:var(--color-primary-surface); font-weight:750; white-space:nowrap; }
+.pretest-score small { font-size:10px; font-weight:500; }
+.pretest-results-count { margin:0; padding:12px 24px 17px; color:var(--color-text-secondary); font-size:11px; }
+.pretest-empty { padding:28px!important; color:var(--color-text-secondary); text-align:center; font-size:12px; }
+@media (max-width:700px) { .pretest-select-wrap { width:100%; } .pretest-selected-heading { padding:16px 16px 0; flex-wrap:wrap; } .pretest-table-toolbar { padding:2px 16px 15px; } .pretest-search,.pretest-date-filter,.pretest-association-filter { width:100%; } .pretest-date-filter,.pretest-association-filter { margin-left:0; } #pretest-panel .training-evaluation-table-wrap { padding:0 16px; } .pretest-results-count { padding:12px 16px; } }

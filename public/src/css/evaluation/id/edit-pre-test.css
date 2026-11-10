@@ -1,0 +1,50 @@
+.questionnaire-edit-page .edit-questionnaire-unavailable { display: grid; justify-items: center; gap: .75rem; padding: 2.5rem 1rem; color: var(--color-text-secondary); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; text-align: center; }
+.questionnaire-edit-page .edit-questionnaire-unavailable i { color: var(--color-primary); font-size: 1.6rem; }
+.questionnaire-edit-page .edit-questionnaire-unavailable p { margin: 0; }
+.questionnaire-edit-page .edit-questionnaire-unavailable a { color: var(--color-primary); font-weight: 700; }
+.questionnaire-edit-page .edit-status-trigger { display: inline-flex; align-items: center; gap: .4rem; margin-right: .55rem; color: var(--color-primary); background: var(--color-surface); border: 1px solid var(--color-primary); border-radius: 9px; font-size: .82rem; font-weight: 650; }
+.questionnaire-edit-page .edit-status-trigger:hover { color: var(--color-surface); background: var(--color-primary); }
+.edit-status-modal .modal-dialog { max-width: 29rem; }
+.edit-status-modal .modal-content { color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 15px; box-shadow: 0 24px 65px rgba(0, 0, 0, .2); }
+.edit-status-modal .modal-header, .edit-status-modal .modal-footer { border-color: var(--color-border); padding: .95rem 1.15rem; }
+.edit-status-modal .modal-body { padding: 1rem 1.15rem; }
+.edit-status-heading { display: flex; align-items: center; gap: .75rem; }
+.edit-status-icon { display: grid; place-items: center; flex: 0 0 2.35rem; height: 2.35rem; color: var(--color-primary); background: var(--color-primary-surface); border-radius: 10px; font-size: 1rem; }
+.edit-status-modal .modal-title { margin: 0; font-size: .97rem; font-weight: 700; }
+.edit-status-heading p { margin: .2rem 0 0; color: var(--color-text-secondary); font-size: .76rem; }
+.edit-status-details { display: grid; gap: .55rem; margin: 0 0 1rem; padding: .8rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 10px; }
+.edit-status-details div { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: .5rem; }
+.edit-status-details dt { color: var(--color-text-secondary); font-size: .74rem; font-weight: 600; }
+.edit-status-details dd { margin: 0; overflow-wrap: anywhere; font-size: .78rem; font-weight: 650; }
+.edit-status-modal .form-label { margin-bottom: .4rem; font-size: .78rem; font-weight: 650; }
+.edit-status-modal .form-label span { color: var(--color-text-secondary); font-weight: 400; }
+.edit-status-modal .form-select, .edit-status-modal .form-control { color: var(--color-text-primary); background-color: var(--color-surface); border-color: var(--color-border); border-radius: 9px; font-size: .8rem; }
+.edit-status-remarks { margin-top: .9rem; }
+.edit-status-remarks[hidden], .edit-status-error[hidden] { display: none; }
+.edit-status-error { margin: .75rem 0 0; color: #bd2b36; font-size: .77rem; }
+.edit-status-cancel, .edit-status-save { border-radius: 9px; font-size: .8rem; font-weight: 650; }
+.edit-status-cancel { color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); }
+.edit-status-modal .edit-status-save {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: #176b34;
+  --bs-btn-border-color: #176b34;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #12572a;
+  --bs-btn-hover-border-color: #12572a;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #104b25;
+  --bs-btn-active-border-color: #104b25;
+  --bs-btn-disabled-color: #fff;
+  --bs-btn-disabled-bg: #176b34;
+  --bs-btn-disabled-border-color: #176b34;
+  min-width: 6.5rem;
+  opacity: 1;
+}
+.edit-status-modal .edit-status-save:focus-visible { box-shadow: 0 0 0 .2rem rgba(23, 107, 52, .25); }
+.edit-status-modal .edit-status-save,
+.edit-status-modal .edit-status-save:disabled { color: #fff; background-color: #176b34; border-color: #176b34; opacity: 1; }
+.edit-status-modal .edit-status-save:hover:not(:disabled) { color: #fff; background-color: #12572a; border-color: #12572a; }
+.questionnaire-status-badge { display: inline-flex; align-items: center; gap: .35rem; width: fit-content; margin: .1rem 0 .55rem; padding: .28rem .65rem; border: 1px solid #a8d7b4; border-radius: 999px; color: #176b34; background: #e7f6eb; font-size: .72rem; font-weight: 700; line-height: 1.2; }
+.questionnaire-status-badge::before { content: ''; width: .4rem; height: .4rem; border-radius: 50%; background: currentColor; }
+.questionnaire-status-badge[data-status='inactive'] { color: #9b3434; background: #fff0ed; border-color: #edc4bc; }
+.questionnaire-status-badge[data-status='draft'], .questionnaire-status-badge[data-status='sample'] { color: #4b5967; background: #edf1f4; border-color: #d0d9e0; }

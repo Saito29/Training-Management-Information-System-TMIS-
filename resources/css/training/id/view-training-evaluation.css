@@ -1,0 +1,49 @@
+#evaluation-panel { display:grid; gap:16px; }
+#evaluation-panel .training-evaluation-card,#evaluation-panel .training-evaluation-detail { overflow:hidden; border-radius:15px; }
+#evaluation-panel .training-evaluation-comments { overflow:hidden; border-radius:15px; }
+.training-evaluation-header,.training-evaluation-detail-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; padding:22px 24px; border-bottom:1px solid var(--color-border); background:linear-gradient(120deg,color-mix(in srgb,var(--color-primary-surface) 45%,var(--color-surface)),var(--color-surface) 70%); }
+.training-evaluation-heading { display:flex; align-items:center; gap:13px; }
+.training-evaluation-icon { display:grid; place-items:center; flex:none; width:46px; height:46px; border-radius:13px; color:var(--color-primary-dark); background:var(--color-primary-surface); font-size:20px; }
+.training-evaluation-eyebrow { color:var(--color-primary-dark); font-size:10px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
+#evaluation-panel h2 { margin:4px 0; color:var(--color-text-primary); font-size:18px; font-weight:750; }
+.training-evaluation-header p,.training-evaluation-detail-header p { margin:0; color:var(--color-text-secondary); font-size:12px; line-height:1.5; }
+.training-evaluation-sample,.training-evaluation-detail-count { padding:6px 10px; border:1px solid var(--color-border); border-radius:999px; color:var(--color-text-secondary); background:var(--color-surface); font-size:11px; font-weight:650; }
+.evaluation-scope-filters { display:flex; align-items:end; flex-wrap:wrap; gap:12px; padding:16px 24px 0; }
+.evaluation-scope-filters label { display:grid; gap:6px; min-width:200px; color:var(--color-text-secondary); font-size:11px; font-weight:700; }
+.evaluation-scope-filters .form-select { min-height:39px; border-color:var(--color-border); border-radius:9px; color:var(--color-text-primary); background-color:var(--color-surface); font-size:12px; font-weight:600; }
+.evaluation-filter-empty { margin:0; padding:22px; border:1px dashed var(--color-border); border-radius:10px; color:var(--color-text-secondary); text-align:center; font-size:12px; }
+.training-evaluation-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; padding:18px 24px; }
+.training-evaluation-summary > div { display:grid; gap:5px; padding:13px 16px; border:1px solid var(--color-border); border-radius:10px; background:var(--color-bg); }
+.training-evaluation-summary span { color:var(--color-text-secondary); font-size:11px; }
+.training-evaluation-summary strong { color:var(--color-text-primary); font-size:21px; line-height:1.1; }
+.training-evaluation-summary strong small { color:var(--color-text-secondary); font-size:13px; font-weight:500; }
+.training-evaluation-table-wrap { padding:0 24px; }
+.training-evaluation-table { min-width:780px; margin:0; color:var(--color-text-primary); border-collapse:separate; border-spacing:0; font-size:12px; }
+.training-evaluation-table thead th { padding:12px 10px; border-bottom:1px solid var(--color-border); color:var(--color-text-secondary); background:var(--color-bg); font-size:11px; font-weight:700; text-align:center; white-space:nowrap; }
+.training-evaluation-table thead th:first-child { width:42%; text-align:left; }
+.training-evaluation-table thead i { color:#e6a719; font-size:9px; }
+.training-evaluation-table tbody th,.training-evaluation-table tbody td { padding:11px 10px; border-bottom:1px solid var(--color-border); vertical-align:middle; }
+.training-evaluation-table tbody th { color:var(--color-text-primary); font-weight:550; line-height:1.45; }
+.training-evaluation-table tbody td { text-align:center; }
+.training-evaluation-table tbody tr:hover,.training-evaluation-table tbody tr.is-selected { background:color-mix(in srgb,var(--color-primary-surface) 62%,var(--color-surface)); }
+.training-evaluation-row-number { display:inline-grid; place-items:center; width:29px; height:29px; margin-right:9px; border-radius:8px; color:var(--color-primary-dark); background:var(--color-primary-surface); font-size:10px; font-weight:750; vertical-align:middle; }
+.training-evaluation-count { min-width:32px; min-height:32px; padding:5px 8px; border:1px solid transparent; border-radius:8px; color:var(--color-text-primary); background:transparent; font-size:12px; font-weight:650; }
+.training-evaluation-count:hover,.training-evaluation-count:focus-visible,.training-evaluation-count.is-active { border-color:color-mix(in srgb,var(--color-primary) 35%,var(--color-border)); color:var(--color-primary-dark); background:var(--color-primary-surface); }
+.training-evaluation-total { font-weight:700; }
+.training-evaluation-average { display:inline-block; min-width:47px; padding:6px 8px; border-radius:8px; color:var(--color-primary-dark); background:var(--color-primary-surface); font-weight:750; }
+.training-evaluation-hint { margin:0; padding:12px 24px 17px; color:var(--color-text-secondary); font-size:11px; }
+.training-evaluation-hint i { margin-right:5px; color:var(--color-primary); }
+.training-evaluation-detail-body { padding:18px 24px 22px; }
+.training-evaluation-rating-tabs { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:15px; }
+.training-evaluation-rating-tabs button { display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:6px 11px; border:1px solid var(--color-border); border-radius:8px; color:var(--color-text-secondary); background:var(--color-surface); font-size:11px; font-weight:650; }
+.training-evaluation-rating-tabs button:hover,.training-evaluation-rating-tabs button:focus-visible,.training-evaluation-rating-tabs button.is-active { border-color:var(--color-primary); color:var(--color-primary-dark); background:var(--color-primary-surface); }
+.training-evaluation-rating-tabs button i,.training-evaluation-participant-score i { color:#e6a719; font-size:10px; }
+.training-evaluation-rating-tabs button span { display:grid; place-items:center; min-width:19px; height:19px; padding:0 4px; border-radius:999px; background:var(--color-bg); font-size:10px; }
+.training-evaluation-participants { margin:0; color:var(--color-text-primary); font-size:12px; }
+.training-evaluation-participants th { color:var(--color-text-secondary); font-size:11px; }
+.training-evaluation-participants td { vertical-align:middle; }
+.training-evaluation-participants th:last-child,.training-evaluation-participants td:last-child { text-align:right; }
+.training-evaluation-avatar { display:inline-grid; place-items:center; width:29px; height:29px; margin-right:9px; border-radius:50%; color:var(--color-primary-dark); background:var(--color-primary-surface); font-size:10px; font-weight:700; }
+.training-evaluation-participant-score { display:inline-flex; align-items:center; gap:4px; padding:5px 9px; border-radius:999px; background:var(--color-bg); font-weight:700; }
+.training-evaluation-empty { padding:22px!important; color:var(--color-text-secondary); text-align:center!important; }
+@media (max-width:700px) { .training-evaluation-header,.training-evaluation-detail-header,.training-evaluation-detail-body { padding:16px; } .evaluation-scope-filters { padding:16px 16px 0; } .evaluation-scope-filters label { width:100%; } .training-evaluation-summary { padding:16px; grid-template-columns:1fr; } .training-evaluation-table-wrap { padding:0 16px; } .training-evaluation-hint { padding:12px 16px; } }

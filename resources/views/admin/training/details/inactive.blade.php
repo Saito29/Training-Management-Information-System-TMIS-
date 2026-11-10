@@ -1,0 +1,2002 @@
+@extends('layouts.admin')
+
+@section('body-attributes')
+class="layout-fixed"
+@endsection
+
+@section('head')
+<meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="{{ asset('src/js/shared/page-loading.js') }}"></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://db.onlinewebfonts.com/c/07e0cde7ae44d7e3cdc61a55fe9af110?family=Blanka"
+      rel="stylesheet"
+    />
+    <!-- Box icons -->
+    <!-- Basic Icons -->
+    <link
+      href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css"
+      rel="stylesheet"
+    />
+    <!-- Filled Icons -->
+    <link
+      href="https://cdn.boxicons.com/3.0.8/fonts/filled/boxicons-filled.min.css"
+      rel="stylesheet"
+    />
+    <!-- Brand Icons -->
+    <link
+      href="https://cdn.boxicons.com/3.0.8/fonts/brands/boxicons-brands.min.css"
+      rel="stylesheet"
+    />
+    <!-- AdminLTE 4 Template -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/styles/overlayscrollbars.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/admin-lte@4.8.4/dist/css/adminlte.min.css"
+    />
+    <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
+    <link
+      rel="stylesheet"
+      href="{{ asset('src/css/training/details/incomplete.css') }}"
+    />
+    <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
+    <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
+    <title>DA-TMIS - Inactive Trainings</title>
+    <link rel="stylesheet" href="{{ asset('src/css/shared/table-loading.css') }}" />
+    <script src="{{ asset('src/js/shared/table-loading.js') }}" defer></script>
+    <!-- Backend integration disabled for now. Uncomment when ready.
+
+-->
+      <script type="module" src="{{ asset('src/js/shared/activity-log.js') }}"></script>
+  <link rel="stylesheet" href="{{ asset('src/css/shared/toast.css') }}">
+    <script src="{{ asset('src/js/shared/toast.js') }}" defer></script>
+@endsection
+
+@section('content')
+<div class="app-wrapper">
+      <nav class="app-header navbar navbar-expand">
+        <div
+          class="app-header-main d-flex justify-content-between align-items-center"
+        >
+          <!-- logo and TMIS -->
+          <div
+            class="app-header-left d-flex align-items-center justify-content-start"
+          >
+            <!-- Hide in large size -->
+            <button
+              class="btn app-mobile-toggle d-lg-none"
+              type="button"
+              data-bs-toggle="offcanvas"
+              data-bs-target="#mobileNavMenu"
+              aria-controls="mobileNavMenu"
+            >
+              <i class="bi bi-list"></i>
+            </button>
+            <!-- Bootstrap hides the logo below sm to keep the mobile header compact. -->
+            <div
+              class="app-logo d-none d-sm-flex align-items-center justify-content-start"
+            >
+              <a
+                href="{{ route('admin.dashboard.dashboard') }}"
+                class="text-decoration-none"
+              >
+                <img
+                  src="{{ asset('assets/logo/DA Logo/DA logo_120519.png') }}"
+                  alt="App_logo"
+                  class="image-logo"
+                />
+              </a>
+              <div
+                class="app-logo-text d-flex align-items-center justify-content-start"
+              >
+                <!-- Bootstrap hides the TMIS wordmark below sm (576px), preserving space for mobile navigation. -->
+                <h3 class="app-name d-none d-sm-block">TMIS</h3>
+                <!-- <span class="text-logo-name">Training Management Information System</span> -->
+              </div>
+            </div>
+          </div>
+          <!-- Navigation Bar -->
+          <div
+            class="app-navigation-bar d-none d-lg-flex justify-content-center"
+          >
+            <ul class="navbar-nav">
+              <li class="nav-item">
+                <a href="{{ route('admin.dashboard.dashboard') }}" class="nav-link">
+                  <i class="bi bi-columns-gap"></i>
+                  <span class="text-icon-active">Dashboard</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a
+                  href="#"
+                  class="nav-link active-page"
+                  role="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#participantHeaderCollapse"
+                  aria-expanded="false"
+                  aria-controls="participantHeaderCollapse"
+                >
+                  <i class="bi bi-people-fill"></i>
+                  <span class="text-icon">Participants</span>
+                  <i class="bi bi-chevron-down ms-2"></i>
+                </a>
+                <div
+                  class="collapse header-collapse"
+                  id="participantHeaderCollapse"
+                >
+                  <div class="header-collapse-menu">
+                  <div class="participant-nav-section-label">Individual</div>
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#createParticipantHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-plus-circle"></i>
+                      <span>Create</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div class="collapse" id="createParticipantHeaderCollapse">
+                      <div class="header-sub-collapse-menu">
+                        <a
+                          href="{{ route('admin.participants.create.register') }}"
+                          class="header-sub-collapse-item"
+                        >
+                          <i class="bi bi-person-fill-add"></i>
+                          <span>Register</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#detailsParticipantHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span>Details</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div class="collapse" id="detailsParticipantHeaderCollapse">
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.participants.details.all-with-status') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-list-check"></i>
+                          <span>List of Farmers</span>
+                        </a>
+                        <a href="{{ route('admin.participants.details.inactive') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-person-walking"></i>
+                          <span>Inactive</span>
+                        </a>
+                      </div>
+                    </div>
+                  <div class="participant-nav-section-label">Farmer Association</div>
+                  <a href="#" class="header-collapse-item" role="button" data-bs-toggle="collapse" data-bs-target="#createFarmerAssociationHeaderCollapse" aria-expanded="false" aria-controls="createFarmerAssociationHeaderCollapse">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Create</span>
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                  </a>
+                  <div class="collapse" id="createFarmerAssociationHeaderCollapse">
+                    <div class="header-sub-collapse-menu">
+                      <a href="{{ route('admin.participants.create.fa-register') }}" class="header-sub-collapse-item">
+                        <i class="bi bi-building-add"></i>
+                        <span>Register</span>
+                      </a>
+                    </div>
+                  </div>
+                  <a href="#" class="header-collapse-item" role="button" data-bs-toggle="collapse" data-bs-target="#detailsFarmerAssociationHeaderCollapse" aria-expanded="false" aria-controls="detailsFarmerAssociationHeaderCollapse">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Details</span>
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                  </a>
+                  <div class="collapse" id="detailsFarmerAssociationHeaderCollapse">
+                    <div class="header-sub-collapse-menu">
+                      <a href="{{ route('admin.participants.details.fa-all-list') }}" class="header-sub-collapse-item">
+                        <i class="bi bi-list-ul"></i>
+                        <span>List of FA</span>
+                      </a>
+                      <a href="{{ route('admin.participants.details.fa-inactive') }}" class="header-sub-collapse-item">
+                        <i class="bi bi-x-circle-fill"></i>
+                        <span>Inactive</span>
+                      </a>
+                    </div>
+                  </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item">
+                <a
+                  href="#"
+                  class="nav-link"
+                  role="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#trainingHeaderCollapse"
+                  aria-expanded="false"
+                  aria-controls="trainingHeaderCollapse"
+                >
+                  <i class="bi bi-book-fill"></i>
+                  <span class="text-icon">Training</span>
+                  <i class="bi bi-chevron-down ms-2"></i>
+                </a>
+                <div
+                  class="collapse header-collapse"
+                  id="trainingHeaderCollapse"
+                >
+                  <div class="header-collapse-menu">
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#createTrainingHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-plus-circle"></i>
+                      <span>Create</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div class="collapse" id="createTrainingHeaderCollapse">
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.training.create.register') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-clipboard-plus-fill"></i>
+                          <span>Register</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#updateTrainingHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-arrow-repeat"></i>
+                      <span>Update</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div class="collapse" id="updateTrainingHeaderCollapse">
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.training.update.for-review') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-clipboard2-check-fill"></i>
+                          <span>For Review</span>
+                          <span class="badge badge-review">34</span>
+                        </a>
+                        <a href="{{ route('admin.training.update.for-approval') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-clipboard2-check-fill"></i>
+                          <span>For Approval</span>
+                          <span class="badge badge-approval">23</span>
+                        </a>
+                        <a href="{{ route('admin.training.update.for-acceptance') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-patch-check-fill"></i>
+                          <span>For Acceptance</span>
+                          <span class="badge badge-acceptance">0</span>
+                        </a>
+
+                      </div>
+                    </div>
+
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#detailsTrainingHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span>Details</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div class="collapse" id="detailsTrainingHeaderCollapse">
+                      <div class="header-sub-collapse-menu">
+                        <a
+                          href="{{ route('admin.training.details.all-status') }}"
+                          class="header-sub-collapse-item"
+                        >
+                          <i class="bi bi-person-video3"></i>
+                          <span>All Status</span>
+                        </a>
+                        <a
+                          href="{{ route('admin.training.details.approved-accepted') }}"
+                          class="header-sub-collapse-item"
+                        >
+                          <i class="bi bi-person-workspace"></i>
+                          <span>Approved & Accepted</span>
+                        </a>
+                        <a
+                          href="{{ route('admin.training.details.incomplete') }}"
+                          class="header-sub-collapse-item"
+                        >
+                          <i class="bi bi-person-fill-gear"></i>
+                          <span>Incomplete</span>
+                        </a>
+                        <a
+                          href="{{ route('admin.training.details.inactive') }}"
+                          class="header-sub-collapse-item"
+                        >
+                          <i class="bi bi-envelope-exclamation-fill"></i>
+                          <span>Inactive</span>
+                        </a>
+                      </div>
+                    </div>
+                  <div class="training-nav-section-label">Facilitator / Resource Person</div>
+                  <a href="#" class="header-collapse-item" role="button" data-bs-toggle="collapse" data-bs-target="#createFacilitatorRpHeaderCollapse" aria-expanded="false" aria-controls="createFacilitatorRpHeaderCollapse">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Create</span>
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                  </a>
+                  <div class="collapse" id="createFacilitatorRpHeaderCollapse">
+                    <div class="header-sub-collapse-menu">
+                      <a href="{{ route('admin.training.create.rp-register') }}" class="header-sub-collapse-item">
+                        <i class="bi bi-person-fill-add"></i>
+                        <span>Register</span>
+                      </a>
+                    </div>
+                  </div>
+                  <a href="#" class="header-collapse-item" role="button" data-bs-toggle="collapse" data-bs-target="#detailsFacilitatorRpHeaderCollapse" aria-expanded="false" aria-controls="detailsFacilitatorRpHeaderCollapse">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Details</span>
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                  </a>
+                  <div class="collapse" id="detailsFacilitatorRpHeaderCollapse">
+                    <div class="header-sub-collapse-menu">
+                      <a href="{{ route('admin.training.details.rp-list') }}" class="header-sub-collapse-item">
+                        <i class="bi bi-list-ul"></i>
+                        <span>List of RP</span>
+                      </a>
+                      <a href="{{ route('admin.training.details.rp-inactive') }}" class="header-sub-collapse-item">
+                        <i class="bi bi-x-circle-fill"></i>
+                        <span>Inactive</span>
+                      </a>
+                    </div>
+                  </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item">
+                <a
+                  href="#"
+                  class="nav-link"
+                  role="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#evaluationHeaderCollapse"
+                  aria-expanded="false"
+                  aria-controls="evaluationHeaderCollapse"
+                >
+                  <i class="bi bi-file-earmark-check"></i>
+                  <span class="text-icon">Evaluation</span>
+                  <i class="bi bi-chevron-down ms-2"></i>
+                </a>
+                <div
+                  class="collapse header-collapse"
+                  id="evaluationHeaderCollapse"
+                >
+                  <div class="header-collapse-menu">
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#createEvaluationHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-plus-circle"></i>
+                      <span>Create</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div class="collapse" id="createEvaluationHeaderCollapse">
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.evaluation.create.pre-test-register') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-text"></i>
+                          <span>Pre-test Questionaire</span>
+                        </a>
+                        <a href="{{ route('admin.evaluation.create.post-test-register') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-text"></i>
+                          <span>Post-test Questionaire</span>
+                        </a>
+                        <a href="{{ route('admin.evaluation.create.training-evaluation-register') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-text"></i>
+                          <span>Training Evaluation</span>
+                        </a>
+                        <a href="{{ route('admin.evaluation.create.rp-evaluation-register') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-text"></i>
+                          <span>Resource Person Evaluation</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#encodeEvaluationHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-code-slash"></i>
+                      <span>Encode</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div class="collapse" id="encodeEvaluationHeaderCollapse">
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.evaluation.encode.pre-test') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-ruled"></i>
+                          <span>Pre-test Evaluation</span>
+                        </a>
+                        <a href="{{ route('admin.evaluation.encode.post-test') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-ruled"></i>
+                          <span>Post-test Evaluation</span>
+                        </a>
+                        <a href="{{ route('admin.evaluation.encode.training-evaluation') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-ruled"></i>
+                          <span>Training Evaluation</span>
+                        </a>
+                        <a href="{{ route('admin.evaluation.encode.rp-evaluation') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-ruled"></i>
+                          <span>Resource Person Evaluation</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#detailsEvaluationHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span>Details</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div class="collapse" id="detailsEvaluationHeaderCollapse">
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.evaluation.details.list-questionnaire') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-journal-text"></i>
+                          <span>List Questionnaire</span>
+                        </a>
+                        <a href="{{ route('admin.evaluation.details.draft-questionnaire') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-file-earmark-text"></i>
+                          <span>Draft Questionnaires</span>
+                        </a>
+                        <a href="{{ route('admin.evaluation.details.inactive') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-journal-x"></i>
+                          <span>Inactive</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item">
+                <a
+                  href="#"
+                  class="nav-link"
+                  role="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#administrationHeaderCollapse"
+                  aria-expanded="false"
+                  aria-controls="administrationHeaderCollapse"
+                >
+                  <i class="bi bi-sliders"></i>
+                  <span class="text-icon">Administration</span>
+                  <i class="bi bi-chevron-down ms-2"></i>
+                </a>
+                <div
+                  class="collapse header-collapse"
+                  id="administrationHeaderCollapse"
+                >
+                  <div class="header-collapse-menu">
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#createAdministrationHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-plus-circle"></i>
+                      <span>Create</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div
+                      class="collapse"
+                      id="createAdministrationHeaderCollapse"
+                    >
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.administration.create.register') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-person-add"></i>
+                          <span>Register</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#updateAdministrationHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-arrow-repeat"></i>
+                      <span>Update</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div
+                      class="collapse"
+                      id="updateAdministrationHeaderCollapse"
+                    >
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.administration.update.for-approval') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-person-check"></i>
+                          <span>For approval</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    <a
+                      href="#"
+                      class="header-collapse-item"
+                      role="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#detailsAdministrationHeaderCollapse"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span>Details</span>
+                      <i class="bi bi-chevron-down ms-auto"></i>
+                    </a>
+                    <div
+                      class="collapse"
+                      id="detailsAdministrationHeaderCollapse"
+                    >
+                      <div class="header-sub-collapse-menu">
+                        <a href="{{ route('admin.administration.details.all-status') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-person-arms-up"></i>
+                          <span>All status</span>
+                        </a>
+                        <a href="{{ route('admin.administration.details.approved-accepted') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-person-hearts"></i>
+                          <span>Approved & accepted</span>
+                        </a>
+                        <a href="{{ route('admin.administration.details.inactive') }}" class="header-sub-collapse-item">
+                          <i class="bi bi-person-fill-gear"></i>
+                          <span>Inactive</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Notification & User profile -->
+          <div class="app-noti-profile d-flex align-items-center">
+            <!-- Notification menu stays end-aligned so its wide content cannot enlarge the mobile layout. -->
+            <div class="app-notification dropdown">
+              <button
+                class="notification-btn position-relative"
+                type="button"
+                id="notificationDropdown"
+                data-bs-toggle="dropdown"
+                data-bs-auto-close="outside"
+                aria-expanded="false"
+                aria-label="Open notifications"
+              >
+                <i class="bi bi-bell-fill"></i>
+                <span
+                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill notification-count"
+                  >3</span
+                >
+              </button>
+              <!-- Notification Dropdown -->
+              <div
+                class="dropdown-menu dropdown-menu-end notification-menu"
+                aria-labelledby="notificationDropdown"
+              >
+                <div class="notification-menu-header">
+                  <div>
+                    <span class="notification-menu-title">Notifications</span>
+                    <span class="notification-menu-subtitle"
+                      >3 unread updates</span
+                    >
+                  </div>
+                  <div class="notification-menu-actions">
+                    <button type="button" class="notification-mark-read">
+                      Mark all read
+                    </button>
+                    <button type="button" class="notification-clear-all">
+                      Clear all
+                    </button>
+                  </div>
+                </div>
+                <div class="notification-menu-list">
+                  <button
+                    type="button"
+                    class="notification-menu-item is-unread"
+                    data-bs-toggle="modal"
+                    data-bs-target="#notificationDetailModal"
+                    data-notification-type="Approval required"
+                    data-notification-time="Today, 9:20 PM"
+                    data-notification-title="Training proposal review needed"
+                    data-notification-description="The Advanced Data Analysis training proposal submitted by John Doe is ready for your review. Your feedback is required before it can proceed to approval."
+                    data-notification-action="Review proposal"
+                  >
+                    <span
+                      class="notification-item-icon notification-item-icon--approval"
+                      ><i class="bi bi-clipboard2-check"></i
+                    ></span>
+                    <span class="notification-item-copy">
+                      <span class="notification-item-title"
+                        >Training proposal review needed</span
+                      >
+                      <span class="notification-item-summary"
+                        >Advanced Data Analysis needs your feedback.</span
+                      >
+                      <span class="notification-item-time">Today, 9:20 PM</span>
+                    </span>
+                    <span
+                      class="notification-unread-dot"
+                      aria-label="Unread"
+                    ></span>
+                  </button>
+                  <button
+                    type="button"
+                    class="notification-menu-item is-unread"
+                    data-bs-toggle="modal"
+                    data-bs-target="#notificationDetailModal"
+                    data-notification-type="Budget update"
+                    data-notification-time="Today, 2:45 PM"
+                    data-notification-title="District allocation records updated"
+                    data-notification-description="The beneficiary district allocation records have been updated. Open this notification to review the updated district entries."
+                    data-notification-action="View allocation records"
+                  >
+                    <span
+                      class="notification-item-icon notification-item-icon--budget"
+                      ><i class="bi bi-wallet2"></i
+                    ></span>
+                    <span class="notification-item-copy">
+                      <span class="notification-item-title"
+                        >District allocation records updated</span
+                      >
+                      <span class="notification-item-summary"
+                        >Beneficiary district entries are ready to review.</span
+                      >
+                      <span class="notification-item-time">Today, 2:45 PM</span>
+                    </span>
+                    <span
+                      class="notification-unread-dot"
+                      aria-label="Unread"
+                    ></span>
+                  </button>
+                  <button
+                    type="button"
+                    class="notification-menu-item is-unread"
+                    data-bs-toggle="modal"
+                    data-bs-target="#notificationDetailModal"
+                    data-notification-type="Participant update"
+                    data-notification-time="Yesterday, 4:10 PM"
+                    data-notification-title="Participant registration approved"
+                    data-notification-description="A participant registration has been approved and is now included in the beneficiary record for its assigned district."
+                    data-notification-action="View participant"
+                  >
+                    <span
+                      class="notification-item-icon notification-item-icon--participant"
+                      ><i class="bi bi-person-check"></i
+                    ></span>
+                    <span class="notification-item-copy">
+                      <span class="notification-item-title"
+                        >Participant registration approved</span
+                      >
+                      <span class="notification-item-summary"
+                        >A new beneficiary record is now active.</span
+                      >
+                      <span class="notification-item-time"
+                        >Yesterday, 4:10 PM</span
+                      >
+                    </span>
+                    <span
+                      class="notification-unread-dot"
+                      aria-label="Unread"
+                    ></span>
+                  </button>
+                </div>
+                <button type="button" class="notification-view-all">
+                  View all notifications <i class="bi bi-arrow-right"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- User profile and role -->
+            <div class="app-profile dropdown-center">
+              <a
+                href="#"
+                class="nav-link dropdown-toggle profile-button"
+                role="button"
+                data-bs-auto-close="outside"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <!-- User profile -->
+                <span class="user-avatar-wrap">
+                  @include('layouts.account-avatar')
+                  <span class="user-status-dot"></span>
+                </span>
+
+                <!-- User name -->
+                <div class="profile-meta">
+                  <span class="profile-name">{{ $accountDisplay['navigationName'] }}</span>
+                  <small class="profile-role">{{ $accountDisplay['role'] ?? 'Role not assigned' }}</small>
+                </div>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end user-menu">
+                <li>
+                  <h6 class="dropdown-header user-menu-header">{{ $accountDisplay['navigationName'] }}</h6>
+                </li>
+                <li>
+                  <span class="dropdown-item-text">{{ $accountDisplay['role'] ?? 'Role not assigned' }}</span>
+                </li>
+                <li>
+                  <hr class="dropdown-divider" />
+                </li>
+                <li>
+                  <a href="{{ route('admin.users.profile') }}" class="dropdown-item">
+                    <i class="bi bi-person-fill-gear"></i>
+                    <span>Profile</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="{{ route('admin.users.logs') }}" class="dropdown-item">
+                    <i class="bi bi-substack"></i>
+                    <span>Logs</span>
+                  </a>
+                </li>
+                
+                <li>
+                  <hr class="dropdown-divider" />
+                </li>
+                <li>
+                  <a href="{{ route('login') }}" class="dropdown-item sign-out-item">
+                    <i class="bi bi-box-arrow-in-right"></i>
+                    <span>Sign out</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Main Body page  -->
+      <main class="app-main">
+        <!-- Bootstrap container and grid keep dashboard cards fluid on every viewport. -->
+        <div class="app-main-body container-fluid px-3 px-md-4">
+          <!-- first row: navigation header -->
+          <div class="row first-row">
+            <div class="col-12 app-content-header m-0 p-0">
+              <div class="container-fluid p-0">
+                <div class="row g-3 align-items-stretch">
+                  <!-- breadcrumbs navigation -->
+                  <div class="col-12 col-xl-8">
+                    <nav aria-label="breadcrumb">
+                      <ol class="breadcrumb">
+                        <li class="breadcrumb-item">Training</li>
+                        <li class="breadcrumb-item">Details</li>
+                        <li class="breadcrumb-item active" aria-current="page">
+                          Inactive
+                        </li>
+                      </ol>
+                    </nav>
+                    <h4 class="content-header">Inactive Trainings</h4>
+                    <span class="content-info"
+                      >Review training programs that are not currently active or open for enrollment.</span
+                    >
+                  </div>
+                  <!-- Inactive Training Details -->
+                  <div class="col-12 col-xl-4">
+                    <div class="card h-100">
+                      <div class="card-header">
+                        <h6 class="card-title mb-0">About this page</h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="status-info-list">
+                          <div class="status-info-item">
+                            <div class="status-info-badge info-scope">
+                              <i class="bi bi-list-check"></i>
+                            </div>
+                            <div class="status-info-content">
+                              <h6>Training status</h6>
+                              <p>Training programs on this page are not currently active:</p>
+                              <div class="status-legend">
+                                <span class="status-badge status-inactive">Inactive</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="status-info-item">
+                            <div class="status-info-badge info-excluded">
+                              <i class="bi bi-exclamation-circle-fill"></i>
+                            </div>
+                            <div class="status-info-content">
+                              <h6>What this status means</h6>
+                              <p>These training programs are not currently offered or open for enrollment. The inactive reason is listed with each record.</p>
+                            </div>
+                          </div>
+                          <div class="status-info-item">
+                            <div class="status-info-badge info-filter">
+                              <i class="bi bi-funnel-fill"></i>
+                            </div>
+                            <div class="status-info-content">
+                              <h6>Finding trainings</h6>
+                              <p>Review the Inactive Reason column, then filter by training type, year, and location or search the records.</p>
+                            </div>
+                          </div>
+                          <div class="status-info-item">
+                            <div class="status-info-badge info-actions">
+                              <i class="bi bi-eye-fill"></i>
+                            </div>
+                            <div class="status-info-content">
+                              <h6>Row actions</h6>
+                              <p>View and Edit open the training record in a new tab. Export saves the matching training records to Excel.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- INACTIVE TRAINING TABLE -->
+          <div class="row second-row">
+            <div class="col-12 mb-2">
+              <section
+                class="card for-review-table-card"
+                aria-labelledby="forReviewTableTitle"
+              >
+                <header class="card-header for-review-table-header">
+                  <div>
+                    <h5 class="for-review-table-title" id="forReviewTableTitle">
+                      Inactive Trainings
+                    </h5>
+                    <p class="for-review-table-description">
+                      Browse inactive training records and review why each program is not currently active.
+                    </p>
+                  </div>
+                  <div class="table-header-actions">
+                    <button
+                      class="btn table-icon-button"
+                      type="button"
+                      id="columnFilterToggle"
+                      aria-expanded="false"
+                      aria-label="Choose visible columns"
+                      title="Choose columns"
+                    >
+                      <i class="bi bi-layout-three-columns"></i>
+                    </button>
+                    <button
+                      class="btn table-icon-button"
+                      type="button"
+                      id="refreshReviewTable"
+                      aria-label="Refresh training records"
+                    >
+                      <i class="bi bi-arrow-clockwise"></i></button
+                    ><button
+                      class="btn table-icon-button table-export-button"
+                      type="button"
+                      id="exportReviewTable"
+                      aria-label="Export training records"
+                    >
+                      <i class="bi bi-file-earmark-excel-fill"></i>
+                    </button>
+                  </div>
+                </header>
+                <div class="card-body for-review-table-body">
+                  <!-- Column Visibility Filter Panel -->
+                  <div class="column-filter-panel" id="columnFilterPanel" style="display: none;">
+                    <div class="column-filter-header">
+                      <h6><i class="bi bi-funnel-fill me-2"></i>Show/Hide Columns</h6>
+                      <button type="button" class="btn-close btn-close-sm" id="closeColumnFilter" aria-label="Close"></button>
+                    </div>
+                    <div class="column-filter-body">
+                      <div class="row g-2">
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-actions" data-column="actions" checked disabled>
+                            <label class="form-check-label" for="col-actions">Actions</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-status" data-column="status" checked>
+                            <label class="form-check-label" for="col-status">Status</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-id" data-column="id" checked>
+                            <label class="form-check-label" for="col-id">Training ID</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-region" data-column="region" checked>
+                            <label class="form-check-label" for="col-region">Region</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-province" data-column="province" checked>
+                            <label class="form-check-label" for="col-province">Province</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-district" data-column="district" checked>
+                            <label class="form-check-label" for="col-district">District</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-municipality" data-column="municipality" checked>
+                            <label class="form-check-label" for="col-municipality">Municipality</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-barangay" data-column="barangay" checked>
+                            <label class="form-check-label" for="col-barangay">Barangay</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-lastName" data-column="lastName" checked>
+                            <label class="form-check-label" for="col-lastName">Last Name</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-firstName" data-column="firstName" checked>
+                            <label class="form-check-label" for="col-firstName">First Name</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-middleName" data-column="middleName" checked>
+                            <label class="form-check-label" for="col-middleName">Middle Name</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-suffix" data-column="suffix" checked>
+                            <label class="form-check-label" for="col-suffix">Extension</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-birthDate" data-column="birthDate" checked>
+                            <label class="form-check-label" for="col-birthDate">Date of Birth</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-sex" data-column="sex" checked>
+                            <label class="form-check-label" for="col-sex">Sex</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-organization" data-column="organization">
+                            <label class="form-check-label" for="col-organization">Training Type</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-role" data-column="role">
+                            <label class="form-check-label" for="col-role">Implementing Office</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-civilStatus" data-column="civilStatus">
+                            <label class="form-check-label" for="col-civilStatus">Civil Status</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-nationality" data-column="nationality">
+                            <label class="form-check-label" for="col-nationality">Nationality</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-placeOfBirth" data-column="placeOfBirth">
+                            <label class="form-check-label" for="col-placeOfBirth">Place of Birth</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-sitio" data-column="sitio">
+                            <label class="form-check-label" for="col-sitio">Sitio / Purok</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-fourPs" data-column="fourPs">
+                            <label class="form-check-label" for="col-fourPs">4Ps</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-pwd" data-column="pwd">
+                            <label class="form-check-label" for="col-pwd">PWD</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-indigenousGroup" data-column="indigenousGroup">
+                            <label class="form-check-label" for="col-indigenousGroup">Indigenous Group</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-tribeName" data-column="tribeName">
+                            <label class="form-check-label" for="col-tribeName">Tribe Name</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-dietaryRestriction" data-column="dietaryRestriction">
+                            <label class="form-check-label" for="col-dietaryRestriction">Dietary Restriction</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-seniorCitizen" data-column="seniorCitizen">
+                            <label class="form-check-label" for="col-seniorCitizen">Senior Citizen</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-yearCovered" data-column="yearCovered">
+                            <label class="form-check-label" for="col-yearCovered">Year Covered</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input column-toggle" type="checkbox" role="switch" id="col-registered" data-column="registered">
+                            <label class="form-check-label" for="col-registered">Registration Date</label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="column-filter-footer">
+                      <button type="button" class="btn btn-sm btn-outline-secondary" id="showAllColumns">Show all</button>
+                      <button type="button" class="btn btn-sm btn-outline-secondary" id="resetColumns">Reset to default</button>
+                      <button type="button" class="btn btn-sm btn-success" id="applyColumnFilter">Done</button>
+                    </div>
+                  </div>
+
+                  <div class="review-table-summaries">
+                    <div class="review-table-summary">
+                      <i class="bi bi-journal-bookmark-fill summary-icon summary-total"></i><span>Total Trainings</span><strong id="summaryTotalReview">0</strong>
+                    </div>
+                    <div class="review-table-summary">
+                      <i class="bi bi-table summary-icon summary-rows"></i><span>Rows per Page</span><strong id="summaryRowsPerPage">10</strong>
+                    </div>
+                    <div class="review-table-summary">
+                      <i class="bi bi-list-check summary-icon summary-visible"></i><span>Visible Trainings</span><strong id="summaryVisibleRows">0</strong>
+                    </div>
+                  </div>
+                  <div class="review-table-toolbar">
+                    <div class="toolbar-filter">
+                      <label for="yearCoveredFilter">Year Covered</label>
+                      <select id="yearCoveredFilter" class="form-select"><option value="">All years</option></select>
+                    </div>
+                    <div class="toolbar-filter toolbar-filter-wide">
+                      <label for="organizationFilter">Training Type</label>
+                      <select id="organizationFilter" class="form-select"><option value="">All training types</option></select>
+                    </div>
+                    <div class="toolbar-filter">
+                      <label for="regionFilter">Region</label>
+                      <select id="regionFilter" class="form-select"><option value="">All regions</option></select>
+                    </div>
+                    <div class="toolbar-filter">
+                      <label for="provinceFilter">Province</label>
+                      <select id="provinceFilter" class="form-select"><option value="">All provinces</option></select>
+                    </div>
+                    <div class="toolbar-filter">
+                      <label for="districtFilter">District</label>
+                      <select id="districtFilter" class="form-select"><option value="">All districts</option></select>
+                    </div>
+                    <div class="toolbar-filter">
+                      <label for="municipalityFilter">Municipality</label>
+                      <select id="municipalityFilter" class="form-select"><option value="">All municipalities</option></select>
+                    </div>
+                    <div class="toolbar-filter">
+                      <label for="barangayFilter">Barangay</label>
+                      <select id="barangayFilter" class="form-select"><option value="">All barangays</option></select>
+                    </div>
+                    <div class="toolbar-search">
+                      <label for="reviewGlobalSearch">Search trainings</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input id="reviewGlobalSearch" class="form-control" type="search" placeholder="Search training records" />
+                      </div>
+                    </div>
+                    <button class="btn clear-filter-button" type="button" id="clearReviewFilters">
+                      <i class="bi bi-filter-circle me-1"></i>Clear filters
+                    </button>
+                  </div>
+                  <div
+                    class="review-pagination"
+                    id="reviewPaginationTop"
+                    aria-label="Top table pagination"
+                  ></div>
+                  <div
+                    class="table-responsive review-table-scroll"
+                    id="reviewTableScroll"
+                  >
+                    <table
+                      class="table review-data-table align-middle"
+                      id="forReviewDataTable"
+                    >
+                      <caption class="visually-hidden">
+                        Inactive training records and the reasons they are inactive
+                      </caption>
+                      <thead>
+                        <tr>
+                          <th data-column="actions">Actions</th>
+                          <th class="sortable-column" data-sort="status" data-column="status">
+                            Status
+                            <i class="bi bi-arrow-down-up"></i>
+                          </th>
+                          <th class="sortable-column" data-sort="id" data-column="id">
+                            Training ID
+                            <i class="bi bi-arrow-down-up"></i>
+                          </th>
+                          <th class="sortable-column" data-sort="region" data-column="region">
+                            Region <i class="bi bi-arrow-down-up"></i>
+                          </th>
+                          <th class="sortable-column" data-sort="province" data-column="province">
+                            Province <i class="bi bi-arrow-down-up"></i>
+                          </th>
+                          <th data-column="district">District</th>
+                          <th class="sortable-column" data-sort="municipality" data-column="municipality">
+                            Municipality <i class="bi bi-arrow-down-up"></i>
+                          </th>
+                          <th class="sortable-column" data-sort="barangay" data-column="barangay">
+                            Barangay <i class="bi bi-arrow-down-up"></i>
+                          </th>
+                          <th class="sortable-column" data-sort="lastName" data-column="lastName">
+                            Last Name <i class="bi bi-arrow-down-up"></i>
+                          </th>
+                          <th class="sortable-column" data-sort="firstName" data-column="firstName">
+                            First Name <i class="bi bi-arrow-down-up"></i>
+                          </th>
+                          <th class="sortable-column" data-sort="middleName" data-column="middleName">
+                            Middle Name <i class="bi bi-arrow-down-up"></i>
+                          </th>
+                          <th data-column="suffix">Extension</th>
+                          <th class="sortable-column" data-sort="birthDate" data-column="birthDate">
+                            Date of Birth <i class="bi bi-arrow-down-up"></i>
+                          </th>
+                          <th class="sortable-column" data-sort="sex" data-column="sex">
+                            Sex <i class="bi bi-arrow-down-up"></i>
+                          </th>
+                          <th class="sortable-column" data-sort="organization" data-column="organization">
+                            Training Type
+                            <i class="bi bi-arrow-down-up"></i>
+                          </th>
+                          <th class="sortable-column" data-sort="role" data-column="role">
+                            Implementing Office <i class="bi bi-arrow-down-up"></i>
+                          </th>
+                          <th data-column="civilStatus">Civil Status</th>
+                          <th data-column="nationality">Nationality</th>
+                          <th data-column="placeOfBirth">Place of Birth</th>
+                          <th data-column="sitio">Sitio / Purok</th>
+                          <th data-column="fourPs">4Ps</th>
+                          <th data-column="pwd">PWD</th>
+                          <th data-column="indigenousGroup">Indigenous Group</th>
+                          <th data-column="tribeName">Tribe Name</th>
+                          <th data-column="dietaryRestriction">Dietary Restriction</th>
+                          <th data-column="seniorCitizen">Senior Citizen</th>
+                          <th class="sortable-column" data-sort="yearCovered" data-column="yearCovered">
+                            Year Covered <i class="bi bi-arrow-down-up"></i>
+                          </th>
+                          <th class="sortable-column" data-sort="registered" data-column="registered">
+                            Registration Date
+                            <i class="bi bi-arrow-down-up"></i>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody id="forReviewTableBody"></tbody>
+                      <tfoot>
+                        <tr>
+                          <th data-column="actions"></th>
+                          <th data-column="status"><input class="form-control form-control-sm column-filter" data-column="status" type="search" placeholder="Search" /></th>
+                          <th data-column="id"><input class="form-control form-control-sm column-filter" data-column="id" type="search" placeholder="Search" /></th>
+                          <th data-column="region"><input class="form-control form-control-sm column-filter" data-column="region" type="search" placeholder="Search" /></th>
+                          <th data-column="province"><input class="form-control form-control-sm column-filter" data-column="province" type="search" placeholder="Search" /></th>
+                          <th data-column="district"><input class="form-control form-control-sm column-filter" data-column="district" type="search" placeholder="Search" /></th>
+                          <th data-column="municipality"><input class="form-control form-control-sm column-filter" data-column="municipality" type="search" placeholder="Search" /></th>
+                          <th data-column="barangay"><input class="form-control form-control-sm column-filter" data-column="barangay" type="search" placeholder="Search" /></th>
+                          <th data-column="lastName"><input class="form-control form-control-sm column-filter" data-column="lastName" type="search" placeholder="Search" /></th>
+                          <th data-column="firstName"><input class="form-control form-control-sm column-filter" data-column="firstName" type="search" placeholder="Search" /></th>
+                          <th data-column="middleName"><input class="form-control form-control-sm column-filter" data-column="middleName" type="search" placeholder="Search" /></th>
+                          <th data-column="suffix"><input class="form-control form-control-sm column-filter" data-column="suffix" type="search" placeholder="Search" /></th>
+                          <th data-column="birthDate"><input class="form-control form-control-sm column-filter" data-column="birthDate" type="date" /></th>
+                          <th data-column="sex"><input class="form-control form-control-sm column-filter" data-column="sex" type="search" placeholder="Search" /></th>
+                          <th data-column="organization"><input class="form-control form-control-sm column-filter" data-column="organization" type="search" placeholder="Search" /></th>
+                          <th data-column="role"><input class="form-control form-control-sm column-filter" data-column="role" type="search" placeholder="Search" /></th>
+                          <th data-column="civilStatus"><input class="form-control form-control-sm column-filter" data-column="civilStatus" type="search" placeholder="Search" /></th>
+                          <th data-column="nationality"><input class="form-control form-control-sm column-filter" data-column="nationality" type="search" placeholder="Search" /></th>
+                          <th data-column="placeOfBirth"><input class="form-control form-control-sm column-filter" data-column="placeOfBirth" type="search" placeholder="Search" /></th>
+                          <th data-column="sitio"><input class="form-control form-control-sm column-filter" data-column="sitio" type="search" placeholder="Search" /></th>
+                          <th data-column="fourPs"><input class="form-control form-control-sm column-filter" data-column="fourPs" type="search" placeholder="Search" /></th>
+                          <th data-column="pwd"><input class="form-control form-control-sm column-filter" data-column="pwd" type="search" placeholder="Search" /></th>
+                          <th data-column="indigenousGroup"><input class="form-control form-control-sm column-filter" data-column="indigenousGroup" type="search" placeholder="Search" /></th>
+                          <th data-column="tribeName"><input class="form-control form-control-sm column-filter" data-column="tribeName" type="search" placeholder="Search" /></th>
+                          <th data-column="dietaryRestriction"><input class="form-control form-control-sm column-filter" data-column="dietaryRestriction" type="search" placeholder="Search" /></th>
+                          <th data-column="seniorCitizen"><input class="form-control form-control-sm column-filter" data-column="seniorCitizen" type="search" placeholder="Search" /></th>
+                          <th data-column="yearCovered"><input class="form-control form-control-sm column-filter" data-column="yearCovered" type="search" placeholder="Search" /></th>
+                          <th data-column="registered"><input class="form-control form-control-sm column-filter" data-column="registered" type="date" /></th>
+                        </tr>
+                      </tfoot>
+                    </table>
+                    <div
+                      class="review-table-state"
+                      id="reviewTableState"
+                      hidden
+                    ></div>
+                  </div>
+                  <div
+                    class="review-pagination"
+                    id="reviewPaginationBottom"
+                    aria-label="Bottom table pagination"
+                  ></div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Offcanvas side navigation bar in mobile -->
+    <div
+      class="offcanvas offcanvas-start app-mobile-menu"
+      tabindex="-1"
+      id="mobileNavMenu"
+      aria-labelledby="mobileNavMenuLabel"
+    >
+      <!-- header -->
+      <div class="offcanvas-header">
+        <!-- Image logo and title -->
+        <div class="offcanvas-brand">
+          <img
+            src="{{ asset('assets/logo/DA SAAD LOGO FULL - GREEN TEXT.png') }}"
+            alt="DA-logo"
+            class="image-logo"
+          />
+          <div class="title-wrapper">
+            <h5 class="offcanvas-title" id="mobileNavMenuLabel">TMIS</h5>
+            <small>Training Management Information System</small>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="btn offcanvas-close-btn"
+          data-bs-dismiss="offcanvas"
+          aria-label="Close"
+        >
+          <i class="bi bi-x-octagon-fill"></i>
+          <span class="close-btn">Close</span>
+        </button>
+      </div>
+      <!-- Offcanvas body -->
+      <div class="offcanvas-body">
+        <div class="mobile-user-panel">
+          @include('layouts.account-avatar')
+          <div class="mobile-user-name-role">
+            <strong class="user-name">{{ $accountDisplay['navigationName'] }}</strong>
+            <small class="user-role">{{ $accountDisplay['role'] ?? 'Role not assigned' }}</small>
+          </div>
+        </div>
+        <!-- User list navigation bar -->
+        <ul class="mobile-nav">
+          <li class="mobile-list-navigation">
+            <a href="{{ route('admin.dashboard.dashboard') }}" class="nav-link">
+              <i class="bi bi-columns-gap"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li class="mobile-list-navigation">
+            <a
+              href="#"
+              class="nav-link"
+              data-bs-toggle="collapse"
+              data-bs-target="#participantMobile"
+              aria-controls="participantMobile"
+              aria-expanded="false"
+            >
+              <i class="bi bi-people-fill"></i>
+              <span>Participants</span>
+              <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul class="collapse mobile-subnav" id="participantMobile">
+              <li class="mobile-subnav-section-label">Individual</li>
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#createParticipantMobile"
+                  aria-controls="createParticipantMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-plus-circle"></i>
+                  <span>Create</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul
+                  class="collapse mobile-submenu"
+                  id="createParticipantMobile"
+                >
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.participants.create.register') }}" class="nav-link">
+                      <i class="bi bi-person-fill-add"></i>
+                      <span>Register</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#detailsParticipantMobile"
+                  aria-controls="detailsParticipantMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-file-earmark-text"></i>
+                  <span>Details</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul
+                  class="collapse mobile-submenu"
+                  id="detailsParticipantMobile"
+                >
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.participants.details.all-with-status') }}" class="nav-link">
+                      <i class="bi bi-list-check"></i>
+                      <span>List of Farmers</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.participants.details.inactive') }}" class="nav-link">
+                      <i class="bi bi-x-circle-fill"></i>
+                      <span>Inactive</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-subnav-section-label">Farmer Association</li>
+              <li class="mobile-list-navigation">
+                <a href="#" class="nav-link" data-bs-toggle="collapse" data-bs-target="#createFarmerAssociationMobile" aria-controls="createFarmerAssociationMobile" aria-expanded="false">
+                  <i class="bi bi-plus-circle"></i>
+                  <span>Create</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="createFarmerAssociationMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.participants.create.fa-register') }}" class="nav-link">
+                      <i class="bi bi-building-add"></i>
+                      <span>Register</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a href="#" class="nav-link" data-bs-toggle="collapse" data-bs-target="#detailsFarmerAssociationMobile" aria-controls="detailsFarmerAssociationMobile" aria-expanded="false">
+                  <i class="bi bi-file-earmark-text"></i>
+                  <span>Details</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="detailsFarmerAssociationMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.participants.details.fa-all-list') }}" class="nav-link">
+                      <i class="bi bi-list-ul"></i>
+                      <span>List of FA</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.participants.details.fa-inactive') }}" class="nav-link">
+                      <i class="bi bi-x-circle-fill"></i>
+                      <span>Inactive</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li class="mobile-list-navigation">
+            <a
+              href="#"
+              class="nav-link"
+              data-bs-toggle="collapse"
+              data-bs-target="#trainingMobile"
+              aria-controls="trainingMobile"
+              aria-expanded="false"
+            >
+              <i class="bi bi-book-fill"></i>
+              <span>Training</span>
+              <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul class="collapse mobile-subnav" id="trainingMobile">
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#createTrainingMobile"
+                  aria-controls="createTrainingMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-plus-circle"></i>
+                  <span>Create</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="createTrainingMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.create.register') }}" class="nav-link">
+                      <i class="bi bi-pencil-square"></i>
+                      <span>Register</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#updateTrainingMobile"
+                  aria-controls="updateTrainingMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-arrow-repeat"></i>
+                  <span>Update</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="updateTrainingMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.update.for-review') }}" class="nav-link">
+                      <i class="bi bi-person-fill-check"></i>
+                      <span>For review</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.update.for-approval') }}" class="nav-link">
+                      <i class="bi bi-person-fill-check"></i>
+                      <span>For approval</span>
+                    </a>
+                    <a href="{{ route('admin.training.update.for-acceptance') }}" class="nav-link">
+                      <i class="bi bi-patch-check-fill"></i>
+                      <span>For acceptance</span>
+                    </a>
+                  </li>
+
+
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#detailsTrainingMobile"
+                  aria-controls="detailsTrainingMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-file-earmark-text"></i>
+                  <span>Details</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="detailsTrainingMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.details.all-status') }}" class="nav-link">
+                      <i class="bi bi-list-check"></i>
+                      <span>All status</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.details.approved-accepted') }}" class="nav-link">
+                      <i class="bi bi-check-circle-fill"></i>
+                      <span>Approved & accepted</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.details.incomplete') }}" class="nav-link">
+                      <i class="bi bi-exclamation-circle-fill"></i>
+                      <span>Incomplete</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.details.inactive') }}" class="nav-link">
+                      <i class="bi bi-x-circle-fill"></i>
+                      <span>Inactive</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-subnav-section-label">Facilitator / Resource Person</li>
+              <li class="mobile-list-navigation">
+                <a href="#" class="nav-link" data-bs-toggle="collapse" data-bs-target="#createFacilitatorRpMobile" aria-controls="createFacilitatorRpMobile" aria-expanded="false">
+                  <i class="bi bi-plus-circle"></i>
+                  <span>Create</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="createFacilitatorRpMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.create.rp-register') }}" class="nav-link">
+                      <i class="bi bi-person-fill-add"></i>
+                      <span>Register</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a href="#" class="nav-link" data-bs-toggle="collapse" data-bs-target="#detailsFacilitatorRpMobile" aria-controls="detailsFacilitatorRpMobile" aria-expanded="false">
+                  <i class="bi bi-file-earmark-text"></i>
+                  <span>Details</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="detailsFacilitatorRpMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.details.rp-list') }}" class="nav-link">
+                      <i class="bi bi-list-ul"></i>
+                      <span>List of RP</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.training.details.rp-inactive') }}" class="nav-link">
+                      <i class="bi bi-x-circle-fill"></i>
+                      <span>Inactive</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li class="mobile-list-navigation">
+            <a
+              href="#"
+              class="nav-link"
+              data-bs-toggle="collapse"
+              data-bs-target="#evaluationMobile"
+              aria-controls="evaluationMobile"
+              aria-expanded="false"
+            >
+              <i class="bi bi-file-earmark-check"></i>
+              <span>Evaluation</span>
+              <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul class="collapse mobile-subnav" id="evaluationMobile">
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#createEvaluationMobile"
+                  aria-controls="createEvaluationMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-plus-circle"></i>
+                  <span>Create</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="createEvaluationMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.create.pre-test-register') }}" class="nav-link">
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span>Pre-test Questionaire</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.create.post-test-register') }}" class="nav-link">
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span>Post-test Questionaire</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.create.training-evaluation-register') }}" class="nav-link">
+                      <i class="bi bi-file-earmark-check"></i>
+                      <span>Training Evaluation</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.create.rp-evaluation-register') }}" class="nav-link">
+                      <i class="bi bi-star-fill"></i>
+                      <span>Resource Person Evaluation</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#encodeEvaluationMobile"
+                  aria-controls="encodeEvaluationMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-pencil-square"></i>
+                  <span>Encode</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse mobile-submenu" id="encodeEvaluationMobile">
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.encode.pre-test') }}" class="nav-link">
+                      <i class="bi bi-pencil-square"></i>
+                      <span>Pre-test Evaluation</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.encode.post-test') }}" class="nav-link">
+                      <i class="bi bi-pencil-square"></i>
+                      <span>Post-test Evaluation</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.encode.training-evaluation') }}" class="nav-link">
+                      <i class="bi bi-pencil-square"></i>
+                      <span>Training Evaluation</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.encode.rp-evaluation') }}" class="nav-link">
+                      <i class="bi bi-pencil-square"></i>
+                      <span>Resource Person Evaluation</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#detailsEvaluationMobile"
+                  aria-controls="detailsEvaluationMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-file-earmark-text"></i>
+                  <span>Details</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul
+                  class="collapse mobile-submenu"
+                  id="detailsEvaluationMobile"
+                >
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.details.list-questionnaire') }}" class="nav-link">
+                      <i class="bi bi-list-check"></i>
+                      <span>List Questionnaire</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.details.draft-questionnaire') }}" class="nav-link">
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span>Draft Questionnaires</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.evaluation.details.inactive') }}" class="nav-link">
+                      <i class="bi bi-x-circle-fill"></i>
+                      <span>Inactive</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li class="mobile-list-navigation">
+            <a
+              href="#"
+              class="nav-link"
+              data-bs-toggle="collapse"
+              data-bs-target="#administrationMobile"
+              aria-controls="administrationMobile"
+              aria-expanded="false"
+            >
+              <i class="bi bi-sliders"></i>
+              <span>Administration</span>
+              <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul class="collapse mobile-subnav" id="administrationMobile">
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#createAdministrationMobile"
+                  aria-controls="createAdministrationMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-plus-circle"></i>
+                  <span>Create</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul
+                  class="collapse mobile-submenu"
+                  id="createAdministrationMobile"
+                >
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.administration.create.register') }}" class="nav-link">
+                      <i class="bi bi-pencil-square"></i>
+                      <span>Register</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#updateAdministrationMobile"
+                  aria-controls="updateAdministrationMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-arrow-repeat"></i>
+                  <span>Update</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul
+                  class="collapse mobile-submenu"
+                  id="updateAdministrationMobile"
+                >
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.administration.update.for-approval') }}" class="nav-link">
+                      <i class="bi bi-person-fill-check"></i>
+                      <span>For approval</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="mobile-list-navigation">
+                <a
+                  href="#"
+                  class="nav-link"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#detailsAdministrationMobile"
+                  aria-controls="detailsAdministrationMobile"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-file-earmark-text"></i>
+                  <span>Details</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul
+                  class="collapse mobile-submenu"
+                  id="detailsAdministrationMobile"
+                >
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.administration.details.all-status') }}" class="nav-link">
+                      <i class="bi bi-list-check"></i>
+                      <span>All status</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.administration.details.approved-accepted') }}" class="nav-link">
+                      <i class="bi bi-check-circle-fill"></i>
+                      <span>Approved & accepted</span>
+                    </a>
+                  </li>
+                  <li class="mobile-subnav-panel-navigation">
+                    <a href="{{ route('admin.administration.details.inactive') }}" class="nav-link">
+                      <i class="bi bi-x-circle-fill"></i>
+                      <span>Inactive</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li class="mobile-list-navigation">
+            <a href="{{ route('admin.users.profile') }}" class="nav-link">
+              <i class="bi bi-person-circle"></i>
+              <span>Profile</span>
+            </a>
+          </li>
+          <li class="mobile-list-navigation">
+            <a href="{{ route('admin.users.logs') }}" class="nav-link">
+              <i class="bi bi-journal-text"></i>
+              <span>Logs</span>
+            </a>
+          </li>
+          
+          <li class="mobile-list-navigation">
+            <a href="{{ route('login') }}" class="nav-link sign-out-item">
+              <i class="bi bi-box-arrow-right"></i>
+              <span>Sign Out</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Notification detail modal -->
+    <div
+      class="modal fade"
+      id="notificationDetailModal"
+      aria-labelledby="notificationDetailModalLabel"
+      aria-hidden="true"
+    >
+      <div
+        class="modal-dialog modal-dialog-centered modal-dialog-scrollable notification-detail-dialog"
+      >
+        <div class="modal-content notification-detail-modal">
+          <div class="modal-header notification-detail-header">
+            <span class="notification-detail-icon"
+              ><i class="bi bi-bell-fill"></i
+            ></span>
+            <button
+              type="button"
+              class="btn btn-modal"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            >
+              <i class="bi bi-x-octagon"></i>
+            </button>
+          </div>
+          <div class="modal-body notification-detail-body">
+            <div class="notification-detail-meta">
+              <span id="notificationDetailType">Approval required</span>
+              <time id="notificationDetailTime">Today, 9:20 PM</time>
+            </div>
+            <h5 id="notificationDetailModalLabel">
+              Training proposal review needed
+            </h5>
+            <p id="notificationDetailDescription"></p>
+          </div>
+          <div class="modal-footer notification-detail-footer">
+            <button
+              type="button"
+              class="btn notification-detail-dismiss"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              class="btn notification-detail-action"
+              id="notificationDetailAction"
+            >
+              Review proposal
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal toast notification -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+      <div
+        id="reviewToast"
+        class="toast review-toast"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-bs-delay="11000"
+      >
+        <div class="toast-header">
+          <i id="reviewToastIcon" class="bi bi-check-circle-fill me-2"></i
+          ><strong id="reviewToastTitle" class="me-2"
+            >Inactive Trainings Refreshed</strong
+          ><small id="reviewToastTime" class="text-body-secondary me-auto"
+            >Now</small
+          ><button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="toast"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div id="reviewToastMessage" class="toast-body">
+          Inactive training records loaded.
+        </div>
+        <div class="toast-body pt-0">
+          <button type="button" class="btn btn-sm btn-outline-primary" id="undoDeleteButton" hidden>
+            Undo (10s)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete training confirmation -->
+    <div
+      class="modal fade"
+      id="deleteConfirmModal"
+      tabindex="-1"
+      aria-labelledby="deleteConfirmModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="deleteConfirmModalLabel">
+              <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Delete Training
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>The training will be deleted after a 10-second undo period.</p>
+            <dl class="delete-training-details">
+              <dt>Training ID</dt><dd id="deleteTrainingId"></dd>
+              <dt>Training Title</dt><dd id="deleteTrainingTitle"></dd>
+              <dt>Training Type</dt><dd id="deleteTrainingType"></dd>
+              <dt>Inactive Reason</dt><dd id="deleteTrainingReason"></dd>
+              <dt>Status</dt><dd><span id="deleteTrainingStatus" class="status-badge"></span></dd>
+            </dl>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirmDeleteButton">
+              <i class="bi bi-trash-fill me-1"></i>Delete Training
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+      crossorigin="anonymous"
+    ></script>
+
+    <!-- AdminLTE 4 Template -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/browser/overlayscrollbars.browser.es6.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.8.4/dist/js/adminlte.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- nav -->
+    <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
+    <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
+    <script src="{{ asset('src/js/training/details/inactive.js?v=training-id-path-1') }}"></script>
+@endsection

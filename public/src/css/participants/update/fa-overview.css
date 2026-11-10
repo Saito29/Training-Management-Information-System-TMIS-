@@ -1,0 +1,371 @@
+/* Association overview and its wide member list. */
+#fa-overview,
+#fa-training,
+#fa-document,
+#fa-intervention,
+#fa-activity {
+  min-width: 0;
+}
+
+#fa-overview .farmer-detail-grid {
+  grid-template-rows: auto;
+}
+
+#fa-training .training-data-panel-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.fa-members-card .overview-card-body {
+  padding: 18px;
+}
+
+.app-main .app-main-body .fa-members-card {
+  width: 100%;
+  min-width: 0;
+}
+
+.fa-sample-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #d9e9dd;
+  border-radius: 9px;
+  color: #386b46;
+  background: #f3faf5;
+  font-size: 12px;
+}
+
+.fa-sample-notice[hidden] {
+  display: none;
+}
+
+.fa-member-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.fa-member-search {
+  flex: 1 1 300px;
+  max-width: 440px;
+}
+
+.fa-member-search .form-label {
+  margin-bottom: 5px;
+  color: #526474;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.fa-member-search .input-group-text {
+  color: #2e7d32;
+  background: #f2f8f3;
+}
+
+.fa-member-search .form-control,
+.fa-member-search .input-group-text,
+.fa-member-actions .btn {
+  min-height: 38px;
+  border-color: #dbe4de;
+  font-size: 12px;
+}
+
+.fa-member-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.fa-member-actions .btn {
+  white-space: nowrap;
+}
+
+.fa-column-chooser {
+  position: relative;
+}
+
+.fa-column-chooser summary {
+  display: inline-flex;
+  align-items: center;
+  list-style: none;
+  cursor: pointer;
+}
+
+.fa-column-chooser summary::-webkit-details-marker {
+  display: none;
+}
+
+.fa-column-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(145px, 1fr));
+  gap: 3px 10px;
+  width: min(390px, calc(100vw - 40px));
+  max-height: 320px;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #dbe4de;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(38, 50, 56, 0.16);
+}
+
+.fa-column-option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 4px;
+  color: #34434c;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.fa-column-option input {
+  accent-color: #2e7d32;
+}
+
+.fa-member-table-frame {
+  border: 1px solid #e4e9e6;
+  border-radius: 9px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+#fa-document .attachment-list { min-width: 0; }
+#fa-document .fa-document-remarks { margin: 0; color: var(--color-text-secondary); font-size: 11px; overflow-wrap: anywhere; }
+#fa-document .attachment-card-actions { flex-wrap: wrap; }
+#fa-document .attachment-card-actions .btn { flex: 1 1 auto; }
+#attachmentViewerModal .attachment-viewer-actions [hidden] { display: none; }
+
+.fa-member-table-frame:focus-visible {
+  outline: 2px solid #2e7d32;
+  outline-offset: 2px;
+}
+
+.fa-member-table {
+  min-width: 1220px;
+  font-size: 12px;
+}
+
+.fa-member-table th {
+  padding: 11px 12px;
+  color: #526474;
+  background: #f6f8f7;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.fa-member-filters th {
+  padding: 7px 8px 10px;
+  background: #fbfcfb;
+}
+
+.fa-member-filters input {
+  min-width: 78px;
+  padding: 5px 7px;
+  border-color: #dce5df;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.fa-member-filters input:focus {
+  border-color: #5b9d69;
+  box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.12);
+}
+
+.fa-member-table td {
+  padding: 11px 12px;
+  color: #34434c;
+  white-space: nowrap;
+}
+
+.fa-member-table [hidden] {
+  display: none;
+}
+
+.fa-member-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.fa-member-table .fa-member-id {
+  color: #276737;
+  font-weight: 650;
+}
+
+.fa-member-status {
+  font-weight: 650;
+}
+
+.fa-member-status.is-active {
+  color: #26733b;
+}
+
+.fa-member-status.is-inactive {
+  color: #8b6b30;
+}
+
+.fa-member-result-count {
+  margin: 0;
+  color: #697985;
+  font-size: 12px;
+}
+
+.fa-member-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 2px 0;
+}
+
+.fa-member-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #526474;
+  font-size: 12px;
+}
+
+.fa-member-page-controls .form-select {
+  width: 78px;
+  border-color: #dbe4de;
+}
+
+.fa-member-page-controls .btn {
+  min-width: 32px;
+  border-color: #dbe4de;
+}
+
+.fa-member-page-controls .btn:disabled {
+  opacity: 0.45;
+}
+
+@media (max-width: 640px) {
+  .fa-member-search,
+  .fa-member-actions {
+    width: 100%;
+    max-width: none;
+  }
+
+  .fa-member-actions .btn {
+    flex: 1 1 0;
+  }
+
+  .fa-column-chooser {
+    flex: 1 1 0;
+  }
+
+  .fa-column-chooser summary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .fa-members-card .overview-card-body {
+    padding: 14px;
+  }
+
+  .fa-member-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* Keep the association overview readable on the shared dark theme. */
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .overview-heading .title-card,
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .farmer-detail strong {
+  color: var(--color-text-primary);
+}
+
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .farmer-detail-label,
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .fa-member-search .form-label,
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .fa-member-result-count,
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .fa-member-page-controls {
+  color: var(--color-text-secondary);
+}
+
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .overview-status {
+  color: #b9e8c0;
+  background-color: #21442a;
+}
+
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .fa-sample-notice {
+  color: #c7e9ce;
+  background-color: #1d3323;
+  border-color: #3a6745;
+}
+
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .fa-column-menu {
+  color: var(--color-text-primary);
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .fa-column-option {
+  color: var(--color-text-primary);
+}
+
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .fa-column-option:hover {
+  background-color: var(--color-primary-surface);
+}
+
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .fa-member-table thead th {
+  color: var(--color-text-primary);
+  background-color: #213027;
+  border-color: var(--color-border);
+}
+
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .fa-member-table .fa-member-filters th {
+  background-color: #1c2820;
+}
+
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .fa-member-table tbody td {
+  color: var(--color-text-primary);
+}
+
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .fa-member-table tbody td.fa-member-id,
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .fa-member-table tbody td.fa-member-status.is-active {
+  color: #a7dfb1;
+}
+
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .fa-member-table tbody td.fa-member-status.is-inactive {
+  color: #f0c879;
+}
+
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) :is(
+  .fa-member-search .form-control,
+  .fa-member-search .input-group-text,
+  .fa-member-filters .form-control,
+  .fa-member-page-controls .form-select
+) {
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  border-color: var(--color-border);
+}
+
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) :is(
+  .fa-member-search .form-control,
+  .fa-member-filters .form-control
+)::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .fa-member-actions .btn-outline-success {
+  color: #a7dfb1;
+  background-color: var(--color-surface);
+  border-color: #4c8a58;
+}
+
+[data-theme='dark'] .app-main .app-main-body :is(#fa-overview, #fa-members) .fa-member-actions .btn-outline-success:hover {
+  color: #0f1410;
+  background-color: #a7dfb1;
+}

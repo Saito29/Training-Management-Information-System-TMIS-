@@ -1,0 +1,367 @@
+erDiagram
+    region ||--o{ organization : contains
+    region ||--o{ users : assigned
+    organization ||--o{ users : employs
+    user_roles ||--o{ users : assigns
+    user_roles ||--o{ role_permissions : grants
+    users ||--o{ user_device_sessions : tracks
+    users ||--o| user_auth : authenticates
+    users ||--o| user_verify : challenges
+    users ||--o| user_data_scopes : filters
+    users ||--o{ users_log : subject_or_actor
+    region ||--o{ associations : owns
+    organization ||--o{ associations : owns
+    region ||--o{ participants : owns
+    organization ||--o{ participants : owns
+    associations o|--o{ participants : membership
+    region ||--o{ resource_persons : owns
+    organization ||--o{ resource_persons : owns
+    region ||--o{ trainings : owns
+    organization ||--o{ trainings : owns
+    region ||--o{ questionnaires : owns
+    organization ||--o{ questionnaires : owns
+    users ||--o{ associations : creates
+    users ||--o{ participants : creates
+    users ||--o{ resource_persons : creates
+    users ||--o{ trainings : creates
+    users ||--o{ questionnaires : creates
+    trainings ||--o{ training_attachments : has
+    users ||--o{ training_attachments : uploads
+    trainings ||--o{ training_participant : enrolls
+    participants ||--o{ training_participant : attends
+    trainings ||--o{ training_resource_person : assigns
+    resource_persons ||--o{ training_resource_person : teaches
+    trainings ||--o{ evaluation_responses : receives
+    questionnaires ||--o{ evaluation_responses : defines
+    participants ||--o{ evaluation_responses : answers
+    users ||--o{ evaluation_responses : encodes
+    trainings ||--o{ training_status_changes : changes
+    users ||--o{ training_status_changes : authorizes
+    training_status_changes ||--o{ training_notifications : notifies
+    users ||--o{ training_notifications : receives
+    users ||--o{ trainings_log : acts
+    users ||--o{ farmers_log : acts
+    region {
+        bigint region_id PK
+        varchar name
+        smallint is_active
+    }
+    organization {
+        bigint org_id PK
+        bigint region_id FK
+        varchar name
+        smallint is_active
+    }
+    user_roles {
+        bigint role_id PK
+        varchar name
+        varchar details
+        smallint is_active
+    }
+    role_permissions {
+        bigint role_id PK,FK
+        varchar permission PK
+    }
+    users {
+        bigint user_id PK
+        varchar email UK
+        varchar first_name
+        varchar last_name
+        bigint role_id FK
+        bigint region_id FK
+        bigint org_id FK
+        varchar status
+        smallint active_status
+        timestamp deleted_at
+    }
+    user_auth {
+        bigint id PK
+        bigint user_id FK,UK
+        varchar password_hash
+        text totp_secret
+        text totp_pending_secret
+        timestamp totp_pending_until
+        bigint totp_last_counter
+        text totp_recovery_codes
+        int session_generation
+        varchar code_hash
+        timestamp expires_at
+    }
+    user_verify {
+        bigint id PK
+        bigint user_id FK,UK
+        varchar code_hash
+        varchar session_binding_hash
+        timestamp expires_at
+    }
+    user_data_scopes {
+        bigint user_id PK,FK
+        json region_ids
+        json office_ids
+    }
+    system_settings {
+        integer id PK
+        boolean maintenance_enabled
+        varchar maintenance_message
+        timestamp maintenance_until
+    }
+    associations {
+        varchar ui_id "Unique with region and office"
+        text ui_data "Encrypted supplementary fields"
+        integer ui_version
+        bigint id PK
+        bigint region_id FK
+        bigint org_id FK
+        bigint created_by FK
+        varchar name
+        varchar organization_type
+        date registration_date
+        boolean is_active
+        timestamp deleted_at
+    }
+    participants {
+        varchar ui_id "Unique with region and office"
+        text ui_data "Encrypted supplementary fields"
+        integer ui_version
+        bigint id PK
+        bigint region_id FK
+        bigint org_id FK
+        bigint association_id FK
+        bigint created_by FK
+        varchar name
+        date date_of_birth
+        text protected_details
+        boolean is_active
+        timestamp deleted_at
+    }
+    resource_persons {
+        varchar ui_id "Unique with region and office"
+        text ui_data "Encrypted supplementary fields"
+        integer ui_version
+        bigint id PK
+        bigint region_id FK
+        bigint org_id FK
+        bigint created_by FK
+        varchar name
+        varchar expertise
+        varchar qualification
+        boolean is_active
+        timestamp deleted_at
+    }
+    trainings {
+        varchar ui_id "Unique with region and office"
+        text ui_data "Encrypted supplementary fields"
+        integer ui_version
+        bigint id PK
+        bigint region_id FK
+        bigint org_id FK
+        bigint created_by FK
+        varchar name
+        date start_date
+        date end_date
+        varchar venue
+        decimal budget
+        varchar status
+        integer version
+        boolean is_active
+        timestamp deleted_at
+    }
+    questionnaires {
+        varchar ui_id "Unique with region and office"
+        text ui_data "Encrypted supplementary fields"
+        integer ui_version
+        bigint id PK
+        bigint region_id FK
+        bigint org_id FK
+        bigint created_by FK
+        varchar name
+        varchar kind
+        json questions
+        boolean is_active
+        timestamp deleted_at
+    }
+    training_attachments {
+        bigint id PK
+        bigint training_id FK
+        bigint uploaded_by FK
+        varchar kind
+        varchar path
+        varchar original_name
+        varchar mime_type
+        bigint size
+    }
+    training_participant {
+        bigint training_id PK,FK
+        bigint participant_id PK,FK
+    }
+    training_resource_person {
+        bigint training_id PK,FK
+        bigint resource_person_id PK,FK
+    }
+    evaluation_responses {
+        bigint id PK
+        bigint training_id FK
+        bigint questionnaire_id FK
+        bigint participant_id FK
+        bigint encoded_by FK
+        json answers
+    }
+    training_status_changes {
+        bigint id PK
+        bigint training_id FK
+        bigint actor_user_id FK
+        varchar from_status
+        varchar to_status
+        text reason
+        timestamp created_at
+    }
+    training_notifications {
+        bigint id PK
+        bigint status_change_id FK
+        bigint user_id FK
+        varchar email
+        integer attempts
+        timestamp retry_at
+        timestamp sent_at
+        timestamp read_at
+        timestamp cancelled_at
+    }
+    users_log {
+        bigint id PK
+        bigint user_id FK
+        bigint actor_user_id FK
+        varchar event
+        jsonb old_values
+        jsonb new_values
+        jsonb metadata
+        uuid request_id
+    }
+    trainings_log {
+        bigint id PK
+        varchar training_id
+        bigint actor_user_id FK
+        varchar event
+        jsonb old_values
+        jsonb new_values
+        uuid request_id
+    }
+    farmers_log {
+        bigint id PK
+        varchar farmer_id
+        bigint actor_user_id FK
+        varchar event
+        jsonb metadata
+        uuid request_id
+    }
+    password_reset_tokens {
+        varchar email PK
+        varchar token
+        timestamp created_at
+    }
+    migrations {
+        integer id PK
+        varchar migration
+        integer batch
+    }
+
+    trainings ||--o{ training_questionnaire : uses
+    questionnaires ||--o{ training_questionnaire : assigned
+    trainings o|--o{ assessment_results : contextualizes
+    questionnaires ||--o{ assessment_results : defines
+    participants o|--o{ assessment_results : answers
+    resource_persons o|--o{ assessment_results : evaluated
+    region ||--o{ assessment_results : scopes
+    organization ||--o{ assessment_results : owns
+    users ||--o{ assessment_results : encodes
+    associations ||--o{ association_attachments : documents
+    participants ||--o{ participant_attachments : documents
+    users ||--o{ association_attachments : uploads
+    users ||--o{ participant_attachments : uploads
+    trainings ||--o{ training_highlights : illustrates
+    users ||--o{ user_notifications : receives_or_creates
+    users ||--o{ user_interface_drafts : owns
+    assessment_results {
+        bigint id PK
+        varchar ui_id UK
+        bigint questionnaire_id FK
+        bigint participant_id FK
+        bigint resource_person_id FK
+        bigint training_id FK
+        bigint region_id FK
+        bigint org_id FK
+        bigint encoded_by FK
+        date assessed_on
+        integer score
+        varchar state
+        json ratings
+        text comments
+        text ui_data "Encrypted"
+        integer ui_version
+        timestamp deleted_at
+    }
+    training_questionnaire {
+        bigint training_id PK,FK
+        bigint questionnaire_id PK,FK
+    }
+    user_notifications {
+        bigint id PK
+        varchar ui_id UK
+        varchar batch_id
+        bigint recipient_id FK
+        bigint creator_id FK
+        varchar title
+        text message
+        varchar related_page
+        timestamp read_at
+        timestamp archived_at
+    }
+    user_interface_drafts {
+        bigint user_id PK,FK
+        varchar draft_key PK
+        text payload "Encrypted"
+        timestamp updated_at
+    }
+    association_attachments {
+        bigint id PK
+        bigint association_id FK
+        bigint uploaded_by FK
+        varchar kind
+        integer year
+        text remarks
+        varchar path
+        varchar original_name
+        varchar mime_type
+        bigint size
+    }
+    participant_attachments {
+        bigint id PK
+        bigint participant_id FK
+        bigint uploaded_by FK
+        varchar kind
+        integer year
+        text remarks
+        varchar path
+        varchar original_name
+        varchar mime_type
+        bigint size
+    }
+    training_highlights {
+        bigint id PK
+        bigint training_id FK
+        integer slide
+        json content
+        varchar image_path
+        varchar logo_path
+        timestamp updated_at
+    }
+
+    user_device_sessions {
+        uuid id PK
+        bigint user_id FK
+        char session_hash UK
+        string ip_address
+        text user_agent
+        timestamp created_at
+        timestamp last_activity_at
+        timestamp revoked_at
+    }

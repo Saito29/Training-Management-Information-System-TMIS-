@@ -1,0 +1,7 @@
+body { background: #f5f7f4; color: #26382c; }
+.card { border: 1px solid #e0e8df; border-radius: 14px; overflow: hidden; }
+.card-header, .card-footer { padding: 1rem 1.25rem; }
+.card-body { padding: 1.25rem; }
+.section-heading { border-bottom: 1px solid #e0e8df; padding-bottom: .55rem; margin-bottom: 1rem; }
+.detail-label { color: #647568; font-size: .82rem; margin-bottom: .2rem; }
+.detail-value { margin-bottom: 0; overflow-wrap: anywhere; }

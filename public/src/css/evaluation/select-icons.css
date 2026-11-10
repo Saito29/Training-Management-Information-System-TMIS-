@@ -1,0 +1,20 @@
+/* Consistent dropdown arrow for evaluation forms and table controls. */
+.app-main .app-main-body select.form-select,
+.app-main .app-main-body .encode-page select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='10' viewBox='0 0 14 10'%3E%3Cpath d='m2 2 5 5 5-5' fill='none' stroke='%23607080' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  background-size: 12px 9px;
+}
+
+[data-theme='dark'] .app-main .app-main-body select.form-select,
+[data-theme='dark'] .app-main .app-main-body .encode-page select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='10' viewBox='0 0 14 10'%3E%3Cpath d='m2 2 5 5 5-5' fill='none' stroke='%23b8c2ba' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.app-main .app-main-body .encode-page .table-page-controls select {
+  min-width: 88px;
+}

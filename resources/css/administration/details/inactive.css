@@ -1,0 +1,181 @@
+.account-approvals { padding-block: 1.5rem 2.5rem; color: var(--color-text-primary); }
+.account-approvals h1 { font-size: clamp(1.25rem, 2vw, 1.5rem); font-weight: 750; }
+.account-approvals h2, #accountReviewTitle, #accountDeleteTitle { font-size: .9375rem; font-weight: 700; margin-bottom: .5rem; }
+.account-approvals p, #approvalCount { color: var(--color-text-secondary); font-size: .8125rem; line-height: 1.6; }
+.account-approvals .card, #accountReviewModal .modal-content, #accountDeleteModal .modal-content { color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: .85rem; }
+.account-approvals .card-header { padding: 1rem 1.25rem; background: transparent; border-bottom: 1px solid var(--color-border); }
+.approval-tools { display: flex; align-items: end; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem; }
+.approval-tools label { flex: 1 1 14rem; font-size: .82rem; font-weight: 600; }
+.approval-tools input, .approval-tools select { margin-top: .4rem; }
+.account-table { min-width: 2400px; --bs-table-bg: var(--color-surface); --bs-table-color: var(--color-text-primary); --bs-table-border-color: var(--color-border); }
+.account-table th { white-space: nowrap; font-size: .75rem; padding: .65rem .75rem; }
+.account-table td { padding: .65rem .75rem; font-size: .8125rem; max-width: 20rem; overflow-wrap: anywhere; }
+.account-table th input { min-width: 8rem; font-size: .77rem; }
+.account-actions { display: flex; gap: .5rem; }
+.account-action { display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; }
+.account-status { display: inline-block; padding: .3rem .65rem; border-radius: 2rem; font-size: .76rem; white-space: nowrap; }
+.account-status.pending { color: #795000; background: #fff1cd; }
+.account-status.rejected { color: #9d2828; background: #ffe5e5; }
+.approval-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; font-size: .83rem; }
+.approval-pagination label { display: flex; align-items: center; gap: .5rem; }
+.approval-pagination select { width: auto; }
+.account-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.account-details dt { font-size: .75rem; color: var(--color-text-secondary); }
+.account-details dd { margin: .2rem 0 0; font-size: .8125rem; overflow-wrap: anywhere; }
+.approval-undo { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); z-index: 1080; display: flex; align-items: center; gap: 1rem; width: max-content; max-width: calc(100% - 2rem); padding: 1rem; background: #27352d; color: #fff; border-radius: .75rem; box-shadow: 0 .5rem 2rem #0003; }
+.account-approvals [hidden], #accountReviewModal [hidden] { display: none !important; }
+[data-theme='dark'] .account-status.pending { color: #ffda8a; background: #48391d; }
+[data-theme='dark'] .account-status.rejected { color: #ffb9b9; background: #4b2727; }
+@media (max-width: 575.98px) { .account-details { grid-template-columns: 1fr; } .approval-undo { font-size: .8rem; } }
+
+/* Consistent type hierarchy and controls for the account approval workspace. */
+.account-approvals { font-family: 'Inter', sans-serif; font-size: .8125rem; line-height: 1.5; }
+.account-approvals h1 { font-size: clamp(1.25rem, 2vw, 1.5rem); line-height: 1.25; letter-spacing: -.025em; }
+.account-approvals h2 { font-size: .9375rem; line-height: 1.4; letter-spacing: -.01em; }
+.account-approvals .breadcrumb { font-size: .75rem; }
+.account-approvals p, #approvalCount { font-size: .8125rem; }
+.account-approvals .btn, .account-approvals .form-control, .account-approvals .form-select { font-size: .8125rem; line-height: 1.5; }
+.account-approvals .approval-table-heading { display: flex; flex-wrap: nowrap; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.account-approvals .approval-table-heading > div { flex: 1; min-width: 0; }
+.account-approvals #refreshApprovals { flex: 0 0 auto; margin-left: auto; white-space: nowrap; }
+.account-table th { font-size: .75rem; font-weight: 650; }
+.account-table td { font-size: .8125rem; line-height: 1.5; }
+.account-table th input.form-control { font-size: .75rem; }
+.account-status { font-size: .75rem; font-weight: 600; }
+.account-approvals .account-action { font-size: 1rem; }
+.account-approvals .approval-pagination { margin-block: 1rem; font-size: .8125rem; gap: .75rem 1rem; }
+.approval-page-buttons { display: flex; gap: .5rem; }
+.approval-pagination > span { font-variant-numeric: tabular-nums; color: var(--color-text-secondary); }
+@media (max-width: 575.98px) {
+  .approval-pagination > label { flex: 1 1 100%; }
+  .approval-pagination .approval-page-buttons { margin-left: auto; }
+}
+
+/* Account dialogs: identity first, grouped details, and a distinct action area. */
+.account-modal { font-family: 'Inter', sans-serif; }
+.account-modal .modal-dialog { --bs-modal-width: 760px; }
+.account-delete-modal .modal-dialog { --bs-modal-width: 520px; }
+#accountReviewModal .modal-content, #accountDeleteModal .modal-content { border-radius: 1.25rem; box-shadow: 0 1.5rem 5rem #0003; overflow: hidden; }
+.account-modal .modal-header { padding: 1.4rem 1.5rem; border-bottom: 1px solid var(--color-border); align-items: flex-start; gap: 1rem; }
+.account-modal-heading { display: flex; align-items: center; gap: .85rem; }
+.account-modal-icon { display: grid; place-items: center; flex: 0 0 2.85rem; height: 2.85rem; font-size: 1.125rem; border-radius: .9rem; background: var(--color-primary-surface); color: var(--color-primary-dark); }
+.account-modal-kicker { display: block; margin-bottom: .25rem; color: var(--color-text-secondary); font-size: .625rem; font-weight: 700; letter-spacing: .11em; }
+.account-modal #accountReviewTitle, .account-modal #accountDeleteTitle { margin: 0; font-size: 1.0625rem; line-height: 1.3; letter-spacing: -.025em; }
+.account-modal .btn-close { flex-shrink: 0; margin: .1rem 0 0 auto; padding: .65rem; border-radius: .5rem; }
+.account-modal .modal-body { padding: 1.5rem; }
+.account-modal-intro { margin: 0 0 1.2rem; color: var(--color-text-secondary); font-size: .8125rem; line-height: 1.65; }
+.account-profile { display: flex; align-items: center; gap: .85rem; padding: 1rem; margin-bottom: 1.4rem; border: 1px solid var(--color-border); background: var(--color-primary-surface); border-radius: .9rem; }
+.account-profile-avatar { display: grid; place-items: center; flex: 0 0 2.8rem; height: 2.8rem; background: var(--color-surface); color: var(--color-primary-dark); border-radius: .85rem; font-size: 1rem; font-weight: 750; }
+.account-profile-identity { min-width: 0; flex: 1; }
+.account-profile h3 { margin: 0 0 .2rem; font-size: .875rem; font-weight: 700; overflow-wrap: anywhere; }
+.account-profile p { margin: 0; color: var(--color-text-secondary); font-size: .78rem; overflow-wrap: anywhere; }
+.account-detail-group { margin-bottom: 1.25rem; }
+.account-detail-group h3 { display: flex; gap: .5rem; align-items: center; margin: 0 0 .8rem; color: var(--color-text-primary); font-size: .82rem; font-weight: 700; }
+.account-detail-group h3 i { color: var(--color-text-secondary); font-size: 1rem; }
+.account-modal .account-details { margin: 0; gap: .9rem 1.5rem; padding: 1rem; border: 1px solid var(--color-border); border-radius: .8rem; }
+.account-modal .account-details dt { font-size: .7rem; font-weight: 500; line-height: 1.4; }
+.account-modal .account-details dd { margin-top: .3rem; font-size: .82rem; line-height: 1.5; font-weight: 600; }
+.account-modal-note { display: flex; align-items: flex-start; gap: .65rem; padding: .9rem 1rem; border-radius: .75rem; background: var(--color-primary-surface); color: var(--color-text-primary); }
+.account-modal-note > i { flex-shrink: 0; margin-top: .05rem; color: var(--color-primary-dark); }
+.account-modal-note strong { display: block; font-size: .78rem; margin-bottom: .25rem; }
+.account-modal-note p { margin: 0; color: var(--color-text-secondary); font-size: .76rem; line-height: 1.6; }
+.account-delete-summary { margin-bottom: 1.1rem; }
+.account-delete-modal .account-modal-icon { color: #b63838; background: #ffeded; }
+.account-note-warning { background: #fff6e3; }
+.account-note-warning > i, .account-note-warning strong { color: #865500; }
+.account-note-warning p { color: #765b29; }
+.account-modal .modal-footer { display: flex; justify-content: space-between; gap: .9rem; margin: 0; padding: 1.1rem 1.5rem; border-top: 1px solid var(--color-border); background: var(--color-surface); }
+.account-footer-hint { display: flex; align-items: center; gap: .4rem; font-size: .69rem; color: var(--color-text-secondary); }
+.account-modal-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: .5rem; margin: 0 0 0 auto; }
+.account-modal-actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.6rem; padding: .6rem .9rem; border-radius: .6rem; font-size: .8rem; font-weight: 600; }
+.account-btn-neutral { color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); }
+.account-btn-neutral:hover { color: var(--color-text-primary); background: var(--color-primary-surface); border-color: var(--color-primary); }
+.account-btn-reject { color: #ae3535; background: transparent; border: 1px solid #e6bcbc; }
+.account-btn-reject:hover { color: #fff; background: #ae3535; border-color: #ae3535; }
+.account-modal .btn:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 3px; }
+[data-theme='dark'] .account-delete-modal .account-modal-icon { color: #ffb9b9; background: #4b2727; }
+[data-theme='dark'] .account-note-warning { background: #48391d; }
+[data-theme='dark'] .account-note-warning :is(i, strong, p) { color: #ffda8a; }
+[data-theme='dark'] .account-btn-reject { color: #ffb9b9; border-color: #855050; }
+[data-theme='dark'] .account-btn-reject:hover { color: #fff; background: #ae3535; }
+[data-theme='dark'] .account-modal .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
+@media (max-width: 575.98px) {
+ .account-modal .modal-header, .account-modal .modal-body, .account-modal .modal-footer { padding: 1.1rem; }
+ .account-profile { flex-wrap: wrap; }
+ .account-profile .account-status { margin-left: 3.65rem; }
+ .account-modal .account-details { grid-template-columns: 1fr; }
+ .account-footer-hint { width: 100%; }
+ .account-modal-actions { width: 100%; }
+ .account-modal-actions .btn { flex: 1 1 auto; }
+}
+
+/* Keep feedback text consistent with the compact page type scale. */
+#reviewToast, .approval-undo { font-size: .8125rem; line-height: 1.5; }
+
+/* Deletion dialog separates account identity, context, and the undo explanation. */
+.account-delete-modal .modal-header { background: linear-gradient(120deg, var(--color-surface), var(--color-primary-surface)); }
+.account-delete-identity { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; padding: 1rem; margin-bottom: 1.2rem; border: 1px solid var(--color-border); border-radius: .85rem; }
+.account-delete-avatar { display: grid; place-items: center; flex: 0 0 2.6rem; height: 2.6rem; border-radius: .75rem; color: var(--color-primary-dark); background: var(--color-primary-surface); font-size: .9rem; font-weight: 700; }
+.account-delete-identity > div { flex: 1; min-width: 8rem; }
+.account-delete-identity h3 { margin: 0 0 .2rem; font-size: .875rem; font-weight: 700; overflow-wrap: anywhere; }
+.account-delete-identity p { margin: 0; font-size: .75rem; color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.account-delete-identity .account-status { font-size: .7rem; }
+.account-delete-summary > h3 { margin: 0 0 .7rem; font-size: .78rem; font-weight: 650; color: var(--color-text-primary); }
+.account-delete-modal .account-details { background: var(--color-surface); }
+.account-delete-footnote { display: flex; align-items: flex-start; gap: .45rem; margin: 1rem 0 0; color: var(--color-text-secondary); font-size: .72rem; line-height: 1.6; }
+.account-delete-footnote > i { flex-shrink: 0; margin-top: .1rem; }
+.account-delete-modal .modal-footer .account-modal-actions { width: 100%; }
+.account-delete-modal .account-btn-neutral { margin-right: auto; }
+@media (max-width: 575.98px) { .account-delete-identity .account-status { margin-left: 3.35rem; } }
+
+/* Compact notifications with status accents and a dedicated dismiss target. */
+.toast-container.account-toast-region { top: var(--account-toast-top, 5rem); z-index: 1090; pointer-events: none; max-width: 100%; }
+#reviewToast.account-toast { --toast-accent: #287a42; --toast-tint: #eaf5ee; width: 380px; max-width: calc(100vw - 2rem); margin: 0; background: var(--color-surface, #fff); color: var(--color-text-primary, #202b25); border: 1px solid var(--color-border, #dfe6e1); border-left: 3px solid var(--toast-accent); border-radius: .9rem; box-shadow: 0 .5rem 2rem #14251c1f; pointer-events: auto; overflow: hidden; font-family: 'Inter', sans-serif; }
+#reviewToast[data-type='warning'] { --toast-accent: #946000; --toast-tint: #fff5df; }
+#reviewToast[data-type='error'] { --toast-accent: #b33434; --toast-tint: #ffeded; }
+.account-toast-layout { display: flex; align-items: flex-start; gap: .75rem; padding: 1rem; }
+.account-toast-symbol { display: grid; place-items: center; flex: 0 0 2.15rem; height: 2.15rem; border-radius: .65rem; color: var(--toast-accent); background: var(--toast-tint); font-size: 1.05rem; }
+.account-toast-content { flex: 1; min-width: 0; }
+.account-toast-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: .25rem .6rem; margin-bottom: .25rem; }
+.account-toast-heading strong { font-size: .8125rem; line-height: 1.5; font-weight: 700; }
+.account-toast-heading small { font-size: .625rem; color: var(--color-text-secondary, #66736b); white-space: nowrap; }
+#reviewToastMessage { margin: 0; padding: 0; font-size: .775rem; line-height: 1.6; color: var(--color-text-secondary, #66736b); overflow-wrap: anywhere; }
+.account-toast-close { display: grid; place-items: center; flex: 0 0 1.75rem; height: 1.75rem; margin: -.25rem -.25rem 0 0; padding: 0; border: 0; border-radius: .45rem; background: transparent; color: var(--color-text-secondary, #66736b); font-size: .75rem; cursor: pointer; }
+.account-toast-close:hover { background: var(--toast-tint); color: var(--toast-accent); }
+.account-toast-close:focus-visible { outline: 2px solid var(--toast-accent); outline-offset: 2px; }
+[data-theme='dark'] #reviewToast.account-toast { --toast-accent: #8dd9a4; --toast-tint: #213c2c; box-shadow: 0 .5rem 2rem #0005; }
+[data-theme='dark'] #reviewToast[data-type='warning'] { --toast-accent: #f2c568; --toast-tint: #43351c; }
+[data-theme='dark'] #reviewToast[data-type='error'] { --toast-accent: #ffa4a4; --toast-tint: #462828; }
+@media (max-width: 575.98px) { .account-toast-layout { gap: .6rem; padding: .85rem; } }
+
+/* Leave page controls clickable around the notification, including themed layouts. */
+[data-theme] .toast-container.account-toast-region { pointer-events: none; }
+
+/* Skeleton rows follow the table columns without collapsing the header or scroll area. */
+.account-table .approval-skeleton-row td { height: 3.6rem; padding: .85rem .75rem; }
+.approval-skeleton { position: relative; display: block; overflow: hidden; background: var(--color-border, #e4eae6); isolation: isolate; }
+.approval-skeleton::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 15%, var(--color-surface, #fff) 50%, transparent 85%); opacity: .65; transform: translateX(-100%); animation: approval-skeleton-shimmer 1.5s ease-in-out infinite; }
+.approval-skeleton-text { width: var(--skeleton-width, 80%); height: .65rem; border-radius: .25rem; }
+.approval-skeleton-badge { width: 7rem; height: 1.5rem; border-radius: 2rem; }
+.approval-skeleton-actions { width: 5.5rem; height: 2.25rem; border-radius: .5rem; }
+@keyframes approval-skeleton-shimmer { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .approval-skeleton::after { animation: none; transform: none; opacity: .2; } }
+#refreshApprovals { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; }
+#refreshApprovals:disabled { cursor: wait; }
+
+.account-status.approved { color: #206b36; background: #e8f5eb; }
+[data-theme='dark'] .account-status.approved { color: #a7e4b8; background: #213c2c; }
+
+.account-list-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .5rem; }
+.account-approvals .approval-table-heading > .account-list-tools { flex: 0 1 auto; }
+.account-column-menu { min-width: 15rem; padding: .85rem; font-size: .8125rem; }
+.account-column-menu-heading { font-weight: 650; padding: 0 .3rem .65rem; color: var(--color-text-primary); }
+#userColumnOptions { max-height: 18rem; overflow-y: auto; margin-bottom: .75rem; }
+.account-column-option { display: flex; align-items: center; gap: .65rem; padding: .4rem .3rem; cursor: pointer; }
+.account-column-option input { width: 1rem; height: 1rem; accent-color: var(--color-primary, #287a42); }
+.account-column-option:hover { background: var(--color-primary-surface); border-radius: .35rem; }
+.account-table [hidden] { display: none !important; }
+@media (max-width: 575.98px) { .account-approvals .approval-table-heading { flex-wrap: wrap; } .account-approvals .approval-table-heading > .account-list-tools { flex: 1 1 100%; justify-content: flex-start; } }
+
+.account-status.inactive { color: #53606a; background: #edf0f3; }
+[data-theme='dark'] .account-status.inactive { color: #c6d0db; background: #303b46; }

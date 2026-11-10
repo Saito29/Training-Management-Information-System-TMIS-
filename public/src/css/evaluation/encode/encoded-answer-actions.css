@@ -1,0 +1,19 @@
+.encode-heading .encoded-record-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .55rem; }
+.encoded-active-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .43rem .7rem; color: #176b34; background: #e7f6eb; border: 1px solid #a8d7b4; border-radius: 999px; font-size: .75rem; font-weight: 750; white-space: nowrap; }
+.encoded-delete-button { display: inline-flex; align-items: center; gap: .4rem; padding: .43rem .7rem; color: #a92d27; background: var(--color-surface); border: 1px solid #e9bbb7; border-radius: .55rem; font-size: .75rem; font-weight: 700; }
+.encoded-delete-button:hover { color: #fff; background: #b42318; border-color: #b42318; }
+.encoded-delete-button:disabled { opacity: .55; cursor: not-allowed; }
+.encoded-delete-modal .modal-content { overflow: hidden; color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 1rem; box-shadow: 0 1.5rem 4rem rgb(0 0 0 / .18); }
+.encoded-delete-modal .modal-header { display: flex; align-items: center; gap: .8rem; padding: 1.2rem 1.35rem; border-color: var(--color-border); }
+.encoded-delete-icon { display: grid; flex: 0 0 2.5rem; place-items: center; height: 2.5rem; color: #b42318; background: #fef0ee; border-radius: .7rem; }
+.encoded-delete-modal .modal-title { font-size: 1.1rem; font-weight: 750; }
+.encoded-delete-modal .modal-body { padding: 1.2rem 1.35rem; }
+.encoded-delete-modal .modal-body p { color: var(--color-text-secondary); font-size: .85rem; }
+.encoded-delete-modal dl { display: grid; gap: .65rem; margin: 0; padding: 1rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: .7rem; }
+.encoded-delete-modal dt { color: var(--color-text-secondary); font-size: .7rem; font-weight: 700; text-transform: uppercase; }
+.encoded-delete-modal dd { margin: 0; overflow-wrap: anywhere; font-size: .83rem; font-weight: 600; }
+.encoded-delete-modal .modal-footer { border-color: var(--color-border); }
+.encoded-delete-undo { position: fixed; z-index: 1100; top: 1rem; right: 1rem; display: flex; align-items: center; gap: 1rem; width: min(24rem, calc(100vw - 2rem)); padding: .85rem; color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); border-left: 3px solid var(--color-primary); border-radius: .7rem; box-shadow: 0 .8rem 2rem rgb(0 0 0 / .15); font-size: .8rem; font-weight: 600; }
+.encoded-delete-undo span { flex: 1; overflow-wrap: anywhere; }
+.encoded-delete-undo button { flex: 0 0 auto; padding: .35rem .5rem; color: var(--color-primary); background: var(--color-primary-surface); border: 0; border-radius: .4rem; font-size: .75rem; font-weight: 750; }
+@media (max-width: 760px) { .encode-heading .encoded-record-actions { justify-content: flex-start; } }

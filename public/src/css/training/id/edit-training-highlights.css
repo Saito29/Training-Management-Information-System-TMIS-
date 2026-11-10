@@ -1,0 +1,57 @@
+.training-highlight-edit-modal .modal-dialog { max-width:none; margin:0; }
+.training-highlight-edit-modal .modal-content { height:100dvh; max-height:100dvh; border-radius:0; }
+.training-highlight-edit-modal #highlightEditForm { display:flex; flex-direction:column; height:100%; min-height:0; }
+.training-highlight-edit-modal .modal-header,
+.training-highlight-edit-modal .modal-footer { flex:none; }
+.training-highlight-edit-modal .training-export-layout { flex:1; min-height:0; overflow:hidden; grid-template-columns:minmax(0, 1.5fr) minmax(320px, .8fr); }
+.training-highlight-edit-modal .training-export-preview-area { align-content:start; min-height:0; overflow:auto; }
+.training-highlight-edit-modal .training-export-preview { aspect-ratio:16/9; width:min(100%, calc((100dvh - 210px) * 16 / 9)); max-width:none; }
+.training-highlight-edit-modal .training-export-preview-overlay { display:flex; flex-direction:column; justify-content:space-between; }
+.training-highlight-edit-modal .training-export-preview-overlay > span { flex:none; }
+.training-highlight-edit-modal .highlight-edit-preview-copy { margin:auto 0; }
+.training-highlight-edit-modal .highlight-edit-preview-copy h3 { margin:0 0 8px; color:#fff; font-size:clamp(16px,2.5vw,30px); font-weight:750; }
+.training-highlight-edit-modal .highlight-edit-preview-copy p { margin:0; color:#edf7ee; font-size:clamp(10px,1.2vw,15px); }
+.training-highlight-edit-modal .highlight-edit-preview-copy blockquote { margin:10px 0 0; padding-left:10px; border-left:2px solid #a9e8b8; font-size:clamp(10px,1.3vw,16px); }
+.highlight-edit-preview-footer { display:flex; align-items:end; justify-content:space-between; gap:16px; color:#c8f2d0; }
+.highlight-edit-preview-footer strong { max-width:65%; line-height:1.15; overflow-wrap:anywhere; }
+.highlight-edit-preview-footer span { text-align:right; font-size:11px; }
+.highlight-edit-preview-footer img { max-width:none; max-height:none; object-fit:contain; }
+.training-highlight-edit-modal .training-export-settings { min-height:0; max-height:none; overflow-y:auto; }
+.training-highlight-edit-modal textarea.form-control { resize:vertical; }
+.highlight-edit-title-controls { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+.highlight-edit-title-controls label { display:flex; align-items:center; gap:5px; color:var(--color-text-secondary); font-size:11px; white-space:nowrap; }
+.highlight-edit-title-controls label:first-child { flex:1 1 160px; }
+.highlight-edit-title-controls .form-control { width:72px; min-width:72px; }
+.highlight-edit-branding { display:flex; flex-wrap:wrap; gap:9px 14px; }
+.highlight-edit-branding legend { margin-bottom:2px; }
+.highlight-edit-branding > label { display:flex; align-items:center; gap:5px; color:var(--color-text-primary); font-size:12px; }
+.highlight-edit-branding > div { width:100%; }
+.highlight-edit-branding > div[hidden] { display:none; }
+.highlight-edit-branding > div .training-export-label { display:block; margin-bottom:6px; }
+.highlight-edit-branding p { margin:5px 0 0; }
+#highlightEditStatus { flex:1; color:var(--color-text-secondary); font-size:11px; }
+.training-highlight-branding { position:absolute; right:7%; bottom:24px; left:7%; display:flex; align-items:end; justify-content:space-between; gap:14px; color:#c8f2d0; text-shadow:0 2px 8px rgba(0,0,0,.8); }
+.training-highlight-branding strong { max-width:65%; overflow-wrap:anywhere; line-height:1.15; }
+.training-highlight-branding span { font-size:11px; text-align:right; }
+.training-highlight-branding img { max-width:none; max-height:none; object-fit:contain; }
+.training-highlight-overlay:has(.training-highlight-branding) .training-highlight-copy :is(h3,p,blockquote):empty,
+.training-highlight-edit-modal .highlight-edit-preview-copy > :empty { display:none; }
+.highlight-edit-size-label { display:flex; align-items:center; gap:7px; margin-top:10px; color:var(--color-text-secondary); font-size:11px; }
+.highlight-edit-size-label .form-control { width:72px; min-width:72px; }
+.highlight-edit-bullets { padding-top:16px; border-top:1px solid var(--color-border); }
+.highlight-edit-bullets textarea { min-height:110px; }
+.highlight-edit-bullet-preview { display:grid; grid-template-columns:1fr; gap:12px; width:100%; max-width:900px; }
+.highlight-edit-bullet-preview > div { min-width:0; padding:14px; border:1px solid var(--color-border); border-radius:9px; background:var(--color-surface); color:var(--color-text-primary); }
+.highlight-edit-bullet-preview > div[hidden] { display:none; }
+.highlight-edit-bullet-preview strong { font-size:12px; }
+.highlight-edit-bullet-preview ul { margin:8px 0 0; padding-left:18px; font-size:11px; line-height:1.5; }
+.highlight-edit-bullet-preview li + li { margin-top:5px; }
+.highlight-dashboard-choice { padding-top:16px; border-top:1px solid var(--color-border); }
+.highlight-dashboard-options { display:flex; flex-wrap:wrap; gap:8px; }
+.highlight-dashboard-options label { display:flex; align-items:center; gap:7px; padding:9px 12px; border:1px solid var(--color-border); border-radius:8px; color:var(--color-text-primary); cursor:pointer; }
+.highlight-dashboard-options label:has(input:checked) { border-color:var(--color-primary); background:var(--color-primary-surface); }
+.training-export-preview-overlay #trainingExportPreviewFooter .training-highlight-branding { position:static; display:flex; width:100%; }
+.training-export-preview-overlay #trainingExportPreviewFooter .training-highlight-branding img { max-width:none; max-height:none; }
+.training-highlight-overlay:has(.training-highlight-branding) .training-highlight-copy { margin-bottom:42px; }
+@media (max-width:900px) { .training-highlight-edit-modal .training-export-layout { grid-template-columns:1fr; grid-template-rows:minmax(180px, 42dvh) minmax(0, 1fr); } }
+@media (max-width:600px) { .training-highlight-header-actions { flex-wrap:wrap; } .training-highlight-edit-modal .training-export-layout { grid-template-rows:minmax(0, 44dvh) minmax(0, 1fr); } .training-highlight-edit-modal .training-export-preview-area { gap:8px; padding:10px; } .training-highlight-edit-modal .highlight-edit-bullet-preview > div { padding:10px 12px; } .training-highlight-edit-modal .highlight-edit-bullet-preview ul { font-size:12px; } .training-highlight-branding { bottom:12px; } }

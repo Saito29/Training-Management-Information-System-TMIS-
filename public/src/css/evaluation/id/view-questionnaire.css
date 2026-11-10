@@ -1,0 +1,64 @@
+/* The view pages reuse the registration markup and styles; these rules only lock and label it. */
+.questionnaire-view-page .app-main .app-main-body { padding-bottom: 2rem; }
+.questionnaire-view-page .btn-submit,
+.questionnaire-view-page .rp-form-actions,
+.questionnaire-view-page [data-add-question] { display: none !important; }
+.questionnaire-view-page .form-control[readonly],
+.questionnaire-view-page .form-select:disabled,
+.questionnaire-view-page .rp-preview-label[readonly] {
+  color: var(--color-text-primary) !important;
+  background-color: var(--color-bg) !important;
+  border-color: var(--color-border) !important;
+  opacity: 1 !important;
+  cursor: default;
+}
+.questionnaire-view-page textarea[readonly] { resize: none; overflow: hidden; }
+.questionnaire-view-page .form-control[readonly]:focus,
+.questionnaire-view-page .form-select:disabled:focus {
+  box-shadow: none;
+  border-color: var(--color-border) !important;
+}
+.questionnaire-view-page .form-header::after,
+.questionnaire-view-page .rp-section:first-child .rp-section-heading::after {
+  content: 'READ ONLY';
+  margin-left: auto;
+  padding: .28rem .6rem;
+  color: var(--color-primary);
+  background: var(--color-primary-surface);
+  border: 1px solid var(--color-primary-light);
+  border-radius: 100px;
+  font-size: .67rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+.questionnaire-view-page .rp-question-table thead th:last-child,
+.questionnaire-view-page .rp-question-table tbody tr:has(td:nth-of-type(3)) td:last-child { display: none; }
+.questionnaire-view-page .rp-question-table tbody td,
+.questionnaire-view-page .rp-question-table tbody th { background: var(--color-surface); }
+.questionnaire-view-page .rp-question-table .rp-question-input { min-height: 3.5rem; }
+.questionnaire-view-page .rp-rating-preview .view-rating-preview {
+  display: grid;
+  justify-items: center;
+  gap: .25rem;
+  padding: .7rem .4rem;
+  color: var(--color-text-primary);
+  background: var(--color-primary-surface);
+  border: 1px solid var(--color-primary-light);
+  border-radius: 8px;
+}
+.questionnaire-view-page .view-rating-preview strong { color: var(--color-primary); font-size: 1rem; }
+.questionnaire-view-page .view-rating-preview input { width: 100%; text-align: center; }
+.questionnaire-view-page .view-meta-list { display: grid; gap: .75rem; margin: 1rem 0 0; }
+.questionnaire-view-page .view-meta-list > div { min-width: 0; padding-bottom: .65rem; border-bottom: 1px solid var(--color-border); }
+.questionnaire-view-page .view-meta-list > div:last-child { padding-bottom: 0; border-bottom: 0; }
+.questionnaire-view-page .view-meta-list dt { margin-bottom: .15rem; color: var(--color-text-secondary); font-size: .72rem; font-weight: 650; }
+.questionnaire-view-page .view-meta-list dd { margin: 0; color: var(--color-text-primary); font-size: .8rem; font-weight: 700; overflow-wrap: anywhere; }
+.questionnaire-view-page .view-record-message { display: grid; justify-items: center; gap: .7rem; padding: 2.5rem 1rem; color: var(--color-text-secondary); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; text-align: center; }
+.questionnaire-view-page .view-record-message i { color: var(--color-primary); font-size: 1.6rem; }
+.questionnaire-view-page .view-record-message p { margin: 0; }
+.questionnaire-view-page .view-record-message a { color: var(--color-primary); font-weight: 700; }
+@media (max-width: 575px) {
+  .questionnaire-view-page .form-header::after,
+  .questionnaire-view-page .rp-section:first-child .rp-section-heading::after { font-size: .6rem; }
+}
