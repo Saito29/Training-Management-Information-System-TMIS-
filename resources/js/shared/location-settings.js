@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.querySelector('#locationRegistration');
   if (!form) return;
   let rows = JSON.parse(document.querySelector('#registeredLocations').textContent);
-  let regions = [...form.elements.region_id.options].filter(option => option.value).map(option => ({region_id:Number(option.value), name:option.textContent, kind:'region'}));
+  let regions = JSON.parse(document.querySelector('#registeredRegions').textContent).map(row=>({...row,kind:'region'}));
   const kind=form.elements.kind, region=form.elements.region_id, parent=form.elements.parent_id;
   const button=form.querySelector('[type="submit"]'), cancel=form.querySelector('[data-location-cancel]');
   let editing=null, saving=false;
@@ -11,7 +11,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const find = (type,id) => (type==='region'?regions:rows).find(row=>row.kind===type&&idOf(row)===String(id));
   const search=document.querySelector('#registeredLocationSearch'),filterRegion=document.querySelector('#registeredLocationRegion'),filterDistrict=document.querySelector('#registeredLocationDistrict'),filterMunicipality=document.querySelector('#registeredLocationMunicipality'),pageSize=document.querySelector('#registeredLocationPageSize');
   const previous=document.querySelector('[data-location-previous]'),next=document.querySelector('[data-location-next]');
-  let page=1;
+  const deleteModalElement=document.querySelector('#settingsDeleteModal');
+  function confirmDelete(recordName) {
+    const modal=bootstrap.Modal.getOrCreateInstance(deleteModalElement);
+    deleteModalElement.querySelector('[data-settings-delete-record]').textContent='“'+recordName+'” will be permanently removed from the location directory.';
+    return new Promise(resolve=>{
+      const confirmButton=deleteModalElement.querySelector('[data-settings-delete-confirm]');
+      const finish=value=>{confirmButton.removeEventListener('click',onConfirm);deleteModalElement.removeEventListener('hidden.bs.modal',onDismiss);resolve(value);};
+      const onConfirm=()=>{finish(true);modal.hide();};
+      const onDismiss=()=>finish(false);
+      confirmButton.addEventListener('click',onConfirm,{once:true});deleteModalElement.addEventListener('hidden.bs.modal',onDismiss,{once:true});modal.show();
+    });
+  }
+  let page=1,sortField='name',sortDirection='asc';
   function beneath(location,id) {
     let current=location;
     const seen=new Set();
@@ -36,6 +48,10 @@ document.addEventListener('DOMContentLoaded', () => {
   filterMunicipality.addEventListener('change',()=>{page=1;renderTable();});
   search.addEventListener('input',()=>{page=1;renderTable();});pageSize.addEventListener('change',()=>{page=1;renderTable();});
   previous.addEventListener('click',()=>{page--;renderTable();});next.addEventListener('click',()=>{page++;renderTable();});
+  document.querySelectorAll('[data-location-sort]').forEach(button=>button.addEventListener('click',()=>{
+    const nextField=button.dataset.locationSort;
+    sortDirection=sortField===nextField&&sortDirection==='asc'?'desc':'asc';sortField=nextField;page=1;renderTable();
+  }));
   function sync() {
     const selectedParent=parent.value, parentKind={district:'province',municipality:'district',barangay:'municipality'}[kind.value];
     const needsRegion=kind.value!=='region';
@@ -51,42 +67,78 @@ document.addEventListener('DOMContentLoaded', () => {
     cancel.hidden=!editing;
     form.querySelector('[data-location-submit-label]').textContent=editing?'Update location':'Create location';
   }
+  // Refresh location summaries, linked filters, and the hierarchy table after saved changes.
   function render() {
     const selectedRegion=region.value;
-    region.replaceChildren(new Option('Select a region',''),...regions.map(row=>new Option(row.name,String(row.region_id))));
+    const activeRegions=regions.filter(row=>row.is_active);
+    region.replaceChildren(new Option('Select a region',''),...activeRegions.map(row=>new Option(row.name,String(row.region_id))));
     region.value=selectedRegion;
     filterOptions();renderTable();
-    document.querySelector('[data-location-count]').textContent=regions.length+' active regions and '+rows.length+' geographic records.';
-    sync();window.dispatchEvent(new Event('tmis:data-updated'));window.dispatchEvent(new CustomEvent('tmis:regions-updated',{detail:regions}));
+    document.querySelector('[data-location-count]').textContent=regions.length+' regions and '+rows.length+' subregion records.';
+    document.querySelector('[data-location-stat-total]').textContent=regions.length+rows.length;
+    document.querySelector('[data-location-stat-active]').textContent=regions.filter(row=>row.is_active).length+rows.filter(row=>row.is_active).length;
+    document.querySelector('[data-location-stat-regions]').textContent=regions.length;
+    document.querySelector('[data-location-stat-subregions]').textContent=rows.length;
+    sync();window.dispatchEvent(new Event('tmis:data-updated'));window.dispatchEvent(new CustomEvent('tmis:regions-updated',{detail:activeRegions}));
   }
+  // Render sortable, filter-aware rows with full hierarchy and state labels instead of bare names.
   function renderTable() {
     const regionName=location=>regions.find(row=>String(row.region_id)===String(location.region_id))?.name||'Inactive region';
-    const parentName=location=>rows.find(row=>String(row.id)===String(location.parent_id))?.name||'Region';
+    const parentName=location=>rows.find(row=>String(row.id)===String(location.parent_id))?.name||'Top-level region';
+    // Trace parent IDs so each directory row carries its complete region-to-leaf path.
+    const hierarchyPath=location=>{
+      if(location.kind==='region')return 'Top-level region';
+      const path=[location.name],seen=new Set();let current=location;
+      while(current&&current.kind!=='region'&&!seen.has(current.id)){
+        seen.add(current.id);current=rows.find(row=>String(row.id)===String(current.parent_id));
+        if(current)path.unshift(current.name);
+      }
+      path.unshift(regionName(location));
+      return path.join(' / ');
+    };
     const query=search.value.trim().toLocaleLowerCase('en-PH');
     const all=[...regions,...rows];
-    const filtered=all.filter(location=>(!filterRegion.value||String(location.region_id)===filterRegion.value)&&(!filterDistrict.value||beneath(location,filterDistrict.value))&&(!filterMunicipality.value||beneath(location,filterMunicipality.value))&&[location.name,location.kind,parentName(location),regionName(location)].join(' ').toLocaleLowerCase('en-PH').includes(query));
+    const filtered=all.filter(location=>(!filterRegion.value||String(location.region_id)===filterRegion.value)&&(!filterDistrict.value||beneath(location,filterDistrict.value))&&(!filterMunicipality.value||beneath(location,filterMunicipality.value))&&[location.name,location.kind,parentName(location),hierarchyPath(location),regionName(location),idOf(location)].join(' ').toLocaleLowerCase('en-PH').includes(query));
+    const sortValues={id:location=>Number(idOf(location)),kind:location=>location.kind,name:location=>location.name,region:location=>regionName(location),is_active:location=>Boolean(location.is_active),updated_at:location=>location.updated_at||''};
+    const sortValue=sortValues[sortField]||sortValues.name;
+    filtered.sort((left,right)=>{
+      const first=sortValue(left),second=sortValue(right);
+      const comparison=typeof first==='number'&&typeof second==='number'?first-second:String(first).localeCompare(String(second),'en-PH',{numeric:true,sensitivity:'base'});
+      return sortDirection==='asc'?comparison:-comparison;
+    });
+    document.querySelectorAll('[data-location-sort]').forEach(control=>{
+      const selected=control.dataset.locationSort===sortField;control.closest('th')?.setAttribute('aria-sort',selected?(sortDirection==='asc'?'ascending':'descending'):'none');
+      const icon=control.querySelector('i');if(icon)icon.className='bi '+(selected?(sortDirection==='asc'?'bi-sort-up':'bi-sort-down'):'bi-arrow-down-up');
+    });
     const size=Number(pageSize.value),pages=Math.max(1,Math.ceil(filtered.length/size));page=Math.max(1,Math.min(page,pages));const start=(page-1)*size;
     const body=document.querySelector('[data-location-rows]');
     body.replaceChildren();
     for(const location of filtered.slice(start,start+size)) {
       const tr=document.createElement('tr');
-      const parentName=rows.find(row=>String(row.id)===String(location.parent_id))?.name||'Region';
-      const regionName=regions.find(row=>String(row.region_id)===String(location.region_id))?.name||'Inactive region';
-      for(const value of [location.name,location.kind[0].toUpperCase()+location.kind.slice(1),location.kind==='region'?'-':parentName,regionName]) {
-        const cell=document.createElement('td');cell.textContent=value;tr.append(cell);
-      }
       const actions=document.createElement('td');
+      actions.className='directory-row-actions';
       for(const action of ['edit','delete']) {
         const control=document.createElement('button');control.type='button';
-        control.className='btn btn-sm me-1 btn-outline-'+(action==='edit'?'primary':'danger');
+        control.className='btn directory-icon-action '+(action==='edit'?'is-edit':'is-delete');
         control.dataset[action==='edit'?'locationEdit':'locationDelete']=location.kind;
-        control.dataset.locationId=idOf(location);control.textContent=action==='edit'?'Edit':'Delete';
+        control.dataset.locationId=idOf(location);control.title=action==='edit'?'Edit '+location.name:'Delete '+location.name;control.setAttribute('aria-label',control.title);
+        const icon=document.createElement('i');icon.className='bi '+(action==='edit'?'bi-pencil-square':'bi-trash3');icon.setAttribute('aria-hidden','true');control.append(icon);
         actions.append(control);
       }
-      tr.append(actions);body.append(tr);
+      tr.append(actions);
+      const idCell=document.createElement('td');idCell.className='directory-id';idCell.textContent=(location.kind==='region'?'REG-':'LOC-')+idOf(location);tr.append(idCell);
+      const typeCell=document.createElement('td'),typeBadge=document.createElement('span');typeBadge.className='directory-type-badge directory-type-'+location.kind;typeBadge.textContent=location.kind[0].toUpperCase()+location.kind.slice(1);typeCell.append(typeBadge);tr.append(typeCell);
+      const nameCell=document.createElement('td');nameCell.className='directory-primary-cell';const name=document.createElement('strong');name.textContent=location.name;const kind=document.createElement('small');kind.textContent=location.kind==='region'?'Administrative region':'Geographic location';nameCell.append(name,kind);tr.append(nameCell);
+      const hierarchyCell=document.createElement('td');hierarchyCell.className='directory-hierarchy';hierarchyCell.textContent=hierarchyPath(location);tr.append(hierarchyCell);
+      const regionCell=document.createElement('td');regionCell.textContent=regionName(location);tr.append(regionCell);
+      const statusCell=document.createElement('td'),status=document.createElement('span');status.className='directory-status '+(location.is_active?'is-active':'is-inactive');status.textContent=location.is_active?'Active':'Inactive';statusCell.append(status);tr.append(statusCell);
+      const updatedCell=document.createElement('td');updatedCell.className='directory-date';
+      const updatedValue=location.updated_at;
+      updatedCell.textContent=updatedValue?new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeZone:'Asia/Manila'}).format(new Date(updatedValue.endsWith('Z')||/[+-]\d\d:\d\d$/.test(updatedValue)?updatedValue:`${updatedValue.replace(' ','T')}Z`)):'Not recorded';tr.append(updatedCell);
+      body.append(tr);
     }
-    if(!filtered.length){const tr=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=5;cell.className='text-center py-4';cell.textContent=all.length?'No locations match your search or filters.':'No locations registered yet.';tr.append(cell);body.append(tr);}
-    document.querySelector('[data-location-summary]').textContent=filtered.length?'Showing '+(start+1)+'-'+Math.min(start+size,filtered.length)+' of '+filtered.length+' locations'+(filtered.length!==all.length?' ('+all.length+' total)':''):'Showing 0 of '+all.length+' locations';
+    if(!filtered.length){const tr=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=8;cell.className='directory-empty';cell.textContent=all.length?'No locations match your search or filters.':'No locations registered yet.';tr.append(cell);body.append(tr);}
+    document.querySelector('[data-location-summary]').textContent=filtered.length?'Showing '+(start+1)+'-'+Math.min(start+size,filtered.length)+' of '+filtered.length+' matching locations; '+all.length+' total':'Showing 0 of '+all.length+' locations';
     document.querySelector('[data-location-page]').textContent='Page '+page+' of '+pages;
     previous.disabled=page===1;next.disabled=page===pages;
   }
@@ -124,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
       form.elements.name.value=location.name;form.scrollIntoView({block:'start',behavior:'smooth'});form.elements.name.focus();
       window.dispatchEvent(new Event('tmis:data-updated'));return;
     }
-    if(!confirm('Delete "'+location.name+'"? This cannot be undone.'))return;
+    if(!await confirmDelete(location.name))return;
     busy(true);control.disabled=true;
     try {
       const result=await request(form.action+'/'+type+'/'+idOf(location),'DELETE');

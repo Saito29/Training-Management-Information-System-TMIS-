@@ -25,7 +25,7 @@
     <script src="{{ asset('src/js/shared/navigation-access.js?v=permission-action-split-1') }}" defer></script>
     @if($navigationAccess['administrator'] ?? false)
         <link rel="stylesheet" href="{{ asset('src/css/shared/profile-visibility.css?v=refresh-placeholder-1') }}">
-        <script src="{{ asset('src/js/shared/profile-visibility.js?v=refresh-placeholder-1') }}" defer></script>
+        <script src="{{ asset('src/js/shared/profile-visibility.js?v=dropdown-entry-1') }}" defer></script>
     @endif
     <script src="{{ asset('src/js/shared/account-avatar.js') }}" defer></script>
     <script src="{{ asset('src/js/shared/system-branding.js') }}" defer></script>

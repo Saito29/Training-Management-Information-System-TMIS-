@@ -53,9 +53,6 @@ input:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px #
 .form-submit:hover { background: #184e37; }
 .form-submit:active { transform: translateY(1px); }
 .form-submit span { font-size: 20px; line-height: 1; }
-.form-submit .submit-spinner { width: 16px; height: 16px; border: 2px solid #ffffff70; border-top-color: #fff; border-radius: 50%; animation: submit-spinner-rotate .7s linear infinite; }
-.form-submit.is-loading { cursor: wait; }
-@keyframes submit-spinner-rotate { to { transform: rotate(360deg); } }
 .account-help { display: flex; align-items: flex-start; gap: 12px; border-top: 1px solid #e4e9e2; padding-top: 20px; margin-top: 24px; }
 .help-icon { display: grid; place-items: center; flex: 0 0 19px; height: 19px; border: 1px solid #9baa9d; border-radius: 50%; color: #6d7e6f; font-size: 12px; }
 .account-help p { margin: 0; font-size: 12px; font-weight: 600; line-height: 1.8; }
@@ -132,3 +129,7 @@ input:disabled { background: #f1f3ef; color: #758072; cursor: not-allowed; }
 .compose-toast > i::before { content: "✓"; font-family: "Segoe UI", sans-serif; font-style: normal; font-weight: 700; }
 .compose-toast[data-type="error"] > i::before { content: "×"; }
 .compose-toast[data-type="warning"] > i::before { content: "!"; }
+.form-submit .submit-spinner { width: 16px; height: 16px; border: 2px solid #ffffff70; border-top-color: #fff; border-radius: 50%; animation: submit-spinner-rotate .7s linear infinite; }
+.form-submit.is-loading { cursor: wait; }
+@keyframes submit-spinner-rotate { to { transform: rotate(360deg); }
+}

@@ -1,4 +1,4 @@
-.edit-participants-shell { min-width:0; overflow:visible; }
+.edit-participants-shell { overflow:hidden; }
 .edit-participants-header { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:23px 25px 19px; background:var(--color-primary-surface); }
 .edit-participants-eyebrow { color:var(--color-primary-dark); font-size:11px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
 .edit-participants-header h2 { margin:4px 0; color:var(--color-text-primary); font-size:22px; font-weight:750; }
@@ -8,7 +8,7 @@
 .edit-participants-tabs button { position:relative; padding:15px 14px; border:0; color:var(--color-text-secondary); background:transparent; font-size:12px; font-weight:700; }
 .edit-participants-tabs button:hover,.edit-participants-tabs button.is-active { color:var(--color-primary-dark); }
 .edit-participants-tabs button.is-active::after { position:absolute; right:10px; bottom:0; left:10px; height:3px; border-radius:3px 3px 0 0; background:var(--color-primary); content:''; }
-.edit-participants-content { min-width:0; padding:22px 25px 25px; }
+.edit-participants-content { padding:22px 25px 25px; }
 .edit-participants-content[hidden] { display:none; }
 .edit-participants-intro { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:17px; }
 .edit-participants-intro h3 { margin:0 0 4px; color:var(--color-text-primary); font-size:15px; font-weight:750; }
@@ -25,7 +25,7 @@
 .edit-participants-export i,.edit-participants-add i { margin-right:5px; }
 .edit-participants-table-wrap { overflow:auto; border:1px solid var(--color-border); border-radius:10px; scrollbar-width:none; -ms-overflow-style:none; }
 .edit-participants-table-wrap::-webkit-scrollbar { display:none; }
-.edit-participants-table { min-width:760px; margin:0; color:var(--color-text-primary); font-size:12px; }
+.edit-participants-table { min-width:620px; margin:0; color:var(--color-text-primary); font-size:12px; }
 .edit-participants-table th { padding:12px 14px; border-bottom:1px solid var(--color-border); color:var(--color-text-secondary); background:var(--color-bg); font-size:11px; font-weight:700; white-space:nowrap; }
 .edit-participants-column-filters th { padding:8px 7px; background:var(--color-surface); }
 .edit-participants-column-filters input { min-width:105px; max-width:240px; border-color:var(--color-border); background:var(--color-surface); color:var(--color-text-primary); font-size:11px; font-weight:500; }

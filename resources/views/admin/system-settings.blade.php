@@ -7,7 +7,7 @@ class="layout-fixed"
 @endsection
 
 @section('head')
-<link rel="stylesheet" href="{{ asset('src/css/shared/system-settings.css?v=settings-active-tab-theme-1') }}">
+<link rel="stylesheet" href="{{ asset('src/css/shared/system-settings.css?v=system-settings-ui-restored-1') }}">
 <script src="{{ asset('src/js/shared/system-settings.js?v=visibility-scope-select-all-refresh-1') }}" defer></script>
 <script src="{{ asset('src/js/shared/maintenance-schedule.js?v=auto-expire-1') }}" defer></script>
 {{-- Load the toast API before the settings feedback script that displays flashed messages. --}}

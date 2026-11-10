@@ -151,9 +151,7 @@
 .training-overview-reference { display: grid; justify-items: end; gap: 6px; min-width: 175px; padding: 2px 0; }
 .training-status-pill { display: inline-flex; min-height: 28px; align-items: center; padding: 5px 11px; border: 1px solid color-mix(in srgb, var(--color-primary) 24%, transparent); border-radius: 999px; color: var(--color-primary-dark); background: var(--color-surface); font-size: 11px; font-weight: 700; }
 .training-status-pill[data-status='approved-accepted'] { color: #087b36; border-color: #b6e4c4; background: #eaf8ef; }
-.training-status-pill[data-status='for-review'],
-.training-status-pill[data-status='for-approval'],
-.training-status-pill[data-status='for-acceptance'] { color: #8a5700; border-color: #f0d7a1; background: #fff8e8; }
+.training-status-pill[data-status='for-review'], .training-status-pill[data-status='for-approval'], .training-status-pill[data-status='for-acceptance'] { color: #8a5700; border-color: #f0d7a1; background: #fff8e8; }
 .training-status-pill[data-status='inactive'] { color: #a32c35; border-color: #f0c0c3; background: #fff0f0; }
 .training-reference-label { margin-top: 5px; color: var(--color-text-muted); font-size: 10px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
 .training-overview-reference > strong { color: var(--color-text-primary); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; overflow-wrap: anywhere; }
@@ -175,7 +173,6 @@
 .training-detail-grid dt { margin-bottom: 5px; color: var(--color-text-secondary); font-size: 10px; font-weight: 600; }
 .training-detail-grid dd { margin: 0; color: var(--color-text-primary); font-size: 12px; font-weight: 650; line-height: 1.5; overflow-wrap: anywhere; }
 .training-detail-grid .training-detail-wide { grid-column: 1 / -1; }
-.training-overview-description { background: var(--color-primary-surface); }
 .training-overview-description .training-overview-eyebrow { margin-bottom: 9px; }
 .training-overview-description p { margin: 12px 0 20px; color: var(--color-text-secondary); font-size: 12px; line-height: 1.75; white-space: pre-line; overflow-wrap: anywhere; }
 .training-description-footer { display: flex; align-items: flex-start; gap: 8px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent); color: var(--color-text-secondary); font-size: 10px; line-height: 1.5; }
@@ -185,11 +182,10 @@
 .training-view .training-bottom-grid .person-row > span:nth-child(2) { min-width: 0; flex: 1; }
 .training-view .training-bottom-grid .person-row strong { overflow-wrap: anywhere; }
 [data-theme='dark'] .training-status-pill[data-status='approved-accepted'] { color: #a8e7b9; border-color: #285d39; background: #183825; }
-[data-theme='dark'] .training-status-pill[data-status='for-review'],
-[data-theme='dark'] .training-status-pill[data-status='for-approval'],
-[data-theme='dark'] .training-status-pill[data-status='for-acceptance'] { color: #f4d18b; border-color: #6a5120; background: #382d17; }
+[data-theme='dark'] .training-status-pill[data-status='for-review'], [data-theme='dark'] .training-status-pill[data-status='for-approval'], [data-theme='dark'] .training-status-pill[data-status='for-acceptance'] { color: #f4d18b; border-color: #6a5120; background: #382d17; }
 [data-theme='dark'] .training-status-pill[data-status='inactive'] { color: #f0afb3; border-color: #71343a; background: #3d2024; }
-@media (max-width: 900px) { .training-overview-details { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .training-overview-details { grid-template-columns: 1fr; }
+}
 @media (max-width: 650px) {
   .training-overview-banner { flex-direction: column; padding: 20px; }
   .training-overview-reference { justify-items: start; }
