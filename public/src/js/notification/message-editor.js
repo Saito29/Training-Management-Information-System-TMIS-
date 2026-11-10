@@ -15,15 +15,6 @@ export function renderMessage(target, message) {
   }
   const lines = String(message || '').split('\n');
   lines.forEach((line, index) => {
-    const heading = line.match(/^#{2,3}\s+(.+)$/);
-    if (heading) {
-      list = null;
-      const title = document.createElement(heading[0].startsWith('###') ? 'h4' : 'h3');
-      title.className = 'notification-message-heading';
-      inline(title, heading[1]);
-      fragment.append(title);
-      return;
-    }
     const match = line.match(/^\s*(?:(-)|\d+\.)\s+(.*)$/);
     if (match) {
       const tag = match[1] ? 'UL' : 'OL';

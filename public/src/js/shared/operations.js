@@ -1,12 +1,6 @@
 (() => {
   const message = document.querySelector('[data-operation-message]')?.dataset.operationMessage;
-  const type = document.querySelector('[data-operation-message]')?.dataset.operationType || 'success';
-  if (message) window.TmisToast?.show(message, type);
-  // Validation feedback is announced once through the toast stack instead of persistent inline alert rows.
-  document.querySelectorAll('[data-operation-errors] span').forEach(error => {
-    const text = error.textContent.trim();
-    if (text) window.TmisToast?.show(text, 'error');
-  });
+  if (message) window.TmisToast?.show(message, 'success');
   document.querySelectorAll('[data-confirm-delete]').forEach(form => form.addEventListener('submit', event => {
     if (!confirm('Move this record to trash? Its audit history will be retained.')) event.preventDefault();
   }));
@@ -24,27 +18,6 @@
     region.addEventListener('change', filter);
     filter();
   }
-  document.querySelectorAll('form').forEach(form => {
-    const accountRole = form.querySelector('[data-account-role]');
-    const accountCredential = form.querySelector('[data-account-credential]');
-    if (!accountRole || !accountCredential) return;
-    const profileResetNotice = form.querySelector('[data-profile-reset-notice]');
-    const filterAccessProfiles = (showResetNotice = false) => {
-      for (const option of accountCredential.options) {
-        if (!option.value) continue;
-        option.hidden = option.dataset.roleId !== accountRole.value;
-        option.disabled = option.hidden;
-      }
-      const incompatibleSelection = accountCredential.selectedOptions[0]?.disabled ?? false;
-      if (incompatibleSelection) accountCredential.value = '';
-      if (profileResetNotice && showResetNotice) profileResetNotice.hidden = !incompatibleSelection;
-    };
-    accountRole.addEventListener('change', () => filterAccessProfiles(true));
-    accountCredential.addEventListener('change', () => {
-      if (profileResetNotice) profileResetNotice.hidden = true;
-    });
-    filterAccessProfiles();
-  });
   document.querySelector('[data-add-question]')?.addEventListener('click', event => {
     const label = document.createElement('label');
     label.className = 'd-block mb-2';
@@ -70,3 +43,4 @@ document.querySelector('[data-evaluation-questionnaire]')?.addEventListener('cha
     fieldset.append(label);
   }
 });
+

@@ -37,6 +37,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('editTrainingForm');
   if (!form) return;
 
+  const trainingTypeSelect = form.elements.namedItem('training_type');
+  const trainingTypeOptions = window.TMIS_PAGE?.registration?.options?.training_type;
+  if (trainingTypeSelect instanceof HTMLSelectElement && Array.isArray(trainingTypeOptions)) {
+    const selectedTraining = window.TmisStore.selected('tmis-trainings');
+    const selectedType = selectedTraining?.training_type || selectedTraining?.type || trainingTypeSelect.value;
+    const options = trainingTypeOptions.map(option => new Option(option.label, option.value));
+    if (selectedType && !options.some(option => option.value === selectedType)) {
+      options.push(new Option(selectedType, selectedType));
+    }
+    trainingTypeSelect.replaceChildren(new Option('Choose type', ''), ...options);
+    trainingTypeSelect.value = selectedType || '';
+  }
+
   const storageKey = 'tmis:training:TRN-000246:overview';
   const field = name => form.elements.namedItem(name);
   const state = document.getElementById('editTrainingState');
@@ -46,13 +59,17 @@ document.addEventListener('DOMContentLoaded', () => {
     pretest: document.getElementById('editPretestList'),
     posttest: document.getElementById('editPosttestList'),
   };
-  const trainers = (window.TMIS_PAGE ? window.TmisStore.records('tmis-resource-persons').map(item=>[item.id,item.office,item.name]) : [
-    ['Maria Teresa Santos', 'Department of Agriculture - Quezon Provincial Office'],
-    ['Roberto Mendoza', 'Agricultural Training Institute - RTC IV-A'],
-    ['Liza Villanueva', 'Quezon State University'],
-    ['Dr. Maria Santos', 'Agricultural Training Division (ATD)'],
-    ['Engr. Carlo Mendoza', 'Agricultural Training Division (ATD)'],
-  ]);
+  const selectedTraining = window.TMIS_PAGE ? window.TmisStore.selected('tmis-trainings') : null;
+  const trainers = (window.TMIS_PAGE ? window.TmisStore.records('tmis-resource-persons') : [
+    { id: 'Maria Teresa Santos', name: 'Maria Teresa Santos', office: 'Department of Agriculture - Quezon Provincial Office' },
+    { id: 'Roberto Mendoza', name: 'Roberto Mendoza', office: 'Agricultural Training Institute - RTC IV-A' },
+    { id: 'Liza Villanueva', name: 'Liza Villanueva', office: 'Quezon State University' },
+    { id: 'Dr. Maria Santos', name: 'Dr. Maria Santos', office: 'Agricultural Training Division (ATD)' },
+    { id: 'Engr. Carlo Mendoza', name: 'Engr. Carlo Mendoza', office: 'Agricultural Training Division (ATD)' },
+  ]).filter(resource =>
+    (!selectedTraining?.region_id || String(resource.region_id) === String(selectedTraining.region_id)) &&
+    (!selectedTraining?.org_id || String(resource.org_id) === String(selectedTraining.org_id)) &&
+    resource.status !== 'Inactive');
   const addresses = {
     region_4a: {
       batangas_3rd: { label: 'Batangas 3rd District', provinces: { batangas: { label: 'Batangas', municipalities: { tanauan: { label: 'Tanauan City', barangays: { san_antonio: 'San Antonio' } } } } } },
@@ -75,24 +92,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function addTrainer(data = {}) {
     const row = document.createElement('div');
-    row.className = 'training-edit-row';
-    row.innerHTML = '<label>Full name<select class="form-select" data-trainer-name required></select></label><label>Organization<input class="form-control" data-trainer-organization readonly required></label><label class="training-edit-row-wide">Qualification / expertise<input class="form-control" data-trainer-qualification></label><label>Contact number<input class="form-control" data-trainer-contact type="tel" inputmode="numeric" pattern="[0-9]{10}" placeholder="10 digits after +63"></label><label>Email address<input class="form-control" data-trainer-email type="email"></label><button class="training-edit-remove" type="button" aria-label="Remove trainer" title="Remove trainer"><i class="bi bi-trash3"></i></button>';
+    row.className = 'training-edit-row training-edit-trainer-row';
+    row.innerHTML = '<label>Trainer / facilitator<select class="form-select" data-trainer-name required></select></label><label>Organization / office<input class="form-control" data-trainer-organization disabled></label><label>Qualification<input class="form-control" data-trainer-qualification disabled></label><label>Expertise<input class="form-control" data-trainer-expertise disabled></label><label>Contact number<input class="form-control" data-trainer-contact disabled></label><label>Email address<input class="form-control" data-trainer-email type="email" disabled></label><button class="training-edit-remove" type="button" aria-label="Remove trainer" title="Remove trainer"><i class="bi bi-trash3"></i></button>';
     const select = row.querySelector('[data-trainer-name]');
     select.add(new Option('Select a trainer / facilitator', ''));
-    trainers.forEach(([name, organization, label]) => {
-      const option = new Option(label || name, name);
-      option.dataset.organization = organization;
+    trainers.forEach(resource => {
+      const option = new Option(resource.name || resource.id, resource.id);
       select.add(option);
     });
-    if (data.name && ![...select.options].some(option => option.value === data.name)) select.add(new Option(data.name, data.name));
-    select.value = data.id || data.name || '';
-    row.querySelector('[data-trainer-organization]').value = data.organization || select.selectedOptions[0]?.dataset.organization || '';
-    row.querySelector('[data-trainer-qualification]').value = data.qualification || '';
-    row.querySelector('[data-trainer-contact]').value = data.contact || '';
-    row.querySelector('[data-trainer-email]').value = data.email || '';
+    const match = trainers.find(resource => resource.id === data.id || resource.name === data.name);
+    if (!match && (data.id || data.name)) {
+      select.add(new Option(`${data.name || data.id} (not in resource directory)`, data.id || data.name));
+    }
+    select.value = match?.id || data.id || data.name || '';
+    fillTrainerDetails(row, data);
     trainerList.append(row);
     updateRemoveButtons();
     return row;
+  }
+
+  function fillTrainerDetails(row, fallback = {}) {
+    const id = row.querySelector('[data-trainer-name]').value;
+    const resource = trainers.find(item => item.id === id);
+    row.querySelector('[data-trainer-organization]').value = resource?.organization_name || resource?.office || fallback.organization || '';
+    row.querySelector('[data-trainer-qualification]').value = resource?.qualification || fallback.qualification || '';
+    row.querySelector('[data-trainer-expertise]').value = resource?.expertise || fallback.expertise || '';
+    row.querySelector('[data-trainer-contact]').value = resource?.phone || fallback.contact || '';
+    row.querySelector('[data-trainer-email]').value = resource?.email || fallback.email || '';
   }
 
   function addQuestion(type, value = '') {
@@ -143,9 +169,11 @@ document.addEventListener('DOMContentLoaded', () => {
     form.querySelectorAll('[name]:not([name$="[]"]):not([type="radio"])').forEach(control => { values[control.name] = control.value; });
     values.delivery_mode = form.querySelector('[name="delivery_mode"]:checked')?.value || '';
     values.trainers = [...trainerList.children].map(row => ({
-      name: row.querySelector('[data-trainer-name]').value,
+      id: row.querySelector('[data-trainer-name]').value,
+      name: row.querySelector('[data-trainer-name]').selectedOptions[0]?.textContent || '',
       organization: row.querySelector('[data-trainer-organization]').value,
       qualification: row.querySelector('[data-trainer-qualification]').value,
+      expertise: row.querySelector('[data-trainer-expertise]').value,
       contact: row.querySelector('[data-trainer-contact]').value,
       email: row.querySelector('[data-trainer-email]').value,
     }));
@@ -195,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const level = addressNames.indexOf(target.name);
       for (let next = level + 1; next < addressNames.length; next++) populateAddress(next);
     }
-    if (target.matches('[data-trainer-name]')) target.closest('.training-edit-row').querySelector('[data-trainer-organization]').value = target.selectedOptions[0]?.dataset.organization || '';
+    if (target.matches('[data-trainer-name]')) fillTrainerDetails(target.closest('.training-edit-row'));
     refresh();
   });
   form.addEventListener('input', event => {
@@ -219,8 +247,8 @@ document.addEventListener('DOMContentLoaded', () => {
       baseline = JSON.stringify(values);
       refresh();
       state.textContent = 'Saved to the database';
-    } catch {
-      state.textContent = 'Unable to save changes';
+    } catch (error) {
+      state.textContent = error.message || 'Unable to save changes';
     }
   });
   refresh();

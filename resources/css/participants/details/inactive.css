@@ -626,3 +626,6 @@
 .status-info-badge.info-deceased { color: var(--color-danger); background: color-mix(in srgb, var(--color-danger) 14%, var(--color-surface)); }
 .status-info-badge.info-inactive { color: var(--color-warning); background: color-mix(in srgb, var(--color-warning) 14%, var(--color-surface)); }
 .status-info-badge.info-waived { color: var(--color-info); background: color-mix(in srgb, var(--color-info) 14%, var(--color-surface)); }
+.pagination-page-size { display: inline-flex; align-items: center; gap: 7px; color: var(--color-text-secondary); font-size: 12px; white-space: nowrap; }
+.pagination-page-size > .tmis-combobox { width: 140px; flex: 0 0 140px; }
+.pagination-page-size > .tmis-combobox .tmis-combobox-input { min-height: 38px; border-radius: 9px; font-size: 14px; }

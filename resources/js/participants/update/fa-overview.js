@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   if (tabs.length) activateTab(tabs[0]);
 
-  const requestedId = new URLSearchParams(location.search).get('faId');
+  const requestedId = window.TmisStore.selectedId();
   const demoAssociation = { id: 'FA-2025-001', association_name: 'Jomalig Farmers Association', short_name: 'JFA', organization_type: 'Association', office: 'Municipal Agriculture Office', province: 'Quezon', district: '1st District', municipality: 'Jomalig', barangay: 'Apad', registration_date: '2025-03-14', year_covered: '2025', status: 'Active' };
   const sampleMembers = [
     { status: 'Active', farmer_id: 'F-2025-001', lname: 'Reyes', fname: 'Maria', mname: 'Santos', sfname: '', dob: '1985-04-18', gender: 'Female', associate_role: 'President', date_registered: '2025-03-14', province: 'Quezon', district: '1st District', municipality: 'Jomalig', barangay: 'Apad', sitio: 'Purok 1' },
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const rowValues = member => {
     const birth = first(member, 'dob', 'date_of_birth', 'birth_date');
     return [
-      first(member, 'status'), first(member, 'farmer_id', 'id'),
+      first(member, 'status'), first(member, 'farmerNumber', 'farmer_number', 'farmer_id', 'id'),
       first(member, 'last_name', 'lname'), first(member, 'first_name', 'fname'),
       first(member, 'middle_name', 'mname'), first(member, 'extension', 'suffix', 'sfname'),
       formatDate(birth), first(member, 'gender', 'sex'),
@@ -151,10 +151,41 @@ document.addEventListener('DOMContentLoaded', () => {
       const stored = JSON.parse(window.TmisStore.getItem('tmis-fa-members') || '[]');
       if (Array.isArray(stored)) storedMembers = stored;
     } catch { /* Invalid browser data leaves the table empty. */ }
-    members = currentAssociation ? [
-      ...(Array.isArray(currentAssociation.members) ? currentAssociation.members : []),
-      ...storedMembers.filter(member => member.faId === id || member.association_id === id),
-    ] : [];
+    if (currentAssociation) {
+      const membersByFarmer = new Map();
+      const rosterMembers = Array.isArray(currentAssociation.members) ? currentAssociation.members : [];
+      const legacyMembers = storedMembers.filter(member => member.faId === id || member.association_id === id);
+
+      [...rosterMembers, ...legacyMembers].forEach(member => {
+        const farmerId = String(member.farmer_id || member.id || '').trim().toLocaleLowerCase();
+        if (!farmerId) return;
+
+        const existing = membersByFarmer.get(farmerId);
+        if (!existing) {
+          membersByFarmer.set(farmerId, member);
+          return;
+        }
+
+        const merged = { ...member, ...existing };
+        Object.entries(member).forEach(([key, value]) => {
+          if ((merged[key] === undefined || merged[key] === null || merged[key] === '') && value !== undefined && value !== null && value !== '') {
+            merged[key] = value;
+          }
+        });
+        const role = existing.position || existing.associate_role || existing.role || member.position || member.associate_role || member.role;
+        if (role) {
+          merged.position = role;
+          merged.associate_role = role;
+          merged.farmer_role = role;
+          merged.role = role;
+        }
+        membersByFarmer.set(farmerId, merged);
+      });
+
+      members = [...membersByFarmer.values()];
+    } else {
+      members = [];
+    }
     const showingSamples = !window.TMIS_PAGE && id === demoAssociation.id && members.length === 0 && Boolean(association);
     if (showingSamples) members = sampleMembers;
     sampleNotice.hidden = !showingSamples;

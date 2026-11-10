@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -69,6 +70,141 @@ class RegistrationReferencesTest extends TestCase
         $this->assertDatabaseHas('geographic_locations', ['name' => 'New province', 'kind' => 'province', 'region_id' => 4]);
     }
 
+    public function test_administrator_can_manage_training_types_and_duplicate_names_are_rejected(): void
+    {
+        $this->signIn();
+
+        $created = $this->postJson('/system/training-types', ['name' => 'Hands-on Workshop'])
+            ->assertCreated()
+            ->assertJsonPath('message', 'Training type added.')
+            ->json('option');
+        $this->assertDatabaseHas('participant_options', [
+            'id' => $created['id'],
+            'field' => 'training_type',
+            'value' => 'Hands-on Workshop',
+        ]);
+        $this->postJson('/system/training-types', ['name' => 'hands-on workshop'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('name');
+
+        $this->patchJson('/system/training-types/'.$created['id'], ['name' => 'Practical Workshop'])
+            ->assertOk()
+            ->assertJsonPath('option.label', 'Practical Workshop');
+        $this->deleteJson('/system/training-types/'.$created['id'])
+            ->assertOk()
+            ->assertJsonPath('message', 'Training type deleted.');
+        $this->assertDatabaseMissing('participant_options', ['id' => $created['id']]);
+
+        $this->get('/system/settings')->assertOk()
+            ->assertSee('Training type directory')
+            ->assertSee('trainingTypeEditModal')
+            ->assertSee('data-training-type-refresh')
+            ->assertSee('Agribusiness')
+            ->assertSee('training-type-settings.js');
+        $this->getJson(route('system.training-types.index'))->assertOk()
+            ->assertJsonFragment(['field' => 'training_type', 'value' => 'Agribusiness', 'label' => 'Agribusiness']);
+        $this->get(route('admin.training.create.register'))->assertOk()
+            ->assertSee('trainerListStatus')
+            ->assertSee('year_covered')
+            ->assertSee('training_type');
+        $this->getJson('/ui/data')->assertOk()
+            ->assertJsonPath('registration.options.training_type.0.value', 'Crop Production');
+    }
+
+    public function test_training_registration_persists_year_covered_and_rejects_out_of_range_years(): void
+    {
+        $this->signIn();
+
+        $this->postJson('/ui/sync', [
+            'key' => 'tmis-trainings',
+            'upserts' => [[
+                'id' => 'TRN-YEAR-COVERED',
+                'training_title' => 'Training with year covered',
+                'training_type' => 'Workshop',
+                'year_covered' => '2025',
+                'start_date' => '2025-12-01',
+                'end_date' => '2025-12-02',
+                'venue' => 'Training hall',
+            ]],
+            'deletes' => [],
+        ])->assertOk();
+
+        $this->assertDatabaseHas('trainings', [
+            'ui_id' => 'TRN-YEAR-COVERED',
+            'year_covered' => 2025,
+        ]);
+
+        foreach ([1999, 2201] as $year) {
+            $id = 'TRN-YEAR-INVALID-'.$year;
+            $this->postJson('/ui/sync', [
+                'key' => 'tmis-trainings',
+                'upserts' => [[
+                    'id' => $id,
+                    'training_title' => 'Training with invalid year',
+                    'year_covered' => $year,
+                ]],
+                'deletes' => [],
+            ])->assertUnprocessable()->assertJsonValidationErrors('year_covered');
+            $this->assertDatabaseMissing('trainings', ['ui_id' => $id]);
+        }
+    }
+
+    public function test_training_type_rename_updates_saved_trainings_and_used_types_cannot_be_deleted(): void
+    {
+        $this->signIn();
+        $this->postJson('/ui/sync', [
+            'key' => 'tmis-trainings',
+            'upserts' => [[
+                'id' => 'TRN-TYPE-USED',
+                'training_title' => 'Training with a managed type',
+                'training_type' => 'Workshop',
+                'start_date' => '2026-12-01',
+                'end_date' => '2026-12-02',
+                'venue' => 'Training hall',
+            ]],
+            'deletes' => [],
+        ])->assertOk();
+        $optionId = DB::table('participant_options')->where('field', 'training_type')->where('value', 'Workshop')->value('id');
+
+        $this->patchJson('/system/training-types/'.$optionId, ['name' => 'Updated Workshop'])->assertOk();
+        $training = DB::table('trainings')->where('ui_id', 'TRN-TYPE-USED')->first();
+        $this->assertSame('Updated Workshop', $training->training_type);
+        $this->assertSame('Updated Workshop', json_decode(Crypt::decryptString($training->ui_data), true, 512, JSON_THROW_ON_ERROR)['training_type']);
+
+        $this->deleteJson('/system/training-types/'.$optionId)
+            ->assertConflict()
+            ->assertJsonPath('message', 'This training type is used by saved trainings and cannot be deleted.');
+        $this->assertDatabaseHas('participant_options', ['id' => $optionId, 'value' => 'Updated Workshop']);
+    }
+
+    public function test_non_administrator_cannot_manage_training_types(): void
+    {
+        $this->signIn(2);
+
+        $this->postJson('/system/training-types', ['name' => 'Unauthorized type'])->assertForbidden();
+        $this->assertDatabaseMissing('participant_options', ['field' => 'training_type', 'value' => 'Unauthorized type']);
+    }
+
+    public function test_training_registration_rejects_an_unconfigured_training_type(): void
+    {
+        $this->signIn();
+
+        $this->postJson('/ui/sync', [
+            'key' => 'tmis-trainings',
+            'upserts' => [[
+                'id' => 'TRN-INVALID-TYPE',
+                'training_title' => 'Invalid training type',
+                'training_type' => 'Unconfigured type',
+                'start_date' => '2026-12-01',
+                'end_date' => '2026-12-02',
+                'venue' => 'Training hall',
+            ]],
+            'deletes' => [],
+        ])->assertUnprocessable()->assertJsonValidationErrors('training_type');
+
+        $this->assertDatabaseMissing('trainings', ['ui_id' => 'TRN-INVALID-TYPE']);
+    }
+
     public function test_non_administrator_cannot_create_location(): void
     {
         $this->signIn(2);
@@ -119,6 +255,55 @@ class RegistrationReferencesTest extends TestCase
         $this->assertSame('Yes', $saved['soloParent']);
         $this->assertDatabaseHas('users_log', ['actor_user_id' => $user->user_id, 'category' => 'participants']);
         $this->get('/ui/data')->assertOk()->assertJsonPath('registration.options.gender.0.value', 'Male')->assertJsonCount(4, 'registration.locations');
+    }
+
+    public function test_registration_blocks_same_full_name_in_same_region_and_office(): void
+    {
+        $this->signIn();
+        $firstRegistration = $this->registration();
+        $firstRegistration['mname'] = 'Luna';
+        $this->postJson('/ui/participants', $firstRegistration)->assertCreated();
+
+        $duplicateRegistration = array_replace($firstRegistration, [
+            'fname' => ' ana ',
+            'mname' => ' luna ',
+            'lname' => ' SANTOS ',
+            'dob' => '1995-08-03',
+            'gender' => 'Male',
+            'confirm_duplicate' => true,
+        ]);
+        $response = $this->postJson('/ui/participants', $duplicateRegistration)
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'A farmer with the same name is already registered for this region and office.')
+            ->assertJsonPath('matches.0.name', 'Ana Luna Santos')
+            ->assertJsonPath('matches.0.region', 'Region IV-A')
+            ->assertJsonPath('matches.0.office', 'DA - SAAD')
+            ->assertJsonPath('matches.0.beneficiaryOffices.0.region', 'Region IV-A')
+            ->assertJsonPath('matches.0.beneficiaryOffices.0.office', 'DA - SAAD')
+            ->assertJsonPath('matches.0.isActive', true);
+
+        $this->assertDatabaseCount('participants', 1);
+    }
+
+    public function test_registration_allows_different_middle_name_or_office(): void
+    {
+        $user = $this->signIn();
+        DB::table('user_data_scopes')->insert([
+            'user_id' => $user->user_id,
+            'region_ids' => null,
+            'office_ids' => null,
+        ]);
+        $firstRegistration = $this->registration();
+        $firstRegistration['mname'] = 'Luna';
+        $this->postJson('/ui/participants', $firstRegistration)->assertCreated();
+
+        $differentMiddleName = array_replace($firstRegistration, ['mname' => 'Marie']);
+        $this->postJson('/ui/participants', $differentMiddleName)->assertCreated();
+
+        $differentOffice = array_replace($firstRegistration, ['org_id' => 2]);
+        $this->postJson('/ui/participants', $differentOffice)->assertCreated();
+
+        $this->assertDatabaseCount('participants', 3);
     }
 
     public function test_registration_requires_complete_choices_and_rejects_future_birthdays(): void

@@ -854,6 +854,7 @@ class="layout-fixed"
                       <div class="form-header d-flex align-items-center gap-2"><i class="bi bi-geo-alt-fill"></i><h6 class="card-header-title">Association location</h6></div>
                       <p class="fa-step-help">Choose each location to load the next field.</p>
                       <div class="row">
+                        <div class="col-12 col-md-6 mb-3"><label for="faRegion" class="form-label">Region <span class="text-required">*</span></label><select id="faRegion" name="region_id" class="form-select" required><option value="">Choose region</option></select></div>
                         <div class="col-12 col-md-6 mb-3"><label for="faProvince" class="form-label">Province <span class="text-required">*</span></label><select id="faProvince" name="province" class="form-select" required><option value="">Choose province</option></select></div>
                         <div class="col-12 col-md-6 mb-3"><label for="faDistrict" class="form-label">District <span class="text-required">*</span></label><select id="faDistrict" name="district" class="form-select" required disabled><option value="">Choose province first</option></select></div>
                         <div class="col-12 col-md-6 mb-3"><label for="faMunicipality" class="form-label">Municipality <span class="text-required">*</span></label><select id="faMunicipality" name="municipality" class="form-select" required disabled><option value="">Choose district first</option></select></div>
@@ -869,11 +870,11 @@ class="layout-fixed"
                         <div class="col-12 col-md-6 mb-3"><label for="faRegistrationDate" class="form-label">Registration date <span class="text-required">*</span></label><input id="faRegistrationDate" name="registration_date" type="date" class="form-control" required></div>
                         <div class="col-12 col-md-6 mb-3"><label for="faYearCovered" class="form-label">Year covered <span class="text-required">*</span></label><select id="faYearCovered" name="year_covered" class="form-select" required><option value="">Choose year</option></select></div>
                         <div class="col-12 col-md-6 mb-3"><label for="faOrganizationType" class="form-label">Organization type <span class="text-required">*</span></label><select id="faOrganizationType" name="organization_type" class="form-select" required><option value="">Choose organization type</option><option value="Association">Association</option><option value="Cooperative">Cooperative</option></select></div>
-                        <div class="col-12 col-md-6 mb-3"><label for="faOffice" class="form-label">Office <span class="text-required">*</span></label><input id="faOffice" name="office" type="text" class="form-control" maxlength="120" placeholder="e.g. Provincial Agriculture Office" required></div>
+                        <div class="col-12 col-md-6 mb-3"><label for="faOffice" class="form-label">Office <span class="text-required">*</span></label><select id="faOffice" name="org_id" class="form-select" required disabled><option value="">Choose region first</option></select></div>
                       </div>
                       <div class="fa-step-actions"><button type="button" class="btn fa-back-button" id="faPreviousStep"><i class="bi bi-arrow-left-short" aria-hidden="true"></i> Back</button><button type="submit" class="btn btn-submit">Register association <i class="bi bi-check2" aria-hidden="true"></i></button></div>
-                      <p class="fa-form-status" id="faFormStatus" role="status" aria-live="polite"></p>
                     </fieldset>
+                    <p class="fa-form-status" id="faFormStatus" role="status" aria-live="polite"></p>
                   </form>
                 </div>
               </div>
@@ -901,7 +902,7 @@ class="layout-fixed"
                     </li>
                     <li class="list-item">
                       <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-                      <p class="list-context">The association location and registration details will be saved in this browser</p>
+                      <p class="list-context">Association details are saved to TMIS when you register.</p>
                     </li>
                   </ul>
                 </div>
@@ -1548,5 +1549,5 @@ class="layout-fixed"
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <!-- Connect registration fieldsets with the wizard progress card. -->
-    <script src="{{ asset('src/js/participants/register/fa-register.js') }}"></script>
+    <script src="{{ asset('src/js/participants/register/fa-register.js?v=association-location-scope-1') }}"></script>
 @endsection

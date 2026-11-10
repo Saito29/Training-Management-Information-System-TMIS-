@@ -28,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedFarmer = null;
   const draftId = new URLSearchParams(location.search).get('draft');
   const resumedDraft = existingRecord || (draftId ? read('tmis-pre-test-encoded').find(r => r.id === draftId && r.status === 'draft') : null);
-  window.TMIS_ENCODED_RECORD = resumedDraft || existingRecord || null;
   let currentPage = 1;
   const dateLabel = value => { if (!value) return '—'; const d = new Date(`${value}T00:00:00`); return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); };
   const age = birthday => { const d = new Date(`${birthday}T00:00:00`); if (Number.isNaN(d.getTime())) return '—'; const now = new Date(); return String(now.getFullYear() - d.getFullYear() - (now.getMonth() < d.getMonth() || (now.getMonth() === d.getMonth() && now.getDate() < d.getDate()) ? 1 : 0)); };
@@ -77,12 +76,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (recordMode && !existingRecord) return;
     if (recordMode === 'edit') draft = false;
     const q = selectedQuestionnaire();
-    if (!draft && !$('trainingId').value) { notify('Select one approved training to link to this evaluation.', 'error'); return; }
     if (!draft && (!selectedFarmer || !q)) { notify('Select a farmer and a questionnaire before saving.', 'error'); return; }
     if (!draft && !form.reportValidity()) { $('encodeStatus').textContent = 'Enter the date and a valid score.'; return; }
     const score = $('score').value === '' ? null : Number($('score').value);
     if (score !== null && (!Number.isInteger(score) || score < 0 || (q && score > Number(q.totalItems)))) { notify('Score must be a whole number within the questionnaire total.', 'error'); return; }
-    const record = { id: activeDraftId || crypto.randomUUID(), trainingId: $('trainingId').value || '', trainingTitle: $('trainingTitleValue').value || '', trainingLocation: $('trainingLocationValue').value || '', trainingVenue: $('trainingVenueValue').value || '', trainingOrganization: $('trainingOrganizationValue').value || '', trainingStartDate: window.TMIS_TRAINING_PICKER?.selectedTraining()?.startDate || resumedDraft?.trainingStartDate || '', trainingEndDate: window.TMIS_TRAINING_PICKER?.selectedTraining()?.endDate || resumedDraft?.trainingEndDate || '', questionnaireId: q?.id || '', questionnaireName: q?.trainingQuestionnaire || '', implementingOffice: q?.implementingOffice || '', totalItems: q?.totalItems || null, farmerId: selectedFarmer?.id || '', farmerName: selectedFarmer?.name || '', farmerAssociation: selectedFarmer?.association || '', farmerLocation: selectedFarmer?.location || '', farmerBirthday: selectedFarmer?.birthday || '', farmerSex: selectedFarmer?.sex || '', date: $('testDate').value, commodity: $('commodity').value.trim(), score, status: draft ? 'draft' : 'complete', savedAt: existingRecord?.savedAt || new Date().toISOString(), updatedAt: recordMode === 'edit' ? new Date().toISOString() : undefined };
+    const record = { id: activeDraftId || crypto.randomUUID(), questionnaireId: q?.id || '', questionnaireName: q?.trainingQuestionnaire || '', implementingOffice: q?.implementingOffice || '', totalItems: q?.totalItems || null, farmerId: selectedFarmer?.id || '', farmerName: selectedFarmer?.name || '', farmerAssociation: selectedFarmer?.association || '', farmerLocation: selectedFarmer?.location || '', farmerBirthday: selectedFarmer?.birthday || '', farmerSex: selectedFarmer?.sex || '', date: $('testDate').value, commodity: $('commodity').value.trim(), score, status: draft ? 'draft' : 'complete', savedAt: existingRecord?.savedAt || new Date().toISOString(), updatedAt: recordMode === 'edit' ? new Date().toISOString() : undefined };
     try {
       const records = read('tmis-pre-test-encoded');
       const index = records.findIndex(item => item.id === record.id);

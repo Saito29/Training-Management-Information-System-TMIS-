@@ -966,13 +966,20 @@ class="layout-fixed"
                             required
                           >
                             <option value="" selected>Choose..</option>
-                            <option value="Crop Production">Crop Production</option>
-                            <option value="Organic Agriculture">Organic Agriculture</option>
-                            <option value="Agribusiness">Agribusiness</option>
-                            <option value="Livestock and Poultry">Livestock and Poultry</option>
-                            <option value="Fisheries">Fisheries</option>
-                            <option value="Post-harvest and Processing">Post-harvest and Processing</option>
-                            <option value="Farm Mechanization">Farm Mechanization</option>
+                          </select>
+                        </div>
+                        <div class="col-12 col-lg-6 mb-3">
+                          <label for="year_covered" class="form-label"
+                            >Year Covered
+                            <span class="text-required">*</span></label
+                          >
+                          <select
+                            name="year_covered"
+                            id="year_covered"
+                            class="form-control form-select"
+                            required
+                          >
+                            <option value="" selected>Choose year</option>
                           </select>
                         </div>
                         <div class="col-12 col-lg-6 mb-3">
@@ -1120,6 +1127,7 @@ class="layout-fixed"
                         </div>
                       </div>
                       <div class="mb-3">
+                        <p id="trainerListStatus" class="settings-field-help" aria-live="polite">1 trainer / facilitator added.</p>
                         <button
                           type="button"
                           class="btn btn-add-row"
@@ -2088,5 +2096,5 @@ class="layout-fixed"
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <!-- Connect registration fieldsets with the wizard progress card. -->
-    <script src="{{ asset('src/js/training/register/register.js') }}"></script>
+    <script src="{{ asset('src/js/training/register/register.js?v=training-year-covered-1') }}"></script>
 @endsection

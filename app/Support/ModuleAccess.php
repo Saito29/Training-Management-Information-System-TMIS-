@@ -361,6 +361,36 @@ class ModuleAccess
         abort_unless($request->user() && self::allowsNavigationPage($request->user(), $module, $page), 403);
     }
 
+    /**
+     * @return array{regionIds: ?list<int>, officeIds: ?list<int>}
+     */
+    public static function registrationScope(User $user): array
+    {
+        if (! self::isAdministrator($user)) {
+            return [
+                'regionIds' => $user->region_id === null ? [] : [(int) $user->region_id],
+                'officeIds' => $user->org_id === null ? [] : [(int) $user->org_id],
+            ];
+        }
+
+        $scope = DB::table('user_data_scopes')->where('user_id', $user->user_id)->first();
+        if (! $scope) {
+            return [
+                'regionIds' => $user->region_id === null ? null : [(int) $user->region_id],
+                'officeIds' => $user->org_id === null ? null : [(int) $user->org_id],
+            ];
+        }
+
+        return [
+            'regionIds' => $scope->region_ids === null
+                ? null
+                : array_map('intval', json_decode($scope->region_ids, true, 512, JSON_THROW_ON_ERROR)),
+            'officeIds' => $scope->office_ids === null
+                ? null
+                : array_map('intval', json_decode($scope->office_ids, true, 512, JSON_THROW_ON_ERROR)),
+        ];
+    }
+
     /** Apply ownership before lookup so other offices cannot enumerate records. */
     public static function scope(Builder $query, User $user, bool $preferences = true): Builder
     {

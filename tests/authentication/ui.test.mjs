@@ -9,9 +9,9 @@ const verification = readFileSync('resources/js/authentication/email-verificatio
 function element(value = '') {
   return {
     value, handlers: {}, dataset: {}, hidden: false, textContent: '', disabled: false,
-    classList: { toggle() {} },
+    attributes: {}, classList: { values: new Set(), add(name) { this.values.add(name); }, toggle() {} },
     addEventListener(name, callback) { this.handlers[name] = callback; },
-    setAttribute() {}, removeAttribute() {}, focus() {}, reportValidity() { return true; },
+    setAttribute(name, value) { this.attributes[name] = value; }, removeAttribute() {}, focus() {}, reportValidity() { return true; },
   };
 }
 
@@ -80,4 +80,84 @@ test('expired verification code disables submission and warns only once', () => 
   assert.equal(browser.toasts.length, 1);
   assert.equal(browser.toasts[0].type, 'warning');
   assert.match(browser.toasts[0].message, /5 minutes/);
+});
+
+test('verification button shows signing-in state during submission', () => {
+  const form = element();
+  form.dataset = { authenticator: 'false', expiresAt: '2099-01-01T00:00:00Z', resendAvailableAt: '2020-01-01T00:00:00Z' };
+  const elements = {
+    'email-verification-form': form,
+    'verification-code': element(),
+    'verify-code-button': element(),
+    'verify-code-spinner': element(),
+    'verify-code-label': element('Verify and sign in'),
+    'verify-code-arrow': element(),
+  };
+  for (const id of ['code-error', 'resend-code', 'code-validity-countdown', 'code-validity', 'resend-countdown']) elements[id] = element();
+  const browser = context(elements);
+  vm.runInNewContext(verification, browser.globals);
+
+  form.handlers.submit();
+
+  assert.equal(elements['verify-code-button'].disabled, true);
+  assert.equal(elements['verify-code-button'].attributes['aria-busy'], 'true');
+  assert.equal(elements['verify-code-button'].classList.values.has('is-loading'), true);
+  assert.equal(elements['verify-code-spinner'].hidden, false);
+  assert.equal(elements['verify-code-label'].textContent, 'Signing in...');
+  assert.equal(elements['verify-code-arrow'].hidden, true);
+  browser.tick();
+  assert.equal(elements['verify-code-button'].disabled, true);
+});
+
+test('complete email verification code submits automatically without clicking verify', () => {
+  const form = element();
+  form.dataset = { authenticator: 'false', expiresAt: '2099-01-01T00:00:00Z', resendAvailableAt: '2020-01-01T00:00:00Z' };
+  form.requestSubmit = () => { form.requestedSubmissions++; };
+  form.requestedSubmissions = 0;
+  const input = element();
+  const elements = { 'email-verification-form': form, 'verification-code': input };
+  for (const id of ['code-error', 'resend-code', 'code-validity-countdown', 'code-validity', 'verify-code-button', 'resend-countdown']) elements[id] = element();
+  const browser = context(elements);
+  vm.runInNewContext(verification, browser.globals);
+
+  input.value = '12345';
+  input.handlers.input();
+  assert.equal(form.requestedSubmissions, 0);
+  input.value = '123456';
+  input.handlers.input();
+
+  assert.equal(form.requestedSubmissions, 1);
+});
+
+test('complete code autofilled before script initialization submits automatically', () => {
+  const form = element();
+  form.dataset = { authenticator: 'false', expiresAt: '2099-01-01T00:00:00Z', resendAvailableAt: '2020-01-01T00:00:00Z' };
+  form.requestSubmit = () => { form.requestedSubmissions++; };
+  form.requestedSubmissions = 0;
+  const input = element('123456');
+  const elements = { 'email-verification-form': form, 'verification-code': input };
+  for (const id of ['code-error', 'resend-code', 'code-validity-countdown', 'code-validity', 'verify-code-button', 'resend-countdown']) elements[id] = element();
+
+  vm.runInNewContext(verification, context(elements).globals);
+
+  assert.equal(form.requestedSubmissions, 1);
+});
+
+test('complete authenticator and recovery codes submit automatically', () => {
+  const form = element();
+  form.dataset = { authenticator: 'true', expiresAt: '2099-01-01T00:00:00Z', resendAvailableAt: '2020-01-01T00:00:00Z' };
+  form.requestSubmit = () => { form.requestedSubmissions++; };
+  form.requestedSubmissions = 0;
+  const input = element();
+  const elements = { 'email-verification-form': form, 'verification-code': input };
+  for (const id of ['code-error', 'resend-code', 'code-validity-countdown', 'code-validity', 'verify-code-button', 'resend-countdown']) elements[id] = element();
+  const browser = context(elements);
+  vm.runInNewContext(verification, browser.globals);
+
+  input.value = '123456';
+  input.handlers.input();
+  input.value = '0123456789-abcdef0123';
+  input.handlers.input();
+
+  assert.equal(form.requestedSubmissions, 2);
 });

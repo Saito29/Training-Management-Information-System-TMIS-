@@ -7,7 +7,7 @@ class="layout-fixed"
 @endsection
 
 @section('head')
-<link rel="stylesheet" href="{{ asset('src/css/shared/system-settings.css?v=settings-active-tab-theme-1') }}">
+<link rel="stylesheet" href="{{ asset('src/css/shared/system-settings.css?v=system-settings-ui-restored-1') }}">
 <script src="{{ asset('src/js/shared/system-settings.js?v=visibility-scope-select-all-refresh-1') }}" defer></script>
 <script src="{{ asset('src/js/shared/maintenance-schedule.js?v=auto-expire-1') }}" defer></script>
 {{-- Load the toast API before the settings feedback script that displays flashed messages. --}}
@@ -1589,11 +1589,13 @@ class="layout-fixed"
 <button class="nav-link" id="super-admins-tab" data-bs-toggle="pill" data-bs-target="#super-admins" type="button" role="tab" aria-controls="super-admins" aria-selected="false"><i class="bi bi-shield-lock" aria-hidden="true"></i><span>Super Admins<small>Elevated administrator access</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>@endif
 @if($isSuperAdministrator)<button class="nav-link" id="database-tab" data-bs-toggle="pill" data-bs-target="#database" type="button" role="tab" aria-controls="database" aria-selected="false"><i class="bi bi-database-gear" aria-hidden="true"></i><span>Database<small>Backup &amp; legacy import</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>@endif
 <button class="nav-link" id="locations-tab" data-bs-toggle="pill" data-bs-target="#locations" type="button" role="tab" aria-controls="locations" aria-selected="false"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>Locations<small>Register geographic records</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+<button class="nav-link" id="training-types-tab" data-bs-toggle="pill" data-bs-target="#training-types" type="button" role="tab" aria-controls="training-types" aria-selected="false"><i class="bi bi-mortarboard" aria-hidden="true"></i><span>Training types<small>Training registration choices</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
 <button class="nav-link" id="nationalities-tab" data-bs-toggle="pill" data-bs-target="#nationalities" type="button" role="tab" aria-controls="nationalities" aria-selected="false"><i class="bi bi-flag" aria-hidden="true"></i><span>Nationalities<small>Participant registration choices</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
 <button class="nav-link" id="offices-tab" data-bs-toggle="pill" data-bs-target="#offices" type="button" role="tab" aria-controls="offices" aria-selected="false"><i class="bi bi-buildings" aria-hidden="true"></i><span>Offices<small>Register offices per region</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
-</nav><div class="settings-admin-note"><i class="bi bi-shield-check" aria-hidden="true"></i>@if($isSuperAdministrator)<strong>Super Admin workspace</strong><p>Your System Administrator account also has Super Admin authorization for maintenance, role access, Super Admin assignments, and database backup tools.</p>@else<strong>System Administrator workspace</strong><p>Your role includes account, branding, visibility, location, and office settings. Super Admin access is separately required for maintenance, role access, Super Admin assignments, and database backup tools.</p>@endif</div></aside>
+</nav><div class="settings-admin-note"><i class="bi bi-shield-check" aria-hidden="true"></i>@if($isSuperAdministrator)<strong>Super Admin workspace</strong><p>Your System Administrator account also has Super Admin authorization for maintenance, role access, Super Admin assignments, and database backup tools.</p>@else<strong>System Administrator workspace</strong><p>Your role includes account, branding, visibility, location, training type, and office settings. Super Admin access is separately required for maintenance, role access, Super Admin assignments, and database backup tools.</p>@endif</div></aside>
 <div class="tab-content settings-content">
 @include('admin.location-settings')
+@include('admin.training-type-settings')
 @include('admin.office-settings')
 @include('admin.nationality-settings')
 <div class="modal fade" id="settingsDeleteModal" tabindex="-1" aria-labelledby="settingsDeleteTitle" aria-hidden="true">
@@ -3089,5 +3091,3 @@ class="layout-fixed"
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
 
 @endsection
-
-

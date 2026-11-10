@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const islandTowns = ['Jomalig', 'Patnanungan'];
-  const allRecords = (window.TMIS_PAGE ? window.TmisStore.records('tmis-farmers') : seed.map(
+  let allRecords = (window.TMIS_PAGE ? window.TmisStore.records('tmis-farmers') : seed.map(
     ([id, organization, role, lastName, firstName, middleName, sex, municipality, barangay, yearCovered], i) => ({
       id,
       organization,
@@ -79,9 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   ));
 
-  // This page lists active farmer profiles. Inactive profiles belong to the
-  // Inactive details page.
-  const records = allRecords.filter((r) => r.status === 'Active');
+  let records = [...allRecords];
 
   // ============================================================
   // Helpers and state
@@ -130,12 +128,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusBadgeClass = (status) =>
     ({
       Active: 'status-active',
+      Inactive: 'status-inactive',
+      Deceased: 'status-deceased',
+      Removed: 'status-neutral',
     })[status] || 'status-neutral';
 
-  const date = (v) =>
-    new Intl.DateTimeFormat('en-PH', {timeZone: 'Asia/Manila',  month: 'short', day: 'numeric', year: 'numeric' }).format(
-      new Date(`${v}T00:00:00`)
-    );
+  const date = (value) => {
+    if (!value) return '—';
+    const parsed = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return '—';
+    return new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' }).format(parsed);
+  };
 
   const notify = (title, message, blocked = false) => {
     $('#reviewToastTitle').textContent = title;
@@ -222,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
               `${i && n - nums[i - 1] > 1 ? '<span>…</span>' : ''}<button data-page="${n}" class="${n === state.page ? 'active' : ''}">${n}</button>`
           )
           .join('')}<button data-page="next" ${state.page === pages ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>`;
-    el.innerHTML = `<span>Showing ${start}–${end} of ${total} farmers</span><div class="pagination-controls"><label class="visually-hidden" for="${id}Rows">Rows per page</label><select id="${id}Rows" data-page-size><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="500">500</option><option value="1000">1000</option><option value="all">All</option></select>${controls}</div>`;
+    el.innerHTML = `<span>Showing ${start}–${end} of ${total} farmers</span><div class="pagination-controls"><label class="pagination-page-size" for="${id}Rows"><span>Rows per page</span><select class="form-select" id="${id}Rows" data-page-size><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="500">500</option><option value="1000">1000</option><option value="all">All</option></select></label>${controls}</div>`;
     $('[data-page-size]', el).value = state.perPage;
   };
 
@@ -233,12 +236,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const id = encodeURIComponent(r.id);
     return `<tr>
       <td data-column="actions"><div class="table-row-actions">
-        <a class="btn table-action-button view-action" href="../id/view-farmer?id=${id}" target="_blank" rel="noopener" title="View farmer profile" aria-label="View farmer profile"><i class="bi bi-eye-fill"></i></a>
-        <a class="btn table-action-button edit-action" href="../id/edit-farmer?id=${id}" target="_blank" rel="noopener" title="Edit farmer profile" aria-label="Edit farmer profile"><i class="bi bi-pencil-fill"></i></a>
+        <a class="btn table-action-button view-action" href="../id/view-farmer/${id}" target="_blank" rel="noopener" title="View farmer profile" aria-label="View farmer profile"><i class="bi bi-eye-fill"></i></a>
+        <a class="btn table-action-button edit-action" href="../id/edit-farmer/${id}" target="_blank" rel="noopener" title="Edit farmer profile" aria-label="Edit farmer profile"><i class="bi bi-pencil-fill"></i></a>
         <button type="button" class="btn table-action-button delete-action" data-delete="${esc(r.id)}" title="Delete farmer profile" aria-label="Delete farmer profile"><i class="bi bi-trash-fill"></i></button>
       </div></td>
       <td data-column="status"><span class="status-badge ${statusBadgeClass(r.status)}">${esc(r.status)}</span></td>
-      <td data-column="id">${esc(r.id)}</td>
+      <td data-column="id">${esc(r.farmerNumber || r.id)}</td>
       <td data-column="region">${esc(r.region)}</td>
       <td data-column="province">${esc(r.province)}</td>
       <td data-column="district">${esc(r.district)}</td>
@@ -263,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <td data-column="dietaryRestriction">${esc(r.dietaryRestriction)}</td>
       <td data-column="seniorCitizen">${esc(r.seniorCitizen)}</td>
       <td data-column="yearCovered">${esc(r.yearCovered)}</td>
-      <td data-column="registered">${date(r.registered)}</td>
+      <td data-column="registered">${date(r.registrationDate || r.registered || r.createdAt)}</td>
     </tr>`;
   };
 
@@ -382,15 +385,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // ============================================================
   // Refresh: reset filters, sorting and paging, then redraw the table
   // ============================================================
-  $('#refreshReviewTable').addEventListener('click', () => {
+  $('#refreshReviewTable').addEventListener('click', async () => {
     const icon = $('#refreshReviewTable i');
     icon.classList.add('spin');
     setTimeout(() => icon.classList.remove('spin'), 700);
-    resetFilters();
-    state.sort = null;
-    state.perPage = 10;
-    refresh();
-    notify('Farmer Profiles Refreshed', `Table reloaded with ${records.length} farmer profiles.`);
+    try {
+      if (window.TMIS_PAGE) {
+        await window.TmisStore.refresh();
+        allRecords = window.TmisStore.records('tmis-farmers');
+        records = [...allRecords];
+      }
+      resetFilters();
+      state.sort = null;
+      state.perPage = 10;
+      refresh();
+      notify('Farmer Profiles Refreshed', `Table reloaded with ${records.length} farmer profiles.`);
+    } catch (error) {
+      notify('Refresh Failed', error.message || 'The farmer list could not be refreshed.', true);
+    }
   });
 
   // ============================================================

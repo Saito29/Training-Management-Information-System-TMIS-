@@ -16,6 +16,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (!form || !steps.length || !fieldsets.length) return;
 
+  const trainingTypeSelect = form.elements.namedItem('training_type');
+  const trainingTypeOptions = window.TMIS_PAGE?.registration?.options?.training_type;
+  if (trainingTypeSelect instanceof HTMLSelectElement && Array.isArray(trainingTypeOptions)) {
+    trainingTypeSelect.replaceChildren(
+      new Option('Choose..', ''),
+      ...trainingTypeOptions.map(option => new Option(option.label, option.value))
+    );
+  }
+  const yearCoveredSelect = form.elements.namedItem('year_covered');
+  if (yearCoveredSelect instanceof HTMLSelectElement) {
+    const currentYear = new Date().getFullYear();
+    yearCoveredSelect.replaceChildren(
+      new Option('Choose year', ''),
+      ...Array.from({ length: currentYear + 2 - 2000 }, (_, index) => {
+        const year = String(currentYear + 1 - index);
+        return new Option(year, year);
+      })
+    );
+  }
+
   const trainerSelect = trainerList?.querySelector('select[name="trainer_name[]"]');
   const staticTrainers = [...(trainerSelect?.options || [])].filter((option) => option.value).map((option) => ({
     name: option.value,
@@ -53,11 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
     syncTrainerContact(row);
   };
   const refreshRegisteredRps = () => {
-    let saved = [];
-    try {
-      const parsed = JSON.parse(window.TmisStore.getItem('tmis-resource-persons') || '[]');
-      if (Array.isArray(parsed)) saved = parsed;
-    } catch { saved = []; }
+    const saved = window.TMIS_PAGE ? window.TmisStore.records('tmis-resource-persons') : [];
     registeredRps.clear();
     saved.filter((record) => record?.id && record.status !== 'Inactive').forEach((record) => registeredRps.set(record.id, record));
     trainerList?.querySelectorAll('select[name="trainer_name[]"]').forEach((select) => {
@@ -261,16 +277,18 @@ document.addEventListener('DOMContentLoaded', () => {
     setSubmitLoading(true);
     try {
       const values = Object.fromEntries(new FormData(form));
-      const id = 'TRN-' + crypto.randomUUID();
+      const temporaryId = 'TRN-TEMP-' + crypto.randomUUID();
       for (const name of ['region_id','district_id','province_id','municipality_id','barangay_id']) {
         const control = form.elements.namedItem(name);
         if (control?.selectedOptions[0]?.value) values[name.replace('_id','')] = control.selectedOptions[0].textContent;
       }
-      const record = {...values, id, trainers:new FormData(form).getAll('trainer_rp_id[]').filter(Boolean).map(id=>({id}))};
+      const record = {...values, id:temporaryId, trainers:new FormData(form).getAll('trainer_rp_id[]').filter(Boolean).map(id=>({id}))};
       const records = window.TmisStore.records('tmis-trainings');
-      await window.TmisStore.setItem('tmis-trainings', JSON.stringify([...records,record]));
+      const result = await window.TmisStore.setItem('tmis-trainings', JSON.stringify([...records,record]));
+      const id = result?.idMappings?.[temporaryId];
+      if (!id) throw new Error('The training was saved, but its reference ID could not be resolved. Refresh the training list to continue.');
       window.TmisToast?.show('Record saved successfully.', 'success');
-      location.assign('../id/view-training?id=' + encodeURIComponent(id));
+      location.assign(`../id/view-training/${encodeURIComponent(id)}`);
     } catch (error) {
       window.TmisToast?.show(error.message || 'The record could not be saved.', 'error');
     } finally { setSubmitLoading(false); }
@@ -319,9 +337,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const title = row.querySelector('.row-title');
       if (title) title.textContent = `Trainer/ Facilitator ${index + 1}`;
 
-      // The first trainer row can never be removed.
-      row.querySelector('[data-remove-row]')?.classList.toggle('d-none', rows.length === 1);
+      const removeButton = row.querySelector('[data-remove-row]');
+      if (removeButton) {
+        removeButton.classList.toggle('d-none', rows.length === 1);
+        removeButton.setAttribute('aria-label', `Remove trainer/facilitator ${index + 1}`);
+      }
     });
+    const status = document.querySelector('#trainerListStatus');
+    if (status) status.textContent = `${rows.length} trainer${rows.length === 1 ? '' : 's'} / facilitator${rows.length === 1 ? '' : 's'} added.`;
   };
 
   const addRow = (list) => {
@@ -330,6 +353,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const row = template.cloneNode(true);
     rowCounter += 1;
+
+    row.querySelectorAll('.tmis-combobox').forEach((wrapper) => {
+      const select = wrapper.querySelector('select');
+      if (!select) return;
+      select.classList.remove('tmis-combobox-source');
+      select.removeAttribute('aria-hidden');
+      select.removeAttribute('tabindex');
+      wrapper.replaceWith(select);
+    });
 
     // Clear values and give each field/label pair a unique id.
     row.querySelectorAll('input, select, textarea').forEach((control) => {
@@ -349,13 +381,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     list.append(row);
-    if (list === trainerList) syncTrainerContact(row);
+    if (list === trainerList) {
+      syncTrainerContact(row);
+    }
     observeControls(row);
     refreshRepeatList(list);
-    row.querySelector('input, select, textarea')?.focus();
+    row.setAttribute('role', 'group');
+    row.setAttribute('aria-label', `Trainer / facilitator ${list.querySelectorAll(':scope > [data-repeat-row]').length}`);
   };
 
-  addTrainerButton?.addEventListener('click', () => addRow(trainerList));
+  addTrainerButton?.addEventListener('click', () => {
+    if (trainerList) addRow(trainerList);
+  });
 
   // Remove a trainer row while keeping at least one row.
   form.addEventListener('click', (event) => {
@@ -374,8 +411,13 @@ document.addEventListener('DOMContentLoaded', () => {
   form.querySelectorAll('.repeat-list').forEach(refreshRepeatList);
   refreshRegisteredRps();
   trainerList?.querySelectorAll('[data-repeat-row]').forEach(syncTrainerContact);
-  window.addEventListener('storage', (event) => {
-    if (event.key === 'tmis-resource-persons') refreshRegisteredRps();
+  window.addEventListener('tmis:data-updated', refreshRegisteredRps);
+
+  trainerList?.addEventListener('input', (event) => {
+    if (event.target.matches('input[name="trainer_contact[]"], input[name="trainer_email[]"]')) {
+      syncTrainerContact(event.target.closest('[data-repeat-row]'));
+      updateWizard();
+    }
   });
 
   // Selecting a resource person fills every detail available in the RP record.

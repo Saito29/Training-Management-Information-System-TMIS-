@@ -60,7 +60,7 @@ class="layout-fixed"
     />
     <link rel="stylesheet" href="{{ asset('src/css/participants/update/fa-overview.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training-participants.css') }}" />
-    <link rel="stylesheet" href="{{ asset('src/css/participants/update/fa-edit.css') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/participants/update/fa-edit.css?v=association-member-roles-1') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
     <title>DA-TMIS - Edit Farmer Association</title>
@@ -858,8 +858,12 @@ class="layout-fixed"
         <div><label class="form-label" for="faEditType">Organization Type</label><select class="form-select" id="faEditType" name="organization_type" required><option value="Association">Association</option><option value="Cooperative">Cooperative</option></select></div>
         <div><label class="form-label" for="faEditDate">Registration Date</label><input class="form-control" id="faEditDate" name="registration_date" type="date" required /></div>
         <div><label class="form-label" for="faEditYear">Year Covered</label><select class="form-select" id="faEditYear" name="year_covered" required></select></div>
-        <div><label class="form-label" for="faEditOffice">Office</label><input class="form-control" id="faEditOffice" name="office" maxlength="120" required /></div>
         <div><label class="form-label" for="faEditStatus">Status</label><select class="form-select" id="faEditStatus" name="status" required><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
+      </div>
+      <h6 class="fa-edit-subtitle"><i class="bi bi-building-check" aria-hidden="true"></i>Registration region and office <span class="text-secondary small">Location is locked after registration.</span></h6>
+      <div class="fa-edit-fields">
+        <div><label class="form-label" for="faEditRegion">Region</label><select class="form-select" id="faEditRegion" name="region_id" required disabled><option value="">Loading available regions...</option></select></div>
+        <div><label class="form-label" for="faEditOffice">Office</label><select class="form-select" id="faEditOffice" name="org_id" required disabled><option value="">Choose a region first</option></select></div>
       </div>
       <h6 class="fa-edit-subtitle"><i class="bi bi-geo-alt" aria-hidden="true"></i>Association location</h6>
       <div class="fa-edit-fields">
@@ -885,7 +889,7 @@ class="layout-fixed"
                   </div>
                   <div id="faCurrentMembersPanel" role="tabpanel" aria-labelledby="faCurrentMembersTab"></div>
                   <div id="faAddMembersPanel" class="edit-participants-content" role="tabpanel" aria-labelledby="faAddMembersTab" hidden>
-                    <div class="edit-participants-intro"><div><h3>Find farmers to add</h3><p>Select farmers individually or select all matching results across pages, then tag them to this association.</p></div><span id="faAvailableCount">0 available</span></div>
+                    <div class="edit-participants-intro"><div><h3>Find farmers to add</h3><p>Only active farmers without an association membership in this association’s region and municipality are available. Select farmers individually or select all matching results across pages.</p></div><span id="faAvailableCount">0 available</span></div>
                     <div class="edit-participants-toolbar fa-available-toolbar">
                       <label class="edit-participants-search"><i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden">Search available farmers</span><input class="form-control" id="faAvailableSearch" type="search" placeholder="Search ID, name, or location" /></label>
                       <select class="form-select" id="faAvailableProvince" aria-label="Filter farmers by province"><option value="">All provinces</option></select>
@@ -897,7 +901,7 @@ class="layout-fixed"
                     <div class="edit-participants-table-wrap fa-available-table-wrap"><table class="table edit-participants-table"><caption class="visually-hidden">Farmers available to tag to this association</caption><thead><tr><th scope="col"><input id="faAvailableSelectAll" type="checkbox" aria-label="Select all farmers matching current filters across all pages" /></th><th scope="col">Farmer ID</th><th scope="col">Full name</th><th scope="col">Barangay</th><th scope="col">Municipality / City</th><th scope="col">Province</th></tr><tr class="edit-participants-column-filters"><th></th><th><input class="form-control form-control-sm" data-fa-column="farmer_id" type="search" placeholder="Filter ID" aria-label="Filter by farmer ID" /></th><th><input class="form-control form-control-sm" data-fa-column="name" type="search" placeholder="Filter name" aria-label="Filter by full name" /></th><th><input class="form-control form-control-sm" data-fa-column="barangay" type="search" placeholder="Filter barangay" aria-label="Filter by barangay" /></th><th><input class="form-control form-control-sm" data-fa-column="municipality" type="search" placeholder="Filter municipality" aria-label="Filter by municipality" /></th><th><input class="form-control form-control-sm" data-fa-column="province" type="search" placeholder="Filter province" aria-label="Filter by province" /></th></tr></thead><tbody id="faAvailableRows"></tbody></table></div>
                     <p id="faAvailableEmpty" class="edit-participants-empty" hidden>No available farmers match your filters.</p>
                     <div class="edit-participants-pagination fa-available-pagination"><span id="faAvailableRange">Showing 0 of 0</span><div class="edit-participants-page-actions"><label>Rows per page <select id="faAvailablePageSize" class="form-select form-select-sm"><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="200">200</option><option value="500">500</option><option value="1000">1,000</option><option value="all">All</option></select></label><button id="faAvailablePrevious" type="button" aria-label="Previous page"><i class="bi bi-chevron-left" aria-hidden="true"></i></button><span id="faAvailablePageStatus">Page 1 of 1</span><button id="faAvailableNext" type="button" aria-label="Next page"><i class="bi bi-chevron-right" aria-hidden="true"></i></button></div></div>
-                    <div class="edit-participants-selection"><span id="faSelectedCount">0 selected</span><button class="btn edit-participants-add" id="faAddSelected" type="button" disabled><i class="bi bi-person-plus" aria-hidden="true"></i>Add selected farmers</button></div>
+                    <div class="edit-participants-selection"><span id="faSelectedCount">0 selected</span><label for="faMemberRole">Membership role<input class="form-control form-control-sm" id="faMemberRole" type="text" maxlength="255" value="Member" /></label><button class="btn edit-participants-add" id="faAddSelected" type="button" disabled><i class="bi bi-person-plus" aria-hidden="true"></i>Add selected farmers</button></div>
                     <p id="faRosterMessage" role="status" aria-live="polite"></p>
                   </div>
                 </div>
@@ -2178,9 +2182,9 @@ class="layout-fixed"
     <!-- nav -->
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/participants/update/fa-overview.js') }}"></script>
+    <script src="{{ asset('src/js/participants/update/fa-overview.js?v=farmer-roster-dedup-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-sections.js') }}"></script>
-    <script src="{{ asset('src/js/participants/update/fa-edit.js') }}"></script>
-    <script src="{{ asset('src/js/participants/update/fa-edit-members.js') }}"></script>
+    <script src="{{ asset('src/js/participants/update/fa-edit.js?v=association-location-scope-1') }}"></script>
+    <script src="{{ asset('src/js/participants/update/fa-edit-members.js?v=association-member-eligibility-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-edit-actions.js') }}"></script>
 @endsection

@@ -536,12 +536,12 @@ document.addEventListener('DOMContentLoaded', () => {
         for(const name of ['district','province','municipality','barangay']) {
           const select=form.elements.namedItem(name); if(select?.selectedOptions[0]?.value) values[name]=select.selectedOptions[0].textContent;
         }
-        await window.TmisStore.saveRecord('tmis-farmers',{...current,...values});
+        const savedFarmer = await window.TmisStore.saveRecord('tmis-farmers',{...current,...values});
         saveBtn.disabled = false;
         saveBtn.innerHTML = originalText;
         const displayUpdatedDate = document.getElementById('displayUpdatedDate');
         if (displayUpdatedDate) {
-          displayUpdatedDate.textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+          displayUpdatedDate.textContent = savedFarmer?.updatedAt ? window.TmisDate.format(savedFarmer.updatedAt, { dateStyle: 'long' }) : 'No record updated';
         }
         showToast('Farmer Profile Updated', 'Farmer personal, address, and contact information have been updated successfully.');
       } catch(error) {

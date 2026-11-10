@@ -1,0 +1,456 @@
+.activity-log-panel,
+.training-activity-card {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-bg) 35%, var(--color-surface));
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: 0 12px 30px color-mix(in srgb, #000 14%, transparent);
+}
+
+.activity-log-header,
+.training-activity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px 22px;
+  background: color-mix(in srgb, var(--color-primary-surface) 38%, var(--color-surface));
+  border-bottom: 1px solid var(--color-border);
+}
+
+.activity-log-heading,
+.training-activity-heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 13px;
+}
+
+.activity-log-heading-icon,
+.training-activity-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 13%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 25%, var(--color-border));
+  border-radius: 12px;
+  font-size: 19px;
+}
+
+.activity-log-heading h2,
+.training-activity-heading h2 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.activity-log-heading p,
+.training-activity-heading p {
+  margin: 3px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.activity-log-search,
+.training-activity-search {
+  width: min(300px, 100%);
+  flex: 0 1 300px;
+}
+
+.activity-log-search .input-group-text,
+.activity-log-search .form-control,
+.training-activity-search .input-group-text,
+.training-activity-search .form-control {
+  min-height: 40px;
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-bg) 65%, var(--color-surface));
+  border-color: var(--color-border);
+  font-size: 12px;
+}
+
+.activity-log-toolbar,
+.training-activity-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 22px;
+  background: color-mix(in srgb, var(--color-bg) 55%, var(--color-surface));
+  border-bottom: 1px solid var(--color-border);
+}
+
+.activity-log-filters,
+.training-activity-filters {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.activity-log-filter,
+.training-activity-filter {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.activity-log-filter > span,
+.training-activity-filter > span {
+  display: inline-grid;
+  min-width: 19px;
+  height: 19px;
+  place-items: center;
+  padding: 0 5px;
+  color: var(--color-text-secondary);
+  background: color-mix(in srgb, var(--color-border) 85%, var(--color-surface));
+  border-radius: 999px;
+  font-size: 10px;
+}
+
+.activity-log-filter:hover,
+.activity-log-filter:focus-visible,
+.training-activity-filter:hover,
+.training-activity-filter:focus-visible,
+.activity-log-filter.is-active,
+.training-activity-filter.is-active {
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+  outline: none;
+}
+
+.activity-log-result-count,
+#trainingActivityCount {
+  flex: none;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.activity-log-list,
+.training-activity-list {
+  display: grid;
+  gap: 9px;
+  padding: 15px 20px 20px;
+}
+
+.activity-log-entry,
+.training-activity-entry {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 13px 15px;
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-bg) 24%, var(--color-surface));
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.activity-log-entry:hover,
+.training-activity-entry:hover {
+  background: color-mix(in srgb, var(--color-primary-surface) 28%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+}
+
+.activity-log-entry-icon,
+.training-activity-entry-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 13%, var(--color-surface));
+  border-radius: 11px;
+  font-size: 15px;
+}
+
+.activity-log-entry[data-category="attachment"] .activity-log-entry-icon,
+.training-activity-entry[data-category="attachment"] .training-activity-entry-icon {
+  color: var(--color-info);
+  background: color-mix(in srgb, var(--color-info) 13%, var(--color-surface));
+}
+
+.activity-log-entry[data-category="membership"] .activity-log-entry-icon {
+  color: var(--color-purple);
+  background: color-mix(in srgb, var(--color-purple) 13%, var(--color-surface));
+}
+
+.activity-log-entry[data-category="status"] .activity-log-entry-icon,
+.training-activity-entry[data-category="status"] .training-activity-entry-icon {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 13%, var(--color-surface));
+}
+
+.activity-log-entry-content,
+.training-activity-entry-content {
+  min-width: 0;
+}
+
+.activity-log-entry-top,
+.training-activity-entry-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.activity-log-entry-title-group,
+.training-activity-entry-heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.activity-log-entry-title,
+.training-activity-entry-heading h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.activity-log-context,
+.activity-log-status,
+.training-activity-context,
+.training-activity-status {
+  display: inline-flex;
+  min-height: 20px;
+  align-items: center;
+  padding: 3px 8px;
+  color: var(--color-text-secondary);
+  background: color-mix(in srgb, var(--color-border) 55%, var(--color-surface));
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.activity-log-context[data-category="attachment"],
+.training-activity-entry[data-category="attachment"] .training-activity-context {
+  color: var(--color-info);
+  background: color-mix(in srgb, var(--color-info) 12%, var(--color-surface));
+}
+
+.activity-log-context[data-category="membership"] {
+  color: var(--color-purple);
+  background: color-mix(in srgb, var(--color-purple) 12%, var(--color-surface));
+}
+
+.activity-log-context[data-category="status"],
+.training-activity-entry[data-category="status"] .training-activity-context {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 12%, var(--color-surface));
+}
+
+.activity-log-context[data-category="profile"],
+.training-activity-entry[data-category="training"] .training-activity-context {
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+}
+
+.training-activity-entry[data-category="participant"] .training-activity-context {
+  color: var(--color-purple);
+  background: color-mix(in srgb, var(--color-purple) 12%, var(--color-surface));
+}
+
+.activity-log-status.is-success,
+.training-activity-status.is-success {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 13%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-success) 25%, var(--color-border));
+}
+
+.activity-log-entry-description,
+.training-activity-entry-content > p {
+  margin: 7px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.activity-log-entry-meta,
+.training-activity-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  gap: 3px 12px;
+  margin-top: 9px;
+}
+
+.activity-log-meta-item,
+.training-activity-meta-item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 0;
+  font-size: 10px;
+}
+
+.activity-log-entry-meta > :first-child,
+.training-activity-meta > :first-child {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.activity-log-entry-meta > :nth-child(2),
+.training-activity-meta > :nth-child(2) {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  justify-content: flex-end;
+  align-self: center;
+  white-space: nowrap;
+}
+
+.activity-log-entry-meta > :nth-child(3),
+.training-activity-meta > :nth-child(3) {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.activity-log-meta-item > i,
+.training-activity-meta-item > i {
+  flex: none;
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.activity-log-meta-copy,
+.training-activity-meta-item > span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px 7px;
+}
+
+.activity-log-meta-copy small,
+.training-activity-meta-item small {
+  display: none;
+}
+
+.activity-log-meta-copy strong,
+.activity-log-meta-detail,
+.activity-log-date-value,
+.training-activity-meta-item strong,
+.training-activity-meta-item time,
+.training-activity-meta-item > span > span {
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+
+.activity-log-meta-copy strong,
+.training-activity-meta > :first-child strong {
+  color: var(--color-text-primary);
+  font-weight: 650;
+}
+
+.activity-log-empty,
+.training-activity-empty {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 38px 16px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.activity-log-empty[hidden] {
+  display: none;
+}
+
+.activity-log-empty > i,
+.training-activity-empty > i {
+  color: var(--color-primary);
+  font-size: 25px;
+}
+
+.activity-log-empty strong,
+.training-activity-empty strong {
+  color: var(--color-text-primary);
+  font-size: 13px;
+}
+
+.activity-log-empty span,
+.training-activity-empty span {
+  font-size: 11px;
+}
+
+@media (max-width: 700px) {
+  .activity-log-header,
+  .training-activity-header,
+  .activity-log-toolbar,
+  .training-activity-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 14px;
+  }
+
+  .activity-log-search,
+  .training-activity-search {
+    width: 100%;
+    flex-basis: auto;
+  }
+
+  .activity-log-list,
+  .training-activity-list {
+    padding: 12px;
+  }
+
+  .activity-log-entry,
+  .training-activity-entry {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 9px;
+    padding: 11px;
+  }
+
+  .activity-log-entry-icon,
+  .training-activity-entry-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+  }
+
+  .activity-log-entry-meta,
+  .training-activity-meta {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+  }
+
+  .activity-log-entry-meta > :first-child,
+  .training-activity-meta > :first-child,
+  .activity-log-entry-meta > :nth-child(2),
+  .training-activity-meta > :nth-child(2),
+  .activity-log-entry-meta > :nth-child(3),
+  .training-activity-meta > :nth-child(3) {
+    grid-column: 1;
+    grid-row: auto;
+    justify-content: flex-start;
+  }
+}

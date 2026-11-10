@@ -129,3 +129,7 @@ input:disabled { background: #f1f3ef; color: #758072; cursor: not-allowed; }
 .compose-toast > i::before { content: "✓"; font-family: "Segoe UI", sans-serif; font-style: normal; font-weight: 700; }
 .compose-toast[data-type="error"] > i::before { content: "×"; }
 .compose-toast[data-type="warning"] > i::before { content: "!"; }
+.form-submit .submit-spinner { width: 16px; height: 16px; border: 2px solid #ffffff70; border-top-color: #fff; border-radius: 50%; animation: submit-spinner-rotate .7s linear infinite; }
+.form-submit.is-loading { cursor: wait; }
+@keyframes submit-spinner-rotate { to { transform: rotate(360deg); }
+}

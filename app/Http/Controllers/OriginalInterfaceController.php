@@ -31,13 +31,88 @@ class OriginalInterfaceController
         return $copy;
     }
 
+    private function syncParticipantAssociationMembership(int $participantId, ?int $previousAssociationId, ?int $associationId, ?string $role): void
+    {
+        $memberships = DB::table('participant_association_memberships')->where('participant_id', $participantId);
+        if ($associationId !== null) {
+            DB::table('participant_association_memberships')
+                ->where('participant_id', $participantId)
+                ->update(['is_primary' => false, 'updated_at' => now()]);
+
+            $membership = DB::table('participant_association_memberships')
+                ->where('participant_id', $participantId)
+                ->where('association_id', $associationId)
+                ->exists();
+            if ($membership) {
+                DB::table('participant_association_memberships')
+                    ->where('participant_id', $participantId)
+                    ->where('association_id', $associationId)
+                    ->update(['role' => $role, 'is_primary' => true, 'updated_at' => now()]);
+            } else {
+                DB::table('participant_association_memberships')->insert([
+                    'participant_id' => $participantId,
+                    'association_id' => $associationId,
+                    'role' => $role,
+                    'is_primary' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            DB::table('participants')->where('id', $participantId)->update([
+                'association_id' => $associationId,
+                'association_role' => $role,
+            ]);
+
+            return;
+        }
+
+        if ($previousAssociationId !== null) {
+            DB::table('participant_association_memberships')
+                ->where('participant_id', $participantId)
+                ->where('association_id', $previousAssociationId)
+                ->update(['is_primary' => false, 'updated_at' => now()]);
+        }
+        $nextMembership = (clone $memberships)
+            ->when($previousAssociationId !== null, fn ($query) => $query->where('association_id', '!=', $previousAssociationId))
+            ->orderBy('association_id')
+            ->first();
+
+        if ($nextMembership) {
+            DB::table('participant_association_memberships')
+                ->where('participant_id', $participantId)
+                ->update(['is_primary' => false, 'updated_at' => now()]);
+            DB::table('participant_association_memberships')
+                ->where('participant_id', $participantId)
+                ->where('association_id', $nextMembership->association_id)
+                ->update(['is_primary' => true, 'updated_at' => now()]);
+            DB::table('participants')->where('id', $participantId)->update([
+                'association_id' => $nextMembership->association_id,
+                'association_role' => $nextMembership->role,
+            ]);
+
+            return;
+        }
+
+        if ($previousAssociationId !== null) {
+            DB::table('participant_association_memberships')
+                ->where('participant_id', $participantId)
+                ->where('association_id', $previousAssociationId)
+                ->delete();
+        }
+        DB::table('participants')->where('id', $participantId)->update([
+            'association_id' => null,
+            'association_role' => null,
+        ]);
+    }
+
     public function registerParticipant(Request $request, RegistrationReferences $references, OriginalInterfaceData $data, OperationsController $operations): JsonResponse
     {
         ModuleAccess::authorize($request, 'participants.create');
         $record = $references->registration($request);
         $matches = $this->matchingParticipants($record);
-        if ($matches !== [] && ! $request->boolean('confirm_duplicate')) {
-            return response()->json(['message' => 'A participant with matching identity details already exists.', 'matches' => $matches], 409);
+        if ($matches !== []) {
+            return response()->json(['message' => 'A farmer with the same name is already registered for this region and office.', 'matches' => $matches], 409);
         }
         $record['id'] = 'FMR-'.Str::uuid();
         $input = $this->payload($request, ['key' => 'tmis-farmers', 'upserts' => [$record], 'deletes' => []]);
@@ -112,17 +187,27 @@ class OriginalInterfaceController
             ->leftJoin('organization', 'participants.org_id', '=', 'organization.org_id')
             ->leftJoin('associations', 'participants.association_id', '=', 'associations.id')
             ->whereNull('participants.deleted_at')
+            ->where(function ($query) use ($participant): void {
+                $query->where(function ($primary) use ($participant): void {
+                    $primary->where('participants.region_id', $participant['region_id'])
+                        ->where('participants.org_id', $participant['org_id']);
+                })->orWhereExists(function ($beneficiary) use ($participant): void {
+                    $beneficiary->selectRaw('1')
+                        ->from('participant_beneficiaries')
+                        ->whereColumn('participant_beneficiaries.participant_id', 'participants.id')
+                        ->where('participant_beneficiaries.region_id', $participant['region_id'])
+                        ->where('participant_beneficiaries.org_id', $participant['org_id']);
+                });
+            })
             ->whereRaw('LOWER(TRIM(participants.first_name)) = ?', [mb_strtolower(trim((string) $participant['fname']))])
+            ->whereRaw('LOWER(TRIM(COALESCE(participants.middle_name, \'\'))) = ?', [mb_strtolower(trim((string) ($participant['mname'] ?? '')))])
             ->whereRaw('LOWER(TRIM(participants.last_name)) = ?', [mb_strtolower(trim((string) $participant['lname']))])
-            ->whereDate('participants.date_of_birth', $participant['dob'])
-            ->whereRaw('LOWER(TRIM(participants.sex)) = ?', [mb_strtolower(trim((string) $participant['gender']))])
             ->orderBy('participants.last_name')
             ->orderBy('participants.first_name')
             ->limit(10)
             ->get([
                 'participants.id', 'participants.ui_id', 'participants.name', 'participants.first_name',
-                'participants.middle_name', 'participants.last_name', 'participants.suffix',
-                'participants.date_of_birth', 'participants.sex', 'participants.is_active',
+                'participants.middle_name', 'participants.last_name', 'participants.suffix', 'participants.is_active',
                 'participants.region_id', 'participants.org_id', 'region.name as region_name',
                 'organization.name as office_name', 'associations.name as association_name',
             ]);
@@ -158,8 +243,6 @@ class OriginalInterfaceController
                 'id' => $record->ui_id ?? (string) $record->id,
                 'farmerNumber' => OriginalInterfaceData::farmerNumber($record),
                 'name' => $fullName !== '' ? $fullName : $record->name,
-                'dateOfBirth' => $record->date_of_birth,
-                'sex' => $record->sex,
                 'isActive' => (bool) $record->is_active,
                 'association' => $record->association_name,
                 'region' => $record->region_name,
@@ -204,7 +287,8 @@ class OriginalInterfaceController
     public function sync(Request $request, OriginalInterfaceData $data, OperationsController $operations): JsonResponse
     {
         $input = $request->validate(['key' => ['required', 'string', 'max:120'], 'upserts' => ['present', 'array', 'max:100'], 'upserts.*' => ['array'], 'deletes' => ['present', 'array', 'max:100'], 'deletes.*' => ['string', 'max:100']]);
-        DB::transaction(function () use ($request, $input, $operations): void {
+        $idMappings = [];
+        DB::transaction(function () use ($request, $input, $operations, &$idMappings): void {
             $module = OriginalInterfaceData::KEYS[$input['key']] ?? null;
             if ($module) {
                 foreach ($input['deletes'] as $id) {
@@ -219,7 +303,10 @@ class OriginalInterfaceController
                     }
                 }
                 foreach ($input['upserts'] as $record) {
-                    $this->upsert($request, $input['key'], $module, $record, $operations);
+                    $idMapping = $this->upsert($request, $input['key'], $module, $record, $operations);
+                    if ($idMapping) {
+                        $idMappings[$idMapping['temporaryId']] = $idMapping['id'];
+                    }
                 }
             } elseif ($input['key'] === 'tmis-users') {
                 $this->accounts($request, $input);
@@ -234,15 +321,16 @@ class OriginalInterfaceController
             }
         });
 
-        return response()->json($data->bootstrap($request->user()) + ['message' => 'Changes saved to the database.']);
+        return response()->json($data->bootstrap($request->user()) + ['message' => 'Changes saved to the database.', 'idMappings' => $idMappings]);
     }
 
-    private function upsert(Request $request, string $key, string $module, array $raw, OperationsController $operations): void
+    /** @return array{temporaryId: string, id: string}|null */
+    private function upsert(Request $request, string $key, string $module, array $raw, OperationsController $operations): ?array
     {
         if ($module === 'evaluations') {
             $this->assessment($request, $key, $raw);
 
-            return;
+            return null;
         }
         $record = $this->validatedRecord($raw);
         if ($module === 'participants') {
@@ -250,6 +338,13 @@ class OriginalInterfaceController
                 'status' => ['sometimes', 'required', Rule::in(['Active', 'Inactive', 'Removed', 'Deceased'])],
                 'yearCovered' => ['sometimes', 'nullable', 'integer', 'min:2000', 'max:2200'],
                 'year_covered' => ['sometimes', 'nullable', 'integer', 'min:2000', 'max:2200'],
+            ])->validate();
+        }
+        if ($module === 'trainings') {
+            Validator::make($record, [
+                'training_type' => ['sometimes', 'nullable', 'string', Rule::exists('participant_options', 'value')->where('field', 'training_type')->where('is_active', true)],
+                'year_covered' => ['sometimes', 'nullable', 'integer', 'min:2000', 'max:2200'],
+                'yearCovered' => ['sometimes', 'nullable', 'integer', 'min:2000', 'max:2200'],
             ])->validate();
         }
         $id = $record['id'];
@@ -310,6 +405,42 @@ class OriginalInterfaceController
                 $operations->update($copy, $module, $databaseId);
             }
         }
+        $temporaryId = null;
+        if ($module === 'trainings' && ! $existing && preg_match('/^TRN-TEMP-[0-9a-f-]{36}$/i', $id) === 1) {
+            $temporaryId = $id;
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            $year = now()->format('y');
+            $sequence = 0;
+            foreach (DB::table('trainings')->where('ui_id', 'like', 'TRN-'.$year.'-%')->pluck('ui_id') as $publicId) {
+                if (is_string($publicId) && preg_match('/^TRN-'.preg_quote($year, '/').'-([0-9]+)$/D', $publicId, $matches) === 1) {
+                    $sequence = max($sequence, (int) $matches[1]);
+                }
+            }
+            $sequence++;
+            $id = 'TRN-'.$year.'-'.str_pad((string) $sequence, 6, '0', STR_PAD_LEFT);
+            while (DB::table('trainings')->where('ui_id', $id)->exists()) {
+                $sequence++;
+                $id = 'TRN-'.now()->format('y').'-'.str_pad((string) $sequence, 6, '0', STR_PAD_LEFT);
+            }
+            $metadata['id'] = $id;
+        } elseif ($module === 'associations' && ! $existing && preg_match('/^FA-TEMP-[0-9a-f-]{36}$/i', $id) === 1) {
+            $temporaryId = $id;
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            $year = now()->format('Y');
+            $sequence = 0;
+            foreach (DB::table('associations')->where('ui_id', 'like', 'FA-'.$year.'-%')->pluck('ui_id') as $publicId) {
+                if (is_string($publicId) && preg_match('/^FA-'.preg_quote($year, '/').'-([0-9]+)$/D', $publicId, $matches) === 1) {
+                    $sequence = max($sequence, (int) $matches[1]);
+                }
+            }
+            $sequence++;
+            $id = 'FA-'.$year.'-'.str_pad((string) $sequence, 3, '0', STR_PAD_LEFT);
+            while (DB::table('associations')->where('ui_id', $id)->exists()) {
+                $sequence++;
+                $id = 'FA-'.now()->format('Y').'-'.str_pad((string) $sequence, 3, '0', STR_PAD_LEFT);
+            }
+            $metadata['id'] = $id;
+        }
         DB::table($module)->where('id', $databaseId)->update(['ui_id' => $id, 'ui_data' => Crypt::encryptString(json_encode($metadata, JSON_THROW_ON_ERROR)), 'ui_version' => $existing ? $existing->ui_version + 1 : 1]);
         if ($module === 'participants') {
             DB::table('participant_beneficiaries')->insertOrIgnore([
@@ -321,6 +452,12 @@ class OriginalInterfaceController
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+            $this->syncParticipantAssociationMembership(
+                $databaseId,
+                isset($existing->association_id) ? (int) $existing->association_id : null,
+                isset($payload['association_id']) ? (int) $payload['association_id'] : null,
+                $payload['association_role'] ?? null,
+            );
         }
         $oldMetadata = $existing ? OriginalInterfaceData::unpack($existing->ui_data) : [];
         $assignmentChanged = false;
@@ -358,7 +495,7 @@ class OriginalInterfaceController
                     if (! $resource) {
                         $resource = OriginalInterfaceData::query($request->user(), 'resource_persons')->where('name', $reference)->first();
                     }
-                    abort_unless($resource && $resource->org_id === $training->org_id && $resource->region_id === $training->region_id && $resource->is_active, 422, 'Select registered resource persons in the training office.');
+                    abort_unless($resource && $resource->is_active, 422, 'Select an active registered resource person.');
                     $trainerIds[] = $resource->id;
                 }
                 DB::table('training_resource_person')->where('training_id', $databaseId)->delete();
@@ -370,19 +507,74 @@ class OriginalInterfaceController
         if ($module === 'associations' && array_key_exists('members', $record)) {
             ModuleAccess::authorize($request, 'associations.'.$permissionAction);
             $owner = DB::table('associations')->where('id', $databaseId)->first();
-            $ids = [];
+            abort_unless($owner, 404);
+            $members = [];
             foreach ($record['members'] as $member) {
                 $farmer = OriginalInterfaceData::find($request->user(), 'participants', (string) ($member['farmer_id'] ?? $member['id'] ?? ''));
+                $currentMembership = $farmer
+                    ? DB::table('participant_association_memberships')->where('participant_id', $farmer->id)->where('association_id', $databaseId)->first()
+                    : null;
+                abort_unless(
+                    $farmer && ($farmer->is_active || $currentMembership),
+                    422,
+                    'Only active farmers may be added to an association.',
+                );
                 abort_unless($farmer && $this->isParticipantBeneficiaryOf($farmer->id, (int) $owner->region_id, (int) $owner->org_id), 422, 'Every member must be registered as a beneficiary of the association office.');
-                $ids[] = $farmer->id;
+                $role = trim((string) ($member['position'] ?? $member['associate_role'] ?? $member['role'] ?? 'Member'));
+                $members[$farmer->id] = ['farmer' => $farmer, 'role' => $role !== '' ? $role : 'Member'];
             }
-            $removed = OriginalInterfaceData::query($request->user(), 'participants')->where('association_id', $databaseId)->whereNotIn('id', $ids);
-            if ((clone $removed)->exists()) {
+            $ids = array_keys($members);
+            $scopedParticipants = OriginalInterfaceData::query($request->user(), 'participants')->select('id');
+            $existingMemberIds = DB::table('participant_association_memberships')
+                ->where('association_id', $databaseId)
+                ->whereIn('participant_id', $scopedParticipants)
+                ->pluck('participant_id');
+            $removedIds = $existingMemberIds->diff($ids)->all();
+            if ($removedIds !== []) {
                 abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
-                $removed->update(['association_id' => null]);
+                foreach ($removedIds as $removedId) {
+                    DB::table('participant_association_memberships')
+                        ->where('participant_id', $removedId)
+                        ->where('association_id', $databaseId)
+                        ->delete();
+                    $participant = DB::table('participants')->where('id', $removedId)->first(['association_id']);
+                    if ((int) ($participant->association_id ?? 0) === $databaseId) {
+                        $this->syncParticipantAssociationMembership((int) $removedId, $databaseId, null, null);
+                    }
+                }
             }
-            if ($ids) {
-                DB::table('participants')->whereIn('id', $ids)->update(['association_id' => $databaseId]);
+            foreach ($members as $participantId => ['farmer' => $farmer, 'role' => $role]) {
+                $currentMembership = DB::table('participant_association_memberships')
+                    ->where('participant_id', $participantId)
+                    ->where('association_id', $databaseId)
+                    ->first();
+                $hasOtherMembership = DB::table('participant_association_memberships')
+                    ->where('participant_id', $participantId)
+                    ->where('association_id', '!=', $databaseId)
+                    ->exists();
+                $isPrimary = (int) ($farmer->association_id ?? 0) === $databaseId
+                    || (bool) ($currentMembership->is_primary ?? false)
+                    || (! $farmer->association_id && ! $hasOtherMembership);
+
+                if ($currentMembership) {
+                    DB::table('participant_association_memberships')
+                        ->where('participant_id', $participantId)
+                        ->where('association_id', $databaseId)
+                        ->update(['role' => $role, 'updated_at' => now()]);
+                } else {
+                    DB::table('participant_association_memberships')->insert([
+                        'participant_id' => $participantId,
+                        'association_id' => $databaseId,
+                        'role' => $role,
+                        'is_primary' => false,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                if ($isPrimary) {
+                    $this->syncParticipantAssociationMembership((int) $participantId, null, $databaseId, $role);
+                }
             }
         }
         if ($module === 'trainings') {
@@ -402,6 +594,7 @@ class OriginalInterfaceController
             }
         }
 
+        return $temporaryId ? ['temporaryId' => $temporaryId, 'id' => $id] : null;
     }
 
     public function enrollment(Request $request, OriginalInterfaceData $interface): JsonResponse
@@ -456,7 +649,7 @@ class OriginalInterfaceController
         foreach (['questions', 'ratingScale', 'members', 'ratings', 'pretest', 'posttest', 'trainers', 'interventions', 'bullets'] as $field) {
             $rules[$field] = ['sometimes', 'array', 'max:500'];
         }
-        $rules += ['pretest.*' => ['string', 'max:100'], 'posttest.*' => ['string', 'max:100'], 'trainers.*' => ['array'], 'trainers.*.id' => ['sometimes', 'string', 'max:100'], 'trainers.*.name' => ['sometimes', 'string', 'max:255'], 'questions.*.text' => ['sometimes', 'string', 'max:1000'], 'questions.*.maxRating' => ['sometimes', 'integer', 'min:1', 'max:10'], 'ratingScale.*.score' => ['required', 'integer', 'min:1', 'max:10'], 'ratingScale.*.label' => ['nullable', 'string', 'max:100'], 'ratingScale.*.description' => ['nullable', 'string', 'max:1000'], 'members.*.farmer_id' => ['sometimes', 'string', 'max:100'], 'ratings.*.rating' => ['nullable', 'numeric', 'min:0', 'max:10'], 'interventions.*.qty' => ['nullable', 'numeric', 'min:0'], 'interventions.*.title' => ['nullable', 'string', 'max:255'], 'interventions.*.remarks' => ['nullable', 'string', 'max:1000'], 'bullets.*' => ['array', 'max:100'], 'bullets.*.*' => ['string', 'max:1000']];
+        $rules += ['pretest.*' => ['string', 'max:100'], 'posttest.*' => ['string', 'max:100'], 'trainers.*' => ['array'], 'trainers.*.id' => ['sometimes', 'string', 'max:100'], 'trainers.*.name' => ['sometimes', 'string', 'max:255'], 'questions.*.text' => ['sometimes', 'string', 'max:1000'], 'questions.*.maxRating' => ['sometimes', 'integer', 'min:1', 'max:10'], 'ratingScale.*.score' => ['required', 'integer', 'min:1', 'max:10'], 'ratingScale.*.label' => ['nullable', 'string', 'max:100'], 'ratingScale.*.description' => ['nullable', 'string', 'max:1000'], 'members.*.farmer_id' => ['sometimes', 'string', 'max:100'], 'members.*.position' => ['sometimes', 'nullable', 'string', 'max:255'], 'members.*.associate_role' => ['sometimes', 'nullable', 'string', 'max:255'], 'members.*.role' => ['sometimes', 'nullable', 'string', 'max:255'], 'ratings.*.rating' => ['nullable', 'numeric', 'min:0', 'max:10'], 'interventions.*.qty' => ['nullable', 'numeric', 'min:0'], 'interventions.*.title' => ['nullable', 'string', 'max:255'], 'interventions.*.remarks' => ['nullable', 'string', 'max:1000'], 'bullets.*' => ['array', 'max:100'], 'bullets.*.*' => ['string', 'max:1000']];
 
         return Validator::make($input, $rules)->validate();
     }
@@ -525,6 +718,15 @@ class OriginalInterfaceController
                     $found = OriginalInterfaceData::query($request->user(), 'associations')->where('name', $association)->first();
                 }
                 abort_unless($found, 422, 'Select a registered association.');
+                if (! $existing) {
+                    abort_unless(
+                        $found->is_active
+                            && (int) $found->region_id === (int) $region
+                            && (int) $found->org_id === (int) $office,
+                        422,
+                        'Select an active association in the farmer\'s registering region and office.',
+                    );
+                }
                 $payload['association_id'] = $found->id;
             }
             $payload['sensitive'] = ['tupad' => $pick(['tupad']), 'solo_parent' => $pick(['solo_parent', 'soloParent']), 'four_ps' => $pick(['fourPs', 'four_ps', '4ps']), 'disability' => $pick(['pwd']), 'indigenous_group' => $pick(['indigenousGroup', 'idp', 'indigenous_group']), 'tribe' => $pick(['tribeName', 'tbname', 'tribe_name']), 'dietary_restriction' => $pick(['dietaryRestriction', 'dtrestriction', 'dietary_restriction']), 'allergies' => $pick(['allergies_on']), 'senior_citizen' => $pick(['seniorCitizen', 'sncitizen', 'senior_citizen'])];

@@ -67,6 +67,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-attachments-cards.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-logs.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/shared/activity-logs.css?v=design-20261109-1') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
     <title>DA-TMIS - View Training</title>
     <meta name="description" content="View Training | DA-TMIS" />
@@ -828,27 +829,59 @@ class="layout-fixed"
           </nav>
           <section id="overview-panel" class="training-panel" role="tabpanel" aria-labelledby="overview-tab">
             <article class="training-hero training-card">
-              <div class="training-title-row"><span class="training-heading-icon"><i class="bi bi-mortarboard" aria-hidden="true"></i></span><h2>Good Agricultural Practices (GAP)</h2><span class="status-approved">Approved &amp; Accepted</span></div>
-              <div class="training-hero-info">
-                <div class="training-facts">
-                  <div><i class="bi bi-clipboard-data"></i><span>Training ID<strong>TRN-000246</strong></span></div><div><i class="bi bi-file-earmark-text"></i><span>Training Type<strong>In-Plant Training</strong></span></div><div><i class="bi bi-calendar3"></i><span>Date Conducted<strong>May 22, 2025</strong></span></div><div><i class="bi bi-geo-alt"></i><span>Municipality / Location<strong>Brgy. San Antonio, Tanauan City</strong></span></div>
-                  <div><i class="bi bi-building"></i><span>Organizer / Office<strong>Agricultural Training Division (ATD)</strong></span></div><div><i class="bi bi-person"></i><span>Resource Person(s)<strong>Dr. Maria Santos; Engr. Carlo Mendoza</strong></span></div><div><i class="bi bi-people"></i><span>No. of Participants<strong>24</strong></span></div><div><i class="bi bi-file-earmark-text"></i><span>Purpose<strong>Knowledge Assessment</strong></span></div>
-                </div></div>
-              <aside class="training-description"><h3>Training Description</h3><p>This training aims to enhance the knowledge and skills of farmers on Good Agricultural Practices (GAP) to promote safe, sustainable, and productive farming.</p></aside>
+              <header class="training-overview-banner">
+                <div class="training-overview-heading">
+                  <span class="training-overview-icon" aria-hidden="true"><i class="bi bi-mortarboard-fill"></i></span>
+                  <div><span class="training-overview-eyebrow">Training record</span><h2 data-training-field="title">Training information</h2><p data-training-field="subtitle">Review the schedule, venue, organizer, and delivery details.</p></div>
+                </div>
+                <div class="training-overview-reference">
+                  <span class="training-status-pill" data-training-field="status">Status not recorded</span>
+                  <span class="training-reference-label">Training ID</span>
+                  <strong data-training-field="id">Reference pending</strong>
+                  <small class="training-reference-format">TRN · two-digit year · annual sequence</small>
+                </div>
+              </header>
+              <div class="training-overview-stats">
+                <div><span class="training-overview-stat-icon"><i class="bi bi-calendar-event"></i></span><span><small>Schedule</small><strong data-training-field="schedule">Not recorded</strong></span></div>
+                <div><span class="training-overview-stat-icon"><i class="bi bi-people"></i></span><span><small>Participants</small><strong data-training-field="participantCount">0 enrolled</strong></span></div>
+                <div><span class="training-overview-stat-icon"><i class="bi bi-building"></i></span><span><small>Implementing office</small><strong data-training-field="office">Not recorded</strong></span></div>
+              </div>
+              <div class="training-overview-details">
+                <section class="training-overview-detail-card" aria-labelledby="trainingDetailsHeading">
+                  <header><span class="training-section-icon"><i class="bi bi-card-list"></i></span><div><h3 id="trainingDetailsHeading">Training details</h3><p>Program, location, and delivery information</p></div></header>
+                  <dl class="training-detail-grid">
+                    <div><dt>Training type</dt><dd data-training-field="type">Not recorded</dd></div>
+                    <div><dt>Delivery mode</dt><dd data-training-field="delivery">Not recorded</dd></div>
+                    <div><dt>Region</dt><dd data-training-field="region">Not recorded</dd></div>
+                    <div><dt>Venue</dt><dd data-training-field="venue">Not recorded</dd></div>
+                    <div><dt>Location</dt><dd data-training-field="location">Not recorded</dd></div>
+                    <div><dt>Partner organization</dt><dd data-training-field="partner">Not recorded</dd></div>
+                    <div><dt>Target participants</dt><dd data-training-field="target">Not recorded</dd></div>
+                    <div><dt>Training budget</dt><dd data-training-field="budget">Not recorded</dd></div>
+                    <div class="training-detail-wide"><dt>Resource persons</dt><dd data-training-field="resources">No resource persons recorded</dd></div>
+                  </dl>
+                </section>
+                <aside class="training-overview-description">
+                  <span class="training-overview-eyebrow">Purpose &amp; scope</span>
+                  <h3>Training description</h3>
+                  <p data-training-field="description">No training description has been recorded.</p>
+                  <div class="training-description-footer"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Details shown here reflect the saved training record.</span></div>
+                </aside>
+              </div>
             </article>
             <div class="training-stats">
-              <article class="stat-card green"><span class="stat-icon"><i class="bi bi-people-fill"></i></span><div><h3>Total Participants</h3><strong>24</strong><small>20 Male (83.3%) &nbsp; 4 Female (16.7%)</small></div></article>
+              <article class="stat-card green"><span class="stat-icon"><i class="bi bi-people-fill"></i></span><div><h3>Total Participants</h3><strong data-training-field="participantCountShort">0</strong><small data-training-field="genderSummary">No participant demographics recorded</small></div></article>
               <div id="overviewAssessmentStats" class="training-assessment-stats"></div>
             </div>
             <div class="training-dashboard-grid">
-              <article class="training-card"><h3><i class="bi bi-lightbulb"></i>Participants by Gender</h3><div class="gender-content"><div class="gender-chart" data-gender-chart role="img" aria-label="20 male and 4 female participants"></div><div class="gender-legend"><p><span class="legend-dot male"></span>Male <small>20 (83.3%)</small></p><p><span class="legend-dot female"></span>Female <small>4 (16.7%)</small></p></div></div></article>
+              <article class="training-card"><h3><i class="bi bi-lightbulb"></i>Participants by Gender</h3><div class="gender-content"><div class="gender-chart" data-gender-chart role="img" aria-label="Participant demographics"></div><div class="gender-legend"><p><span class="legend-dot male"></span>Male <small data-gender-count="Male">0</small></p><p><span class="legend-dot female"></span>Female <small data-gender-count="Female">0</small></p></div></div></article>
               <article class="training-card"><h3><i class="bi bi-calendar3"></i>Pre-Test and Post-Test by Questionnaire</h3><div class="test-average-chart" id="testAverageChart" role="img" aria-label="Pre-test and post-test questionnaire averages"></div><div id="assessmentChartLegend" class="assessment-chart-legend"></div></article>
               <article class="training-card training-evaluation-card"><h3><i class="bi bi-star"></i>Training Evaluation</h3><div class="evaluation-score"><div class="evaluation-score-ring" role="img" aria-label="Training evaluation: 4.56 out of 5"><span><strong>4.56</strong><small>/ 5</small></span></div><div class="evaluation-score-copy"><span class="evaluation-grade">Very Good</span><p>Overall training rating</p><div class="evaluation-stars" aria-hidden="true"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-half"></i></div></div></div><a class="evaluation-details-link" href="#evaluation-panel" data-go-panel="evaluation-panel">View evaluation details <i class="bi bi-arrow-right"></i></a></article>
             </div>
             <div class="training-bottom-grid">
-              <article class="training-card"><h3><i class="bi bi-lightbulb"></i>Key Highlights</h3><ul><li>Participants actively engaged during the hands-on demonstration.</li><li data-score-highlight>Significant improvement from pre-test (<span data-pretest-average>—</span>) to post-test (<span data-posttest-average>—</span>).</li><li>High satisfaction rating for both the resource person and training conduct.</li><li>Participants expressed interest in advanced GAP topics.</li></ul></article>
-              <article class="training-card"><h3><i class="bi bi-arrow-up-right"></i>Ways Forward</h3><ul><li>Conduct follow-up training on advanced GAP practices.</li><li>Provide supplementary materials and reference guides.</li><li>Monitor implementation of learned practices in the field.</li><li>Organize site visit to model farms.</li></ul></article>
-              <article class="training-card"><div class="card-heading"><h3><i class="bi bi-clipboard2-data"></i>Resource Person(s)</h3><a href="#resource-panel" data-go-panel="resource-panel">View All</a></div><div class="person-row"><span class="avatar">MS</span><span><strong>Dr. Maria Santos</strong><small>Resource Person (Lead)</small></span><b>4.78 <small>/ 5</small></b></div><div class="person-row"><span class="avatar">CM</span><span><strong>Engr. Carlo Mendoza</strong><small>Resource Person</small></span><b>4.66 <small>/ 5</small></b></div></article>
+              <article class="training-card"><h3><i class="bi bi-lightbulb"></i>Key Highlights</h3><ul id="overviewHighlights"><li>No highlights recorded.</li></ul></article>
+              <article class="training-card"><h3><i class="bi bi-arrow-up-right"></i>Ways Forward</h3><ul id="overviewWaysForward"><li>No next steps recorded.</li></ul></article>
+              <article class="training-card"><div class="card-heading"><h3><i class="bi bi-clipboard2-data"></i>Resource Persons</h3><a href="#resource-panel" data-go-panel="resource-panel">View All</a></div><div id="overviewResourcePersons"><p class="training-overview-empty">No resource persons recorded.</p></div></article>
             </div>
           </section>
           <section id="participants-panel" class="training-panel" role="tabpanel" aria-labelledby="participants-tab" hidden>
@@ -1895,7 +1928,7 @@ class="layout-fixed"
     </script>
     <script src="{{ asset('src/js/training/id/view-training-assessments.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script src="{{ asset('src/js/training/id/view-training.js') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training.js?v=training-id-path-1') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-participants.js') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-feedback-filters.js') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-pretest.js') }}"></script>
@@ -1904,5 +1937,5 @@ class="layout-fixed"
     <script src="{{ asset('src/js/training/id/view-training-evaluation.js') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-highlights.js') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-attachments-cards.js') }}"></script>
-    <script src="{{ asset('src/js/training/id/view-training-logs.js') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training-logs.js?v=live-logs-20261109-3') }}"></script>
 @endsection

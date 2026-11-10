@@ -194,10 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
       toggle.setAttribute('aria-label', `Show ${key === 'confirm' ? 'confirm new' : key} password`);
       toggle.firstElementChild.className = 'bi bi-eye';
     });
-    $('password-current').type = 'password';
-    $('toggle-password-current').setAttribute('aria-pressed', 'false');
-    $('toggle-password-current').setAttribute('aria-label', 'Show current password');
-    $('toggle-password-current').firstElementChild.className = 'bi bi-eye';
     $('passwordFormStatus').textContent = '';
     updatePasswordRequirements();
   }
@@ -208,20 +204,6 @@ document.addEventListener('DOMContentLoaded', () => {
       input.type = visible ? 'text' : 'password';
       toggle.setAttribute('aria-pressed', String(visible));
       toggle.setAttribute('aria-label', `${visible ? 'Hide' : 'Show'} ${key === 'confirm' ? 'confirm new' : key} password`);
-      toggle.firstElementChild.className = visible ? 'bi bi-eye-slash' : 'bi bi-eye';
-    });
-  });
-  [
-    ['password-current', 'toggle-password-current', 'current'],
-    ['mfaSetupPassword', 'toggle-mfaSetupPassword', 'sign-in'],
-    ['mfaManagePassword', 'toggle-mfaManagePassword', 'sign-in'],
-  ].forEach(([inputId, toggleId, label]) => {
-    const input = $(inputId), toggle = $(toggleId);
-    toggle.addEventListener('click', () => {
-      const visible = input.type === 'password';
-      input.type = visible ? 'text' : 'password';
-      toggle.setAttribute('aria-pressed', String(visible));
-      toggle.setAttribute('aria-label', `${visible ? 'Hide' : 'Show'} ${label} password`);
       toggle.firstElementChild.className = visible ? 'bi bi-eye-slash' : 'bi bi-eye';
     });
   });

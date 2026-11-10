@@ -1,10 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
   const panel = document.getElementById('fa-members');
   if (!panel) return;
-  const id = new URLSearchParams(location.search).get('faId');
+  const id = window.TmisStore.selectedId();
   const key = 'tmis-farmer-associations';
   const $ = selector => panel.querySelector(selector);
-  const sample = (window.TMIS_PAGE ? window.TmisStore.records('tmis-farmers').map(item=>({...item,farmer_id:item.id,last_name:item.lastName,first_name:item.firstName,middle_name:item.middleName})) : [
+  const sample = (window.TMIS_PAGE ? window.TmisStore.records('tmis-farmers').filter(item => item.status === 'Active').map(item => ({
+    ...item,
+    farmer_id: item.id,
+    farmerNumber: item.farmerNumber || item.id,
+    lname: item.lastName || item.lname || item.last_name,
+    fname: item.firstName || item.fname || item.first_name,
+    mname: item.middleName || item.mname || item.middle_name,
+  })) : [
     ['FMR-2026-001', 'Dela Cruz', 'Juan', 'Santos', 'Male', 'Quezon', 'Alabat', 'Villa Esperanza'],
     ['FMR-2026-002', 'Santos', 'Maria', 'Reyes', 'Female', 'Quezon', 'Perez', 'Villamanzano Sur'],
     ['FMR-2025-003', 'Reyes', 'Pedro', 'Garcia', 'Male', 'Quezon', 'Jomalig', 'Apad'],
@@ -75,6 +82,14 @@ document.addEventListener('DOMContentLoaded', () => {
     return new Set([...(association?.members || []), ...read('tmis-fa-members').filter(member => member.faId === id || member.association_id === id)]
       .map(member => String(member.farmer_id || member.id || '').toLowerCase()));
   }
+  function isEligibleForAssociation(member, association) {
+    const hasMembership = Boolean(member.association_id || member.associationMemberships?.length);
+    const normalize = value => String(value || '').trim().toLocaleLowerCase();
+    return !hasMembership
+      && String(member.region_id || '') === String(association?.region_id || '')
+      && normalize(member.municipality) !== ''
+      && normalize(member.municipality) === normalize(association?.municipality);
+  }
   function populate(select, values, label) {
     const current = select.value;
     select.replaceChildren(new Option(label, ''), ...[...new Set(values.filter(Boolean))].sort().map(value => new Option(value, value)));
@@ -85,17 +100,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const columns = Object.fromEntries([...panel.querySelectorAll('[data-fa-column]')].map(input => [input.dataset.faColumn, input.value.trim().toLowerCase()]));
     return available.filter(member => {
       const name = [member.fname, member.mname, member.lname].filter(Boolean).join(' ');
-      const values = { ...member, name };
+      const values = { ...member, farmer_id: member.farmerNumber || member.farmer_id, name };
       return locationKeys.every(key => {
         const selected = $(`#faAvailable${key[0].toUpperCase()}${key.slice(1)}`).value;
         return !selected || member[key] === selected;
-      }) && (!term || [member.farmer_id, name, member.barangay, member.municipality, member.district, member.province].some(value => String(value).toLowerCase().includes(term)))
+      }) && (!term || [member.farmerNumber, member.farmer_id, name, member.barangay, member.municipality, member.district, member.province].some(value => String(value || '').toLowerCase().includes(term)))
         && columnKeys.every(key => !columns[key] || String(values[key] || '').toLowerCase().includes(columns[key]));
     });
   }
   function render() {
     const tagged = taggedIds();
-    available = sample.filter(member => !tagged.has(member.farmer_id.toLowerCase()));
+    const association = read(key).find(record => record.id === id);
+    available = sample.filter(member => !tagged.has(member.farmer_id.toLowerCase()) && isEligibleForAssociation(member, association));
     [...selected].forEach(value => { if (tagged.has(value.toLowerCase())) selected.delete(value); });
     let scoped = available;
     locationKeys.forEach(key => {
@@ -108,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pages = Math.max(1, Math.ceil(filtered.length / size));
     page = Math.min(page, pages);
     const start = (page - 1) * size;
-    $('#faAvailableRows').innerHTML = filtered.slice(start, start + size).map(member => `<tr><td><input type="checkbox" data-farmer-id="${escape(member.farmer_id)}" aria-label="Select ${escape(member.fname + ' ' + member.lname)}" ${selected.has(member.farmer_id) ? 'checked' : ''}></td><td>${escape(member.farmer_id)}</td><td><strong>${escape([member.fname, member.mname, member.lname].filter(Boolean).join(' '))}</strong></td><td>${escape(member.barangay)}</td><td>${escape(member.municipality)}</td><td>${escape(member.province)}</td></tr>`).join('');
+    $('#faAvailableRows').innerHTML = filtered.slice(start, start + size).map(member => `<tr><td><input type="checkbox" data-farmer-id="${escape(member.farmer_id)}" aria-label="Select ${escape([member.fname, member.lname].filter(Boolean).join(' '))}" ${selected.has(member.farmer_id) ? 'checked' : ''}></td><td>${escape(member.farmerNumber || member.farmer_id)}</td><td><strong>${escape([member.fname, member.mname, member.lname].filter(Boolean).join(' '))}</strong></td><td>${escape(member.barangay)}</td><td>${escape(member.municipality)}</td><td>${escape(member.province)}</td></tr>`).join('');
     $('#faAvailableEmpty').hidden = filtered.length > 0;
     $('#faAvailableCount').textContent = `${filtered.length} matching available`;
     $('#faSelectedCount').textContent = `${selected.size} selected`;
@@ -135,11 +151,13 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#faAddSelected').addEventListener('click', async () => {
     const records = read(key), index = records.findIndex(record => record.id === id);
     if (index < 0) return;
-    const chosen = sample.filter(member => selected.has(member.farmer_id) && !taggedIds().has(member.farmer_id.toLowerCase()));
+    const association = records[index];
+    const chosen = sample.filter(member => selected.has(member.farmer_id) && !taggedIds().has(member.farmer_id.toLowerCase()) && isEligibleForAssociation(member, association));
     if (!chosen.length) return;
     const today = new Date();
     const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    records[index].members = [...(records[index].members || []), ...chosen.map(member => ({ ...member, date_registered: date }))];
+    const role = $('#faMemberRole').value.trim() || 'Member';
+    records[index].members = [...(records[index].members || []), ...chosen.map(member => ({ ...member, associate_role: role, position: role, date_registered: date }))];
     try {
       await window.TmisStore.setItem(key, JSON.stringify(records));
       selected.clear();
