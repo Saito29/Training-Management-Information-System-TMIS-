@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('userRegisterForm');
   if (!form) return;
+  form.elements.role.querySelector('option[value="System Administrator"]')?.remove();
   // Remove notices created by the previous form version during a live reload.
   document.querySelectorAll('#userFormMessage, .user-form-message, .user-field-error').forEach((notice) => notice.remove());
   const steps = [...form.querySelectorAll('.user-step')];

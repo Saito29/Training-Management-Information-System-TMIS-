@@ -233,11 +233,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Table rendering
   // ============================================================
   const rowHtml = (r) => {
-    const id = encodeURIComponent(r.id);
+    const farmerNumber = encodeURIComponent(r.farmerNumber || r.id);
     return `<tr>
       <td data-column="actions"><div class="table-row-actions">
-        <a class="btn table-action-button view-action" href="../id/view-farmer?id=${id}" target="_blank" rel="noopener" title="View farmer profile" aria-label="View farmer profile"><i class="bi bi-eye-fill"></i></a>
-        <a class="btn table-action-button edit-action" href="../id/edit-farmer?id=${id}" target="_blank" rel="noopener" title="Edit farmer profile" aria-label="Edit farmer profile"><i class="bi bi-pencil-fill"></i></a>
+        <a class="btn table-action-button view-action" href="../id/view-farmer/${farmerNumber}" target="_blank" rel="noopener" title="View farmer profile" aria-label="View farmer profile"><i class="bi bi-eye-fill"></i></a>
+        <a class="btn table-action-button edit-action" href="../id/edit-farmer/${farmerNumber}" target="_blank" rel="noopener" title="Edit farmer profile" aria-label="Edit farmer profile"><i class="bi bi-pencil-fill"></i></a>
         <button type="button" class="btn table-action-button delete-action" data-delete="${esc(r.id)}" title="Delete farmer profile" aria-label="Delete farmer profile"><i class="bi bi-trash-fill"></i></button>
       </div></td>
       <td data-column="status"><span class="status-badge ${statusBadgeClass(r.status)}">${esc(r.status)}</span></td>

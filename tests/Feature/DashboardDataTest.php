@@ -29,7 +29,7 @@ class DashboardDataTest extends TestCase
         $this->travelTo(Carbon::parse('2026-11-06 12:00:00', 'Asia/Manila'));
         $this->signIn();
         $this->getJson('/ui/data')->assertOk()->assertJsonPath('dashboard.trainingCount', 0)->assertJsonPath('dashboard.funds.current', 0)->assertJsonPath('dashboard.upcoming', [])->assertJsonPath('dashboard.groups', [0, 0, 0, 0, 0]);
-        $this->get('/app/admin/dashboard/dashboard')->assertOk()->assertSee('No upcoming training')->assertDontSee('Specialized Swine Production');
+        $this->get('/app/admin/dashboard/dashboard')->assertOk()->assertSee('Active Farmers')->assertSee('No upcoming training')->assertDontSee('Specialized Swine Production');
     }
 
     public function test_yearly_funds_and_upcoming_records_use_approved_scoped_database_trainings(): void
@@ -41,7 +41,7 @@ class DashboardDataTest extends TestCase
             DB::table('trainings')->insert($base + ['name' => $name, 'start_date' => $date, 'end_date' => $date, 'budget' => $budget]);
         }
         DB::table('trainings')->insert(array_replace($base, ['name' => 'Not approved', 'start_date' => '2026-12-01', 'end_date' => '2026-12-01', 'budget' => 5000, 'status' => 'For review']));
-        $this->getJson('/ui/data')->assertOk()->assertJsonPath('dashboard.currentYear', 2026)->assertJsonPath('dashboard.previousYear', 2025)->assertJsonPath('dashboard.funds.current', 1200)->assertJsonPath('dashboard.funds.previous', 800)->assertJsonPath('dashboard.upcoming.0.title', 'Current')->assertJsonCount(1, 'dashboard.upcoming')->assertJsonPath('dashboard.allocatedBudgetByDistrict.0.current', 1200)->assertJsonPath('dashboard.allocatedBudgetByDistrict.0.previous', 800);
+        $this->getJson('/ui/data')->assertOk()->assertJsonPath('dashboard.currentYear', 2026)->assertJsonPath('dashboard.previousYear', 2025)->assertJsonPath('dashboard.funds.current', 1200)->assertJsonPath('dashboard.funds.previous', 800)->assertJsonPath('dashboard.upcoming.0.title', 'Current')->assertJsonCount(1, 'dashboard.upcoming')->assertJsonPath('dashboard.allocatedBudgetByDistrict.0.current', 1200)->assertJsonPath('dashboard.allocatedBudgetByDistrict.0.previous', 800)->assertJsonPath('dashboard.allocatedBudgetByDistrict.0.activities', 2);
         if ($directory = getenv('TMIS_UI_FIXTURE_DIR')) {
             DB::table('participants')->insert(['name' => 'Test Beneficiary', 'date_of_birth' => '1990-01-01', 'sex' => 'Female', 'region_id' => 4, 'org_id' => 1, 'created_by' => $user->user_id, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
             $html = $this->get('/app/admin/dashboard/dashboard')->assertOk()->getContent();

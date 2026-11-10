@@ -132,6 +132,49 @@ class SystemSettingsFeaturesTest extends TestCase
             ->assertSee('Base role only');
     }
 
+    public function test_user_administration_hides_system_administrators_and_rejects_direct_edits(): void
+    {
+        $administrator = $this->account();
+        $systemAdministratorRoleId = DB::table('user_roles')->where('name', 'System Administrator')->value('role_id');
+        $encoderRoleId = DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id');
+        $hiddenAdministrator = $this->account($systemAdministratorRoleId);
+        DB::table('users')->where('user_id', $hiddenAdministrator->user_id)->update([
+            'email' => 'hidden-admin@example.test',
+            'status' => 'Pending approval',
+            'active_status' => 0,
+        ]);
+        $encoder = $this->account($encoderRoleId);
+        DB::table('users')->where('user_id', $encoder->user_id)->update([
+            'status' => 'Pending approval',
+            'active_status' => 0,
+        ]);
+        $this->signIn($administrator);
+
+        $this->get(route('system.accounts', ['state' => 'pending']))
+            ->assertOk()
+            ->assertSee($encoder->email)
+            ->assertDontSee($hiddenAdministrator->email)
+            ->assertDontSee('>System Administrator</option>', false);
+        $this->patchJson('/system/accounts/'.$hiddenAdministrator->user_id, ['action' => 'delete'])->assertNotFound();
+        $this->patchJson('/system/accounts/'.$encoder->user_id, [
+            'action' => 'update',
+            'role_id' => $systemAdministratorRoleId,
+            'region_id' => 4,
+            'org_id' => 1,
+            'status' => 'Approved & Accepted',
+            'active_status' => 1,
+        ])->assertUnprocessable()->assertJsonValidationErrors('role_id');
+        $this->assertDatabaseHas('users', [
+            'user_id' => $hiddenAdministrator->user_id,
+            'status' => 'Pending approval',
+            'active_status' => 0,
+        ]);
+        $this->assertDatabaseHas('users', [
+            'user_id' => $encoder->user_id,
+            'role_id' => $encoderRoleId,
+        ]);
+    }
+
     public function test_credential_management_links_to_users_of_its_role_and_filters_the_account_list(): void
     {
         $administrator = $this->account();

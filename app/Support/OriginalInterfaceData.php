@@ -74,6 +74,18 @@ class OriginalInterfaceData
         return ($year !== '' ? $year : '00').str_pad((string) $participant->id, 6, '0', STR_PAD_LEFT);
     }
 
+    private static function findFarmerByNumber(User $user, string $farmerNumber): ?object
+    {
+        if (! preg_match('/^\d{8,}$/', $farmerNumber)) {
+            return null;
+        }
+
+        $participantId = (int) substr($farmerNumber, 2);
+        $participant = self::query($user, 'participants')->where('id', $participantId)->first();
+
+        return $participant && hash_equals(self::farmerNumber($participant), $farmerNumber) ? $participant : null;
+    }
+
     /** Build the authorized interface data, including all accounts on the administrator notification screens. */
     public function bootstrap(User $user): array
     {
@@ -114,12 +126,21 @@ class OriginalInterfaceData
 
         $trainingQuestionnaires = DB::table('training_questionnaire')->whereIn('training_id', self::query($user, 'trainings')->select('id'))->join('questionnaires', 'training_questionnaire.questionnaire_id', '=', 'questionnaires.id')->whereNull('questionnaires.deleted_at')->get(['training_id', 'questionnaires.id', 'questionnaires.ui_id', 'questionnaires.kind'])->groupBy('training_id');
         $trainingResources = DB::table('training_resource_person')->whereIn('training_id', self::query($user, 'trainings')->select('id'))->join('resource_persons', 'training_resource_person.resource_person_id', '=', 'resource_persons.id')->whereNull('resource_persons.deleted_at')->get(['training_id', 'resource_persons.id', 'resource_persons.ui_id', 'resource_persons.name', 'resource_persons.title'])->groupBy('training_id');
-        parse_str((string) parse_url(request()->header('X-TMIS-PAGE', ''), PHP_URL_QUERY), $pageQuery);
-        $currentId = (string) request()->query('id', $pageQuery['id'] ?? $pageQuery['faId'] ?? '');
+        $page = (string) request()->header('X-TMIS-PAGE', '');
+        parse_str((string) parse_url($page, PHP_URL_QUERY), $pageQuery);
+        $pagePath = ltrim((string) parse_url($page, PHP_URL_PATH), '/');
+        $farmerNumber = preg_match('~^app/admin/participants/id/(?:view|edit)-farmer/(\d+)$~', $pagePath, $matches) === 1 ? $matches[1] : '';
+        $selectedFarmer = $farmerNumber !== '' ? self::findFarmerByNumber($user, $farmerNumber) : null;
+        $currentId = $selectedFarmer
+            ? (string) ($selectedFarmer->ui_id ?? $selectedFarmer->id)
+            : (string) request()->query('id', $pageQuery['id'] ?? $pageQuery['faId'] ?? '');
         $selectedRecords = [];
+        if ($selectedFarmer && ModuleAccess::allows($user, 'participants.read')) {
+            $selectedRecords['participants'] = $selectedFarmer;
+        }
         if ($currentId !== '') {
             foreach (['trainings', 'participants', 'associations', 'resource_persons'] as $logModule) {
-                if (ModuleAccess::allows($user, $logModule.'.read') && ($selectedRecord = self::find($user, $logModule, $currentId))) {
+                if (! isset($selectedRecords[$logModule]) && ModuleAccess::allows($user, $logModule.'.read') && ($selectedRecord = self::find($user, $logModule, $currentId))) {
                     $selectedRecords[$logModule] = $selectedRecord;
                 }
             }
@@ -141,18 +162,40 @@ class OriginalInterfaceData
                     $actorOffice = $log->activity_office ?: 'Office not assigned';
                     $actorRegion = $log->activity_region ?: 'Region not assigned';
                     $isFarmerCreation = $logModule === 'participants' && $log->event === 'participants_created_'.$selectedRecord->id;
-                    $farmerName = trim(implode(' ', array_filter([$selectedRecord->first_name, $selectedRecord->middle_name, $selectedRecord->last_name, $selectedRecord->suffix]))) ?: 'the participant';
+                    $recordName = match ($logModule) {
+                        'participants' => 'Farmer profile',
+                        'associations' => 'Farmer association',
+                        'trainings' => 'Training',
+                        'resource_persons' => 'Resource person',
+                        default => 'Record',
+                    };
+                    $description = match (true) {
+                        $isFarmerCreation => 'Farmer profile was registered successfully.',
+                        str_contains($log->event, 'beneficiary_added') => 'Farmer was linked to an association office successfully.',
+                        str_contains($log->event, 'attachment') => $recordName.' attachment was updated.',
+                        str_contains($log->event, 'delete') => $recordName.' was removed.',
+                        str_contains($log->event, 'restore') => $recordName.' was restored.',
+                        str_contains($log->event, 'status') => $recordName.' status was updated.',
+                        default => $recordName.' information was updated successfully.',
+                    };
+                    $title = match (true) {
+                        $isFarmerCreation => 'Farmer Profile Created',
+                        str_contains($log->event, 'beneficiary_added') => 'Farmer Association Updated',
+                        str_contains($log->event, 'attachment') => $recordName.' Attachment Updated',
+                        str_contains($log->event, 'delete') => $recordName.' Removed',
+                        str_contains($log->event, 'restore') => $recordName.' Restored',
+                        str_contains($log->event, 'status') => $recordName.' Status Updated',
+                        default => $recordName.' Updated',
+                    };
 
                     return [
                         'category' => $isFarmerCreation ? 'profile' : (str_contains($log->event, 'document') ? 'attachment' : (str_contains($log->event, 'enrollment') ? 'participant' : 'profile')),
-                        'title' => $isFarmerCreation ? 'Farmer Profile Created' : ucfirst(str_replace('_', ' ', $log->event)),
-                        'description' => $isFarmerCreation
-                            ? 'A new farmer profile was successfully registered for '.$farmerName.' by '.$actorName.', '.$actorOffice.' - '.$actorRegion.'.'
-                            : $log->description,
+                        'title' => $title,
+                        'description' => $description,
                         'actor' => $actorName.', '.$actorOffice.' - '.$actorRegion,
                         'date' => $log->created_at,
                         'status' => ucfirst($log->outcome),
-                        'reference' => $isFarmerCreation ? self::farmerNumber($selectedRecord) : (string) ($selectedRecord->ui_id ?? $selectedRecord->id),
+                        'reference' => $logModule === 'participants' ? self::farmerNumber($selectedRecord) : (string) ($selectedRecord->ui_id ?? $selectedRecord->id),
                         'icon' => $isFarmerCreation ? 'bi-person-plus' : 'bi-clock-history',
                     ];
                 })
@@ -288,13 +331,18 @@ class OriginalInterfaceData
         $page = request()->header('X-TMIS-PAGE', request()->path());
 
         $normalizedPage = ltrim($page, '/');
-        $needsAccounts = str_starts_with($normalizedPage, 'app/admin/administration/')
+        $isAccountManagement = str_starts_with($normalizedPage, 'app/admin/administration/');
+        $needsAccounts = $isAccountManagement
             || str_starts_with($normalizedPage, 'app/admin/notification/notification')
             || $normalizedPage === 'app/admin/users/profile';
 
         if (! ModuleAccess::isAdministrator($user) || ! $needsAccounts) {
 
             $users->where('user_id', $user->user_id);
+
+        } elseif ($isAccountManagement) {
+
+            $users->whereNotIn('users.role_id', DB::table('user_roles')->where('name', 'System Administrator')->select('role_id'));
 
         }
 
@@ -395,7 +443,7 @@ class OriginalInterfaceData
             ? ($savedScope->office_ids === null ? null : json_decode($savedScope->office_ids, true, 512, JSON_THROW_ON_ERROR))
             : ($user->org_id === null ? [] : [(int) $user->org_id]);
 
-        return ['registration' => app(RegistrationReferences::class)->choices() + ['regionId' => $user->region_id, 'officeId' => $user->org_id, 'regionIds' => $registrationRegionIds, 'officeIds' => $registrationOfficeIds], 'dashboard' => app(DashboardData::class)->build($stores), 'roles' => $isAdministrator ? DB::table('user_roles')->where('is_active', 1)->pluck('name')->all() : [], 'stores' => $stores, 'actor' => (new AccountDisplay)->forUser($user), 'regions' => DB::table('region')->where('is_active', 1)->get(['region_id', 'name']), 'offices' => DB::table('organization')->where('is_active', 1)->get(['org_id', 'region_id', 'name']), 'permissions' => array_values(array_filter(ModuleAccess::permissions(), fn (string $permission): bool => ModuleAccess::allows($user, $permission))), 'administrator' => $isAdministrator];
+        return ['registration' => app(RegistrationReferences::class)->choices() + ['regionId' => $user->region_id, 'officeId' => $user->org_id, 'regionIds' => $registrationRegionIds, 'officeIds' => $registrationOfficeIds], 'dashboard' => app(DashboardData::class)->build($stores), 'roles' => $isAdministrator ? DB::table('user_roles')->where('is_active', 1)->where('name', '<>', 'System Administrator')->pluck('name')->all() : [], 'stores' => $stores, 'actor' => (new AccountDisplay)->forUser($user), 'regions' => DB::table('region')->where('is_active', 1)->get(['region_id', 'name']), 'offices' => DB::table('organization')->where('is_active', 1)->get(['org_id', 'region_id', 'name']), 'permissions' => array_values(array_filter(ModuleAccess::permissions(), fn (string $permission): bool => ModuleAccess::allows($user, $permission))), 'administrator' => $isAdministrator];
 
     }
 }

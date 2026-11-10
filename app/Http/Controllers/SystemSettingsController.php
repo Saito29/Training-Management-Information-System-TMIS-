@@ -36,7 +36,7 @@ class SystemSettingsController
         $data = $request->validate([
             'state' => ['nullable', Rule::in(['active', 'inactive', 'trash', 'pending'])],
             'search' => ['nullable', 'string', 'max:100'],
-            'role_id' => ['nullable', 'integer', Rule::exists('user_roles', 'role_id')->where('is_active', 1)],
+            'role_id' => ['nullable', 'integer', Rule::exists('user_roles', 'role_id')->where('is_active', 1)->whereNot('name', 'System Administrator')],
             'role_credential_id' => ['nullable', 'integer', Rule::exists('role_credentials', 'role_credential_id')],
             'region_id' => ['nullable', 'integer', Rule::exists('region', 'region_id')],
             'org_id' => ['nullable', 'integer', Rule::exists('organization', 'org_id')],
@@ -50,6 +50,7 @@ class SystemSettingsController
                 $join->on('users.role_credential_id', '=', 'account_credentials.role_credential_id')
                     ->on('users.role_id', '=', 'account_credentials.role_id');
             })
+            ->where('account_roles.name', '<>', 'System Administrator')
             ->select([
                 'users.*',
                 'account_roles.name as role_name',
@@ -110,10 +111,11 @@ class SystemSettingsController
             'accountFilters' => $data,
             'credentialGrants' => $credentialGrants,
             'credentialDenials' => $credentialDenials,
-            'roles' => DB::table('user_roles')->where('is_active', 1)->orderBy('name')->get(),
+            'roles' => DB::table('user_roles')->where('is_active', 1)->where('name', '<>', 'System Administrator')->orderBy('name')->get(),
             'credentialTypes' => DB::table('role_credentials')
                 ->join('user_roles', 'user_roles.role_id', '=', 'role_credentials.role_id')
                 ->where('user_roles.is_active', 1)
+                ->where('user_roles.name', '<>', 'System Administrator')
                 ->orderBy('role_credentials.role_id')
                 ->orderBy('role_credentials.name')
                 ->get(['role_credentials.role_credential_id', 'role_credentials.role_id', 'role_credentials.name']),
@@ -134,7 +136,7 @@ class SystemSettingsController
         abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
         $data = $request->validate([
             'action' => ['required', Rule::in(['update', 'delete', 'restore'])],
-            'role_id' => ['required_if:action,update', 'integer', Rule::exists('user_roles', 'role_id')->where('is_active', 1)],
+            'role_id' => ['required_if:action,update', 'integer', Rule::exists('user_roles', 'role_id')->where('is_active', 1)->whereNot('name', 'System Administrator')],
             'role_credential_id' => ['nullable', 'integer', Rule::exists('role_credentials', 'role_credential_id')->where('role_id', $request->input('role_id'))],
             'region_id' => ['required_if:action,update', 'integer', Rule::exists('region', 'region_id')->where('is_active', 1)],
             'org_id' => ['required_if:action,update', 'integer', Rule::exists('organization', 'org_id')->where('is_active', 1)->where('region_id', $request->input('region_id'))],
@@ -144,6 +146,7 @@ class SystemSettingsController
         DB::transaction(function () use ($request, $id, $data): void {
             $user = User::where('user_id', $id)->lockForUpdate()->firstOrFail();
             abort_if((int) $request->user()->user_id === $id, 422, 'Use your profile for personal changes. You cannot change your own access or delete your own account.');
+            abort_if(DB::table('user_roles')->where('role_id', $user->role_id)->where('name', 'System Administrator')->exists(), 404);
             if ($data['action'] === 'update') {
                 abort_if($user->deleted_at !== null, 409, 'Restore this account before editing access.');
                 abort_if($data['status'] !== 'Approved & Accepted' && $data['active_status'], 422, 'Only approved accounts can be activated.');

@@ -133,9 +133,9 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::view('/app/admin/participants/details/fa-inactive', 'admin.participants.details.fa-inactive')->name('admin.participants.details.fa-inactive');
     Route::view('/app/admin/participants/details/inactive', 'admin.participants.details.inactive')->name('admin.participants.details.inactive');
     Route::view('/app/admin/participants/id/edit-fa', 'admin.participants.id.edit-fa')->name('admin.participants.id.edit-fa');
-    Route::view('/app/admin/participants/id/edit-farmer', 'admin.participants.id.edit-farmer')->name('admin.participants.id.edit-farmer');
+    Route::view('/app/admin/participants/id/edit-farmer/{farmer?}', 'admin.participants.id.edit-farmer')->where('farmer', '[0-9]{8,}')->name('admin.participants.id.edit-farmer');
     Route::view('/app/admin/participants/id/view-fa', 'admin.participants.id.view-fa')->name('admin.participants.id.view-fa');
-    Route::view('/app/admin/participants/id/view-farmer', 'admin.participants.id.view-farmer')->name('admin.participants.id.view-farmer');
+    Route::view('/app/admin/participants/id/view-farmer/{farmer?}', 'admin.participants.id.view-farmer')->where('farmer', '[0-9]{8,}')->name('admin.participants.id.view-farmer');
     Route::view('/app/admin/training/create/register', 'admin.training.create.register')->name('admin.training.create.register');
     Route::view('/app/admin/training/create/rp-register', 'admin.training.create.rp-register')->name('admin.training.create.rp-register');
     Route::view('/app/admin/training/details/all-status', 'admin.training.details.all-status')->name('admin.training.details.all-status');

@@ -56,6 +56,34 @@ class OriginalInterfaceTest extends TestCase
         $this->assertStringNotContainsString('Confidential disability', DB::table('participants')->value('protected_details'));
     }
 
+    public function test_farmer_number_routes_open_the_profile_and_use_the_number_in_activity_logs(): void
+    {
+        $this->signIn();
+        $response = $this->save('tmis-farmers', [
+            'id' => 'FMR-ROUTE-001',
+            'fname' => 'Ana',
+            'lname' => 'Santos',
+            'gender' => 'Female',
+            'dob' => '1990-01-01',
+            'region_id' => 'region_4a',
+            'status' => 'Active',
+        ])->assertOk();
+        $farmerNumber = $response->json('stores.tmis-farmers.0.farmerNumber');
+
+        $this->get(route('admin.participants.id.view-farmer', ['farmer' => $farmerNumber]))
+            ->assertOk()
+            ->assertViewIs('admin.participants.id.view-farmer');
+        $this->get(route('admin.participants.id.edit-farmer', ['farmer' => $farmerNumber]))
+            ->assertOk()
+            ->assertViewIs('admin.participants.id.edit-farmer');
+        $this->get('/app/admin/participants/id/view-farmer?id=FMR-ROUTE-001')->assertOk();
+        $this->getJson('/ui/data', [
+            'X-TMIS-PAGE' => '/app/admin/participants/id/view-farmer/'.$farmerNumber,
+        ])->assertOk()
+            ->assertJsonPath('stores.tmis-farmers.0.activityLogs.0.reference', $farmerNumber)
+            ->assertJsonPath('stores.tmis-farmers.0.activityLogs.0.description', 'Farmer profile was registered successfully.');
+    }
+
     public function test_original_training_form_creates_review_and_submission_still_requires_design(): void
     {
         Mail::fake();
@@ -229,7 +257,11 @@ class OriginalInterfaceTest extends TestCase
     public function test_original_account_edit_can_reactivate_and_update_email_and_trash_is_functional(): void
     {
         $this->signIn();
-        $account = User::factory()->create(['active_status' => 0, 'email_verified' => true]);
+        $account = User::factory()->create([
+            'role_id' => DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id'),
+            'active_status' => 0,
+            'email_verified' => true,
+        ]);
         $record = $this->withHeaders(['X-TMIS-PAGE' => '/app/admin/administration/id/edit-user'])->getJson('/ui/data')->assertOk()->json('stores.tmis-users');
         $record = collect($record)->firstWhere('id', (string) $account->user_id);
         $record['status'] = 'Approved & Accepted';

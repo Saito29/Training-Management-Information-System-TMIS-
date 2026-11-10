@@ -721,7 +721,7 @@ class OperationsTest extends TestCase
     }
 
     /** Verify activity summaries name edited fields without exposing the stored field values. */
-    public function test_activity_log_summarizes_changed_operational_fields_in_plain_language(): void
+    public function test_activity_log_uses_a_concise_operation_summary(): void
     {
         $user = $this->signIn();
         $id = $this->training($user);
@@ -739,7 +739,7 @@ class OperationsTest extends TestCase
         $this->patchJson('/operations/trainings/'.$id, $payload)->assertOk();
 
         $response = $this->getJson(route('admin.users.logs'))->assertOk();
-        $response->assertJsonPath('data.0.description', 'Updated training record (changed: name, venue, budget).');
+        $response->assertJsonPath('data.0.description', 'Updated training record.');
         $this->assertStringNotContainsString('Updated training hall', $response->getContent());
         $auditValues = json_decode(DB::table('users_log')->where('event', 'trainings_updated_'.$id)->value('new_values'), true, 512, JSON_THROW_ON_ERROR);
         $this->assertSame(['name', 'venue', 'budget'], $auditValues['changed_fields']);

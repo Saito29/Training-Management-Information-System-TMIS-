@@ -910,7 +910,7 @@ class="layout-fixed"
                     </div>
                   </div>
                 </div>
-                <!-- Total Participants -->
+                <!-- Active Farmers -->
                 <div class="col-12 col-md-6">
                   <!-- Card wrapper -->
                   <div class="card card-app-right-main-content h-100">
@@ -922,7 +922,7 @@ class="layout-fixed"
                           <i class="bi bi-people"></i>
                         </div>
                         <div class="card-header-title">
-                          <h5 class="card-header-text">Farmers Trained</h5>
+                          <h5 class="card-header-text">Active Farmers</h5>
                           <span class="card-header-context">{{ $originalInterfaceData['dashboard']['participantCount'] ?? 0 }}</span>
                         </div>
                         <div class="card-tools">
@@ -947,7 +947,7 @@ class="layout-fixed"
                       >
                         <div class="card-chart-label">
                           <span class="card-chart-eyebrow"
-                            >Paricipants activity</span
+                            >Farmer registrations</span
                           >
                           <span class="card-chart-period"
                             >January - December</span
@@ -971,7 +971,7 @@ class="layout-fixed"
                     </div>
                     <div class="card-footer">
                       <span class="card-footer-context"
-                        >Total participants across all municipalities.</span
+                        >Active farmers registered across all municipalities.</span
                       >
                     </div>
                   </div>

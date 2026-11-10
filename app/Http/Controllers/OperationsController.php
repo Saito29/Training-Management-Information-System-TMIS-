@@ -561,13 +561,7 @@ class OperationsController
             $beforeValues = $this->auditValues($entry->old_values);
             $afterValues = $this->auditValues($entry->new_values);
             $entry->account_email = $afterValues['email'] ?? $beforeValues['email'] ?? $entry->subject_email;
-            $reportedFields = is_array($afterValues['changed_fields'] ?? null) ? $afterValues['changed_fields'] : [];
-            $changedFields = array_values(array_unique(array_merge(
-                $reportedFields,
-                array_diff(array_keys($afterValues), array_keys($beforeValues)),
-                array_filter(array_keys($beforeValues), fn (string $field): bool => array_key_exists($field, $afterValues) && $beforeValues[$field] !== $afterValues[$field]),
-            )));
-            $entry->description = $this->humanActivityDescription($action, $category, $changedFields);
+            $entry->description = $this->humanActivityDescription($action, $category);
             $entry->category = match ($action) {
                 'create' => 'registration',
                 'status', 'approve', 'reject' => 'status',
@@ -592,9 +586,8 @@ class OperationsController
         });
     }
 
-    /** Turn validated changed-field names into a short audit sentence while omitting private values. */
-    /** Format activity as a readable event summary from safe field names, never stored values. */
-    private function humanActivityDescription(string $action, string $category, array $changedFields): string
+    /** Format activity as a readable event summary without exposing internal field names. */
+    private function humanActivityDescription(string $action, string $category): string
     {
         $recordName = match ($category) {
             'trainings' => 'training record',
@@ -606,38 +599,13 @@ class OperationsController
             'account' => 'account details',
             default => Str::headline(str_replace('_', ' ', $category)).' record',
         };
-        $fieldLabels = [
-            'name' => 'name', 'description' => 'description', 'start_date' => 'start date', 'end_date' => 'end date',
-            'venue' => 'venue', 'budget' => 'budget', 'is_active' => 'active status', 'status' => 'status',
-            'region_id' => 'region', 'org_id' => 'office', 'changed_fields' => null, 'version' => null,
-            'created_by' => null, 'updated_at' => null, 'deleted_at' => null, 'ui_version' => null,
-            'email' => 'email address', 'phone' => 'phone number', 'date_of_birth' => 'date of birth',
-            'position' => 'position', 'role_id' => 'role', 'role_credential_id' => 'access profile',
-            'active_status' => 'account status', 'email_verified' => 'email verification',
-            'first_name' => 'first name', 'middle_name' => 'middle name', 'last_name' => 'last name',
-            'suffix' => 'suffix', 'sex' => 'sex', 'address' => 'address', 'expertise' => 'expertise',
-            'kind' => 'questionnaire type', 'questions' => 'questions', 'training_id' => 'training',
-            'training_type' => 'training type', 'delivery_mode' => 'delivery mode', 'target_participants' => 'target participants',
-            'partner_organization' => 'partner organization', 'year_covered' => 'year covered', 'short_name' => 'short name',
-            'organization_type' => 'organization type', 'registration_date' => 'registration date', 'nationality' => 'nationality',
-            'place_of_birth' => 'place of birth', 'house_number' => 'house / building number', 'street' => 'street / purok / sitio',
-            'postal_code' => 'postal code', 'telephone' => 'telephone', 'association_role' => 'association role',
-            'title' => 'professional title', 'qualification' => 'qualification', 'organization_name' => 'organization / office',
-            'district' => 'district', 'province' => 'province', 'municipality' => 'municipality / city', 'barangay' => 'barangay',
-            'extension_name' => 'suffix', 'mobile_number' => 'phone number', 'is_updated_at' => null,
-        ];
-        $labels = array_values(array_filter(array_unique(array_map(
-            fn (string $field): ?string => $fieldLabels[$field] ?? null,
-            array_filter($changedFields, 'is_string'),
-        ))));
         $verb = match ($action) {
             'create' => 'Created', 'delete' => 'Deleted', 'restore' => 'Restored', 'status' => 'Changed the status of',
             'approve' => 'Approved', 'reject' => 'Rejected', 'attachment' => 'Updated an attachment for',
             default => 'Updated',
         };
-        $summary = $verb.' '.$recordName;
 
-        return $summary.($labels !== [] ? ' (changed: '.implode(', ', $labels).').' : '.');
+        return $verb.' '.$recordName.'.';
     }
 
     /** Compare validated edits with the locked row to avoid reporting fields that stayed unchanged. */

@@ -55,8 +55,9 @@ document.addEventListener('DOMContentLoaded', () => {
         badge.hidden = count === null || count === 0;
         badge.setAttribute('aria-label', count === null ? 'Acceptance queue access unavailable' : `${count} trainings for acceptance`);
       });
-    }).catch(() => {
+    }).catch((error) => {
       queueBadges.forEach((badge) => { badge.hidden = true; });
+      console.error('Unable to load training queue counts.', error);
     });
     const accountPages = { Profile: 'profile', Logs: 'logs' };
     document.querySelectorAll('.app-profile a, .app-mobile-menu a').forEach((link) => {

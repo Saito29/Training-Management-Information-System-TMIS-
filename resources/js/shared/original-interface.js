@@ -10,11 +10,25 @@
 
   const stable = value => JSON.stringify(value, (key, item) => item && !Array.isArray(item) && typeof item === 'object' ? Object.fromEntries(Object.entries(item).sort(([a],[b]) => a.localeCompare(b))) : item);
 
-  const selectedId = () => { const query = new URLSearchParams(location.search); return query.get('id') || query.get('faId') || query.get('farmerId') || ''; };
+  const requestedId = () => { const query = new URLSearchParams(location.search); return query.get('id') || query.get('faId') || query.get('farmerId') || ''; };
+
+  const farmerNumberFromPath = () => location.pathname.match(/\/participants\/id\/(?:view|edit)-farmer\/(\d+)\/?$/)?.[1] || '';
 
   const records = key => clone(stores[key] || []);
 
-  const selected = key => records(key).find(record => record.id === selectedId());
+  const selectedId = () => {
+    const number = farmerNumberFromPath();
+    const farmerPage = /\/participants\/id\/(?:view|edit)-farmer(?:\/|$)/.test(location.pathname);
+    const numberFromQuery = farmerPage && /^\d{8,}$/.test(requestedId()) ? requestedId() : '';
+    const farmerNumber = number || numberFromQuery;
+    return farmerNumber ? stores['tmis-farmers']?.find(record => record.farmerNumber === farmerNumber)?.id || farmerNumber : requestedId();
+  };
+
+  const selected = key => {
+    const id = selectedId();
+    const number = farmerNumberFromPath() || requestedId();
+    return records(key).find(record => record.id === id || (key === 'tmis-farmers' && record.farmerNumber === number));
+  };
 
   async function request(path, data, method = 'POST') {
 
@@ -244,18 +258,32 @@
   const ageGroup=farmer=>{if(!farmer.birthDate)return 'Not recorded';const birth=new Date(farmer.birthDate+'T00:00:00');const today=new Date(dashboard.today+'T00:00:00');if(Number.isNaN(+birth)||birth>today)return 'Not recorded';let age=year-birth.getFullYear();if(today.getMonth()<birth.getMonth()||(today.getMonth()===birth.getMonth()&&today.getDate()<birth.getDate()))age--;return age<15?'Below 15':dashboard.ageLabels[age<=30?0:age<60?1:2];};
   function reports(original){
     const copy=structuredClone(original);
-    copy.activities.rows=trainings.map(item=>[item.title,item.district||'',item.municipality||'',item.startDate,item.participants?.length||0,item.status]);
-    copy.participants.rows=farmers.map(item=>[item.name,item.sex||'',ageGroup(item),item.district||'','', 'Enrollment recorded']);
-    copy.fca.rows=associations.map(item=>[item.association_name,item.district||'',item.municipality||'',item.members?.length||0,'',item.status]);
-    copy.budget.headers=['District',String(dashboard.currentYear)+' allocated',String(dashboard.previousYear)+' allocated'];
-    copy.budget.rows=aggregate('district').map(item=>[item.district,money(item.current),money(item.previous)]);
-    copy.provinceBudget.headers=['Province',String(dashboard.currentYear)+' allocated',String(dashboard.previousYear)+' allocated'];
-    copy.provinceBudget.rows=aggregate('province').map(item=>[item.province,money(item.current),money(item.previous)]);
-    copy.municipalityBudget.headers=['Municipality','Province',String(dashboard.currentYear)+' allocated',String(dashboard.previousYear)+' allocated'];
-    copy.municipalityBudget.rows=aggregate('municipality').map(item=>[item.municipality,item.province,money(item.current),money(item.previous)]);
+    copy.activities.title='Approved Training Activities';
+    copy.activities.exportName='Approved-Training-Activities';
+    copy.activities.description='Approved training records with schedule, location, enrollment and budget details.';
+    copy.activities.headers=['Training ID','Training','Type','District','Province','Municipality','Schedule','Farmers','Budget','Status'];
+    copy.activities.rows=trainings.map(item=>[item.id,item.title,item.type||'',item.district||'',item.province||'',item.municipality||'',[item.startDate,item.endDate].filter(Boolean).join(' - '),item.participants?.length||0,money(Number(item.budget)||0),item.status]);
+    copy.participants.title='Active Farmers';
+    copy.participants.exportName='Active-Farmers';
+    copy.participants.description='Active farmer profiles with demographic, association and registration details.';
+    copy.participants.headers=['Farmer Number','Full Name','Sex','Age Group','Region','Office','District','Province','Municipality','Barangay','Association','Registered','Status'];
+    copy.participants.rows=farmers.map(item=>[item.farmerNumber||item.id,item.name,item.sex||'',ageGroup(item),item.region||'',item.office||'',item.district||'',item.province||'',item.municipality||'',item.barangay||'',item.organization||'',item.registrationDate||item.registration_date||item.registered||item.createdAt||'',item.status]);
+    copy.fca.title='Active Farmer Associations';
+    copy.fca.exportName='Active-Farmer-Associations';
+    copy.fca.description='Active association records with location, membership and status details.';
+    copy.fca.headers=['Association ID','Association','Organization Type','Region','Office','District','Province','Municipality','Members','Status'];
+    copy.fca.rows=associations.map(item=>[item.id,item.association_name,item.organization_type||item.organizationType||'',item.region||'',item.office||'',item.district||'',item.province||'',item.municipality||'',item.members?.length||0,item.status]);
+    copy.budget.headers=['District','Province',String(dashboard.currentYear)+' allocated',String(dashboard.previousYear)+' allocated','Approved trainings'];
+    copy.budget.rows=aggregate('district').map(item=>[item.district,item.province,money(item.current),money(item.previous),item.activities]);
+    copy.provinceBudget.headers=['Province',String(dashboard.currentYear)+' allocated',String(dashboard.previousYear)+' allocated','Approved trainings'];
+    copy.provinceBudget.rows=aggregate('province').map(item=>[item.province,money(item.current),money(item.previous),item.activities]);
+    copy.municipalityBudget.headers=['Municipality','Province',String(dashboard.currentYear)+' allocated',String(dashboard.previousYear)+' allocated','Approved trainings'];
+    copy.municipalityBudget.rows=aggregate('municipality').map(item=>[item.municipality,item.province,money(item.current),money(item.previous),item.activities]);
     copy.ageSex.rows=ageSex[0].data.map((value,index)=>[dashboard.ageLabels[index],value,ageSex[1].data[index],value+ageSex[1].data[index],farmers.length?((value+ageSex[1].data[index])*100/farmers.length).toFixed(1)+'%':'0%']);
-    copy.sex.rows=sexes.map((value,index)=>[['Male','Female'][index],value,farmers.length?(value*100/farmers.length).toFixed(1)+'%':'0%','','']);
-    copy.groups.rows=groups.map((value,index)=>[dashboard.groupLabels[index],value,farmers.length?(value*100/farmers.length).toFixed(1)+'%':'0%','','']);
+    copy.sex.headers=['Sex','Active farmers','Share of active farmers'];
+    copy.sex.rows=sexes.map((value,index)=>[['Male','Female'][index],value,farmers.length?(value*100/farmers.length).toFixed(1)+'%':'0%']);
+    copy.groups.headers=['Beneficiary Group','Active Farmers','Share of Active Farmers'];
+    copy.groups.rows=groups.map((value,index)=>[dashboard.groupLabels[index],value,farmers.length?(value*100/farmers.length).toFixed(1)+'%':'0%']);
     for(const report of Object.values(copy))report.total=report.rows.length+' records';
     return copy;
   }
@@ -300,11 +328,14 @@
     if(path.includes('/participants/id/')&&farmer){
       const fields={first_name:farmer.firstName,middle_name:farmer.middleName,last_name:farmer.lastName,extension:farmer.suffix,dob:farmer.birthDate,gender:farmer.sex,civil_status:farmer.civil_status,tupad:farmer.tupad,solo_parent:farmer.soloParent,nationality:farmer.nationality,place_of_birth:farmer.placeOfBirth||farmer.place_of_birth,four_ps:farmer.fourPs,pwd:farmer.pwd,senior_citizen:farmer.seniorCitizen,indigenous_group:farmer.indigenousGroup,tribe_name:farmer.tribeName,dietary_restriction:farmer.dietaryRestriction,allergies_on:farmer.allergies_on,region:farmer.region,district:farmer.district,province:farmer.province,municipality:farmer.municipality,barangay:farmer.barangay,postal_code:farmer.postal_code,mobile_no:farmer.phone,email:farmer.email,street_purok_sitio:farmer.street_purok_sitio_name,house_building_number:farmer.house_building_number,tel_number:farmer.telephone};
       const form=document.getElementById('editFarmerPersonalForm');if(form)for(const[name,value]of Object.entries(fields)){const control=form.elements.namedItem(name);setSelect(control,value);if(control?.tagName==='SELECT')control.dispatchEvent(new Event('change',{bubbles:true}));}
-      const details={'Farmer ID':farmer.id,'Full Name':farmer.name,'Mobile Number':farmer.phone,'Address':[farmer.barangay,farmer.municipality,farmer.province].filter(Boolean).join(', '),'Sex':farmer.sex,'Date of Birth':farmer.birthDate,'Nationality':farmer.nationality,'Place of Birth':farmer.placeOfBirth,'Farmer Association':farmer.organization,'4Ps Beneficiary':farmer.fourPs,'Person with Disability':farmer.pwd};
+      const farmerNumber=farmer.farmerNumber||farmer.id;
+      const details={'Farmer ID':farmerNumber,'Full Name':farmer.name,'Mobile Number':farmer.phone,'Address':[farmer.barangay,farmer.municipality,farmer.province].filter(Boolean).join(', '),'Sex':farmer.sex,'Date of Birth':farmer.birthDate,'Nationality':farmer.nationality,'Place of Birth':farmer.placeOfBirth,'Farmer Association':farmer.organization,'4Ps Beneficiary':farmer.fourPs,'Person with Disability':farmer.pwd};
       const association=store.records('tmis-farmer-associations').find(item=>item._db_id===farmer.association_id);
       Object.assign(details,{'TUPAD':farmer.tupad,'Solo Parent':farmer.soloParent,'Email Address':farmer.email,'Gender':farmer.sex,'Civil Status':farmer.civil_status,'4Ps':farmer.fourPs,'Person With Disability':farmer.pwd,'Indigenous Group':farmer.indigenousGroup,'Dietary Restrictions':farmer.dietaryRestriction,'Allergies':farmer.allergies_on,'Senior Citizen':farmer.seniorCitizen,'Telephone Number':farmer.telephone,'Postal Code':farmer.postal_code,'Association ID':association?.id,'Association Name':association?.association_name,'Position / Role':farmer.role,'Date Updated':farmer.updatedAt,'Record Status':farmer.status});
+      const farmerId=document.getElementById('displayFarmerId');if(farmerId)farmerId.textContent=farmerNumber;
+      const interventionReference=document.getElementById('interventionFarmerReference');if(interventionReference){const icon=interventionReference.querySelector('i');interventionReference.replaceChildren(...(icon?[icon]:[]),document.createTextNode(` Intervention records for Farmer ID ${farmerNumber}`));}
       document.querySelectorAll('.overview-status').forEach(item=>item.textContent=farmer.status);
-      document.querySelectorAll('a[href$="/participants/id/edit-farmer"]').forEach(link=>link.search='?id='+encodeURIComponent(farmer.id));
+      document.querySelectorAll('a[href$="/participants/id/edit-farmer"],a[href$="/participants/id/view-farmer"]').forEach(link=>{const action=link.href.endsWith('/edit-farmer')?'edit':'view';link.href=`/app/admin/participants/id/${action}-farmer/${encodeURIComponent(farmerNumber)}`;});
       document.querySelectorAll('.farmer-detail').forEach(item=>{const label=item.querySelector('.farmer-detail-label')?.textContent.trim(),value=item.querySelector('strong');if(value&&Object.hasOwn(details,label))value.textContent=details[label]||'Not recorded';});
     }
     if(path.includes('/administration/id/')){
@@ -331,4 +362,3 @@
   }
   document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,0));
 })();
-

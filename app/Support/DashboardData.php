@@ -48,9 +48,10 @@ class DashboardData
             foreach ($geography as $field => &$rows) {
                 $label = ($item[$field] ?? '') ?: 'Not recorded';
                 $key = $field === 'municipality' ? (($item['province'] ?? '') ?: 'Not recorded').' / '.$label : $label;
-                $rows[$key] ??= [$field => $label, 'province' => $item['province'] ?? '', 'current' => 0.0, 'previous' => 0.0, 'amount' => 0.0];
+                $rows[$key] ??= [$field => $label, 'province' => $item['province'] ?? '', 'current' => 0.0, 'previous' => 0.0, 'amount' => 0.0, 'activities' => 0];
                 $rows[$key][$coveredYear === $year ? 'current' : 'previous'] += $budget;
                 $rows[$key]['amount'] += $budget;
+                $rows[$key]['activities']++;
             }
             unset($rows);
         }

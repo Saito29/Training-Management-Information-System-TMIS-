@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const $ = (id) => document.getElementById(id);
   const key = 'tmis-users';
   const form = $('userUpdateForm');
+  form.elements.role.querySelector('option[value="System Administrator"]')?.remove();
   const editableFields = ['firstName', 'middleName', 'lastName', 'suffix', 'dateOfBirth', 'email', 'phone', 'role', 'credentialTypeId', 'region', 'office', 'position', 'status'];
   const officeTypes = ['DA Regional Field Office', 'DA-SAAD', 'DA-AMIA', 'DA-Livestock', 'DA-HVCDP', 'DA-Rice Program', 'DA-Corn Program', 'DA-ATI'];
   let loadedSnapshot = null;
@@ -178,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updates.email = updates.email.toLowerCase();
       updates.remarks = updates.status === 'Inactive' ? form.elements.remarks.value.trim() : '';
       if (!updates.firstName || !updates.lastName || !updates.dateOfBirth || !updates.email || !updates.region || !updates.office) { feedback('Complete all required registration fields.', 'warning'); return; }
-      if (!['System Administrator', 'Data Encoder', 'Program Administrator', 'Program Head'].includes(updates.role)
+      if (!['Data Encoder', 'Program Administrator', 'Program Head'].includes(updates.role)
         || !['Approved & Accepted', 'Inactive'].includes(updates.status)) { feedback('Select a valid role and account status.', 'warning'); return; }
       if (users.some((item) => item?.id !== id && String(item?.email || '').toLowerCase() === updates.email)) { feedback('This work email is already registered to another user.', 'warning'); form.elements.email.focus(); return; }
       const changed = Object.keys(updates).filter(field => {

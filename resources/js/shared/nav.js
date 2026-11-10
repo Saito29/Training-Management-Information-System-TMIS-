@@ -23,6 +23,42 @@ document.addEventListener('DOMContentLoaded', () => {
       try { sessionStorage.removeItem('tmis-current-user-id'); } catch { /* Storage may be disabled. */ }
       window.location.assign(loginUrl.href);
     });
+    const queueBadges = [
+      ...document.querySelectorAll('.badge-review'),
+      ...document.querySelectorAll('.badge-approval'),
+      ...document.querySelectorAll('.badge-acceptance'),
+    ];
+    queueBadges.forEach((badge) => { badge.textContent = '…'; });
+    fetch(new URL('../../../operations/training-queue-counts', profileScript.src), {
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    }).then((response) => {
+      if (!response.ok) throw new Error('Queue counts unavailable');
+      return response.json();
+    }).then((counts) => {
+      document.querySelectorAll('.badge-review').forEach((badge) => {
+        const count = counts.for_review;
+        badge.textContent = count ?? '';
+        badge.hidden = count === null || count === 0;
+        badge.setAttribute('aria-label', count === null ? 'Review queue access unavailable' : `${count} trainings for review`);
+      });
+      document.querySelectorAll('.badge-approval').forEach((badge) => {
+        const count = counts.for_approval;
+        badge.textContent = count ?? '';
+        badge.hidden = count === null || count === 0;
+        badge.setAttribute('aria-label', count === null ? 'Approval queue access unavailable' : `${count} trainings for approval`);
+      });
+      document.querySelectorAll('.badge-acceptance').forEach((badge) => {
+        const count = counts.for_acceptance;
+        badge.textContent = count ?? '';
+        badge.hidden = count === null || count === 0;
+        badge.setAttribute('aria-label', count === null ? 'Acceptance queue access unavailable' : `${count} trainings for acceptance`);
+      });
+    }).catch((error) => {
+      queueBadges.forEach((badge) => { badge.hidden = true; });
+      console.error('Unable to load training queue counts.', error);
+    });
     const accountPages = { Profile: 'profile', Logs: 'logs' };
     document.querySelectorAll('.app-profile a, .app-mobile-menu a').forEach((link) => {
       const file = accountPages[link.textContent.trim()];

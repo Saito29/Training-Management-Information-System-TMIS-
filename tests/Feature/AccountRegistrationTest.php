@@ -63,7 +63,11 @@ class AccountRegistrationTest extends TestCase
     public function test_rejection_keeps_account_inactive_and_other_roles_cannot_manage_accounts(): void
     {
         $admin = $this->signInAdministrator();
-        $user = User::factory()->create(['status' => 'Pending approval', 'active_status' => 0]);
+        $user = User::factory()->create([
+            'role_id' => DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id'),
+            'status' => 'Pending approval',
+            'active_status' => 0,
+        ]);
         $this->patchJson(route('accounts.update', $user), ['decision' => 'Rejected'])->assertOk();
         $this->assertDatabaseHas('users', ['user_id' => $user->user_id, 'status' => 'Rejected', 'active_status' => 0]);
         $admin->role_id = DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id');
@@ -116,6 +120,59 @@ class AccountRegistrationTest extends TestCase
         $data['credentialTypeId'] = $headCredentialId;
         $this->postJson(route('accounts.store'), $data)->assertUnprocessable()->assertJsonValidationErrors('credentialTypeId');
         $this->assertDatabaseMissing('users', ['email' => 'mismatched@example.com']);
+    }
+
+    public function test_system_administrator_accounts_and_role_choices_are_hidden_from_account_management(): void
+    {
+        $this->signInAdministrator();
+        $administratorRoleId = DB::table('user_roles')->where('name', 'System Administrator')->value('role_id');
+        $encoderRoleId = DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id');
+        $pendingAdministrator = User::factory()->create([
+            'email' => 'pending-admin@example.com',
+            'role_id' => $administratorRoleId,
+            'status' => 'Pending approval',
+            'active_status' => 0,
+        ]);
+        User::factory()->create([
+            'email' => 'approved-encoder@example.com',
+            'role_id' => $encoderRoleId,
+            'status' => 'Approved & Accepted',
+            'active_status' => 1,
+        ]);
+        User::factory()->create([
+            'email' => 'pending-encoder@example.com',
+            'role_id' => $encoderRoleId,
+            'status' => 'Pending approval',
+            'active_status' => 0,
+        ]);
+
+        $this->getJson(route('accounts.index'))
+            ->assertOk()
+            ->assertJsonCount(1, 'users')
+            ->assertJsonPath('users.0.email', 'pending-encoder@example.com');
+        $options = $this->getJson(route('accounts.options'))->assertOk();
+        $this->assertSame(false, in_array('System Administrator', $options->json('roles'), true));
+        $this->assertSame(false, array_key_exists('System Administrator', $options->json('credentialTypes')));
+
+        $managementData = $this->getJson('/ui/data', ['X-TMIS-PAGE' => '/app/admin/administration/details/all-status'])
+            ->assertOk()
+            ->assertJsonCount(2, 'stores.tmis-users');
+        $this->assertSame(false, in_array('System Administrator', $managementData->json('roles'), true));
+        $this->assertSame(false, in_array($pendingAdministrator->email, array_column($managementData->json('stores.tmis-users'), 'email'), true));
+        $this->patchJson(route('accounts.update', $pendingAdministrator), ['decision' => 'Approved'])->assertNotFound();
+        $this->assertDatabaseHas('users', [
+            'user_id' => $pendingAdministrator->user_id,
+            'status' => 'Pending approval',
+            'active_status' => 0,
+        ]);
+
+        $registration = $this->registration();
+        $registration['email'] = 'admin-role@example.com';
+        $registration['role'] = 'System Administrator';
+        $this->postJson(route('accounts.store'), $registration)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('role');
+        $this->assertDatabaseMissing('users', ['email' => 'admin-role@example.com']);
     }
 
     public function test_registration_options_include_credential_permission_grants_and_blocks(): void

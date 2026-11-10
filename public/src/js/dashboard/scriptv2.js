@@ -105,9 +105,9 @@ document.addEventListener('DOMContentLoaded', function () {
       ],
     },
     participants: {
-      title: 'Total Participants',
-      exportName: 'Total-Participants',
-      description: 'Farmer participants trained across all capacity-building activities.',
+      title: 'Active Farmers',
+      exportName: 'Active-Farmers',
+      description: 'Active farmer profiles and registration activity.',
       icon: 'bi-people-fill',
       total: '120 participants',
       headers: ['Participant', 'Sex', 'Age Group', 'District', 'Activity', 'Attendance'],
@@ -1040,7 +1040,7 @@ document.addEventListener('DOMContentLoaded', function () {
           formatter: (value) => Math.round(value),
         },
         title: {
-          text: 'Participants',
+          text: 'Active farmers',
           style: { color: '#607068', fontSize: '11px', fontWeight: 500 },
         },
       },
@@ -1075,7 +1075,7 @@ document.addEventListener('DOMContentLoaded', function () {
             dataPointIndex
           );
 
-          return `<div class="apexcharts-tooltip-custom" style="--tooltip-series-color: ${seriesColor};"><div class="apexcharts-tooltip-heading"><strong>${trainingMonths[dataPointIndex]} ${year}</strong></div><div class="apexcharts-tooltip-total"><span>Total participants</span><strong>${totalParticipants}</strong></div><div class="apexcharts-tooltip-section-title">Municipality details</div>${municipalityRows}</div>`;
+          return `<div class="apexcharts-tooltip-custom" style="--tooltip-series-color: ${seriesColor};"><div class="apexcharts-tooltip-heading"><strong>${trainingMonths[dataPointIndex]} ${year}</strong></div><div class="apexcharts-tooltip-total"><span>Active farmer registrations</span><strong>${totalParticipants}</strong></div><div class="apexcharts-tooltip-section-title">Municipality details</div>${municipalityRows}</div>`;
         },
       },
       responsive: [
