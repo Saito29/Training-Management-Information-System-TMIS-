@@ -1,6 +1,14 @@
 #overview-panel .training-edit-form { overflow:hidden; margin-bottom:16px; }
 .training-edit-header { display:flex; align-items:center; gap:15px; padding:22px 26px; border-bottom:1px solid var(--color-border); background:var(--color-primary-surface); }
 .training-edit-header-icon { display:grid; place-items:center; flex:none; width:48px; height:48px; border-radius:14px; color:var(--color-primary-dark); background:var(--color-surface); font-size:23px; }
+.training-edit-meta { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.training-edit-meta .training-edit-eyebrow { overflow-wrap:anywhere; }
+.training-status-pill { display:inline-flex; min-height:25px; align-items:center; padding:4px 10px; border:1px solid color-mix(in srgb,var(--color-primary) 24%,transparent); border-radius:999px; color:var(--color-primary-dark); background:var(--color-surface); font-size:10px; font-weight:700; }
+.training-status-pill[data-status='approved-accepted'] { color:#087b36; border-color:#b6e4c4; background:#eaf8ef; }
+.training-status-pill[data-status='active'] { color:#087b36; border-color:#b6e4c4; background:#eaf8ef; }
+.training-status-pill[data-status='for-review'],.training-status-pill[data-status='for-approval'],.training-status-pill[data-status='for-acceptance'] { color:#8a5700; border-color:#f0d7a1; background:#fff8e8; }
+.training-status-pill[data-status='inactive'] { color:#a32c35; border-color:#f0c0c3; background:#fff0f0; }
+.training-status-pill[data-status='status-not-recorded'] { color:var(--color-text-secondary); }
 .training-edit-header h2 { margin:3px 0 4px; color:var(--color-text-primary); font-size:clamp(19px,2vw,25px); font-weight:750; }
 .training-edit-header p { margin:0; color:var(--color-text-secondary); font-size:12px; }
 .training-edit-eyebrow { color:var(--color-primary-dark); font-size:11px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
@@ -37,6 +45,31 @@
 .training-edit-save { padding:9px 16px; color:#fff; background:var(--color-primary); font-size:12px; font-weight:700; white-space:nowrap; }
 .training-edit-save:hover:not(:disabled) { color:#fff; background:var(--color-primary-dark); }
 .training-edit-save:disabled { opacity:.5; cursor:not-allowed; }
+.training-edit-form .form-select:disabled { color:var(--color-text-secondary); background-color:var(--color-bg); opacity:1; cursor:not-allowed; }
+.training-edit-confirm-modal { overflow:hidden; border:1px solid var(--color-border); border-radius:16px; background:var(--color-surface); color:var(--color-text-primary); }
+.training-edit-confirm-modal .modal-header { align-items:flex-start; border-bottom:1px solid var(--color-border); background:var(--color-primary-surface); }
+.training-edit-confirm-modal .modal-title { margin-top:4px; color:var(--color-text-primary); font-weight:750; }
+.training-edit-confirm-copy { color:var(--color-text-secondary); font-size:13px; }
+.training-edit-confirm-details { display:grid; gap:0; margin:16px 0; border:1px solid var(--color-border); border-radius:10px; }
+.training-edit-confirm-details > div { display:grid; grid-template-columns:minmax(135px,.7fr) minmax(0,1.3fr); gap:12px; padding:11px 13px; }
+.training-edit-confirm-details > div + div { border-top:1px solid var(--color-border); }
+.training-edit-confirm-details dt { color:var(--color-text-secondary); font-size:11px; font-weight:650; }
+.training-edit-confirm-details dd { margin:0; color:var(--color-text-primary); font-size:12px; font-weight:700; overflow-wrap:anywhere; }
+.training-edit-confirm-note { display:flex; gap:8px; margin:0; color:var(--color-text-secondary); font-size:11px; }
+.training-edit-confirm-note i { color:var(--color-primary); }
+.training-edit-confirm-save { padding:8px 14px; color:#fff; background:var(--color-primary); font-size:12px; font-weight:700; }
+.training-edit-confirm-save:hover:not(:disabled) { color:#fff; background:var(--color-primary-dark); }
+.training-edit-confirm-save:disabled { opacity:.55; cursor:wait; }
+.training-header-actions { display:flex; flex-wrap:wrap; gap:9px; }
+.training-status-update { padding:8px 12px; border:1px solid var(--color-primary); border-radius:9px; color:var(--color-primary-dark); background:var(--color-primary-surface); font-size:12px; font-weight:700; }
+.training-status-update:hover { color:var(--color-primary-dark); border-color:var(--color-primary-dark); }
+.training-status-field { display:grid; gap:7px; color:var(--color-text-primary); font-size:12px; font-weight:650; }
+.training-status-field .form-control,.training-status-field .form-select { border-color:var(--color-border); background-color:var(--color-surface); color:var(--color-text-primary); font-size:12px; }
+.training-status-field .form-control:focus,.training-status-field .form-select:focus { border-color:var(--color-primary); box-shadow:0 0 0 3px var(--color-primary-surface); }
 @media(max-width:1050px) { .training-edit-body { grid-template-columns:1fr; } .training-edit-section:nth-child(3) { border-bottom:1px solid var(--color-border); } }
-@media(max-width:600px) { .training-edit-header { flex-wrap:wrap; padding:18px; } .training-edit-state { margin-left:0; } .training-edit-body { padding:4px 18px 18px; } .training-edit-grid { grid-template-columns:1fr; } .training-edit-wide { grid-column:1; } .training-edit-row { grid-template-columns:1fr auto; } .training-edit-row label,.training-edit-row .training-edit-row-wide { grid-column:1; } .training-edit-row .training-edit-remove { grid-column:2; grid-row:1; } .training-edit-footer { flex-wrap:wrap; padding:16px 18px; } }
+@media(max-width:600px) { .training-edit-header { flex-wrap:wrap; padding:18px; } .training-edit-state { margin-left:0; } .training-edit-body { padding:4px 18px 18px; } .training-edit-grid { grid-template-columns:1fr; } .training-edit-wide { grid-column:1; } .training-edit-row { grid-template-columns:1fr auto; } .training-edit-row label,.training-edit-row .training-edit-row-wide { grid-column:1; } .training-edit-row .training-edit-remove { grid-column:2; grid-row:1; } .training-edit-footer { flex-wrap:wrap; padding:16px 18px; } .training-edit-confirm-details > div { grid-template-columns:1fr; gap:4px; } }
 .training-edit-trainer-row input:disabled { color:var(--color-text-secondary); background:var(--color-bg); opacity:1; }
+[data-theme='dark'] .training-status-pill[data-status='approved-accepted'] { color:#a8e7b9; border-color:#285d39; background:#183825; }
+[data-theme='dark'] .training-status-pill[data-status='active'] { color:#a8e7b9; border-color:#285d39; background:#183825; }
+[data-theme='dark'] .training-status-pill[data-status='for-review'],[data-theme='dark'] .training-status-pill[data-status='for-approval'],[data-theme='dark'] .training-status-pill[data-status='for-acceptance'] { color:#f4d18b; border-color:#6a5120; background:#382d17; }
+[data-theme='dark'] .training-status-pill[data-status='inactive'] { color:#f0afb3; border-color:#71343a; background:#3d2024; }

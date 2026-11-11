@@ -36,11 +36,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const form = document.getElementById('editTrainingForm');
   if (!form) return;
+  const selectedTraining = window.TMIS_PAGE ? window.TmisStore.selected('tmis-trainings') : null;
 
   const trainingTypeSelect = form.elements.namedItem('training_type');
   const trainingTypeOptions = window.TMIS_PAGE?.registration?.options?.training_type;
   if (trainingTypeSelect instanceof HTMLSelectElement && Array.isArray(trainingTypeOptions)) {
-    const selectedTraining = window.TmisStore.selected('tmis-trainings');
     const selectedType = selectedTraining?.training_type || selectedTraining?.type || trainingTypeSelect.value;
     const options = trainingTypeOptions.map(option => new Option(option.label, option.value));
     if (selectedType && !options.some(option => option.value === selectedType)) {
@@ -50,7 +50,118 @@ document.addEventListener('DOMContentLoaded', () => {
     trainingTypeSelect.value = selectedType || '';
   }
 
-  const storageKey = 'tmis:training:TRN-000246:overview';
+  const customStatusSelect = form.elements.namedItem('customStatusId');
+  if (customStatusSelect instanceof HTMLSelectElement) {
+    const availableStatuses = window.TMIS_PAGE?.recordStatuses || [];
+    const customStatusId = String(selectedTraining?.customStatusId || '');
+    const options = availableStatuses.map(status => new Option(status.name, String(status.id)));
+    if (customStatusId && !options.some(option => option.value === customStatusId)) {
+      const currentStatus = new Option(selectedTraining?.customStatus || 'Inactive status', customStatusId);
+      currentStatus.disabled = true;
+      options.push(currentStatus);
+    }
+    customStatusSelect.replaceChildren(new Option('No additional status', ''), ...options);
+    customStatusSelect.value = customStatusId;
+  }
+
+  const trainingStatusBadge = document.getElementById('editTrainingStatusBadge');
+  const trainingActiveBadge = document.getElementById('editTrainingActiveBadge');
+  const trainingCustomStatusBadge = document.getElementById('editTrainingCustomStatusBadge');
+  if (selectedTraining && trainingStatusBadge) {
+    const trainingStatus = selectedTraining.workflowStatus || selectedTraining.status || 'Status not recorded';
+    trainingStatusBadge.textContent = trainingStatus;
+    trainingStatusBadge.dataset.status = trainingStatus.toLowerCase().replace(/[^a-z]+/g, '-');
+    document.getElementById('editTrainingId').textContent = selectedTraining.id || 'Training record';
+    if (trainingActiveBadge) {
+      const activeStatus = selectedTraining.is_active === false ? 'Inactive' : 'Active';
+      trainingActiveBadge.textContent = activeStatus;
+      trainingActiveBadge.dataset.status = activeStatus.toLowerCase();
+    }
+    if (trainingCustomStatusBadge && selectedTraining.customStatus) {
+      trainingCustomStatusBadge.textContent = selectedTraining.customStatus;
+      trainingCustomStatusBadge.hidden = false;
+    }
+  }
+  const statusButton = document.getElementById('editTrainingStatusButton');
+  const statusForm = document.getElementById('editTrainingStatusForm');
+  if (statusButton && statusForm) {
+    const statusSelect = document.getElementById('editTrainingActiveStatus');
+    const remarksField = document.getElementById('editTrainingStatusRemarksField');
+    const remarksInput = document.getElementById('editTrainingStatusRemarks');
+    const statusError = document.getElementById('editTrainingStatusError');
+    const statusSaveButton = document.getElementById('saveEditTrainingStatus');
+    const hasEditPermission = window.TMIS_NAV_ACCESS?.administrator
+      || window.TMIS_NAV_ACCESS?.permissions?.includes('trainings.edit');
+    const databaseId = Number(selectedTraining?._db_id);
+    statusButton.hidden = !hasEditPermission || !Number.isSafeInteger(databaseId) || databaseId < 1;
+
+    function syncStatusRemarks() {
+      const inactive = statusSelect.value === 'false';
+      remarksField.hidden = !inactive;
+      remarksInput.required = inactive;
+      if (!inactive) remarksInput.value = '';
+    }
+
+    statusSelect.addEventListener('change', syncStatusRemarks);
+    document.getElementById('editTrainingStatusModal').addEventListener('show.bs.modal', () => {
+      document.getElementById('editTrainingStatusName').textContent =
+        selectedTraining?.title || selectedTraining?.training_title || selectedTraining?.id || 'Training';
+      document.getElementById('editTrainingWorkflowStatus').textContent =
+        selectedTraining?.workflowStatus || selectedTraining?.status || 'Not set';
+      statusSelect.value = selectedTraining?.is_active === true ? 'true' : 'false';
+      remarksInput.value = selectedTraining?.statusRemarks || '';
+      statusError.hidden = true;
+      statusError.textContent = '';
+      syncStatusRemarks();
+    });
+
+    statusForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!statusForm.reportValidity() || statusSaveButton.disabled) return;
+
+      const version = Number(selectedTraining?.version);
+      if (!Number.isSafeInteger(databaseId) || databaseId < 1
+        || !Number.isSafeInteger(version) || version < 1) {
+        statusError.textContent = 'The training details are invalid. Refresh the page and try again.';
+        statusError.hidden = false;
+        return;
+      }
+
+      statusSaveButton.disabled = true;
+      statusError.hidden = true;
+      try {
+        const isActive = statusSelect.value === 'true';
+        await window.TmisStore.request(`/operations/trainings/${databaseId}/active`, {
+          is_active: isActive,
+          version,
+          remarks: isActive ? undefined : remarksInput.value.trim(),
+        }, 'PATCH');
+        const pageUrl = new URL(window.location.href);
+        pageUrl.searchParams.set('trainingStatusUpdated', isActive ? 'activated' : 'deactivated');
+        window.location.assign(pageUrl);
+      } catch (requestError) {
+        statusError.textContent = requestError instanceof Error
+          ? requestError.message
+          : 'The training status could not be updated.';
+        statusError.hidden = false;
+      } finally {
+        statusSaveButton.disabled = false;
+      }
+    });
+
+    const pageUrl = new URL(window.location.href);
+    const updateResult = pageUrl.searchParams.get('trainingStatusUpdated');
+    const successMessages = {
+      activated: 'Training activated.',
+      deactivated: 'Training deactivated.',
+    };
+    if (updateResult && successMessages[updateResult]) {
+      pageUrl.searchParams.delete('trainingStatusUpdated');
+      window.history.replaceState(null, '', pageUrl);
+      window.TmisToast?.show(successMessages[updateResult], 'success');
+    }
+  }
+  const storageKey = `tmis:training:${selectedTraining?.id || 'TRN-000246'}:overview`;
   const field = name => form.elements.namedItem(name);
   const state = document.getElementById('editTrainingState');
   const saveButton = form.querySelector('.training-edit-save');
@@ -59,7 +170,25 @@ document.addEventListener('DOMContentLoaded', () => {
     pretest: document.getElementById('editPretestList'),
     posttest: document.getElementById('editPosttestList'),
   };
-  const selectedTraining = window.TMIS_PAGE ? window.TmisStore.selected('tmis-trainings') : null;
+  const officeSelect = field('implementing_office');
+  if (selectedTraining) {
+    const officeById = window.TMIS_PAGE?.offices?.find(office =>
+      String(office.org_id) === String(selectedTraining.org_id));
+    const officeName = String(officeById?.name || selectedTraining.office || selectedTraining.implementing_office || '');
+    const matchingOffice = [...officeSelect.options].find(option =>
+      option.value === officeName || option.textContent.trim() === officeName);
+    if (matchingOffice) {
+      officeSelect.value = matchingOffice.value;
+    } else if (officeName || selectedTraining.org_id) {
+      const officeValue = officeName || String(selectedTraining.org_id);
+      officeSelect.add(new Option(officeName || 'Current implementing office', officeValue));
+      officeSelect.value = officeValue;
+    } else {
+      officeSelect.value = '';
+    }
+    officeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  officeSelect.disabled = true;
   const trainers = (window.TMIS_PAGE ? window.TmisStore.records('tmis-resource-persons') : [
     { id: 'Maria Teresa Santos', name: 'Maria Teresa Santos', office: 'Department of Agriculture - Quezon Provincial Office' },
     { id: 'Roberto Mendoza', name: 'Roberto Mendoza', office: 'Agricultural Training Institute - RTC IV-A' },
@@ -70,16 +199,51 @@ document.addEventListener('DOMContentLoaded', () => {
     (!selectedTraining?.region_id || String(resource.region_id) === String(selectedTraining.region_id)) &&
     (!selectedTraining?.org_id || String(resource.org_id) === String(selectedTraining.org_id)) &&
     resource.status !== 'Inactive');
-  const addresses = {
-    region_4a: {
-      batangas_3rd: { label: 'Batangas 3rd District', provinces: { batangas: { label: 'Batangas', municipalities: { tanauan: { label: 'Tanauan City', barangays: { san_antonio: 'San Antonio' } } } } } },
-      quezon_1st: { label: 'Quezon 1st District', provinces: { quezon: { label: 'Quezon', municipalities: { jomalig: { label: 'Jomalig', barangays: { bukal: 'Bukal', talisoy: 'Talisoy' } } } } } },
-      laguna_1st: { label: 'Laguna 1st District', provinces: { laguna: { label: 'Laguna', municipalities: { pakil: { label: 'Pakil', barangays: { banilan: 'Banilan', casa_real: 'Casa Real' } } } } } },
-    },
-    region_1: { pangasinan_1st: { label: 'Pangasinan 1st District', provinces: { pangasinan: { label: 'Pangasinan', municipalities: { alaminos: { label: 'Alaminos', barangays: { alos: 'Alos', baleyadaan: 'Baleyadaan' } } } } } } },
-  };
-  const addressNames = ['region_id', 'district_id', 'province_id', 'municipality_id', 'barangay_id'];
-  const defaultAddress = ['region_4a', 'batangas_3rd', 'batangas', 'tanauan', 'san_antonio'];
+  const addressNames = ['region_id', 'province_id', 'district_id', 'municipality_id', 'barangay_id'];
+  const addressKinds = [
+    {name: 'province', kind: 'province'},
+    {name: 'district', kind: 'district'},
+    {name: 'municipality', kind: 'municipality'},
+    {name: 'barangay', kind: 'barangay'},
+  ];
+  const registration = window.TMIS_PAGE?.registration;
+  const regions = registration?.regions || window.TMIS_PAGE?.regions || [];
+  const locations = registration?.locations || [];
+  const normalizeLocation = value => String(value || '')
+    .replace(/\s*\([^)]*\)/g, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/gi, ' ')
+    .trim()
+    .toLocaleLowerCase();
+  const regionSelect = field('region_id');
+  if (Array.isArray(regions)) {
+    regionSelect.replaceChildren(
+      new Option(regions.length ? 'Choose region' : 'No regions available', ''),
+      ...regions.map(region => new Option(region.name, String(region.region_id)))
+    );
+  }
+
+  function locationsFor(kind, parentId, regionId) {
+    return locations.filter(location =>
+      location.kind === kind
+      && String(location.region_id) === String(regionId)
+      && (kind === 'province' || String(location.parent_id) === String(parentId))
+    );
+  }
+
+  function locationMatch(rows, kind, id, name, provinceName = '') {
+    const byId = rows.find(location => String(location.id) === String(id));
+    if (byId) return byId;
+    const aliases = [name, id].filter(Boolean).map(value => String(value));
+    if (kind === 'district' && provinceName) {
+      aliases.push(...aliases.map(value => value
+        .replace(new RegExp(`^${provinceName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'i'), '')
+        .replace(/\s+district$/i, '')));
+    }
+    const normalizedAliases = new Set(aliases.map(normalizeLocation).filter(Boolean));
+    return rows.find(location => normalizedAliases.has(normalizeLocation(location.name)));
+  }
   const questionOptions = (window.TMIS_PAGE ? {pretest:window.TmisStore.records('tmis-pre-test-questionnaires').map(item=>[item.id,item.trainingQuestionnaire]),posttest:window.TmisStore.records('tmis-post-test-questionnaires').map(item=>[item.id,item.trainingQuestionnaire])} : {
     pretest: [['PRE-GEN-01', 'General Knowledge Assessment (Pre-test)'], ['PRE-CROP-01', 'Crop Production Pre-test'], ['PRE-ORG-01', 'Organic Agriculture Pre-test'], ['PRE-BIZ-01', 'Agribusiness Pre-test']],
     posttest: [['POST-GEN-01', 'General Knowledge Assessment (Post-test)'], ['POST-CROP-01', 'Crop Production Post-test'], ['POST-ORG-01', 'Organic Agriculture Post-test'], ['POST-BIZ-01', 'Agribusiness Post-test']],
@@ -142,26 +306,45 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function addressChildren(level) {
-    const [region, district, province, municipality] = addressNames.map(name => field(name).value);
-    if (level === 1) return addresses[region];
-    if (level === 2) return addresses[region]?.[district]?.provinces;
-    if (level === 3) return addresses[region]?.[district]?.provinces?.[province]?.municipalities;
-    return addresses[region]?.[district]?.provinces?.[province]?.municipalities?.[municipality]?.barangays;
+  function populateLocation(kind, parentId, regionId, value = '', label = '', provinceName = '') {
+    const select = field(`${kind}_id`);
+    const rows = parentId ? locationsFor(kind, parentId, regionId) : [];
+    select.replaceChildren(
+      new Option(parentId ? `Choose ${kind}` : 'Choose the parent location first', ''),
+      ...rows.map(location => new Option(location.name, String(location.id)))
+    );
+    select.disabled = !parentId;
+    const match = locationMatch(rows, kind, value, label, provinceName);
+    if (match) {
+      select.value = String(match.id);
+    } else if (parentId && (value || label)) {
+      const legacyValue = String(value || `legacy-${kind}-${normalizeLocation(label).replace(/\s+/g, '-')}`);
+      select.add(new Option(label || String(value), legacyValue));
+      select.value = legacyValue;
+    }
+    return select.value;
   }
 
-  function populateAddress(level, selected = '') {
-    const select = field(addressNames[level]);
-    const records = addressChildren(level);
-    select.replaceChildren(new Option(`Choose ${['', 'district', 'province', 'municipality', 'barangay'][level]}`, ''));
-    Object.entries(records || {}).forEach(([id, record]) => select.add(new Option(typeof record === 'string' ? record : record.label, id)));
-    select.disabled = !records;
-    select.value = [...select.options].some(option => option.value === selected) ? selected : '';
-  }
-
-  function setAddress(values) {
-    field('region_id').value = values[0] || '';
-    for (let level = 1; level < addressNames.length; level++) populateAddress(level, values[level]);
+  function setAddress(record = {}) {
+    const regionId = String(record.region_id || record.region || selectedTraining?.region_id || '');
+    const regionName = String(record.region || selectedTraining?.region || '');
+    const regionMatch = regions.find(region =>
+      String(region.region_id) === regionId || normalizeLocation(region.name) === normalizeLocation(regionName || regionId));
+    if (!regionMatch && (regionName || regionId)) {
+      regionSelect.add(new Option(regionName || regionId, regionId || regionName));
+    }
+    regionSelect.value = String(regionMatch?.region_id || regionId || regionName);
+    let parentId = regionSelect.value;
+    let provinceName = '';
+    addressKinds.forEach(({name, kind}) => {
+      const value = record[`${name}_id`] || '';
+      const label = record[name] || '';
+      const selectedId = populateLocation(kind, parentId, regionSelect.value, value, label, provinceName);
+      if (kind === 'province') {
+        provinceName = field('province_id').selectedOptions[0]?.textContent || label;
+      }
+      parentId = selectedId;
+    });
   }
 
   function collect() {
@@ -178,22 +361,49 @@ document.addEventListener('DOMContentLoaded', () => {
       email: row.querySelector('[data-trainer-email]').value,
     }));
     for (const type of ['pretest', 'posttest']) values[type] = [...questionnaireLists[type].querySelectorAll('select')].map(select => select.value);
-    if(window.TMIS_PAGE){for(const name of addressNames){const control=field(name);if(control?.selectedOptions[0]?.value)values[name.replace('_id','')]=control.selectedOptions[0].textContent;}if(values.region)values.region_id=values.region;}
+    if (window.TMIS_PAGE) {
+      for (const name of addressNames) {
+        const control = field(name);
+        if (control?.selectedOptions[0]?.value) {
+          values[name.replace('_id', '')] = control.selectedOptions[0].textContent;
+        }
+      }
+    }
     return values;
   }
 
+  const initialValues = selectedTraining ? {
+    training_title: selectedTraining.title || selectedTraining.training_title || '',
+    implementing_office: officeSelect.value,
+    training_type: selectedTraining.training_type || selectedTraining.type || '',
+    partner_organization: selectedTraining.partner_organization || '',
+    training_description: selectedTraining.description || '',
+    start_date: selectedTraining.start_date || selectedTraining.startDate || '',
+    end_date: selectedTraining.end_date || selectedTraining.endDate || '',
+    venue_location: selectedTraining.venue_location || selectedTraining.venue || '',
+    region_id: String(selectedTraining.region_id || selectedTraining.region || ''),
+    province_id: selectedTraining.province_id || selectedTraining.province || '',
+    district_id: selectedTraining.district_id || selectedTraining.district || '',
+    municipality_id: selectedTraining.municipality_id || selectedTraining.municipality || '',
+    barangay_id: selectedTraining.barangay_id || selectedTraining.barangay || '',
+    delivery_mode: selectedTraining.delivery_mode || 'In-person',
+    target_participants: String(selectedTraining.target_participants || ''),
+    customStatusId: String(selectedTraining.customStatusId || ''),
+    trainers: selectedTraining.trainers || [],
+    pretest: selectedTraining.pretest || [],
+    posttest: selectedTraining.posttest || [],
+  } : null;
   let saved;
-  try { saved = JSON.parse(window.TmisStore.getItem(storageKey) || 'null'); } catch { saved = null; }
+  try { saved = JSON.parse(window.TmisStore.getItem(storageKey) || 'null') || initialValues; } catch { saved = initialValues; }
   if (saved && typeof saved === 'object') {
     Object.entries(saved).forEach(([name, value]) => {
-      if (name === 'trainers' || name === 'pretest' || name === 'posttest' || addressNames.includes(name) || name === 'delivery_mode') return;
+      if (name === 'trainers' || name === 'pretest' || name === 'posttest' || addressNames.includes(name) || name === 'delivery_mode' || name === 'implementing_office') return;
       const control = field(name);
       if (control && typeof value === 'string') control.value = value;
     });
-    setAddress(addressNames.map(name => saved[name]));
     const mode = [...form.querySelectorAll('[name="delivery_mode"]')].find(input => input.value === saved.delivery_mode);
     if (mode) mode.checked = true;
-  } else setAddress(defaultAddress);
+  }
   (saved?.trainers?.length ? saved.trainers : [{}]).forEach(addTrainer);
   for (const type of ['pretest', 'posttest']) {
     const defaults = window.trainingAssessments?.list(type).map(item => item.id) || [];
@@ -208,20 +418,29 @@ document.addEventListener('DOMContentLoaded', () => {
     end.setCustomValidity(start.value && end.value && end.value < start.value ? 'End date cannot be earlier than the start date.' : '');
   }
   function syncHeading() { document.getElementById('editTrainingHeading').textContent = field('training_title').value.trim() || 'Untitled training'; }
-  let baseline = JSON.stringify(collect());
+  let baseline = null;
+  const confirmModalElement = document.getElementById('editTrainingConfirmModal');
+  const confirmModal = bootstrap.Modal.getOrCreateInstance(confirmModalElement);
+  const confirmButton = document.getElementById('confirmEditTrainingSave');
+  const confirmError = document.getElementById('editTrainingConfirmError');
+  const canEditTraining = !selectedTraining || (selectedTraining.workflowStatus || selectedTraining.status) === 'For Review';
+  let pendingValues = null;
   function refresh() {
     syncDate();
     syncHeading();
-    const dirty = JSON.stringify(collect()) !== baseline;
-    saveButton.disabled = !dirty;
-    state.textContent = dirty ? 'Unsaved changes' : 'Up to date';
+    const dirty = baseline !== null && JSON.stringify(collect()) !== baseline;
+    saveButton.disabled = !dirty || !canEditTraining;
+    state.textContent = !canEditTraining ? 'Return to For Review to edit' : dirty ? 'Unsaved changes' : 'Up to date';
     state.classList.toggle('is-dirty', dirty);
   }
   form.addEventListener('change', event => {
     const target = event.target;
     if (addressNames.slice(0, -1).includes(target.name)) {
       const level = addressNames.indexOf(target.name);
-      for (let next = level + 1; next < addressNames.length; next++) populateAddress(next);
+      let parentId = target.value;
+      addressKinds.slice(level).forEach(({kind}) => {
+        parentId = populateLocation(kind, parentId, regionSelect.value);
+      });
     }
     if (target.matches('[data-trainer-name]')) fillTrainerDetails(target.closest('.training-edit-row'));
     refresh();
@@ -237,19 +456,51 @@ document.addEventListener('DOMContentLoaded', () => {
     const add = event.target.closest('[data-add-questionnaire]');
     if (add) { addQuestion(add.dataset.addQuestionnaire); refresh(); }
   });
-  form.addEventListener('submit', async event => {
+  form.addEventListener('submit', event => {
     event.preventDefault();
     syncDate();
     if (!form.reportValidity()) return;
-    const values = collect();
+    if (!canEditTraining) {
+      window.TmisToast?.show('Return the training to For Review before editing its information.', 'warning');
+      return;
+    }
+    pendingValues = collect();
+    const baselineValues = JSON.parse(baseline);
+    const changedFields = Object.keys(pendingValues).filter(name =>
+      JSON.stringify(pendingValues[name]) !== JSON.stringify(baselineValues[name]));
+    document.getElementById('editTrainingConfirmName').textContent = pendingValues.training_title || 'Untitled training';
+    document.getElementById('editTrainingConfirmStatus').textContent = selectedTraining?.workflowStatus || selectedTraining?.status || 'For Review';
+    document.getElementById('editTrainingConfirmChanges').textContent = `${changedFields.length} field${changedFields.length === 1 ? '' : 's'}`;
+    confirmError.hidden = true;
+    confirmError.textContent = '';
+    confirmModal.show();
+  });
+  confirmButton.addEventListener('click', async () => {
+    if (!pendingValues || confirmButton.disabled) return;
+    confirmButton.disabled = true;
+    confirmButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Saving…';
+    confirmError.hidden = true;
     try {
-      await window.TmisStore.setItem(storageKey, JSON.stringify(values));
-      baseline = JSON.stringify(values);
+      await window.TmisStore.setItem(storageKey, JSON.stringify(pendingValues));
+      baseline = JSON.stringify(pendingValues);
       refresh();
       state.textContent = 'Saved to the database';
+      pendingValues = null;
+      confirmModal.hide();
+      window.TmisToast?.show('Training information updated successfully.', 'success');
     } catch (error) {
-      state.textContent = error.message || 'Unable to save changes';
+      confirmError.textContent = error.message || 'Unable to save training changes.';
+      confirmError.hidden = false;
+      window.TmisToast?.show(error.message || 'Unable to save training changes.', 'error');
+    } finally {
+      confirmButton.disabled = false;
+      confirmButton.innerHTML = '<i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Save updates';
     }
   });
   refresh();
+  setTimeout(() => {
+    setAddress(saved || selectedTraining || {});
+    baseline = JSON.stringify(collect());
+    refresh();
+  }, 0);
 });

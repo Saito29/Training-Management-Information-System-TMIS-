@@ -107,6 +107,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!resource) return;
     const score = resource.questions.reduce((sum, question) => sum + stats(question).score, 0);
     const responses = resource.questions.reduce((sum, question) => sum + stats(question).count, 0);
-    row.querySelector('b').innerHTML = `${(score / responses).toFixed(2)} <small>/ 5</small>`;
+    const average = row.querySelector('strong');
+    if (average && responses > 0) {
+      average.textContent = `${(score / responses).toFixed(2)} / 5`;
+    }
   });
 });

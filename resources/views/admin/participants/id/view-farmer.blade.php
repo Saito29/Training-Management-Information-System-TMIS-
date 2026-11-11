@@ -875,6 +875,7 @@ class="layout-fixed"
                           <span class="overview-heading-icon"><i class="bi bi-person-vcard" aria-hidden="true"></i></span>
                           <h5 class="title-card">Personal Information</h5>
                           <span class="overview-status">Active</span>
+                          <span class="overview-status" id="farmerCustomStatusBadge" hidden></span>
                         </div>
                       </div>
                       <div class="card-body overview-card-body">

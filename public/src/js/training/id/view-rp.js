@@ -50,6 +50,9 @@ document.addEventListener('DOMContentLoaded', () => {
     ? registered.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Not available';
   document.getElementById('rpStatus').textContent = value('status') || 'Active';
   document.getElementById('rpStatus').classList.toggle('is-inactive', value('status') === 'Inactive');
+  const customStatus = document.getElementById('rpCustomStatus');
+  customStatus.textContent = value('customStatus');
+  customStatus.hidden = !value('customStatus');
   if (value('status') === 'Inactive' && value('status_remarks')) {
     const remark = document.createElement('p');
     remark.className = 'rp-status-remark';

@@ -1,8 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
   const panel = document.getElementById('participants-panel');
   if (!panel) return;
-  const training = window.TMIS_PAGE ? window.TmisStore.selected('tmis-trainings') : null;
+  const selectedTraining = () => window.TMIS_PAGE ? window.TmisStore.selected('tmis-trainings') : null;
+  let training = selectedTraining();
   const storageKey = `tmis:training:${training?.id || 'TRN-000246'}:participants`;
+  const beneficiaryOfficesFor = record => record.beneficiaryOffices?.length
+    ? record.beneficiaryOffices
+    : [{region_id: record.region_id, org_id: record.org_id, region: record.region, office: record.office, isPrimary: true}];
   const names = [
     ['Dela Cruz', 'Juan', 'Santos'], ['Reyes', 'Pedro', 'Garcia'], ['Mendoza', 'Carlo', 'Ramos'],
     ['Santos', 'Maria', 'Reyes'], ['Bautista', 'Rogelio', 'Cruz'], ['Ramos', 'Antonio', 'Lopez'],
@@ -18,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ['Aguilar', 'Dennis', 'Reyes'], ['Francisco', 'Lourdes', 'Aquino'], ['Tadeo', 'Victor', 'Santos'],
   ];
   const barangays = ['San Antonio', 'Darasa', 'Balele', 'Trapiche', 'Mabini', 'Poblacion'];
-  const directory = (window.TMIS_PAGE ? window.TmisStore.records('tmis-farmers') : names.map(([last, first, middle], index) => {
+  const buildDirectory = () => (window.TMIS_PAGE ? window.TmisStore.records('tmis-farmers') : names.map(([last, first, middle], index) => {
     const location = index < 24 ? ['Batangas', 'Batangas 3rd District', 'Tanauan City', barangays[index % barangays.length]]
       : index < 30 ? ['Batangas', 'Batangas 4th District', 'Lipa City', ['Balintawak', 'Sabang', 'Tambo'][index % 3]]
         : ['Laguna', 'Laguna 2nd District', 'Calamba City', ['Canlubang', 'Poblacion', 'Parian'][index % 3]];
@@ -28,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
       province: location[0], district: location[1], municipality: location[2], barangay: location[3], region: 'Region IV-A',
     };
   })).map(record => {
-    const beneficiaries = record.beneficiaryOffices || [];
+    const beneficiaries = beneficiaryOfficesFor(record);
     const trainingBeneficiary = beneficiaries.find(beneficiary =>
       (!training?.region_id || String(beneficiary.region_id) === String(training.region_id)) &&
       (!training?.org_id || String(beneficiary.org_id) === String(training.org_id)));
@@ -39,17 +43,32 @@ document.addEventListener('DOMContentLoaded', () => {
       name: record.name || [record.firstName, record.middleName, record.lastName].filter(Boolean).join(' '),
     };
   });
+  let directory = buildDirectory();
   const knownIds = new Set(directory.map(record => record.id));
   const initialIds = directory.slice(0, 24).map(record => record.id);
   const $ = selector => panel.querySelector(selector);
-  const locationKeys = ['region', 'province', 'municipality'];
   const normalized = value => String(value || '').trim().toLocaleLowerCase();
-  const trainingLocationMatches = record => ['province', 'municipality'].every(key =>
-    !training?.[key] || normalized(record[key]) === normalized(training[key]));
+  const trainingLocationMatches = record => {
+    const beneficiaries = beneficiaryOfficesFor(record);
+    const regionMatches = training?.region_id
+      ? beneficiaries.some(beneficiary => String(beneficiary.region_id) === String(training.region_id))
+      : !training?.region || beneficiaries.some(beneficiary =>
+        normalized(beneficiary.region || record.region) === normalized(training.region));
+    const matchesLocation = key => {
+      const expectedId = training?.[`${key}_id`];
+      const actualId = record[`${key}_id`];
+      if (expectedId && actualId && String(actualId) === String(expectedId)) return true;
+      const expected = training?.[key];
+      const actual = record[key];
+      if (expected && actual) return normalized(actual) === normalized(expected);
+      return !expected && !expectedId;
+    };
+    return regionMatches && ['province', 'municipality'].every(matchesLocation);
+  };
   const eligibleForTraining = record => {
     if (!window.TMIS_PAGE) return true;
     if (record.status !== 'Active') return false;
-    return (record.beneficiaryOffices || []).some(beneficiary =>
+    return beneficiaryOfficesFor(record).some(beneficiary =>
       String(beneficiary.region_id) === String(training?.region_id) &&
       String(beneficiary.org_id) === String(training?.org_id));
   };
@@ -67,41 +86,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const selectedIds = new Set();
   let activeTab = 'current';
   let feedback = '';
-  const columns = [
-    ['id', 'Farmer ID'], ['name', 'Full name'], ['region', 'Region'],
-    ['province', 'Province'], ['municipality', 'Municipality / City'], ['barangay', 'Barangay'],
-  ];
   const tableState = {
-    current: { page: 1, pageSize: 20, columns: {} },
-    available: { page: 1, pageSize: 20, columns: {} },
+    current: { page: 1, pageSize: 20 },
+    available: { page: 1, pageSize: 20 },
   };
 
   function installTableControls(type) {
     const content = $(`#edit${type === 'current' ? 'Current' : 'Add'}Panel`);
     const head = content.querySelector('thead');
-    const row = document.createElement('tr');
-    row.className = 'edit-participants-column-filters';
-    if (type === 'available') row.append(document.createElement('th'));
-    columns.forEach(([key, label]) => {
-      const cell = document.createElement('th');
-      const input = document.createElement('input');
-      input.className = 'form-control form-control-sm';
-      input.type = 'search';
-      input.dataset.columnFilter = key;
-      input.setAttribute('aria-label', `Filter ${type === 'current' ? 'current' : 'available'} participants by ${label}`);
-      input.placeholder = `Filter ${label.toLowerCase()}`;
-      cell.append(input);
-      row.append(cell);
-    });
-    if (type === 'current') row.append(document.createElement('th'));
-    head.append(row);
-    row.addEventListener('input', event => {
-      const input = event.target.closest('[data-column-filter]');
-      if (!input) return;
-      tableState[type].columns[input.dataset.columnFilter] = input.value.trim().toLocaleLowerCase();
-      tableState[type].page = 1;
-      render();
-    });
     const pagination = document.createElement('div');
     pagination.className = 'edit-participants-pagination';
     pagination.setAttribute('aria-label', `${type === 'current' ? 'Current' : 'Available'} participant pages`);
@@ -121,11 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
     tableState[type].pagination = pagination;
   }
 
-  function matchesColumns(record, type) {
-    return Object.entries(tableState[type].columns).every(([key, term]) =>
-      !term || String(record[key]).toLocaleLowerCase().includes(term));
-  }
-
   function pageRows(rows, type) {
     const state = tableState[type];
     const size = state.pageSize === 'all' ? Math.max(1, rows.length) : state.pageSize;
@@ -139,63 +126,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function match(record, search) {
     const term = normalized(search);
-    return !term || [record.id, record.name, record.region, record.barangay, record.municipality, record.province]
+    return !term || [record.id, record.name, record.barangay]
       .some(value => normalized(value).includes(term));
   }
   function currentFiltered() {
     return directory.filter(record => currentIds.has(record.id) &&
-      match(record, $('#editCurrentSearch').value) &&
-      matchesLocation(record, 'Current') &&
-      matchesColumns(record, 'current'));
+      match(record, $('#editCurrentSearch').value));
   }
   function availableFiltered() {
     return directory.filter(record => !currentIds.has(record.id) &&
       eligibleForTraining(record) &&
       trainingLocationMatches(record) &&
-      match(record, $('#editAvailableSearch').value) &&
-      matchesLocation(record, 'Available') &&
-      matchesColumns(record, 'available'));
+      match(record, $('#editAvailableSearch').value));
   }
   function rowCells(record) {
     return `<td>${escapeHtml(record.id)}</td><td><strong>${escapeHtml(record.name)}</strong></td><td>${escapeHtml(record.region || '—')}</td><td>${escapeHtml(record.province || '—')}</td><td>${escapeHtml(record.municipality || '—')}</td><td>${escapeHtml(record.barangay || '—')}</td>`;
   }
-  let filtersInitialized = false;
-  function populateSelect(select, values, label) {
-    const chosen = select.value;
-    const preferred = !filtersInitialized ? training?.[select.dataset.locationFilter] : '';
-    select.replaceChildren(new Option(label, ''));
-    [...new Set(values)].sort().forEach(value => select.add(new Option(value, value)));
-    const desired = chosen || preferred;
-    select.value = [...select.options].some(option => normalized(option.value) === normalized(desired)) ? desired : '';
-  }
-  function matchesLocation(record, type) {
-    return locationKeys.every(key => {
-      const selected = $(`#edit${type}${key[0].toUpperCase()}${key.slice(1)}`).value;
-      return !selected || normalized(record[key]) === normalized(selected);
-    });
-  }
-  function populateLocationFilters(type, records) {
-    let scoped = records;
-    locationKeys.forEach(key => {
-      const select = $(`#edit${type}${key[0].toUpperCase()}${key.slice(1)}`);
-      populateSelect(select, scoped.map(record => record[key]).filter(Boolean), `All ${key === 'municipality' ? 'municipalities' : `${key}s`}`);
-      if (select.value) scoped = scoped.filter(record => normalized(record[key]) === normalized(select.value));
-    });
-  }
-  function updateFilters() {
-    populateLocationFilters('Current', directory.filter(record => currentIds.has(record.id)));
-    populateLocationFilters('Available', directory.filter(record => !currentIds.has(record.id) && eligibleForTraining(record) && trainingLocationMatches(record)));
-    filtersInitialized = true;
-  }
   function render() {
-    updateFilters();
     const current = currentFiltered();
     const available = availableFiltered();
-    const visibleIds = new Set(available.map(record => record.id));
     [...selectedIds].forEach(id => { if (currentIds.has(id)) selectedIds.delete(id); });
     $('#editCurrentRows').innerHTML = pageRows(current, 'current').map(record => `<tr>${rowCells(record)}<td><button class="edit-participants-remove" type="button" data-remove-participant="${escapeHtml(record.id)}" aria-label="Remove ${escapeHtml(record.name)} from this training"><i class="bi bi-person-dash" aria-hidden="true"></i> Remove</button></td></tr>`).join('');
     $('#editAvailableRows').innerHTML = pageRows(available, 'available').map(record =>
-      `<tr><td><input type="checkbox" data-participant-id="${escapeHtml(record.id)}" aria-label="Select ${escapeHtml(record.name)}" ${selectedIds.has(record.id) ? 'checked' : ''}></td>${rowCells(record)}</tr>`).join('');
+      `<tr data-selectable-participant="${escapeHtml(record.id)}"><td><input type="checkbox" data-participant-id="${escapeHtml(record.id)}" aria-label="Select ${escapeHtml(record.name)}" ${selectedIds.has(record.id) ? 'checked' : ''}></td>${rowCells(record)}</tr>`).join('');
     $('#editCurrentEmpty').hidden = current.length > 0;
     $('#editAvailableEmpty').hidden = available.length > 0;
     $('#editCurrentCount').textContent = `${current.length} matching of ${currentIds.size} current participants`;
@@ -204,9 +157,10 @@ document.addEventListener('DOMContentLoaded', () => {
     $('#editSelectedCount').textContent = `${selectedIds.size} selected`;
     $('#editAddSelected').disabled = selectedIds.size === 0;
     $('#editParticipantFeedback').textContent = feedback;
+    $('#editAvailableFeedback').textContent = feedback;
     const all = $('#editSelectAll');
     all.checked = available.length > 0 && available.every(record => selectedIds.has(record.id));
-    all.indeterminate = !all.checked && [...visibleIds].some(id => selectedIds.has(id));
+    all.indeterminate = !all.checked && available.some(record => selectedIds.has(record.id));
     all.disabled = available.length === 0;
   }
   function showTab(tab) {
@@ -233,26 +187,20 @@ document.addEventListener('DOMContentLoaded', () => {
     tableState[index === 0 ? 'current' : 'available'].page = 1;
     render();
   }));
-  panel.addEventListener('change', event => {
-    const select = event.target.closest('[data-location-filter]');
-    if (!select) return;
-    const type = select.closest('#editCurrentPanel') ? 'Current' : 'Available';
-    const level = locationKeys.indexOf(select.dataset.locationFilter);
-    locationKeys.slice(level + 1).forEach(key => { $(`#edit${type}${key[0].toUpperCase()}${key.slice(1)}`).value = ''; });
-    tableState[type.toLowerCase()].page = 1;
-    render();
-  });
-  $('#editAvailableClear').addEventListener('click', () => {
-    $('#editAvailableSearch').value = '';
-    locationKeys.forEach(key => { $(`#editAvailable${key[0].toUpperCase()}${key.slice(1)}`).value = ''; });
-    tableState.available.columns = {};
-    $('#editAddPanel').querySelectorAll('[data-column-filter]').forEach(input => { input.value = ''; });
-    tableState.available.page = 1;
-    render();
-  });
   $('#editAvailableRows').addEventListener('change', event => {
     const checkbox = event.target.closest('[data-participant-id]');
     if (!checkbox) return;
+    if (checkbox.checked) selectedIds.add(checkbox.dataset.participantId);
+    else selectedIds.delete(checkbox.dataset.participantId);
+    render();
+  });
+  $('#editAvailableRows').addEventListener('click', event => {
+    if (event.target.closest('input, button, a, select, textarea, label')) return;
+    const row = event.target.closest('[data-selectable-participant]');
+    if (!row) return;
+    const checkbox = row.querySelector('[data-participant-id]');
+    if (!checkbox) return;
+    checkbox.checked = !checkbox.checked;
     if (checkbox.checked) selectedIds.add(checkbox.dataset.participantId);
     else selectedIds.delete(checkbox.dataset.participantId);
     render();
@@ -301,33 +249,60 @@ document.addEventListener('DOMContentLoaded', () => {
     showTab('current');
     render();
   });
-  $('#editParticipantRefresh').addEventListener('click', async () => {
+  panel.querySelectorAll('[data-refresh-participants]').forEach(button => button.addEventListener('click', async () => {
+    const activeTab = button.dataset.refreshParticipants;
+    button.disabled = true;
     try {
       if (window.TMIS_PAGE) await window.TmisStore.refresh();
+      training = selectedTraining();
+      directory = buildDirectory();
+      knownIds.clear();
+      directory.forEach(record => knownIds.add(record.id));
       currentIds = loadRoster();
       selectedIds.clear();
-      feedback = 'Roster refreshed.';
+      tableState.current.page = 1;
+      tableState.available.page = 1;
+      feedback = `${activeTab === 'current' ? 'Current participants' : 'Available farmers'} refreshed.`;
       render();
     } catch (error) {
-      feedback = error.message || 'Unable to refresh the training roster.';
+      feedback = error.message || 'Unable to refresh participant data.';
       render();
+    } finally {
+      button.disabled = false;
     }
-  });
-  $('#editParticipantExport').addEventListener('click', () => {
-    const heading = ['Farmer ID', 'Full Name', 'Region', 'Province', 'Municipality / City', 'Barangay'];
-    const quote = value => `"${String(value).replace(/"/g, '""')}"`;
-    const rows = directory.filter(record => currentIds.has(record.id)).map(record =>
-      [record.id, record.name, record.region, record.province, record.municipality, record.barangay].map(quote).join(','));
-    const blob = new Blob([`\uFEFF${[heading.map(quote).join(','), ...rows].join('\r\n')}`], { type: 'text/csv;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `training-participants-${training?.id || 'sample'}.csv`;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-    feedback = `Exported ${rows.length} current participants.`;
-    render();
+  }));
+  panel.querySelector('[data-export-participants="current"]')?.addEventListener('click', () => {
+    const records = currentFiltered();
+    if (!window.XLSX?.utils) {
+      const message = 'Excel export is unavailable. Check your connection and try again.';
+      if (window.TmisToast) window.TmisToast.show(message, 'error');
+      else window.alert(message);
+      return;
+    }
+
+    try {
+      const headers = ['Farmer ID', 'Full Name', 'Region', 'Province', 'Municipality / City', 'Barangay'];
+      const rows = records.map(record => [
+        record.id,
+        record.name,
+        record.region || '',
+        record.province || '',
+        record.municipality || '',
+        record.barangay || '',
+      ]);
+      const sheet = window.XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      sheet['!cols'] = [16, 28, 20, 20, 24, 22].map(wch => ({ wch }));
+      const workbook = window.XLSX.utils.book_new();
+      window.XLSX.utils.book_append_sheet(workbook, sheet, 'Current Participants');
+      const trainingId = String(training?.id || 'sample').replace(/[^a-zA-Z0-9_-]/g, '-');
+      window.XLSX.writeFile(workbook, `training-current-${trainingId}.xlsx`);
+      feedback = `Exported ${records.length} current participants.`;
+      render();
+    } catch (error) {
+      const message = error.message || 'Unable to export the current participant list.';
+      if (window.TmisToast) window.TmisToast.show(message, 'error');
+      else window.alert(message);
+    }
   });
   const actionHeading = document.createElement('th');
   actionHeading.scope = 'col';
@@ -335,8 +310,8 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#editCurrentPanel thead tr').append(actionHeading);
   installTableControls('current');
   installTableControls('available');
-  $('#editSelectAll').setAttribute('aria-label', 'Select all participants matching the current filters across all pages');
-  $('#editAddPanel .edit-participants-intro p').textContent = 'Select farmers individually or select all filtered results across pages, then add them to this training.';
+  $('#editSelectAll').setAttribute('aria-label', 'Select all eligible farmers matching the search across all pages');
+  $('#editAddPanel .edit-participants-intro p').textContent = 'Only active farmers matching this training\'s region, province, and municipality are listed. Search by farmer ID, name, or barangay.';
   showTab('current');
   render();
   document.addEventListener('training:tabchange', event => {

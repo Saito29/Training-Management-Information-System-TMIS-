@@ -848,7 +848,7 @@ class="layout-fixed"
             <section class="info-wrapper" id="fa-overview" role="tabpanel" aria-labelledby="fa-overview-tab">
               <div class="farmer-overview-layout">
                 <article class="card overview-card fa-edit-card mb-3">
-  <div class="card-header overview-card-header"><div class="overview-heading"><span class="overview-heading-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span><h5 class="title-card" id="faOverviewTitle">Farmer Association</h5><span class="overview-status" id="faOverviewStatus">Active</span></div></div>
+  <div class="card-header overview-card-header"><div class="overview-heading"><span class="overview-heading-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span><h5 class="title-card" id="faOverviewTitle">Farmer Association</h5><span class="overview-status" id="faOverviewStatus">Active</span><span class="overview-status" id="faOverviewCustomStatus" hidden></span></div></div>
   <div class="card-body overview-card-body">
     <form id="faEditForm" class="fa-edit-form">
       <div class="fa-edit-fields">
@@ -859,6 +859,7 @@ class="layout-fixed"
         <div><label class="form-label" for="faEditDate">Registration Date</label><input class="form-control" id="faEditDate" name="registration_date" type="date" required /></div>
         <div><label class="form-label" for="faEditYear">Year Covered</label><select class="form-select" id="faEditYear" name="year_covered" required></select></div>
         <div><label class="form-label" for="faEditStatus">Status</label><select class="form-select" id="faEditStatus" name="status" required><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
+        <div><label class="form-label" for="faEditCustomStatus">Additional status</label><select class="form-select" id="faEditCustomStatus" name="customStatusId"><option value="">No additional status</option></select><small class="form-text">Independent of Active / Inactive.</small></div>
       </div>
       <h6 class="fa-edit-subtitle"><i class="bi bi-building-check" aria-hidden="true"></i>Registration region and office <span class="text-secondary small">Location is locked after registration.</span></h6>
       <div class="fa-edit-fields">
@@ -2184,7 +2185,7 @@ class="layout-fixed"
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-overview.js?v=farmer-roster-dedup-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-sections.js') }}"></script>
-    <script src="{{ asset('src/js/participants/update/fa-edit.js?v=association-location-scope-1') }}"></script>
+    <script src="{{ asset('src/js/participants/update/fa-edit.js?v=association-reload-toast-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-edit-members.js?v=association-member-eligibility-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-edit-actions.js') }}"></script>
 @endsection

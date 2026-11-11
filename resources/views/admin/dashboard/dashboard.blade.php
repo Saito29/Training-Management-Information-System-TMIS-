@@ -874,7 +874,7 @@ class="layout-fixed"
                         </div>
                       </div>
                     </div>
-                    <div class="card-body px-3 px-md-3 pt-0 pb-3">
+                    <div class="card-body px-3 px-md-3 pt-3 pb-3">
                       <div
                         class="card-summary-row d-flex flex-column flex-sm-row align-items-start align-items-sm-center"
                       >
@@ -941,7 +941,7 @@ class="layout-fixed"
                         </div>
                       </div>
                     </div>
-                    <div class="card-body px-3 px-md-3 pt-0 pb-3">
+                    <div class="card-body px-3 px-md-3 pt-3 pb-3">
                       <div
                         class="card-summary-row d-flex flex-column flex-sm-row align-items-start align-items-sm-center"
                       >
@@ -1011,7 +1011,7 @@ class="layout-fixed"
                     </div>
                   </div>
                 </div>
-                <div class="card-body px-3 px-md-3 pt-0 pb-3">
+                <div class="card-body px-3 px-md-3 pt-3 pb-3">
                   <div
                     class="card-summary-row d-flex flex-column flex-sm-row align-items-start align-items-sm-center"
                   >
@@ -1073,7 +1073,7 @@ class="layout-fixed"
                     </div>
                   </div>
                 </div>
-                <div class="card-body px-3 px-md-3 pt-0 pb-3">
+                <div class="card-body px-3 px-md-3 pt-3 pb-3">
                   <div
                     class="card-summary-row d-flex flex-column flex-sm-row align-items-start align-items-sm-center"
                   >
@@ -1264,7 +1264,7 @@ class="layout-fixed"
           <!-- Beneficiary card grows from full width to a compact dashboard column. -->
           <div class="row fourth-row g-4">
             <!-- Total Gender per youth, adult, senior -->
-            <div class="col-12 col-md-6 col-xl-4">
+            <div class="col-12 col-md-6 col-xl-3">
               <div class="card card-beneficiary">
                 <div
                   class="card-header d-flex align-items-start position-relative p-3 pe-5 pb-2 lh-sm bg-transparent border-0"
@@ -1300,7 +1300,7 @@ class="layout-fixed"
               </div>
             </div>
             <!-- Total Gender per male and female -->
-            <div class="col-12 col-md-6 col-xl-4">
+            <div class="col-12 col-md-6 col-xl-3">
               <div class="card card-beneficiary">
                 <div
                   class="card-header d-flex align-items-start position-relative p-3 pe-5 pb-2 lh-sm bg-transparent border-0"
@@ -1333,7 +1333,7 @@ class="layout-fixed"
               </div>
             </div>
             <!-- Total PWD, 4ps, IP -->
-            <div class="col-12 col-md-6 col-xl-4">
+            <div class="col-12 col-md-6 col-xl-6">
               <div class="card card-beneficiary">
                 <div
                   class="card-header d-flex align-items-start position-relative p-3 pe-5 pb-2 lh-sm bg-transparent border-0"
@@ -1374,6 +1374,17 @@ class="layout-fixed"
               <div class="card card-upcoming-training">
                 <div class="card-header">
                   <h5 class="card-header-text">Upcoming Training</h5>
+                  <button
+                    type="button"
+                    class="btn btn-modal"
+                    data-bs-toggle="modal"
+                    data-bs-target="#dashboardReportModal"
+                    data-report-key="upcoming"
+                    title="View all upcoming trainings"
+                    aria-label="View all upcoming trainings"
+                  >
+                    <i class="bi bi-list-ul" aria-hidden="true"></i>
+                  </button>
                 </div>
                 <div class="card-body">
                   <div class="row">
@@ -2284,6 +2295,6 @@ class="layout-fixed"
 
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/dashboard/scriptv2.js?v=dashboard-report-controls-1') }}"></script>
+    <script src="{{ asset('src/js/dashboard/scriptv2.js?v=dashboard-card-reports-2') }}"></script>
     <script src="{{ asset('src/js/dashboard/training-highlight-carousel.js') }}"></script>
 @endsection

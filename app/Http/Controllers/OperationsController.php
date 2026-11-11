@@ -109,6 +109,14 @@ class OperationsController
         ModuleAccess::authorize($request, $module.'.create');
         $this->query($request, $module);
         $data = $this->validated($request, $module);
+        if (array_key_exists('record_status_id', $data)) {
+            abort_unless(
+                $data['record_status_id'] === null
+                    || DB::table('record_statuses')->where('id', $data['record_status_id'])->where('is_active', true)->exists(),
+                422,
+                'Select an available additional status.',
+            );
+        }
         if ($module === 'associations') {
             ModuleAccess::authorizeRegistrationScope(
                 $request->user(),
@@ -149,6 +157,14 @@ class OperationsController
             $record = $this->query($request, $module)->where('id', $id)->lockForUpdate()->first();
             abort_unless($record, 404);
             abort_unless((int) $record->region_id === (int) $data['region_id'] && (int) $record->org_id === (int) $data['org_id'], 422, 'Record ownership cannot be changed.');
+            if (array_key_exists('record_status_id', $data) && $data['record_status_id'] !== null) {
+                abort_unless(
+                    (int) $record->record_status_id === (int) $data['record_status_id']
+                        || DB::table('record_statuses')->where('id', $data['record_status_id'])->where('is_active', true)->exists(),
+                    422,
+                    'Select an available additional status.',
+                );
+            }
             if ($module === 'trainings') {
                 abort_unless((int) $record->version === $request->integer('version'), 409, 'Training changed. Refresh before editing.');
                 abort_unless($record->status === 'For review', 409, 'Return the training to review before editing.');
@@ -199,6 +215,9 @@ class OperationsController
         if ($module === 'resource_persons') {
             $rules['expertise'] = ['nullable', 'string', 'max:255'];
         }
+        if (in_array($module, ['participants', 'associations', 'trainings', 'resource_persons'], true)) {
+            $rules['record_status_id'] = ['nullable', 'integer', Rule::exists('record_statuses', 'id')];
+        }
         if ($module === 'questionnaires') {
             $rules += ['kind' => ['required', Rule::in(['Pre-test', 'Post-test', 'Training evaluation', 'Resource person evaluation'])], 'questions' => ['required', 'array', 'min:1', 'max:100'], 'questions.*' => ['required', 'string', 'max:1000']];
         }
@@ -240,6 +259,46 @@ class OperationsController
         });
 
         return $this->respond($request, 'trainings', $id, 'Training status updated. Office email notifications are pending delivery.');
+    }
+
+    public function setActive(Request $request, int $id): JsonResponse|RedirectResponse
+    {
+        ModuleAccess::authorize($request, 'trainings.edit');
+        $data = $request->validate([
+            'is_active' => ['required', 'boolean'],
+            'version' => ['required', 'integer', 'min:1'],
+            'remarks' => ['required_if:is_active,false', 'nullable', 'string', 'max:2000'],
+        ]);
+
+        DB::transaction(function () use ($request, $id, $data): void {
+            $training = $this->query($request, 'trainings')->where('id', $id)->lockForUpdate()->first();
+            abort_unless($training, 404);
+            abort_unless((int) $training->version === (int) $data['version'], 409, 'Training changed. Refresh before trying again.');
+
+            $isActive = (bool) $data['is_active'];
+            $statusRemarks = $isActive ? null : trim((string) ($data['remarks'] ?? ''));
+            $stateChanged = (bool) $training->is_active !== $isActive;
+            if (! $stateChanged && $training->status_remarks === $statusRemarks) {
+                return;
+            }
+
+            DB::table('trainings')->where('id', $id)->update([
+                'is_active' => $isActive,
+                'status_remarks' => $statusRemarks,
+                'version' => $training->version + 1,
+                'updated_at' => now(),
+            ]);
+            $this->audit(
+                $request,
+                'trainings',
+                $id,
+                $stateChanged ? 'status_changed' : 'status_remarks_updated',
+                ['is_active' => (bool) $training->is_active, 'status_remarks' => $training->status_remarks],
+                ['is_active' => $isActive, 'status_remarks' => $statusRemarks],
+            );
+        });
+
+        return $this->respond($request, 'trainings', $id, $data['is_active'] ? 'Training activated.' : 'Training deactivated.');
     }
 
     public function bulkTransition(Request $request): JsonResponse

@@ -1165,9 +1165,9 @@ class="layout-fixed"
                           </div>
                         </div>
                         <div class="col-12 col-lg-4 mb-3">
-                          <label for="associate_name" class="form-label">Association Name</label>
-                          <select name="associate_name" id="associate_name" class="form-select form-control" disabled><option value="">Loading database options...</option></select>
-                          <div class="form-text">Only active associations in the selected region and office are available.</div>
+                          <label for="associate_name" class="form-label">Association Names</label>
+                          <select name="associate_names[]" id="associate_name" class="form-select form-control" multiple disabled aria-describedby="associate_name_help"><option value="">Loading database options...</option></select>
+                          <div class="form-text" id="associate_name_help">Select one or more active associations in the selected region and office. Use Ctrl or Command to select multiple.</div>
                           <button type="button" id="openCreateAssociation" class="btn btn-outline-success btn-sm mt-2" hidden><i class="bi bi-plus-circle" aria-hidden="true"></i> Create farmer association</button>
                         </div>
                         <div class="col-12 col-lg-4 mb-3">

@@ -892,6 +892,7 @@ class="layout-fixed"
                               <span class="farmer-status-pill active-status">
                                 <i class="bi bi-patch-check-fill"></i> Active
                               </span>
+                              <span class="farmer-status-pill" id="farmerCustomStatusBadge" hidden></span>
                               <button type="button" class="btn farmer-status-action mt-2" data-bs-toggle="modal" data-bs-target="#farmerStatusModal"><i class="bi bi-arrow-left-right" aria-hidden="true"></i><span>Update status</span><i class="bi bi-arrow-right ms-auto" aria-hidden="true"></i></button>
                             </div>
                           </div>
@@ -974,6 +975,13 @@ class="layout-fixed"
                                 <option value="Chinese">Chinese</option>
                                 <option value="Other">Other</option>
                               </select>
+                            </div>
+                            <div class="col-12 col-sm-6 col-lg-3">
+                              <label for="farmer_custom_status" class="form-label">Additional status</label>
+                              <select class="form-select" id="farmer_custom_status" name="customStatusId">
+                                <option value="">No additional status</option>
+                              </select>
+                              <small class="form-text">Independent of Active / Inactive.</small>
                             </div>
 
                             <div class="col-12 col-sm-6 col-lg-3">

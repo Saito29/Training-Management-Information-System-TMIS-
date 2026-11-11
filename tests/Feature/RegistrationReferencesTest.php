@@ -343,6 +343,82 @@ class RegistrationReferencesTest extends TestCase
         $this->assertDatabaseCount('participants', 0);
     }
 
+    public function test_farmer_registration_saves_multiple_association_memberships(): void
+    {
+        $user = $this->signIn();
+        $firstAssociation = DB::table('associations')->insertGetId([
+            'region_id' => 4,
+            'org_id' => 1,
+            'created_by' => $user->user_id,
+            'name' => 'First farmer association',
+            'is_active' => true,
+        ]);
+        $secondAssociation = DB::table('associations')->insertGetId([
+            'region_id' => 4,
+            'org_id' => 1,
+            'created_by' => $user->user_id,
+            'name' => 'Second farmer association',
+            'is_active' => true,
+        ]);
+        $data = $this->registration();
+        $data['association_status'] = 'Yes';
+        $data['associate_names'] = [(string) $firstAssociation, (string) $secondAssociation];
+        $data['associate_role'] = 'Member';
+
+        $response = $this->postJson('/ui/participants', $data)
+            ->assertCreated()
+            ->assertJsonPath('message', 'Changes saved to the database.');
+
+        $participantId = DB::table('participants')->where('ui_id', $response->json('participant_id'))->value('id');
+        $this->assertDatabaseHas('participant_association_memberships', [
+            'participant_id' => $participantId,
+            'association_id' => $firstAssociation,
+            'role' => 'Member',
+            'is_primary' => true,
+        ]);
+        $this->assertDatabaseHas('participant_association_memberships', [
+            'participant_id' => $participantId,
+            'association_id' => $secondAssociation,
+            'role' => 'Member',
+            'is_primary' => false,
+        ]);
+        $this->assertSame(2, DB::table('participant_association_memberships')->where('participant_id', $participantId)->count());
+        $this->get(route('admin.participants.create.register'))
+            ->assertOk()
+            ->assertSee('name="associate_names[]"', false)
+            ->assertSee('multiple disabled', false);
+    }
+
+    public function test_farmer_registration_rejects_multiple_associations_outside_the_selected_office(): void
+    {
+        $user = $this->signIn();
+        $validAssociation = DB::table('associations')->insertGetId([
+            'region_id' => 4,
+            'org_id' => 1,
+            'created_by' => $user->user_id,
+            'name' => 'Valid farmer association',
+            'is_active' => true,
+        ]);
+        $foreignAssociation = DB::table('associations')->insertGetId([
+            'region_id' => 4,
+            'org_id' => 2,
+            'created_by' => $user->user_id,
+            'name' => 'Foreign office association',
+            'is_active' => true,
+        ]);
+        $data = $this->registration();
+        $data['association_status'] = 'Yes';
+        $data['associate_names'] = [(string) $validAssociation, (string) $foreignAssociation];
+        $data['associate_role'] = 'Member';
+
+        $this->postJson('/ui/participants', $data)
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Select active associations in the farmer\'s registering region and office.');
+
+        $this->assertDatabaseCount('participants', 0);
+        $this->assertDatabaseCount('participant_association_memberships', 0);
+    }
+
     public function test_rename_updates_existing_address_records_without_moving_hierarchy(): void
     {
         $user = $this->signIn();

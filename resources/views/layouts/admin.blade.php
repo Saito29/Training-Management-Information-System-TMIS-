@@ -17,7 +17,7 @@
     @if(isset($originalInterfaceData))
         <script>window.TMIS_PAGE = {{ Illuminate\Support\Js::from($originalInterfaceData) }};</script>
         <script src="{{ asset('src/js/shared/date-time.js') }}"></script>
-        <script src="{{ asset('src/js/shared/original-interface.js?v=dashboard-report-data-1') }}"></script>
+        <script src="{{ asset('src/js/shared/original-interface.js?v=dashboard-report-data-2') }}"></script>
     @endif
     @yield('head')
     <link rel="stylesheet" href="{{ asset('src/css/shared/account-avatar.css') }}">

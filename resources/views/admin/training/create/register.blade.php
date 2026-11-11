@@ -1218,20 +1218,6 @@ class="layout-fixed"
                           </select>
                         </div>
                         <div class="col-12 col-sm-6 col-lg-4 mb-3">
-                          <label for="district_number" class="form-label"
-                            >District <span class="text-required">*</span></label
-                          >
-                          <select
-                            name="district_id"
-                            id="district_number"
-                            class="form-select form-control"
-                            required
-                            disabled
-                          >
-                            <option value="" selected>Choose a region first</option>
-                          </select>
-                        </div>
-                        <div class="col-12 col-sm-6 col-lg-4 mb-3">
                           <label for="province_id" class="form-label"
                             >Province <span class="text-required">*</span></label
                           >
@@ -1242,7 +1228,21 @@ class="layout-fixed"
                             required
                             disabled
                           >
-                            <option value="" selected>Choose a district first</option>
+                            <option value="" selected>Choose a region first</option>
+                          </select>
+                        </div>
+                        <div class="col-12 col-sm-6 col-lg-4 mb-3">
+                          <label for="district_number" class="form-label"
+                            >District <span class="text-required">*</span></label
+                          >
+                          <select
+                            name="district_id"
+                            id="district_number"
+                            class="form-select form-control"
+                            required
+                            disabled
+                          >
+                            <option value="" selected>Choose a province first</option>
                           </select>
                         </div>
                         <div class="col-12 col-sm-6 mb-3">
@@ -1257,7 +1257,7 @@ class="layout-fixed"
                             required
                             disabled
                           >
-                            <option value="" selected>Choose a province first</option>
+                            <option value="" selected>Choose a district first</option>
                           </select>
                         </div>
                         <div class="col-12 col-sm-6 mb-3">
@@ -2096,5 +2096,5 @@ class="layout-fixed"
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <!-- Connect registration fieldsets with the wizard progress card. -->
-    <script src="{{ asset('src/js/training/register/register.js?v=training-year-covered-1') }}"></script>
+    <script src="{{ asset('src/js/training/register/register.js?v=training-database-locations-2') }}"></script>
 @endsection

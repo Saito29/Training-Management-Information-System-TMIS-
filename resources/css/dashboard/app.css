@@ -501,6 +501,15 @@
   z-index: 2;
 }
 
+.app-main .app-main-body .card-allocation-breakdown.dashboard-report-card-interactive {
+  cursor: pointer;
+}
+
+.app-main .app-main-body .card-allocation-breakdown.dashboard-report-card-interactive:focus-visible {
+  outline: 3px solid var(--color-info);
+  outline-offset: 3px;
+}
+
 .app-main .app-main-body .row.first-row-right > [class*='col-']:hover,
 .app-main .app-main-body .row.first-row-right > [class*='col-']:focus-within,
 .app-main .app-main-body .row.second-row > [class*='col-']:hover,

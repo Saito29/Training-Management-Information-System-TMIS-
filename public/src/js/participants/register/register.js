@@ -249,7 +249,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!form.reportValidity()) return;
     setSubmitLoading(true);
     try {
-      const values = Object.fromEntries(new FormData(form));
+      const formData = new FormData(form);
+      const values = Object.fromEntries([...formData].filter(([name]) => name !== 'associate_names[]'));
+      const associationNames = formData.getAll('associate_names[]').filter(Boolean);
+      if (associationNames.length) values.associate_names = associationNames;
       const result = await window.TmisStore.request(form.action, values);
       window.TmisStore.publish(result);
       window.TmisToast?.show('Record saved successfully.', 'success');
@@ -334,9 +337,13 @@ document.addEventListener('DOMContentLoaded', () => {
       field.required = belongsToAssociation;
 
       if (!belongsToAssociation) {
-        field.value = '';
-      }
-    });
+          if (field instanceof HTMLSelectElement && field.multiple) {
+            [...field.options].forEach(option => { option.selected = false; });
+          } else {
+            field.value = '';
+          }
+        }
+      });
   };
 
   associationStatus.forEach((radio) => {
@@ -350,11 +357,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const office = form.elements.namedItem('org_id');
   function fill(select, rows, placeholder, preserve = false) {
     if (!select) return;
-    const previous = preserve ? select.value : '';
-    select.replaceChildren(new Option(rows.length ? placeholder : 'No records available', ''), ...rows.map(row => new Option(row.label || row.name, String(row.value ?? row.id ?? row.region_id ?? row.org_id))));
+    const previous = preserve
+      ? new Set(select.multiple ? [...select.selectedOptions].map(option => option.value) : [select.value])
+      : new Set();
+    select.replaceChildren(
+      ...(select.multiple ? [] : [new Option(rows.length ? placeholder : 'No records available', '')]),
+      ...rows.map(row => new Option(row.label || row.name, String(row.value ?? row.id ?? row.region_id ?? row.org_id)))
+    );
     // Keep empty lists required: an incomplete hierarchy must never silently bypass registration.
     select.disabled = false;
-    if (previous && [...select.options].some(option => option.value === previous)) select.value = previous;
+    if (select.multiple) {
+      [...select.options].forEach(option => { option.selected = previous.has(option.value); });
+    } else {
+      const previousValue = previous.values().next().value;
+      if (previousValue && [...select.options].some(option => option.value === previousValue)) {
+        select.value = previousValue;
+      }
+    }
     select.dispatchEvent(new Event('change', {bubbles:true}));
   }
   for (const [name, rows] of Object.entries(data.registration.options)) fill(form.elements.namedItem(name), rows, 'Select an option');

@@ -104,6 +104,15 @@ document.addEventListener('DOMContentLoaded', function () {
         ['Farm Enterprise Planning', 'District V', 'San Jose', '09 May 2026', '22', 'Completed'],
       ],
     },
+    upcoming: {
+      title: 'Upcoming Capacity-Building Activities',
+      exportName: 'Upcoming-Capacity-Building-Activities',
+      description: 'Capacity-building activities scheduled today through the next three days.',
+      icon: 'bi-calendar-event',
+      total: '0 trainings',
+      headers: ['Training ID', 'Training', 'Type', 'District', 'Province', 'Municipality', 'Start Date', 'End Date', 'Venue', 'Participants', 'Status'],
+      rows: [],
+    },
     participants: {
       title: 'Active Farmers',
       exportName: 'Active-Farmers',
@@ -442,6 +451,39 @@ document.addEventListener('DOMContentLoaded', function () {
 
     dashboardReportModal.addEventListener('hidden.bs.modal', () => {
       document.body.classList.remove('dashboard-report-modal-open');
+    });
+  }
+
+  if (dashboardReportModal && typeof bootstrap !== 'undefined') {
+    document.querySelectorAll('[data-report-key][data-bs-target="#dashboardReportModal"]').forEach((reportButton) => {
+      reportButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        bootstrap.Modal.getOrCreateInstance(dashboardReportModal).show(reportButton);
+      });
+    });
+
+    document.querySelectorAll('.card-allocation-breakdown').forEach((card) => {
+      if (card.closest('.d-none')) return;
+      const reportButton = card.querySelector('[data-report-key][data-bs-target="#dashboardReportModal"]');
+      if (!reportButton) return;
+
+      const title = card.querySelector('h5')?.textContent.trim() || 'Allocated training budget';
+      card.classList.add('dashboard-report-card-interactive');
+      card.tabIndex = 0;
+      card.setAttribute('role', 'group');
+      card.setAttribute('aria-label', `${title}. Press Enter or Space to open the detailed report.`);
+
+      const openReport = () => bootstrap.Modal.getOrCreateInstance(dashboardReportModal).show(reportButton);
+      card.addEventListener('click', (event) => {
+        if (event.target.closest('button, a, input, select, textarea, summary, [role="button"], .apexcharts-toolbar')) return;
+        openReport();
+      });
+      card.addEventListener('keydown', (event) => {
+        if (event.target !== card || !['Enter', ' '].includes(event.key)) return;
+        event.preventDefault();
+        openReport();
+      });
     });
   }
 

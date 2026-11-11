@@ -1,13 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
   const columns = [
-    ['actions', 'Actions'], ['status', 'Status'], ['id', 'Resource Person ID'],
+    ['actions', 'Actions'], ['status', 'Status'], ['customStatus', 'Additional Status'], ['id', 'Resource Person ID'],
     ['first_name', 'First Name'], ['middle_name', 'Middle Name'],
     ['last_name', 'Last Name'], ['suffix', 'Suffix'],
     ['office', 'Office / Designation'], ['title', 'Title'],
     ['qualification', 'Qualification'], ['expertise', 'Expertise'],
     ['phone', 'Phone'], ['email', 'Email'], ['savedAt', 'Registration Date'],
   ];
-  const defaults = new Set(['actions', 'status', 'id', 'first_name', 'middle_name', 'last_name', 'suffix', 'office']);
+  const defaults = new Set(['actions', 'status', 'customStatus', 'id', 'first_name', 'middle_name', 'last_name', 'suffix', 'office']);
   const visible = new Set(defaults);
   const byId = (id) => document.getElementById(id);
   let records = [];
@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
   ].filter(Boolean).join(' ');
   const valueOf = (record, key) => {
     if (key === 'status') return record.status || 'Active';
+    if (key === 'customStatus') return record.customStatus || '';
     if (key === 'savedAt') return record.savedAt ? new Date(record.savedAt).toLocaleDateString() : '';
     return String(record[key] || '');
   };
@@ -164,6 +165,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (key === 'status') {
           const badge = document.createElement('span'); badge.className = `status-badge ${record.status === 'Inactive' ? 'status-neutral' : 'status-approved'}`;
           badge.textContent = valueOf(record, key); cell.append(badge);
+        } else if (key === 'customStatus') {
+          const badge = document.createElement('span'); badge.className = 'status-badge status-neutral';
+          badge.textContent = valueOf(record, key) || '—'; cell.append(badge);
         } else cell.textContent = valueOf(record, key) || '—';
         row.append(cell);
       });

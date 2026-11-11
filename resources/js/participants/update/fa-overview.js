@@ -59,6 +59,9 @@ document.addEventListener('DOMContentLoaded', () => {
     title.textContent = association.association_name || 'Farmer Association';
     status.textContent = association.status || 'Active';
     status.classList.toggle('is-inactive', association.status === 'Inactive');
+    const customStatus = document.getElementById('faOverviewCustomStatus');
+    customStatus.textContent = association.customStatus || '';
+    customStatus.hidden = !association.customStatus;
     fields.forEach(field => {
       const key = field.dataset.faField;
       field.textContent = association[key] || '—';

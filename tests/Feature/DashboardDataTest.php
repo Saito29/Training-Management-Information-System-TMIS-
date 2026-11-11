@@ -29,7 +29,7 @@ class DashboardDataTest extends TestCase
         $this->travelTo(Carbon::parse('2026-11-06 12:00:00', 'Asia/Manila'));
         $this->signIn();
         $this->getJson('/ui/data')->assertOk()->assertJsonPath('dashboard.trainingCount', 0)->assertJsonPath('dashboard.funds.current', 0)->assertJsonPath('dashboard.upcoming', [])->assertJsonPath('dashboard.groups', [0, 0, 0, 0, 0]);
-        $this->get('/app/admin/dashboard/dashboard')->assertOk()->assertSee('Active Farmers')->assertSee('No upcoming training')->assertDontSee('Specialized Swine Production');
+        $this->get('/app/admin/dashboard/dashboard')->assertOk()->assertSee('Active Farmers')->assertSee('No upcoming training')->assertSee('View all upcoming trainings')->assertSee('data-report-key="upcoming"', false)->assertDontSee('Specialized Swine Production');
     }
 
     public function test_yearly_funds_and_upcoming_records_use_approved_scoped_database_trainings(): void

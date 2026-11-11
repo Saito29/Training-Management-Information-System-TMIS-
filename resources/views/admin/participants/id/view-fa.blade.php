@@ -850,6 +850,7 @@ class="layout-fixed"
                       <span class="overview-heading-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
                       <h5 class="title-card" id="faOverviewTitle">Farmer Association</h5>
                       <span class="overview-status" id="faOverviewStatus">Active</span>
+                      <span class="overview-status" id="faOverviewCustomStatus" hidden></span>
                     </div>
                   </div>
                   <div class="card-body overview-card-body">

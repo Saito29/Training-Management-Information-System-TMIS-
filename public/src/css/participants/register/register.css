@@ -309,6 +309,11 @@
   color: #607088;
 }
 
+.card-form form #associate_name[multiple] {
+  min-height: 122px;
+  padding: 8px 10px;
+}
+
 .card-form form .input-group-text {
   border-color: #e0e0e0;
   background-color: #e8f5e9;

@@ -267,6 +267,98 @@ class OperationsTest extends TestCase
         $this->assertDatabaseHas('trainings', ['id' => $id, 'status' => 'Approved & Accepted', 'version' => 5]);
     }
 
+    public function test_training_activation_changes_active_state_without_changing_workflow_status(): void
+    {
+        $user = $this->signIn();
+        $id = $this->training($user, ['status' => 'For acceptance', 'is_active' => false, 'version' => 4]);
+
+        $this->patchJson(route('operations.trainings.active', $id), ['is_active' => true, 'version' => 4])
+            ->assertOk()
+            ->assertJsonPath('message', 'Training activated.');
+
+        $this->assertDatabaseHas('trainings', ['id' => $id, 'status' => 'For acceptance', 'is_active' => true, 'version' => 5]);
+        $this->assertDatabaseHas('trainings_log', ['training_id' => (string) $id, 'event' => 'status_changed']);
+
+        $this->patchJson(route('operations.trainings.active', $id), [
+            'is_active' => false,
+            'version' => 5,
+            'remarks' => 'The training was postponed.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Training deactivated.');
+
+        $this->assertDatabaseHas('trainings', [
+            'id' => $id,
+            'status' => 'For acceptance',
+            'is_active' => false,
+            'version' => 6,
+            'status_remarks' => 'The training was postponed.',
+        ]);
+    }
+
+    public function test_deactivating_training_requires_and_persists_remarks(): void
+    {
+        $user = $this->signIn();
+        $id = $this->training($user);
+
+        $this->patchJson(route('operations.trainings.active', $id), ['is_active' => false, 'version' => 1])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('remarks');
+
+        $this->patchJson(route('operations.trainings.active', $id), [
+            'is_active' => false,
+            'version' => 1,
+            'remarks' => 'Cancelled after the venue became unavailable.',
+        ])->assertOk()->assertJsonPath('message', 'Training deactivated.');
+
+        $this->assertDatabaseHas('trainings', [
+            'id' => $id,
+            'is_active' => false,
+            'version' => 2,
+            'status_remarks' => 'Cancelled after the venue became unavailable.',
+        ]);
+    }
+
+    public function test_reactivating_training_clears_previous_status_remarks(): void
+    {
+        $user = $this->signIn();
+        $id = $this->training($user, [
+            'is_active' => false,
+            'version' => 2,
+            'status_remarks' => 'Cancelled after the venue became unavailable.',
+        ]);
+
+        $this->patchJson(route('operations.trainings.active', $id), ['is_active' => true, 'version' => 2])
+            ->assertOk()
+            ->assertJsonPath('message', 'Training activated.');
+
+        $this->assertDatabaseHas('trainings', [
+            'id' => $id,
+            'is_active' => true,
+            'version' => 3,
+            'status_remarks' => null,
+        ]);
+    }
+
+    public function test_training_activation_rejects_stale_versions_and_users_without_edit_permission(): void
+    {
+        $user = $this->signIn(3);
+        $id = $this->training($user, ['is_active' => false]);
+
+        $this->patchJson(route('operations.trainings.active', $id), ['is_active' => true, 'version' => 1])
+            ->assertForbidden();
+
+        DB::table('role_permissions')->insert([
+            ['role_id' => 3, 'permission' => 'trainings.read'],
+            ['role_id' => 3, 'permission' => 'trainings.edit'],
+        ]);
+
+        $this->patchJson(route('operations.trainings.active', $id), ['is_active' => true, 'version' => 9])
+            ->assertConflict();
+
+        $this->assertDatabaseHas('trainings', ['id' => $id, 'is_active' => false, 'version' => 1]);
+    }
+
     public function test_final_acceptance_requires_the_accept_permission(): void
     {
         $user = $this->signIn(3);

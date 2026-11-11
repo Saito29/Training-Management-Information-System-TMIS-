@@ -98,6 +98,8 @@ class OriginalInterfaceData
 
         $associations = [];
 
+        $recordStatuses = DB::table('record_statuses')->get(['id', 'name', 'is_active'])->keyBy('id');
+
         $trainingDocuments = DB::table('training_attachments')->whereIn('training_id', self::query($user, 'trainings')->select('id'))->get()->groupBy('training_id');
 
         $associationDocuments = DB::table('association_attachments')->whereIn('association_id', self::query($user, 'associations')->select('id'))->get()->groupBy('association_id');
@@ -313,7 +315,25 @@ class OriginalInterfaceData
 
                 $id = $record->ui_id ?? (string) $record->id;
 
-                $item = array_replace($item, ['id' => $id, '_db_id' => $record->id, '_version' => $record->ui_version, 'region_id' => $record->region_id, 'org_id' => $record->org_id, 'region' => $regions[$record->region_id] ?? '', 'office' => $offices[$record->org_id] ?? '', 'description' => $record->description ?? '', 'createdAt' => $record->created_at, 'updatedAt' => $record->updated_at]);
+                $recordStatusId = in_array($module, ['participants', 'associations', 'trainings', 'resource_persons'], true)
+                    ? $record->record_status_id
+                    : null;
+                $customStatus = $recordStatusId === null ? null : $recordStatuses->get($recordStatusId);
+                $item = array_replace($item, [
+                    'id' => $id,
+                    '_db_id' => $record->id,
+                    '_version' => $record->ui_version,
+                    'region_id' => $record->region_id,
+                    'org_id' => $record->org_id,
+                    'region' => $regions[$record->region_id] ?? '',
+                    'office' => $offices[$record->org_id] ?? '',
+                    'description' => $record->description ?? '',
+                    'createdAt' => $record->created_at,
+                    'updatedAt' => $record->updated_at,
+                    'customStatusId' => $recordStatusId === null ? '' : (string) $recordStatusId,
+                    'customStatus' => $customStatus->name ?? '',
+                    'customStatusActive' => (bool) ($customStatus->is_active ?? false),
+                ]);
 
                 $savedStatus = $item['status'] ?? null;
                 $item['status'] = in_array($savedStatus, ['Active', 'Inactive', 'Removed', 'Deceased'], true)
@@ -386,9 +406,10 @@ class OriginalInterfaceData
 
                 } else {
 
-                    $item = array_replace($item, ['title' => $record->name, 'training_title' => $record->name, 'type' => $record->training_type, 'training_type' => $record->training_type, 'delivery_mode' => $record->delivery_mode, 'startDate' => $record->start_date, 'endDate' => $record->end_date, 'start_date' => $record->start_date, 'end_date' => $record->end_date, 'venue' => $record->venue, 'venue_location' => $record->venue, 'budget' => $record->budget, 'training_budget' => $record->budget, 'yearCovered' => $record->year_covered, 'dateEncoded' => substr((string) $record->created_at, 0, 10), 'province' => $record->province, 'district' => $record->district, 'municipality' => $record->municipality, 'barangay' => $record->barangay, 'status' => ! $record->is_active ? 'Inactive' : match ($record->status) {
+                    $workflowStatus = match ($record->status) {
                         'For review' => 'For Review', 'For approval' => 'For Approval', 'For acceptance' => 'For Acceptance', 'Approved', 'Approved & Accepted' => 'Approved & Accepted', default => $record->status
-                    }, 'version' => $record->version]);
+                    };
+                    $item = array_replace($item, ['title' => $record->name, 'training_title' => $record->name, 'type' => $record->training_type, 'training_type' => $record->training_type, 'delivery_mode' => $record->delivery_mode, 'startDate' => $record->start_date, 'endDate' => $record->end_date, 'start_date' => $record->start_date, 'end_date' => $record->end_date, 'venue' => $record->venue, 'venue_location' => $record->venue, 'budget' => $record->budget, 'training_budget' => $record->budget, 'yearCovered' => $record->year_covered, 'dateEncoded' => substr((string) $record->created_at, 0, 10), 'province' => $record->province, 'district' => $record->district, 'municipality' => $record->municipality, 'barangay' => $record->barangay, 'is_active' => (bool) $record->is_active, 'statusRemarks' => $record->status_remarks, 'workflowStatus' => $workflowStatus, 'status' => ! $record->is_active ? 'Inactive' : $workflowStatus, 'version' => $record->version]);
 
                     $item['trainers'] = collect($trainingResources[$record->id] ?? [])->map(fn ($resource): array => ['id' => $resource->ui_id ?? (string) $resource->id, 'name' => $resource->name, 'role' => $resource->title ?? 'Resource person'])->all();
                     foreach (['pretest' => 'Pre-test', 'posttest' => 'Post-test'] as $key => $kind) {
@@ -586,6 +607,7 @@ class OriginalInterfaceData
             'dashboard' => app(DashboardData::class)->build($stores),
             'roles' => $isAdministrator ? DB::table('user_roles')->where('is_active', 1)->where('name', '<>', 'System Administrator')->pluck('name')->all() : [],
             'stores' => $stores,
+            'recordStatuses' => $recordStatuses->where('is_active', true)->values(),
             'actor' => (new AccountDisplay)->forUser($user),
             'regions' => DB::table('region')->where('is_active', 1)->get(['region_id', 'name']),
             'offices' => DB::table('organization')->where('is_active', 1)->get(['org_id', 'region_id', 'name']),

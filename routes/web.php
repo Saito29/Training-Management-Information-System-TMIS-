@@ -54,6 +54,10 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::post('/system/nationalities', [SystemSettingsController::class, 'storeNationality'])->name('system.nationalities.store');
     Route::patch('/system/nationalities/{option}', [SystemSettingsController::class, 'updateNationality'])->whereNumber('option')->name('system.nationalities.update');
     Route::delete('/system/nationalities/{option}', [SystemSettingsController::class, 'deleteNationality'])->whereNumber('option')->name('system.nationalities.destroy');
+    Route::get('/system/record-statuses', [SystemSettingsController::class, 'recordStatuses'])->name('system.record-statuses.index');
+    Route::post('/system/record-statuses', [SystemSettingsController::class, 'storeRecordStatus'])->name('system.record-statuses.store');
+    Route::patch('/system/record-statuses/{status}', [SystemSettingsController::class, 'updateRecordStatus'])->whereNumber('status')->name('system.record-statuses.update');
+    Route::delete('/system/record-statuses/{status}', [SystemSettingsController::class, 'deleteRecordStatus'])->whereNumber('status')->name('system.record-statuses.destroy');
     Route::get('/system/training-types', [SystemSettingsController::class, 'trainingTypes'])->name('system.training-types.index');
     Route::post('/system/training-types', [SystemSettingsController::class, 'storeTrainingType'])->name('system.training-types.store');
     Route::patch('/system/training-types/{option}', [SystemSettingsController::class, 'updateTrainingType'])->whereNumber('option')->name('system.training-types.update');
@@ -73,6 +77,7 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::get('/operations/evaluations', [OperationsController::class, 'evaluations'])->name('operations.evaluations.index');
     Route::post('/operations/evaluations', [OperationsController::class, 'evaluation'])->name('operations.evaluations.store');
     Route::post('/operations/trainings/{id}/status', [OperationsController::class, 'transition'])->whereNumber('id')->name('operations.trainings.status');
+    Route::patch('/operations/trainings/{id}/active', [OperationsController::class, 'setActive'])->whereNumber('id')->name('operations.trainings.active');
     Route::post('/operations/trainings/bulk-status', [OperationsController::class, 'bulkTransition'])->middleware('throttle:30,1')->name('operations.trainings.bulk-status');
     Route::post('/operations/trainings/{id}/attachments', [OperationsController::class, 'attachment'])->whereNumber('id')->name('operations.trainings.attachments');
     Route::get('/operations/trainings/{id}/attachments/{attachment}', [OperationsController::class, 'download'])->whereNumber(['id', 'attachment'])->name('operations.trainings.download');

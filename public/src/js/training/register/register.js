@@ -36,6 +36,46 @@ document.addEventListener('DOMContentLoaded', () => {
     );
   }
 
+  const registration = window.TMIS_PAGE?.registration;
+  const locations = registration?.locations;
+  if (Array.isArray(locations) && Array.isArray(registration.regions)) {
+    const regionRows = registration.regions;
+    const locationFields = [
+      {select: province, kind: 'province', parent: () => region.value},
+      {select: district, kind: 'district', parent: () => province.value},
+      {select: municipality, kind: 'municipality', parent: () => district.value},
+      {select: barangay, kind: 'barangay', parent: () => municipality.value},
+    ];
+    region.replaceChildren(
+      new Option(regionRows.length ? 'Choose a region' : 'No regions available', ''),
+      ...regionRows.map(row => new Option(row.name, String(row.region_id)))
+    );
+
+    function populateLocation(field) {
+      const parentId = field.parent();
+      const options = parentId
+        ? locations.filter(location =>
+          location.kind === field.kind
+          && String(location.region_id) === region.value
+          && (field.kind === 'province' || String(location.parent_id) === parentId))
+        : [];
+      const label = field.kind === 'municipality' ? 'municipality / city' : field.kind;
+      field.select.replaceChildren(
+        new Option(parentId ? `Choose a ${label}` : `Choose ${field.kind === 'province' ? 'a region' : 'the parent location'} first`, ''),
+        ...options.map(location => new Option(location.name, String(location.id)))
+      );
+      field.select.disabled = !parentId;
+    }
+
+    region.addEventListener('change', () => locationFields.forEach(populateLocation));
+    locationFields.slice(0, -1).forEach((field, index) => {
+      field.select.addEventListener('change', () => {
+        locationFields.slice(index + 1).forEach(populateLocation);
+      });
+    });
+    locationFields.forEach(populateLocation);
+  }
+
   const trainerSelect = trainerList?.querySelector('select[name="trainer_name[]"]');
   const staticTrainers = [...(trainerSelect?.options || [])].filter((option) => option.value).map((option) => ({
     name: option.value,
@@ -452,126 +492,5 @@ document.addEventListener('DOMContentLoaded', () => {
   endDate?.addEventListener('change', syncDateRange);
   syncDateRange();
 
-  /* ------------------------------------------------------------------
-     Venue address hierarchy: region > district > province > municipality > barangay
-  ------------------------------------------------------------------ */
-  // Development-only hierarchy. Replace this object with the corresponding
-  // database/API records while preserving each record's parent ID.
-  const addressHierarchy = {
-    region_4a: {
-      districts: {
-        quezon_1st: {
-          label: 'Quezon 1st District',
-          provinces: {
-            quezon: {
-              label: 'Quezon',
-              municipalities: {
-                jomalig: {
-                  label: 'Jomalig',
-                  barangays: { bukal: 'Bukal', talisoy: 'Talisoy' },
-                },
-              },
-            },
-          },
-        },
-        laguna_1st: {
-          label: 'Laguna 1st District',
-          provinces: {
-            laguna: {
-              label: 'Laguna',
-              municipalities: {
-                pakil: {
-                  label: 'Pakil',
-                  barangays: { banilan: 'Banilan', casa_real: 'Casa Real' },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-    region_1: {
-      districts: {
-        pangasinan_1st: {
-          label: 'Pangasinan 1st District',
-          provinces: {
-            pangasinan: {
-              label: 'Pangasinan',
-              municipalities: {
-                alaminos: {
-                  label: 'Alaminos',
-                  barangays: { alos: 'Alos', baleyadaan: 'Baleyadaan' },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  };
-
-  const resetAddressSelect = (select, placeholder) => {
-    if (!select) return;
-
-    select.replaceChildren(new Option(placeholder, '', true, true));
-    select.disabled = true;
-  };
-
-  const populateAddressSelect = (select, records, placeholder) => {
-    resetAddressSelect(select, placeholder);
-
-    Object.entries(records).forEach(([id, record]) => {
-      select.add(new Option(typeof record === 'string' ? record : record.label, id));
-    });
-
-    select.disabled = false;
-  };
-
-  const syncAddressHierarchy = () => {
-    const selectedRegion = addressHierarchy[region?.value];
-    resetAddressSelect(district, 'Choose a region first');
-    resetAddressSelect(province, 'Choose a district first');
-    resetAddressSelect(municipality, 'Choose a province first');
-    resetAddressSelect(barangay, 'Choose a municipality first');
-
-    if (!selectedRegion) return;
-    populateAddressSelect(district, selectedRegion.districts, 'Choose..');
-  };
-
-  const syncDistrict = () => {
-    const selectedDistrict = addressHierarchy[region?.value]?.districts[district?.value];
-    resetAddressSelect(province, 'Choose a district first');
-    resetAddressSelect(municipality, 'Choose a province first');
-    resetAddressSelect(barangay, 'Choose a municipality first');
-
-    if (!selectedDistrict) return;
-    populateAddressSelect(province, selectedDistrict.provinces, 'Choose..');
-  };
-
-  const syncProvince = () => {
-    const selectedProvince =
-      addressHierarchy[region?.value]?.districts[district?.value]?.provinces[province?.value];
-    resetAddressSelect(municipality, 'Choose a province first');
-    resetAddressSelect(barangay, 'Choose a municipality first');
-
-    if (!selectedProvince) return;
-    populateAddressSelect(municipality, selectedProvince.municipalities, 'Choose..');
-  };
-
-  const syncMunicipality = () => {
-    const selectedMunicipality =
-      addressHierarchy[region?.value]?.districts[district?.value]?.provinces[province?.value]
-        ?.municipalities[municipality?.value];
-    resetAddressSelect(barangay, 'Choose a municipality first');
-
-    if (!selectedMunicipality) return;
-    populateAddressSelect(barangay, selectedMunicipality.barangays, 'Choose..');
-  };
-
-  region?.addEventListener('change', syncAddressHierarchy);
-  district?.addEventListener('change', syncDistrict);
-  province?.addEventListener('change', syncProvince);
-  municipality?.addEventListener('change', syncMunicipality);
-  syncAddressHierarchy();
   updateWizard();
 });

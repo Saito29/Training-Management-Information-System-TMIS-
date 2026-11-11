@@ -4,6 +4,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const editForm = document.getElementById('faEditForm');
   if (!editForm) return;
 
+  const pageUrl = new URL(window.location.href);
+  if (pageUrl.searchParams.get('associationUpdated') === '1') {
+    pageUrl.searchParams.delete('associationUpdated');
+    window.history.replaceState(null, '', pageUrl);
+    window.TmisToast?.show('Association information updated successfully.', 'success');
+  }
+
   const locations = {
     Quezon: {
       '1st District': { Jomalig: ['Apad', 'Bukal', 'Talisoy'] },
@@ -22,6 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const editMessage = document.getElementById('faEditMessage');
   const pageData = window.TMIS_PAGE || {};
   const registration = pageData.registration || {};
+  const customStatusSelect = document.getElementById('faEditCustomStatus');
+  const customStatuses = Array.isArray(pageData.recordStatuses) ? pageData.recordStatuses : [];
   const read = () => {
     try { const records = JSON.parse(window.TmisStore.getItem(storageKey) || '[]'); return Array.isArray(records) ? records : []; }
     catch { return []; }
@@ -96,12 +105,23 @@ document.addEventListener('DOMContentLoaded', () => {
       if (['region_id', 'org_id', 'province', 'district', 'municipality', 'barangay'].includes(control.name)) return;
       control.value = record[control.name] || (control.name === 'year_covered' ? String(record.registration_date || '').slice(0, 4) : '');
     });
+    const statusOptions = customStatuses.map(status => new Option(status.name, String(status.id)));
+    if (record.customStatusId && !statusOptions.some(option => option.value === String(record.customStatusId))) {
+      const currentStatus = new Option(record.customStatus || 'Inactive status', String(record.customStatusId));
+      currentStatus.disabled = true;
+      statusOptions.push(currentStatus);
+    }
+    customStatusSelect.replaceChildren(new Option('No additional status', ''), ...statusOptions);
+    customStatusSelect.value = String(record.customStatusId || '');
     setRegistrationLocation(record);
     setLocation(record);
     document.getElementById('faOverviewTitle').textContent = record.association_name || 'Farmer Association';
     const badge = document.getElementById('faOverviewStatus');
     badge.textContent = record.status || 'Active';
     badge.classList.toggle('is-inactive', record.status === 'Inactive');
+    const customStatusBadge = document.getElementById('faOverviewCustomStatus');
+    customStatusBadge.textContent = record.customStatus || '';
+    customStatusBadge.hidden = !record.customStatus;
   }
   editForm.addEventListener('submit', async event => {
     event.preventDefault();
@@ -112,12 +132,12 @@ document.addEventListener('DOMContentLoaded', () => {
     records[index] = { ...records[index], ...Object.fromEntries(new FormData(editForm)) };
     try {
       await window.TmisStore.setItem(storageKey, JSON.stringify(records));
-      setMessage(editMessage, 'Association information saved.');
-      showRecord();
-      window.dispatchEvent(new StorageEvent('storage', { key: storageKey }));
     } catch (error) {
       setMessage(editMessage, error instanceof Error ? error.message : 'Could not save the association. Refresh and try again.', true);
+      return;
     }
+    pageUrl.searchParams.set('associationUpdated', '1');
+    window.location.assign(pageUrl);
   });
   showRecord();
 });

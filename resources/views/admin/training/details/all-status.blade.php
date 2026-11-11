@@ -2012,5 +2012,6 @@ class="layout-fixed"
     <!-- nav -->
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/training/details/all-status.js?v=training-id-path-1') }}"></script>
+    <script src="{{ asset('src/js/training/details/status-actions.js?v=training-status-actions-1') }}"></script>
+    <script src="{{ asset('src/js/training/details/all-status.js?v=training-status-lists-1') }}"></script>
 @endsection

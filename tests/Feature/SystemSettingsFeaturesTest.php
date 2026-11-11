@@ -48,6 +48,60 @@ class SystemSettingsFeaturesTest extends TestCase
         ])->assertNotFound();
     }
 
+    public function test_administrator_can_manage_additional_statuses_and_cannot_delete_assigned_statuses(): void
+    {
+        $administrator = $this->account();
+        $this->signIn($administrator);
+
+        $created = $this->postJson(route('system.record-statuses.store'), [
+            'name' => 'For monitoring',
+            'description' => 'Follow up with the assigned office.',
+        ])->assertCreated()
+            ->assertJsonPath('status.name', 'For monitoring')
+            ->assertJsonPath('status.usage_count', 0);
+        $statusId = $created->json('status.id');
+
+        $this->patchJson(route('system.record-statuses.update', $statusId), [
+            'name' => 'For follow-up',
+            'description' => 'Follow up with the assigned office.',
+            'is_active' => false,
+        ])->assertOk()
+            ->assertJsonPath('status.name', 'For follow-up')
+            ->assertJsonPath('status.is_active', false);
+
+        DB::table('associations')->insert([
+            'region_id' => 4,
+            'org_id' => 1,
+            'created_by' => $administrator->user_id,
+            'name' => 'Status-linked association',
+            'is_active' => true,
+            'record_status_id' => $statusId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->getJson(route('system.record-statuses.index'))->assertOk()
+            ->assertJsonPath('statuses.0.association_count', 1)
+            ->assertJsonPath('statuses.0.usage_count', 1);
+        $this->deleteJson(route('system.record-statuses.destroy', $statusId))
+            ->assertConflict()
+            ->assertJsonPath('message', 'This status is assigned to saved records and cannot be deleted.');
+        $this->assertDatabaseHas('record_statuses', ['id' => $statusId, 'name' => 'For follow-up']);
+
+        $this->postJson(route('system.record-statuses.store'), ['name' => 'Active'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('name');
+    }
+
+    public function test_additional_status_management_is_limited_to_administrators(): void
+    {
+        $encoder = $this->account(2);
+        $this->signIn($encoder);
+
+        $this->getJson(route('system.record-statuses.index'))->assertForbidden();
+        $this->postJson(route('system.record-statuses.store'), ['name' => 'For monitoring'])->assertForbidden();
+    }
+
     public function test_system_settings_loads_compatible_bootstrap_for_tabs_and_notifications(): void
     {
         $administrator = $this->account();
@@ -69,6 +123,9 @@ class SystemSettingsFeaturesTest extends TestCase
             ->assertSee('id="roles-tab"', false)
             ->assertSee('id="credentials-tab"', false)
             ->assertSee('id="database-tab"', false)
+            ->assertSee('id="record-statuses-tab"', false)
+            ->assertSee('id="record-statuses"', false)
+            ->assertSee('record-status-settings.js?v=record-status-management-1', false)
             ->assertSee('Download full SQL backup')
             ->assertSee('Legacy TMIS SQL export')
             ->assertSee('SQL is parsed as data and never executed.')

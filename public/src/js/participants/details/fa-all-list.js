@@ -4,9 +4,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const storageKey = 'tmis-farmer-associations';
   const listStatus = document.body.dataset.faListStatus === 'Inactive' ? 'Inactive' : 'Active';
   const statusLabel = listStatus.toLowerCase();
-  const columns = ['actions', 'status', 'id', 'region', 'province', 'district', 'municipality', 'barangay', 'association_name', 'short_name', 'registration_date', 'year_covered', 'organization_type', 'office'];
+  const columns = ['actions', 'status', 'customStatus', 'id', 'region', 'province', 'district', 'municipality', 'barangay', 'association_name', 'short_name', 'registration_date', 'year_covered', 'organization_type', 'office'];
   const defaults = columns.slice(0, 12);
-  const labels = { id: 'Farmer Association ID', association_name: 'Name', short_name: 'Shortened Name', organization_type: 'Organization Type', office: 'Office', region: 'Region', province: 'Province', district: 'District', municipality: 'Municipality', barangay: 'Barangay', registration_date: 'Registration Date', year_covered: 'Year Covered', status: 'Status' };
+  const labels = { id: 'Farmer Association ID', association_name: 'Name', short_name: 'Shortened Name', organization_type: 'Organization Type', office: 'Office', region: 'Region', province: 'Province', district: 'District', municipality: 'Municipality', barangay: 'Barangay', registration_date: 'Registration Date', year_covered: 'Year Covered', status: 'Active status', customStatus: 'Additional status' };
   const geo = ['region', 'province', 'district', 'municipality', 'barangay'];
   const seeds = [
     { id: 'FA-2025-001', association_name: 'Jomalig Farmers Association', short_name: 'JFA', organization_type: 'Association', office: 'Municipal Agriculture Office', province: 'Quezon', district: '1st District', municipality: 'Jomalig', barangay: 'Apad', registration_date: '2025-03-14', year_covered: '2025', status: 'Active' },
@@ -94,6 +94,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (field === 'status') {
       const status = associationStatus(record);
       const badge = document.createElement('span'); badge.className = `status-badge ${status === 'Active' ? 'status-active' : 'status-inactive'}`; badge.textContent = status; td.append(badge);
+    } else if (field === 'customStatus') {
+      const badge = document.createElement('span'); badge.className = 'status-badge status-neutral'; badge.textContent = record.customStatus || '—'; td.append(badge);
     } else td.textContent = record[field] || '—';
     row.append(td);
   }

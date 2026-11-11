@@ -370,6 +370,7 @@ class SystemSettingsController
                 ])
                 ->orderBy('label')
                 ->get(),
+            'recordStatusOptions' => $this->recordStatusOptions(),
             'trainingTypeOptions' => $this->trainingTypeOptions(),
             'grants' => $isSuperAdministrator
                 ? DB::table('role_permissions')->get()->groupBy('role_id')->map(fn ($permissions) => ModuleAccess::normalizePermissionRows($permissions))
@@ -798,6 +799,150 @@ class SystemSettingsController
         });
 
         return response()->json(['message' => 'Nationality deleted.']);
+    }
+
+    public function recordStatuses(Request $request): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+
+        return response()->json(['statuses' => $this->recordStatusOptions()]);
+    }
+
+    public function storeRecordStatus(Request $request): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'description' => ['nullable', 'string', 'max:500'],
+        ]);
+        $name = trim($data['name']);
+        $this->validateRecordStatusName($name);
+
+        $status = DB::transaction(function () use ($request, $data, $name): array {
+            $this->ensureUniqueRecordStatusName($name);
+            $id = DB::table('record_statuses')->insertGetId([
+                'name' => $name,
+                'description' => trim((string) ($data['description'] ?? '')) ?: null,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            AuditTrail::record($request, 'record_status_created_'.$id, $request->user(), after: ['name' => $name], category: 'settings');
+
+            return $this->recordStatus($id);
+        });
+
+        return response()->json(['status' => $status, 'message' => 'Status added.'], 201);
+    }
+
+    public function updateRecordStatus(Request $request, int $status): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'description' => ['nullable', 'string', 'max:500'],
+            'is_active' => ['required', 'boolean'],
+        ]);
+        $name = trim($data['name']);
+        $this->validateRecordStatusName($name);
+
+        $updated = DB::transaction(function () use ($request, $data, $name, $status): array {
+            $existing = DB::table('record_statuses')->where('id', $status)->lockForUpdate()->first();
+            abort_unless($existing, 404);
+            $this->ensureUniqueRecordStatusName($name, $status);
+            DB::table('record_statuses')->where('id', $status)->update([
+                'name' => $name,
+                'description' => trim((string) ($data['description'] ?? '')) ?: null,
+                'is_active' => (bool) $data['is_active'],
+                'updated_at' => now(),
+            ]);
+            AuditTrail::record($request, 'record_status_updated_'.$status, $request->user(), before: ['name' => $existing->name, 'is_active' => (bool) $existing->is_active], after: ['name' => $name, 'is_active' => (bool) $data['is_active']], category: 'settings');
+
+            return $this->recordStatus($status);
+        });
+
+        return response()->json(['status' => $updated, 'message' => 'Status updated.']);
+    }
+
+    public function deleteRecordStatus(Request $request, int $status): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        DB::transaction(function () use ($request, $status): void {
+            $existing = DB::table('record_statuses')->where('id', $status)->lockForUpdate()->first();
+            abort_unless($existing, 404);
+            $usageCount = $this->recordStatusUsageCount($status);
+            abort_if($usageCount > 0, 409, 'This status is assigned to saved records and cannot be deleted.');
+            DB::table('record_statuses')->where('id', $status)->delete();
+            AuditTrail::record($request, 'record_status_deleted_'.$status, $request->user(), before: ['name' => $existing->name], category: 'settings');
+        });
+
+        return response()->json(['message' => 'Status deleted.']);
+    }
+
+    /** @return Collection<int, object> */
+    private function recordStatusOptions(): Collection
+    {
+        $statuses = DB::table('record_statuses')
+            ->select('record_statuses.*')
+            ->addSelect([
+                'farmer_count' => DB::table('participants')
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('participants.record_status_id', 'record_statuses.id'),
+                'association_count' => DB::table('associations')
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('associations.record_status_id', 'record_statuses.id'),
+                'training_count' => DB::table('trainings')
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('trainings.record_status_id', 'record_statuses.id'),
+                'resource_person_count' => DB::table('resource_persons')
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('resource_persons.record_status_id', 'record_statuses.id'),
+            ])
+            ->orderBy('name')
+            ->get();
+
+        return $statuses->map(function (object $status): object {
+            $status->is_active = (bool) $status->is_active;
+            $status->farmer_count = (int) $status->farmer_count;
+            $status->association_count = (int) $status->association_count;
+            $status->training_count = (int) $status->training_count;
+            $status->resource_person_count = (int) $status->resource_person_count;
+            $status->usage_count = $status->farmer_count + $status->association_count + $status->training_count + $status->resource_person_count;
+
+            return $status;
+        });
+    }
+
+    /** @return array<string, mixed> */
+    private function recordStatus(int $statusId): array
+    {
+        return (array) $this->recordStatusOptions()->firstWhere('id', $statusId);
+    }
+
+    private function recordStatusUsageCount(int $statusId): int
+    {
+        return (int) DB::table('participants')->where('record_status_id', $statusId)->count()
+            + (int) DB::table('associations')->where('record_status_id', $statusId)->count()
+            + (int) DB::table('trainings')->where('record_status_id', $statusId)->count()
+            + (int) DB::table('resource_persons')->where('record_status_id', $statusId)->count();
+    }
+
+    private function validateRecordStatusName(string $name): void
+    {
+        if ($name === '' || in_array(mb_strtolower($name), ['active', 'inactive'], true)) {
+            throw ValidationException::withMessages(['name' => 'Enter a name other than the built-in Active or Inactive status.']);
+        }
+    }
+
+    private function ensureUniqueRecordStatusName(string $name, ?int $exceptId = null): void
+    {
+        $exists = DB::table('record_statuses')
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
+            ->when($exceptId !== null, fn ($query) => $query->where('id', '!=', $exceptId))
+            ->exists();
+        if ($exists) {
+            throw ValidationException::withMessages(['name' => 'Enter a unique status name.']);
+        }
     }
 
     public function trainingTypes(Request $request): JsonResponse

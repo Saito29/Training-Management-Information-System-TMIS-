@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'No current schedule or enrollment period',
   ];
   const pad = (value) => String(value).padStart(2, '0');
-  const records = (window.TMIS_PAGE ? window.TmisStore.records('tmis-trainings').filter(item => item.status === 'Inactive') : Array.from({ length: 45 }, (_, index) => {
+  const records = (window.TMIS_PAGE ? window.TmisStore.records('tmis-trainings').filter(item => item.is_active === false).map(item => ({...item, status: 'Inactive'})) : Array.from({ length: 45 }, (_, index) => {
     const n = index + 1;
     const year = 2024 + (n % 3);
     const place = LOCATIONS[n % LOCATIONS.length];
@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const COLUMNS = [
     ['status', 'Status'],
+    ['workflowStatus', 'Workflow Status'],
     ['id', 'Training ID'], ['title', 'Training Title'],
     ['type', 'Training Type'], ['office', 'Implementing Office'],
     ['inactiveReason', 'Inactive Reason'],
@@ -64,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ['yearCovered', 'Year Covered'], ['dateEncoded', 'Date Encoded'],
   ];
   const DEFAULT_VISIBLE_COLUMNS = new Set([
-    'actions', 'status', 'id', 'title', 'type', 'office', 'inactiveReason', 'startDate', 'endDate', 'venue',
+    'actions', 'status', 'workflowStatus', 'id', 'title', 'type', 'office', 'inactiveReason', 'startDate', 'endDate', 'venue',
   ]);
   const body = $('#forReviewTableBody');
   const table = $('#forReviewDataTable');
@@ -85,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusClass = (status) => ({
     'For Review': 'status-review',
     'For Approval': 'status-approval',
+    'For Acceptance': 'status-acceptance',
     'Approved & Accepted': 'status-approved',
     Incomplete: 'status-incomplete',
     Inactive: 'status-inactive',
@@ -249,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pages = state.perPage === 'all' ? 1 : Math.max(1, Math.ceil(all.length / state.perPage));
     if (state.page > pages) state.page = 1;
     const rows = state.perPage === 'all' ? all : all.slice((state.page - 1) * state.perPage, state.page * state.perPage);
-    body.innerHTML = rows.map((r) => `<tr data-record-id="${esc(r.id)}"><td data-column="actions"><div class="table-row-actions"><a class="btn table-action-button view-action" href="../id/view-training/${encodeURIComponent(r.id)}" target="_blank" rel="noopener" title="View training" aria-label="View ${esc(r.id)}"><i class="bi bi-eye-fill"></i></a><a class="btn table-action-button edit-action" href="../id/edit-training/${encodeURIComponent(r.id)}" target="_blank" rel="noopener" title="Edit training" aria-label="Edit ${esc(r.id)}"><i class="bi bi-pencil-fill"></i></a><button type="button" class="btn table-action-button delete-action" data-delete="${esc(r.id)}" title="Delete training" aria-label="Delete ${esc(r.id)}"><i class="bi bi-trash-fill"></i></button></div></td>${COLUMNS.map(([key]) => `<td data-column="${key}">${key === 'status' ? `<span class="status-badge ${statusClass(r.status)}">${esc(r.status)}</span>` : esc(['startDate', 'endDate', 'dateEncoded'].includes(key) ? formatDate(r[key]) : r[key])}</td>`).join('')}</tr>`).join('');
+    body.innerHTML = rows.map((r) => `<tr data-record-id="${esc(r.id)}"><td data-column="actions"><div class="table-row-actions"><a class="btn table-action-button view-action" href="../id/view-training/${encodeURIComponent(r.id)}" target="_blank" rel="noopener" title="View training" aria-label="View ${esc(r.id)}"><i class="bi bi-eye-fill"></i></a><a class="btn table-action-button edit-action" href="../id/edit-training/${encodeURIComponent(r.id)}" target="_blank" rel="noopener" title="Edit training" aria-label="Edit ${esc(r.id)}"><i class="bi bi-pencil-fill"></i></a>${window.TmisTrainingStatusActions?.render(r) || ''}<button type="button" class="btn table-action-button delete-action" data-delete="${esc(r.id)}" title="Delete training" aria-label="Delete ${esc(r.id)}"><i class="bi bi-trash-fill"></i></button></div></td>${COLUMNS.map(([key]) => `<td data-column="${key}">${key === 'status' ? `<span class="status-badge ${statusClass(r.status)}">${esc(r.status)}</span>` : esc(['startDate', 'endDate', 'dateEncoded'].includes(key) ? formatDate(r[key]) : r[key])}</td>`).join('')}</tr>`).join('');
     applyColumnVisibility();
     empty.hidden = rows.length > 0;
     if (!rows.length) empty.innerHTML = '<i class="bi bi-check2-circle"></i><strong>No inactive trainings match these filters.</strong>';

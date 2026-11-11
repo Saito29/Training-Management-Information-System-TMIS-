@@ -56,7 +56,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/training/id/view-training.css') }}"
+      href="{{ asset('src/css/training/id/view-training.css?v=training-status-badge-1') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-participants.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-pretest.css') }}" />
@@ -835,7 +835,9 @@ class="layout-fixed"
                   <div><span class="training-overview-eyebrow">Training record</span><h2 data-training-field="title">Training information</h2><p data-training-field="subtitle">Review the schedule, venue, organizer, and delivery details.</p></div>
                 </div>
                 <div class="training-overview-reference">
-                  <span class="training-status-pill" data-training-field="status">Status not recorded</span>
+                  <span class="training-status-pill" data-training-field="status" data-status="neutral" aria-label="Workflow status">Status not recorded</span>
+                  <span class="training-status-pill" data-training-field="active-status" data-status="neutral" aria-label="Training active status">Status not recorded</span>
+                  <span class="training-status-pill" data-training-field="custom-status" data-status="custom" aria-label="Additional status" hidden></span>
                   <span class="training-reference-label">Training ID</span>
                   <strong data-training-field="id">Reference pending</strong>
                   <small class="training-reference-format">TRN · two-digit year · annual sequence</small>
@@ -1928,7 +1930,7 @@ class="layout-fixed"
     </script>
     <script src="{{ asset('src/js/training/id/view-training-assessments.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script src="{{ asset('src/js/training/id/view-training.js?v=training-id-path-1') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training.js?v=training-status-badge-1') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-participants.js') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-feedback-filters.js') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-pretest.js') }}"></script>

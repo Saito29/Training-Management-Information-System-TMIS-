@@ -94,8 +94,20 @@ document.addEventListener('DOMContentLoaded', () => {
   text('genderSummary', `${maleCount} male · ${femaleCount} female`, 'No participant demographics recorded');
 
   if (statusElement) {
-    statusElement.textContent = training.status || 'Status not recorded';
-    statusElement.dataset.status = String(training.status || '').toLowerCase().replace(/[^a-z]+/g, '-');
+    const status = training.workflowStatus || training.status || 'Status not recorded';
+    statusElement.textContent = status;
+    statusElement.dataset.status = status.toLowerCase().replace(/[^a-z]+/g, '-');
+  }
+  const activeStatusElement = field('active-status');
+  if (activeStatusElement) {
+    const activeStatus = training.is_active === false ? 'Inactive' : 'Active';
+    activeStatusElement.textContent = activeStatus;
+    activeStatusElement.dataset.status = activeStatus.toLowerCase();
+  }
+  const customStatusElement = field('custom-status');
+  if (customStatusElement) {
+    customStatusElement.textContent = training.customStatus || '';
+    customStatusElement.hidden = !training.customStatus;
   }
 
   const chart = document.querySelector('[data-gender-chart]');
@@ -195,7 +207,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-pretest-average]').forEach(element => { element.textContent = percentage(pretest); });
   document.querySelectorAll('[data-posttest-average]').forEach(element => { element.textContent = percentage(posttest); });
   if (pretest.percentage === null || posttest.percentage === null) {
-    document.querySelector('[data-score-highlight]').textContent = 'Assessment results are not yet available.';
+    const scoreHighlight = document.querySelector('[data-score-highlight]');
+    if (scoreHighlight) {
+      scoreHighlight.textContent = 'Assessment results are not yet available.';
+    }
   }
   document.getElementById('testAverageChart').setAttribute('aria-label', exams.length
     ? exams.map(exam => `${examLabel(exam)} ${exam.name}: ${exam.percentage === null ? 'no scores yet' : `${exam.percentage.toFixed(2)}%`}`).join('; ')

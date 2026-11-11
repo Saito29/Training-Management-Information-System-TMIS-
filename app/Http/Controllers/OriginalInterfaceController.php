@@ -110,15 +110,62 @@ class OriginalInterfaceController
     {
         ModuleAccess::authorize($request, 'participants.create');
         $record = $references->registration($request);
+        $associationNames = $record['associate_names'] ?? [];
+        $associations = collect($associationNames)->map(function (string $associationName) use ($request, $record): object {
+            $association = OriginalInterfaceData::find($request->user(), 'associations', $associationName);
+            abort_unless(
+                $association
+                    && $association->is_active
+                    && (int) $association->region_id === (int) $record['region_id']
+                    && (int) $association->org_id === (int) $record['org_id'],
+                422,
+                'Select active associations in the farmer\'s registering region and office.',
+            );
+
+            return $association;
+        });
+        unset($record['associate_names']);
         $matches = $this->matchingParticipants($record);
         if ($matches !== []) {
             return response()->json(['message' => 'A farmer with the same name is already registered for this region and office.', 'matches' => $matches], 409);
         }
         $record['id'] = 'FMR-'.Str::uuid();
         $input = $this->payload($request, ['key' => 'tmis-farmers', 'upserts' => [$record], 'deletes' => []]);
-        $response = $this->sync($input, $data, $operations);
+        $response = DB::transaction(function () use ($request, $input, $data, $operations, $associations, $record): JsonResponse {
+            $syncResponse = $this->sync($input, $data, $operations);
+            $responseData = $syncResponse->getData(true);
+            $participant = OriginalInterfaceData::find($request->user(), 'participants', $record['id']);
+            abort_unless($participant, 500, 'The newly registered farmer could not be loaded.');
 
-        return response()->json($response->getData(true) + ['participant_id' => $record['id']], 201);
+            foreach ($associations->skip(1) as $association) {
+                DB::table('participant_association_memberships')->insert([
+                    'participant_id' => $participant->id,
+                    'association_id' => $association->id,
+                    'role' => $record['associate_role'] ?? null,
+                    'is_primary' => false,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                AuditTrail::record(
+                    $request,
+                    'participant_association_membership_added_'.$participant->id.'_'.$association->id,
+                    $request->user(),
+                    after: ['association_id' => $association->id, 'role' => $record['associate_role'] ?? null],
+                    category: 'participants',
+                );
+            }
+
+            if ($associations->count() > 1) {
+                $responseData = $data->bootstrap($request->user()) + [
+                    'message' => $responseData['message'] ?? 'Changes saved to the database.',
+                    'idMappings' => $responseData['idMappings'] ?? [],
+                ];
+            }
+
+            return response()->json($responseData + ['participant_id' => $record['id']], 201);
+        });
+
+        return $response;
     }
 
     public function participantMatches(Request $request, RegistrationReferences $references): JsonResponse
@@ -643,6 +690,7 @@ class OriginalInterfaceController
         $scalar = ['id', 'name', 'title', 'description', 'status', 'statusRemarks', 'remarks', 'training_title', 'training_type', 'type', 'delivery_mode', 'target_participants', 'partner_organization', 'training_description', 'training_budget', 'budget', 'venue', 'venue_location', 'start_date', 'end_date', 'startDate', 'endDate', 'region', 'region_id', 'office', 'org_id', 'implementing_office', 'implementingOffice', 'province', 'province_id', 'district', 'district_id', 'municipality', 'municipality_id', 'barangay', 'barangay_id', 'yearCovered', 'year_covered', 'firstName', 'middleName', 'lastName', 'first_name', 'middle_name', 'last_name', 'fname', 'mname', 'lname', 'sfname', 'suffix', 'sex', 'gender', 'date_of_birth', 'dateOfBirth', 'birthDate', 'birthday', 'dob', 'email', 'email_account', 'phone', 'mobile_no', 'nationality', 'place_of_birth', 'pob', 'house_building_number', 'street_purok_sitio_name', 'postal_code', 'tel_number', 'associate_name', 'association_id', 'associate_role', 'role', 'tupad', 'soloParent', 'solo_parent', 'fourPs', 'four_ps', '4ps', 'pwd', 'indigenousGroup', 'idp', 'tribeName', 'tbname', 'dietaryRestriction', 'dtrestriction', 'allergies_on', 'seniorCitizen', 'sncitizen', 'association_name', 'short_name', 'organization_type', 'registration_date', 'qualification', 'expertise', 'organization_name', 'questionnaireName', 'trainingQuestionnaire', 'totalItems', 'questionnaireId', 'trainingId', 'trainingTitle', 'trainingLocation', 'trainingVenue', 'trainingOrganization', 'trainingStartDate', 'trainingEndDate', 'farmerId', 'resourcePersonId', 'date', 'commodity', 'score', 'comments', 'csv', 'civil_status', 'extension', 'senior_citizen', 'indigenous_group', 'tribe_name', 'dietary_restriction', 'street_purok_sitio', 'tel_number', 'dashboardSlide', '_version'];
         $allowed = array_merge($scalar, ['questions', 'ratingScale', 'members', 'ratings', 'pretest', 'posttest', 'trainers', 'interventions', 'bullets']);
         $input = Arr::only($raw, $allowed);
+        $input += Arr::only($raw, ['customStatusId']);
         $rules = ['id' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9:_-]+$/']];
         foreach ($scalar as $field) {
             if ($field !== 'id') {
@@ -655,6 +703,7 @@ class OriginalInterfaceController
                 $rules[$field] = ['nullable', 'string', 'max:'.(in_array($field, ['description', 'training_description', 'comments', 'remarks', 'statusRemarks'], true) ? 10000 : 255)];
             }
         }
+        $rules['customStatusId'] = ['nullable', 'integer'];
         foreach (['questions', 'ratingScale', 'members', 'ratings', 'pretest', 'posttest', 'trainers', 'interventions', 'bullets'] as $field) {
             $rules[$field] = ['sometimes', 'array', 'max:500'];
         }
@@ -701,6 +750,20 @@ class OriginalInterfaceController
             $name = trim(implode(' ', array_filter([$first, $middle, $last, $pick(['suffix', 'sfname', 'extension'])])));
         }
         $payload = ['name' => $name, 'region_id' => $region, 'org_id' => $office, 'description' => $pick(['training_description', 'description']), 'is_active' => ! in_array($item['status'] ?? '', ['Inactive', 'Removed', 'Deceased', 'Draft'], true)];
+        if (in_array($module, ['participants', 'associations', 'trainings', 'resource_persons'], true)) {
+            $statusWasSubmitted = array_key_exists('customStatusId', $item);
+            $customStatusId = $statusWasSubmitted
+                ? (blank($item['customStatusId']) ? null : (int) $item['customStatusId'])
+                : ($existing->record_status_id ?? null);
+            if ($customStatusId !== null) {
+                $statusQuery = DB::table('record_statuses')->where('id', $customStatusId);
+                if ((int) ($existing->record_status_id ?? 0) !== $customStatusId) {
+                    $statusQuery->where('is_active', true);
+                }
+                abort_unless($statusQuery->exists(), 422, 'Select an available additional status.');
+            }
+            $payload['record_status_id'] = $customStatusId;
+        }
         foreach (['province', 'district', 'municipality', 'barangay'] as $field) {
             if (isset($item[$field])) {
                 $payload[$field] = $item[$field];

@@ -47,6 +47,65 @@ class OriginalInterfaceTest extends TestCase
         $this->get('/app/admin/participants/details/fa-all-list')->assertOk()->assertViewIs('admin.participants.details.fa-all-list')->assertSee('TMIS_PAGE')->assertDontSee('TMIS database operations:');
     }
 
+    public function test_additional_statuses_can_be_assigned_to_each_supported_record_type(): void
+    {
+        $this->signIn();
+        $statusId = DB::table('record_statuses')->insertGetId([
+            'name' => 'For monitoring',
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $associationResponse = $this->save('tmis-farmer-associations', [
+            'id' => 'FA-CUSTOM-STATUS',
+            'association_name' => 'Custom-status association',
+            'status' => 'Active',
+            'customStatusId' => (string) $statusId,
+        ])->assertOk()
+            ->assertJsonPath('stores.tmis-farmer-associations.0.customStatus', 'For monitoring');
+
+        $this->save('tmis-farmers', [
+            'id' => 'FMR-CUSTOM-STATUS',
+            'first_name' => 'Status',
+            'last_name' => 'Farmer',
+            'status' => 'Active',
+            'customStatusId' => (string) $statusId,
+        ])->assertOk()
+            ->assertJsonPath('stores.tmis-farmers.0.customStatus', 'For monitoring');
+
+        $this->save('tmis-resource-persons', [
+            'id' => 'RP-CUSTOM-STATUS',
+            'first_name' => 'Status',
+            'last_name' => 'Resource',
+            'email' => 'resource-status@example.test',
+            'customStatusId' => (string) $statusId,
+        ])->assertOk()
+            ->assertJsonPath('stores.tmis-resource-persons.0.customStatus', 'For monitoring');
+
+        $this->save('tmis-trainings', [
+            'id' => 'TRN-CUSTOM-STATUS',
+            'training_title' => 'Custom-status training',
+            'start_date' => '2026-12-01',
+            'end_date' => '2026-12-02',
+            'venue' => 'Training hall',
+            'customStatusId' => (string) $statusId,
+        ])->assertOk()
+            ->assertJsonPath('stores.tmis-trainings.0.customStatus', 'For monitoring')
+            ->assertJsonPath('stores.tmis-trainings.0.workflowStatus', 'For Review');
+
+        foreach (['associations', 'participants', 'resource_persons', 'trainings'] as $table) {
+            $this->assertDatabaseHas($table, ['record_status_id' => $statusId]);
+        }
+
+        DB::table('record_statuses')->where('id', $statusId)->update(['is_active' => false]);
+        $association = $associationResponse->json('stores.tmis-farmer-associations.0');
+        $association['association_name'] = 'Updated custom-status association';
+        $this->save('tmis-farmer-associations', $association)->assertOk()
+            ->assertJsonPath('stores.tmis-farmer-associations.0.customStatus', 'For monitoring')
+            ->assertJsonPath('stores.tmis-farmer-associations.0.status', 'Active');
+    }
+
     public function test_dashboard_association_count_uses_database_active_status(): void
     {
         $this->signIn();
@@ -64,6 +123,31 @@ class OriginalInterfaceTest extends TestCase
             ->assertOk()
             ->assertJsonPath('stores.tmis-farmer-associations.0.status', 'Inactive')
             ->assertJsonPath('dashboard.associationCount', 0);
+    }
+
+    public function test_inactive_training_data_preserves_its_active_state_and_workflow_status(): void
+    {
+        $this->signIn();
+        $this->save('tmis-trainings', [
+            'id' => 'TRN-INACTIVE-WORKFLOW',
+            'training_title' => 'Inactive workflow training',
+            'start_date' => '2026-12-01',
+            'end_date' => '2026-12-02',
+            'venue' => 'Training hall',
+            'budget' => 1000,
+        ])->assertOk();
+        DB::table('trainings')->where('ui_id', 'TRN-INACTIVE-WORKFLOW')->update([
+            'status' => 'For acceptance',
+            'is_active' => false,
+            'status_remarks' => 'The training location is unavailable.',
+        ]);
+
+        $this->getJson('/ui/data')
+            ->assertOk()
+            ->assertJsonPath('stores.tmis-trainings.0.status', 'Inactive')
+            ->assertJsonPath('stores.tmis-trainings.0.workflowStatus', 'For Acceptance')
+            ->assertJsonPath('stores.tmis-trainings.0.is_active', false)
+            ->assertJsonPath('stores.tmis-trainings.0.statusRemarks', 'The training location is unavailable.');
     }
 
     public function test_association_registration_saves_a_region_and_its_matching_office(): void
@@ -400,6 +484,108 @@ class OriginalInterfaceTest extends TestCase
             ->assertSee('Association Test Municipality')
             ->assertSee('Association Test Barangay')
             ->assertDontSee('Inactive Association Province');
+    }
+
+    public function test_training_registration_and_edit_forms_receive_active_database_locations(): void
+    {
+        $this->signIn();
+        $provinceId = DB::table('geographic_locations')->insertGetId([
+            'region_id' => 4,
+            'kind' => 'province',
+            'name' => 'Training Form Province',
+            'is_active' => true,
+        ]);
+        $districtId = DB::table('geographic_locations')->insertGetId([
+            'region_id' => 4,
+            'parent_id' => $provinceId,
+            'kind' => 'district',
+            'name' => 'Training Form District',
+            'is_active' => true,
+        ]);
+        $municipalityId = DB::table('geographic_locations')->insertGetId([
+            'region_id' => 4,
+            'parent_id' => $districtId,
+            'kind' => 'municipality',
+            'name' => 'Training Form Municipality',
+            'is_active' => true,
+        ]);
+        DB::table('geographic_locations')->insert([
+            'region_id' => 4,
+            'parent_id' => $municipalityId,
+            'kind' => 'barangay',
+            'name' => 'Training Form Barangay',
+            'is_active' => true,
+        ]);
+        DB::table('geographic_locations')->insert([
+            'region_id' => 4,
+            'kind' => 'province',
+            'name' => 'Inactive Training Province',
+            'is_active' => false,
+        ]);
+
+        foreach ([
+            route('admin.training.create.register'),
+            route('admin.training.id.edit-training'),
+        ] as $url) {
+            $this->get($url)
+                ->assertOk()
+                ->assertSee('Training Form Province')
+                ->assertSee('Training Form District')
+                ->assertSee('Training Form Municipality')
+                ->assertSee('Training Form Barangay')
+                ->assertDontSee('Inactive Training Province');
+        }
+    }
+
+    public function test_training_participant_editor_uses_search_refresh_export_and_select_all_controls(): void
+    {
+        $this->signIn();
+
+        $this->get(route('admin.training.id.edit-training'))
+            ->assertOk()
+            ->assertSee('Search ID, name, or barangay')
+            ->assertSee('data-refresh-participants="current"', false)
+            ->assertSee('data-refresh-participants="available"', false)
+            ->assertSee('data-export-participants="current"', false)
+            ->assertSee('data-export-participants="available"', false)
+            ->assertSee('id="editSelectAll"', false)
+            ->assertDontSee('data-location-filter=', false)
+            ->assertDontSee('id="editAvailableClear"', false);
+    }
+
+    public function test_training_editor_renders_active_status_modal_with_conditional_remarks(): void
+    {
+        $this->signIn();
+
+        $this->get(route('admin.training.id.edit-training'))
+            ->assertOk()
+            ->assertSee('id="editTrainingStatusButton"', false)
+            ->assertSee('id="editTrainingStatusModal"', false)
+            ->assertSee('id="editTrainingActiveStatus"', false)
+            ->assertSee('id="editTrainingStatusRemarks"', false)
+            ->assertSee('Current workflow status');
+    }
+
+    public function test_training_edit_and_view_pages_render_status_badges(): void
+    {
+        $this->signIn();
+        $this->save('tmis-trainings', [
+            'id' => 'TRN-STATUS-BADGE',
+            'training_title' => 'Status badge training',
+            'start_date' => '2026-12-01',
+            'end_date' => '2026-12-02',
+            'venue' => 'Training hall',
+        ])->assertOk();
+
+        $this->get(route('admin.training.id.edit-training', ['id' => 'TRN-STATUS-BADGE']))
+            ->assertOk()
+            ->assertSee('id="editTrainingStatusBadge"', false)
+            ->assertSee('data-status="neutral"', false);
+
+        $this->get(route('admin.training.id.view-training', ['id' => 'TRN-STATUS-BADGE']))
+            ->assertOk()
+            ->assertSee('data-training-field="status"', false)
+            ->assertSee('data-status="neutral"', false);
     }
 
     public function test_association_registration_rejects_an_office_from_a_different_region(): void

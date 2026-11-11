@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'Certificate of Completion',
   ];
   const pad = (value) => String(value).padStart(2, '0');
-  const records = (window.TMIS_PAGE ? window.TmisStore.records('tmis-trainings').filter(item => !item.designFile).map(item=>({...item,status:'Incomplete',missingAttachments:['Training Design'],missingCount:1})) : Array.from({ length: 45 }, (_, index) => {
+  const records = (window.TMIS_PAGE ? window.TmisStore.records('tmis-trainings').filter(item => !item.designFile || !(item.participants || []).length).map(item=>({...item,status:'Incomplete',missingAttachments:[...(!item.designFile?['Training Design']:[]),...(!(item.participants||[]).length?['No farmers linked']:[])],missingCount:(!item.designFile?1:0)+(!(item.participants||[]).length?1:0)})) : Array.from({ length: 45 }, (_, index) => {
     const n = index + 1;
     const year = 2024 + (n % 3);
     const place = LOCATIONS[n % LOCATIONS.length];
@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const COLUMNS = [
     ['missingAttachments', 'Missing Attachments'], ['status', 'Status'],
+    ['workflowStatus', 'Workflow Status'],
     ['id', 'Training ID'], ['title', 'Training Title'],
     ['type', 'Training Type'], ['office', 'Implementing Office'],
     ['startDate', 'Start Date'], ['endDate', 'End Date'], ['venue', 'Venue'],
@@ -70,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ['yearCovered', 'Year Covered'], ['dateEncoded', 'Date Encoded'],
   ];
   const DEFAULT_VISIBLE_COLUMNS = new Set([
-    'actions', 'status', 'id', 'title', 'type', 'office', 'missingAttachments', 'startDate', 'endDate', 'venue',
+    'actions', 'status', 'workflowStatus', 'id', 'title', 'type', 'office', 'missingAttachments', 'startDate', 'endDate', 'venue',
   ]);
   const body = $('#forReviewTableBody');
   const table = $('#forReviewDataTable');
@@ -91,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusClass = (status) => ({
     'For Review': 'status-review',
     'For Approval': 'status-approval',
+    'For Acceptance': 'status-acceptance',
     'Approved & Accepted': 'status-approved',
     Incomplete: 'status-incomplete',
   })[status] || 'status-neutral';
@@ -117,14 +119,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.title = 'DA-TMIS - Incomplete Trainings';
   $('.content-header').textContent = 'Incomplete Trainings';
-  $('.content-info').textContent = 'Review training records that are missing required training documents.';
+  $('.content-info').textContent = 'Review training records that are missing a Training Design attachment or have no linked farmers.';
   $('#forReviewTableTitle').textContent = 'Incomplete Trainings';
-  $('.for-review-table-description').textContent = 'Find incomplete training records and see which training attachments are still missing.';
+  $('.for-review-table-description').textContent = 'Find incomplete training records and see whether the Training Design or farmer links are missing.';
   const summaryLabels = $$('.review-table-summary span');
   if (summaryLabels[0]) summaryLabels[0].textContent = 'Incomplete Trainings';
   if (summaryLabels[2]) summaryLabels[2].textContent = 'Visible Trainings';
   const about = $('.all-status-about');
-  if (about) about.textContent = 'This page lists training records that are missing at least one required training attachment.';
+  if (about) about.textContent = 'This page lists training records that are missing a Training Design attachment or have no linked farmers.';
 
   const toolbar = $('.review-table-toolbar');
   toolbar.innerHTML = `
@@ -258,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pages = state.perPage === 'all' ? 1 : Math.max(1, Math.ceil(all.length / state.perPage));
     if (state.page > pages) state.page = 1;
     const rows = state.perPage === 'all' ? all : all.slice((state.page - 1) * state.perPage, state.page * state.perPage);
-    body.innerHTML = rows.map((r) => `<tr data-record-id="${esc(r.id)}"><td data-column="actions"><div class="table-row-actions"><a class="btn table-action-button view-action" href="../id/view-training/${encodeURIComponent(r.id)}" target="_blank" rel="noopener" title="View training" aria-label="View ${esc(r.id)}"><i class="bi bi-eye-fill"></i></a><a class="btn table-action-button edit-action" href="../id/edit-training/${encodeURIComponent(r.id)}" target="_blank" rel="noopener" title="Edit training" aria-label="Edit ${esc(r.id)}"><i class="bi bi-pencil-fill"></i></a><button type="button" class="btn table-action-button delete-action" data-delete="${esc(r.id)}" title="Delete training" aria-label="Delete ${esc(r.id)}"><i class="bi bi-trash-fill"></i></button></div></td>${COLUMNS.map(([key]) => `<td data-column="${key}">${key === 'status' ? `<span class="status-badge ${statusClass(r.status)}">${esc(r.status)}</span>` : key === 'missingAttachments' ? missingBadges(r) : esc(['startDate', 'endDate', 'dateEncoded'].includes(key) ? formatDate(r[key]) : r[key])}</td>`).join('')}</tr>`).join('');
+    body.innerHTML = rows.map((r) => `<tr data-record-id="${esc(r.id)}"><td data-column="actions"><div class="table-row-actions"><a class="btn table-action-button view-action" href="../id/view-training/${encodeURIComponent(r.id)}" target="_blank" rel="noopener" title="View training" aria-label="View ${esc(r.id)}"><i class="bi bi-eye-fill"></i></a><a class="btn table-action-button edit-action" href="../id/edit-training/${encodeURIComponent(r.id)}" target="_blank" rel="noopener" title="Edit training" aria-label="Edit ${esc(r.id)}"><i class="bi bi-pencil-fill"></i></a>${window.TmisTrainingStatusActions?.render(r) || ''}<button type="button" class="btn table-action-button delete-action" data-delete="${esc(r.id)}" title="Delete training" aria-label="Delete ${esc(r.id)}"><i class="bi bi-trash-fill"></i></button></div></td>${COLUMNS.map(([key]) => `<td data-column="${key}">${key === 'status' ? `<span class="status-badge ${statusClass(r.status)}">${esc(r.status)}</span>` : key === 'missingAttachments' ? missingBadges(r) : esc(['startDate', 'endDate', 'dateEncoded'].includes(key) ? formatDate(r[key]) : r[key])}</td>`).join('')}</tr>`).join('');
     applyColumnVisibility();
     empty.hidden = rows.length > 0;
     if (!rows.length) empty.innerHTML = '<i class="bi bi-check2-circle"></i><strong>No incomplete trainings match these filters.</strong>';

@@ -56,15 +56,15 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/training/id/view-training.css') }}"
+      href="{{ asset('src/css/training/id/view-training.css?v=training-status-badge-1') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-participants.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-highlights.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training-highlights.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training-attachments-cards.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-logs.css') }}" />
-    <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training.css?v=trainer-detail-fields-1') }}" />
-    <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training-participants.css?v=training-location-roster-1') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training.css?v=training-status-badge-1') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training-participants.css?v=training-participant-controls-5') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/activity-logs.css?v=design-20261109-1') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
@@ -813,7 +813,7 @@ class="layout-fixed"
               <h1>Edit Training Information</h1>
               <p>Complete details, participants, test results, evaluations, and attachments for this training.</p>
             </div>
-            <div class="training-header-actions"><a class="btn training-back" href="{{ route('admin.training.details.all-status') }}"><i class="bi bi-arrow-left"></i> Back to List</a></div>
+            <div class="training-header-actions"><button class="btn training-status-update" id="editTrainingStatusButton" type="button" data-bs-toggle="modal" data-bs-target="#editTrainingStatusModal" hidden><i class="bi bi-toggle-on" aria-hidden="true"></i> Update status</button><a class="btn training-back" href="{{ route('admin.training.details.all-status') }}"><i class="bi bi-arrow-left"></i> Back to List</a></div>
           </header>
           <nav class="training-tabs" aria-label="Training sections" role="tablist">
             <button class="training-tab active" id="overview-tab" type="button" role="tab" aria-selected="true" aria-controls="overview-panel" data-panel="overview-panel"><i class="bi bi-house"></i>Overview</button>
@@ -824,12 +824,13 @@ class="layout-fixed"
           </nav>
           <section id="overview-panel" class="training-panel" role="tabpanel" aria-labelledby="overview-tab">
             <form id="editTrainingForm" class="training-edit-form training-card" autocomplete="on">
-              <header class="training-edit-header"><div class="training-edit-header-icon"><i class="bi bi-mortarboard" aria-hidden="true"></i></div><div><span class="training-edit-eyebrow">TRN-000246 · Approved &amp; Accepted</span><h2 id="editTrainingHeading">Good Agricultural Practices (GAP)</h2><p>Edit the details used when registering this training.</p></div><span id="editTrainingState" class="training-edit-state" role="status" aria-live="polite">Up to date</span></header>
+              <header class="training-edit-header"><div class="training-edit-header-icon"><i class="bi bi-mortarboard" aria-hidden="true"></i></div><div><div class="training-edit-meta"><span class="training-edit-eyebrow" id="editTrainingId">Training record</span><span class="training-status-pill" id="editTrainingStatusBadge" data-status="neutral" aria-label="Workflow status">Status not recorded</span><span class="training-status-pill" id="editTrainingActiveBadge" data-status="neutral" aria-label="Training active status">Status not recorded</span><span class="training-status-pill" id="editTrainingCustomStatusBadge" data-status="custom" aria-label="Additional status" hidden></span></div><h2 id="editTrainingHeading">Good Agricultural Practices (GAP)</h2><p>Edit the details used when registering this training.</p></div><span id="editTrainingState" class="training-edit-state" role="status" aria-live="polite">Up to date</span></header>
               <div class="training-edit-body">
                 <section class="training-edit-section" aria-labelledby="editBasicTitle"><div class="training-edit-section-heading"><span>01</span><div><h3 id="editBasicTitle">Training information</h3><p>Title, office, category, and objectives</p></div></div><div class="training-edit-grid">
                   <label>Training title <input class="form-control" name="training_title" maxlength="150" value="Good Agricultural Practices (GAP)" required></label>
-                  <label>Implementing office / division / unit <select class="form-select" name="implementing_office" required><option value="">Choose office</option><option>DA-SAAD</option><option>DA-AMIA</option><option>DA-Livestock</option><option>DA-HVCDP</option><option value="DA-Rice">DA-Rice Program</option><option value="DA-Corn">DA-Corn Program</option><option>DA-ATI</option><option value="Agricultural Training Division (ATD)" selected>Agricultural Training Division (ATD)</option></select></label>
+                  <label>Implementing office / division / unit <select class="form-select" name="implementing_office" required disabled aria-describedby="implementingOfficeHelp"><option value="">Loading current office</option><option>DA-SAAD</option><option>DA-AMIA</option><option>DA-Livestock</option><option>DA-HVCDP</option><option value="DA-Rice">DA-Rice Program</option><option value="DA-Corn">DA-Corn Program</option><option>DA-ATI</option><option value="Agricultural Training Division (ATD)" selected>Agricultural Training Division (ATD)</option></select><small class="form-text" id="implementingOfficeHelp">The implementing office is fixed for this training and cannot be changed here.</small></label>
                   <label>Training type <select class="form-select" name="training_type" required><option value="">Choose type</option><option>Crop Production</option><option>Organic Agriculture</option><option>Agribusiness</option><option>Livestock and Poultry</option><option>Fisheries</option><option>Post-harvest and Processing</option><option>Farm Mechanization</option><option selected>In-Plant Training</option></select></label>
+                  <label>Additional status <select class="form-select" name="customStatusId"><option value="">No additional status</option></select><small class="form-text">Independent of training workflow and Active / Inactive status.</small></label>
                   <label>Partner organization <input class="form-control" name="partner_organization" maxlength="150" placeholder="Optional partner or program"></label>
                   <label class="training-edit-wide">Brief description / objective <textarea class="form-control" name="training_description" rows="3" required>This training aims to enhance the knowledge and skills of farmers on Good Agricultural Practices (GAP) to promote safe, sustainable, and productive farming.</textarea></label>
                 </div></section>
@@ -838,7 +839,7 @@ class="layout-fixed"
                   <label>Start date <input class="form-control" type="date" name="start_date" value="2025-05-22" required></label><label>End date <input class="form-control" type="date" name="end_date" value="2025-05-23" required></label>
                   <label class="training-edit-wide">Venue / location <input class="form-control" name="venue_location" value="Brgy. San Antonio, Tanauan City" required></label>
                   <label>Region <select class="form-select" name="region_id" required><option value="">Choose region</option><option value="region_4a" selected>Region IV-A (CALABARZON)</option><option value="region_1">Region I (Ilocos Region)</option></select></label>
-                  <label>District <select class="form-select" name="district_id" required></select></label><label>Province <select class="form-select" name="province_id" required></select></label><label>Municipality / City <select class="form-select" name="municipality_id" required></select></label><label>Barangay <select class="form-select" name="barangay_id" required></select></label>
+                  <label>Province <select class="form-select" name="province_id" required></select></label><label>District <select class="form-select" name="district_id" required></select></label><label>Municipality / City <select class="form-select" name="municipality_id" required></select></label><label>Barangay <select class="form-select" name="barangay_id" required></select></label>
                   <fieldset class="training-edit-wide training-edit-mode"><legend>Delivery mode</legend><label><input type="radio" name="delivery_mode" value="In-person" checked><i class="bi bi-people"></i><span>In-person</span></label><label><input type="radio" name="delivery_mode" value="Online"><i class="bi bi-display"></i><span>Online</span></label><label><input type="radio" name="delivery_mode" value="Blended"><i class="bi bi-person-workspace"></i><span>Blended</span></label></fieldset>
                 </div></section>
                 <section class="training-edit-section" aria-labelledby="editParticipantsTitle"><div class="training-edit-section-heading"><span>04</span><div><h3 id="editParticipantsTitle">Participants &amp; questionnaires</h3><p>Target attendance and selected assessments</p></div></div><div class="training-edit-grid">
@@ -846,15 +847,122 @@ class="layout-fixed"
                   <div class="training-edit-wide"><span class="training-edit-label">Pre-test questionnaires</span><div id="editPretestList" class="training-edit-repeat"></div><button class="btn training-edit-add" type="button" data-add-questionnaire="pretest"><i class="bi bi-plus-lg"></i> Add pre-test</button></div>
                   <div class="training-edit-wide"><span class="training-edit-label">Post-test questionnaires</span><div id="editPosttestList" class="training-edit-repeat"></div><button class="btn training-edit-add" type="button" data-add-questionnaire="posttest"><i class="bi bi-plus-lg"></i> Add post-test</button></div>
                 </div></section>
-              </div><footer class="training-edit-footer"><span>Changes to this form are saved in this browser.</span><button class="btn training-edit-save" type="submit" disabled><i class="bi bi-check2-circle"></i> Save changes</button></footer>
+              </div><footer class="training-edit-footer"><span>Review the update details before saving.</span><button class="btn training-edit-save" type="submit" disabled><i class="bi bi-check2-circle"></i> Save changes</button></footer>
             </form>
+            <div class="modal fade" id="editTrainingConfirmModal" tabindex="-1" aria-labelledby="editTrainingConfirmTitle" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content training-edit-confirm-modal">
+                  <div class="modal-header">
+                    <div><span class="training-edit-eyebrow">Training information</span><h2 class="modal-title fs-5" id="editTrainingConfirmTitle">Confirm your updates</h2></div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <p class="training-edit-confirm-copy">Check the record details before saving your changes.</p>
+                    <dl class="training-edit-confirm-details">
+                      <div><dt>Training</dt><dd id="editTrainingConfirmName"></dd></div>
+                      <div><dt>Current workflow status</dt><dd id="editTrainingConfirmStatus"></dd></div>
+                      <div><dt>Updated fields</dt><dd id="editTrainingConfirmChanges"></dd></div>
+                    </dl>
+                    <p class="training-edit-confirm-note"><i class="bi bi-info-circle" aria-hidden="true"></i> Saving information does not change the workflow status. Details can only be updated while the training is For Review.</p>
+                    <p id="editTrainingConfirmError" class="alert alert-danger py-2 mb-0" role="alert" hidden></p>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn training-edit-confirm-save" id="confirmEditTrainingSave"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Save updates</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal fade" id="editTrainingStatusModal" tabindex="-1" aria-labelledby="editTrainingStatusTitle" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <form class="modal-content training-edit-confirm-modal" id="editTrainingStatusForm">
+                  <div class="modal-header">
+                    <div><span class="training-edit-eyebrow">Training status</span><h2 class="modal-title fs-5" id="editTrainingStatusTitle">Update training status</h2></div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <p class="training-edit-confirm-copy">Choose whether this training is active. Its workflow status will not change.</p>
+                    <dl class="training-edit-confirm-details">
+                      <div><dt>Training</dt><dd id="editTrainingStatusName"></dd></div>
+                      <div><dt>Current workflow status</dt><dd id="editTrainingWorkflowStatus"></dd></div>
+                    </dl>
+                    <label class="training-status-field" for="editTrainingActiveStatus">Training status
+                      <select class="form-select" id="editTrainingActiveStatus" required>
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                      </select>
+                    </label>
+                    <div class="training-status-field mt-3" id="editTrainingStatusRemarksField" hidden>
+                      <label for="editTrainingStatusRemarks">Remarks <span class="text-required">*</span></label>
+                      <textarea class="form-control" id="editTrainingStatusRemarks" rows="3" maxlength="2000" placeholder="Explain why this training is inactive"></textarea>
+                    </div>
+                    <p id="editTrainingStatusError" class="alert alert-danger py-2 mt-3 mb-0" role="alert" hidden></p>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn training-edit-confirm-save" id="saveEditTrainingStatus"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Save status</button>
+                  </div>
+                </form>
+              </div>
+            </div>
           </section>
           <section id="participants-panel" class="training-panel" role="tabpanel" aria-labelledby="participants-tab" hidden>
             <div class="edit-participants-shell training-card">
               <header class="edit-participants-header"><div><span class="edit-participants-eyebrow">Training roster</span><h2>Participants</h2><p>Manage the farmers attending this training.</p></div><span id="editParticipantTotal" class="edit-participants-total">24 current participants</span></header>
               <nav class="edit-participants-tabs" aria-label="Participant management" role="tablist"><button id="editCurrentTab" class="is-active" type="button" role="tab" aria-selected="true" aria-controls="editCurrentPanel">Current participants</button><button id="editAddTab" type="button" role="tab" aria-selected="false" aria-controls="editAddPanel">Add participants</button></nav>
-              <section id="editCurrentPanel" class="edit-participants-content" role="tabpanel" aria-labelledby="editCurrentTab"><div class="edit-participants-toolbar"><label class="edit-participants-search"><i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden">Search current participants</span><input class="form-control" id="editCurrentSearch" type="search" placeholder="Search ID, name, or location"></label><select class="form-select" id="editCurrentRegion" data-location-filter="region" aria-label="Filter current participants by region"><option value="">All regions</option></select><select class="form-select" id="editCurrentProvince" data-location-filter="province" aria-label="Filter current participants by province"><option value="">All provinces</option></select><select class="form-select" id="editCurrentMunicipality" data-location-filter="municipality" aria-label="Filter current participants by municipality"><option value="">All municipalities</option></select><button class="btn edit-participants-icon" id="editParticipantRefresh" type="button" title="Refresh roster" aria-label="Refresh roster"><i class="bi bi-arrow-clockwise"></i></button><button class="btn edit-participants-export" id="editParticipantExport" type="button"><i class="bi bi-download"></i> Export list</button></div><div class="edit-participants-table-wrap"><table class="table edit-participants-table"><caption class="visually-hidden">Current participants for this training</caption><thead><tr><th scope="col">Farmer ID</th><th scope="col">Full name</th><th scope="col">Region</th><th scope="col">Province</th><th scope="col">Municipality / City</th><th scope="col">Barangay</th></tr></thead><tbody id="editCurrentRows"></tbody></table></div><p class="edit-participants-empty" id="editCurrentEmpty" hidden>No current participants match your search.</p><div class="edit-participants-table-footer"><span id="editCurrentCount"></span><span id="editParticipantFeedback" role="status" aria-live="polite"></span></div></section>
-              <section id="editAddPanel" class="edit-participants-content" role="tabpanel" aria-labelledby="editAddTab" hidden><div class="edit-participants-intro"><div><h3>Find farmers to add</h3><p>Available farmers are matched to this training's beneficiary region, province, and municipality.</p></div><span id="editAvailableCount"></span></div><div class="edit-participants-toolbar"><label class="edit-participants-search"><i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden">Search available participants</span><input class="form-control" id="editAvailableSearch" type="search" placeholder="Search ID, name, or location"></label><select class="form-select" id="editAvailableRegion" data-location-filter="region" aria-label="Filter available participants by region"><option value="">All regions</option></select><select class="form-select" id="editAvailableProvince" data-location-filter="province" aria-label="Filter available participants by province"><option value="">All provinces</option></select><select class="form-select" id="editAvailableMunicipality" data-location-filter="municipality" aria-label="Filter available participants by municipality"><option value="">All municipalities</option></select><button class="btn edit-participants-clear" id="editAvailableClear" type="button">Clear filters</button></div><div class="edit-participants-table-wrap"><table class="table edit-participants-table"><caption class="visually-hidden">Farmers available to add to this training</caption><thead><tr><th scope="col"><input id="editSelectAll" type="checkbox" aria-label="Select all visible participants"></th><th scope="col">Farmer ID</th><th scope="col">Full name</th><th scope="col">Region</th><th scope="col">Province</th><th scope="col">Municipality / City</th><th scope="col">Barangay</th></tr></thead><tbody id="editAvailableRows"></tbody></table></div><p class="edit-participants-empty" id="editAvailableEmpty" hidden>No active, eligible farmers match this training's location.</p><div class="edit-participants-selection"><span id="editSelectedCount">0 selected</span><button class="btn edit-participants-add" id="editAddSelected" type="button" disabled><i class="bi bi-person-plus"></i> Add selected participants</button></div></section>
+              <section id="editCurrentPanel" class="edit-participants-content" role="tabpanel" aria-labelledby="editCurrentTab">
+                <div class="edit-participants-toolbar edit-participants-toolbar-current">
+                  <label class="edit-participants-search">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <span class="visually-hidden">Search current participants by ID, name, or barangay</span>
+                    <input class="form-control" id="editCurrentSearch" type="search" placeholder="Search ID, name, or barangay">
+                  </label>
+                  <button class="btn edit-participants-icon" type="button" data-refresh-participants="current" aria-label="Refresh current participants">
+                    <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Refresh
+                  </button>
+                  <button class="btn edit-participants-export" type="button" data-export-participants="current">
+                    <i class="bi bi-file-earmark-excel" aria-hidden="true"></i> Export XLSX
+                  </button>
+                </div>
+                <div class="edit-participants-table-wrap">
+                  <table class="table edit-participants-table">
+                    <caption class="visually-hidden">Current participants for this training</caption>
+                    <thead>
+                      <tr><th scope="col">Farmer ID</th><th scope="col">Full name</th><th scope="col">Region</th><th scope="col">Province</th><th scope="col">Municipality / City</th><th scope="col">Barangay</th></tr>
+                    </thead>
+                    <tbody id="editCurrentRows"></tbody>
+                  </table>
+                </div>
+                <p class="edit-participants-empty" id="editCurrentEmpty" hidden>No current participants match your search.</p>
+                <div class="edit-participants-table-footer"><span id="editCurrentCount"></span><span id="editParticipantFeedback" role="status" aria-live="polite"></span></div>
+              </section>
+              <section id="editAddPanel" class="edit-participants-content" role="tabpanel" aria-labelledby="editAddTab" hidden>
+                <div class="edit-participants-intro">
+                  <div><h3>Find farmers to add</h3><p>Only active farmers matching this training's region, province, and municipality are listed.</p></div>
+                  <span id="editAvailableCount"></span>
+                </div>
+                <div class="edit-participants-toolbar">
+                  <label class="edit-participants-search">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <span class="visually-hidden">Search available farmers by ID, name, or barangay</span>
+                    <input class="form-control" id="editAvailableSearch" type="search" placeholder="Search ID, name, or barangay">
+                  </label>
+                  <button class="btn edit-participants-icon" type="button" data-refresh-participants="available" aria-label="Refresh available farmers">
+                    <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Refresh
+                  </button>
+                </div>
+                <div class="edit-participants-table-wrap">
+                  <table class="table edit-participants-table">
+                    <caption class="visually-hidden">Farmers available to add to this training</caption>
+                    <thead>
+                      <tr><th scope="col"><input id="editSelectAll" type="checkbox" aria-label="Select all matching eligible farmers across all pages"></th><th scope="col">Farmer ID</th><th scope="col">Full name</th><th scope="col">Region</th><th scope="col">Province</th><th scope="col">Municipality / City</th><th scope="col">Barangay</th></tr>
+                    </thead>
+                    <tbody id="editAvailableRows"></tbody>
+                  </table>
+                </div>
+                <p class="edit-participants-empty" id="editAvailableEmpty" hidden>No active, eligible farmers match this training's location.</p>
+                <div class="edit-participants-selection"><span id="editSelectedCount">0 selected</span><span id="editAvailableFeedback" role="status" aria-live="polite"></span><button class="btn edit-participants-add" id="editAddSelected" type="button" disabled><i class="bi bi-person-plus" aria-hidden="true"></i> Add selected participants</button></div>
+              </section>
             </div>
           </section>
           <section id="highlights-panel" class="training-panel" role="tabpanel" aria-labelledby="highlights-tab" hidden></section>
@@ -1883,10 +1991,10 @@ class="layout-fixed"
       {"pretest":[{"id":"PRE-GEN-01","name":"General Knowledge Assessment (Pre-test)","itemCount":12,"averageCorrect":8.1},{"id":"PRE-CROP-01","name":"Crop Production Pre-test","itemCount":12,"averageCorrect":8.328}],"posttest":[{"id":"POST-GEN-01","name":"General Knowledge Assessment (Post-test)","itemCount":12,"averageCorrect":10.2},{"id":"POST-CROP-01","name":"Crop Production Post-test","itemCount":12,"averageCorrect":10.5168}]}
     </script>
     <script src="{{ asset('src/js/training/id/view-training-assessments.js') }}"></script>
-    <script src="{{ asset('src/js/training/id/edit-training-participants.js?v=training-location-roster-1') }}"></script>
+    <script src="{{ asset('src/js/training/id/edit-training-participants.js?v=training-participant-controls-4') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-highlights.js') }}"></script>
     <script src="{{ asset('src/js/training/id/edit-training-highlights.js') }}"></script>
     <script src="{{ asset('src/js/training/id/edit-training-attachments-cards.js') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-logs.js?v=live-logs-20261109-3') }}"></script>
-    <script src="{{ asset('src/js/training/id/edit-training.js?v=trainer-detail-fields-1') }}"></script>
+    <script src="{{ asset('src/js/training/id/edit-training.js?v=training-status-badge-1') }}"></script>
 @endsection
