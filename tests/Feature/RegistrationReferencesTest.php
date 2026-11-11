@@ -404,7 +404,7 @@ class RegistrationReferencesTest extends TestCase
         $this->signIn();
         $this->postJson('/system/settings', ['maintenance_enabled' => true, 'maintenance_message' => 'Scheduled', 'maintenance_until' => '2026-11-06T10:30', 'maintenance_timezone' => 'Asia/Manila'])->assertOk();
         $this->assertDatabaseHas('system_settings', ['maintenance_until' => '2026-11-06 02:30:00']);
-        $this->get('/system/settings')->assertOk()->assertSee('2026-11-06T10:30')->assertSee('Philippine time');
+        $this->get('/system/settings')->assertOk()->assertSee('2026-11-06T10:30')->assertSee('Asia/Manila time');
         $this->postJson('/system/settings', ['maintenance_enabled' => true, 'maintenance_until' => '2026-11-06T08:30', 'maintenance_timezone' => 'Asia/Manila'])->assertUnprocessable()->assertJsonValidationErrors('maintenance_until');
     }
 

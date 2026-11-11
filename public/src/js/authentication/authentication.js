@@ -15,6 +15,21 @@ document.querySelectorAll(".authenticator-container form").forEach((form) => {
   }, true);
 });
 
+const signInForm = document.getElementById("authenticator_form");
+signInForm?.addEventListener("submit", () => {
+  const button = signInForm.querySelector(".auth-submit-button");
+  if (!button || button.disabled) {
+    return;
+  }
+
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  button.classList.add("is-loading");
+  button.querySelector(".auth-submit-label").textContent = "Signing in...";
+  button.querySelector(".submit-spinner").hidden = false;
+  button.querySelector(".auth-submit-arrow").hidden = true;
+});
+
 document.querySelectorAll("[data-password-target]").forEach((toggle) => {
   toggle.addEventListener("click", () => {
     const password = document.getElementById(toggle.dataset.passwordTarget);

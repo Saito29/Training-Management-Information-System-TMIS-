@@ -23,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
       try { sessionStorage.removeItem('tmis-current-user-id'); } catch { /* Storage may be disabled. */ }
       window.location.assign(loginUrl.href);
     });
-<<<<<<< HEAD
     const queueBadges = [
       ...document.querySelectorAll('.badge-review'),
       ...document.querySelectorAll('.badge-approval'),
@@ -60,8 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
       queueBadges.forEach((badge) => { badge.hidden = true; });
       console.error('Unable to load training queue counts.', error);
     });
-=======
->>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
     const accountPages = { Profile: 'profile', Logs: 'logs' };
     document.querySelectorAll('.app-profile a, .app-mobile-menu a').forEach((link) => {
       const file = accountPages[link.textContent.trim()];

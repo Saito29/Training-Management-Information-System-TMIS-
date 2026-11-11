@@ -47,6 +47,25 @@ class OriginalInterfaceTest extends TestCase
         $this->get('/app/admin/participants/details/fa-all-list')->assertOk()->assertViewIs('admin.participants.details.fa-all-list')->assertSee('TMIS_PAGE')->assertDontSee('TMIS database operations:');
     }
 
+    public function test_dashboard_association_count_uses_database_active_status(): void
+    {
+        $this->signIn();
+        $this->save('tmis-farmer-associations', [
+            'id' => 'FA-STALE-STATUS',
+            'association_name' => 'Inactive Association',
+            'region_id' => '4',
+            'org_id' => '1',
+            'status' => 'Active',
+        ])->assertOk();
+
+        DB::table('associations')->where('ui_id', 'FA-STALE-STATUS')->update(['is_active' => false]);
+
+        $this->getJson('/ui/data')
+            ->assertOk()
+            ->assertJsonPath('stores.tmis-farmer-associations.0.status', 'Inactive')
+            ->assertJsonPath('dashboard.associationCount', 0);
+    }
+
     public function test_association_registration_saves_a_region_and_its_matching_office(): void
     {
         $this->signIn(1, 2);
@@ -275,16 +294,37 @@ class OriginalInterfaceTest extends TestCase
         $this->assertSame('Region IV-A', $associations->firstWhere('id', 'FA-LIST-ACTIVE')['region']);
     }
 
-    public function test_all_farmer_status_page_includes_inactive_profiles_and_labeled_page_size_controls(): void
+    public function test_all_farmer_status_page_lists_only_active_profiles(): void
     {
         $this->signIn();
+        $this->save('tmis-farmers', [
+            'id' => 'FMR-LIST-ACTIVE',
+            'fname' => 'Active',
+            'lname' => 'Farmer',
+            'gender' => 'Female',
+            'dob' => '1990-01-01',
+            'status' => 'Active',
+        ])->assertOk();
+        $this->save('tmis-farmers', [
+            'id' => 'FMR-LIST-INACTIVE',
+            'fname' => 'Inactive',
+            'lname' => 'Farmer',
+            'gender' => 'Female',
+            'dob' => '1990-01-01',
+            'status' => 'Inactive',
+        ])->assertOk();
 
         $this->get(route('admin.participants.details.all-with-status'))
             ->assertOk()
-            ->assertSee('All Farmer Profiles')
-            ->assertSee('active and inactive farmer profiles')
-            ->assertSee('All farmer profiles')
-            ->assertSee('all-status-page-size-1');
+            ->assertSee('Active Farmer Profiles')
+            ->assertSee('Active Farmers')
+            ->assertSee('View and manage active farmer profiles.')
+            ->assertSee('Inactive farmer profiles are excluded from this list.')
+            ->assertDontSee('This list includes active and inactive farmer profiles.')
+            ->assertSee('all-status.js?v=active-farmer-list-1', false);
+        $farmers = collect($this->getJson('/ui/data')->assertOk()->json('stores.tmis-farmers'));
+        $this->assertSame('Active', $farmers->firstWhere('id', 'FMR-LIST-ACTIVE')['status']);
+        $this->assertSame('Inactive', $farmers->firstWhere('id', 'FMR-LIST-INACTIVE')['status']);
     }
 
     public function test_farmer_association_view_and_edit_pages_accept_the_association_id_in_the_path(): void
@@ -386,7 +426,6 @@ class OriginalInterfaceTest extends TestCase
         $this->assertStringNotContainsString('Confidential disability', DB::table('participants')->value('protected_details'));
     }
 
-<<<<<<< HEAD
     public function test_farmer_number_routes_open_the_profile_and_use_the_number_in_activity_logs(): void
     {
         $this->signIn();
@@ -401,19 +440,20 @@ class OriginalInterfaceTest extends TestCase
         ])->assertOk();
         $farmerNumber = $response->json('stores.tmis-farmers.0.farmerNumber');
 
-        $this->get(route('admin.participants.id.view-farmer', ['farmer' => $farmerNumber]))
+        $this->get(route('admin.participants.id.view-farmer', ['id' => $farmerNumber]))
             ->assertOk()
             ->assertViewIs('admin.participants.id.view-farmer');
-        $this->get(route('admin.participants.id.edit-farmer', ['farmer' => $farmerNumber]))
+        $this->get(route('admin.participants.id.edit-farmer', ['id' => $farmerNumber]))
             ->assertOk()
             ->assertViewIs('admin.participants.id.edit-farmer');
         $this->get('/app/admin/participants/id/view-farmer?id=FMR-ROUTE-001')->assertOk();
         $this->getJson('/ui/data', [
             'X-TMIS-PAGE' => '/app/admin/participants/id/view-farmer/'.$farmerNumber,
         ])->assertOk()
-            ->assertJsonPath('stores.tmis-farmers.0.activityLogs.0.reference', $farmerNumber)
-            ->assertJsonPath('stores.tmis-farmers.0.activityLogs.0.description', 'Farmer profile was registered successfully.');
-=======
+            ->assertJsonPath('stores.tmis-farmers.0.activityLogs.0.title', 'Farmer Profile Created')
+            ->assertJsonPath('stores.tmis-farmers.0.activityLogs.0.status', 'Success');
+    }
+
     public function test_association_roster_exposes_farmer_number_separately_from_internal_id(): void
     {
         $this->signIn();
@@ -533,9 +573,22 @@ class OriginalInterfaceTest extends TestCase
             ->assertSee('Treasurer');
         $this->get(route('admin.participants.id.edit-farmer', ['id' => 'FMR-MULTI-ASSOCIATION']))
             ->assertOk()
+            ->assertSee('id="farmer_association_id" name="association_id" disabled', false)
             ->assertSee('data-association-memberships', false)
             ->assertSee('Secondary Association')
             ->assertSee('Treasurer');
+
+        $updatedFarmer = collect($this->getJson('/ui/data')->assertOk()->json('stores.tmis-farmers'))
+            ->firstWhere('id', 'FMR-MULTI-ASSOCIATION');
+        unset($updatedFarmer['association_id']);
+        $this->save('tmis-farmers', $updatedFarmer)->assertOk();
+
+        $this->assertDatabaseHas('participant_association_memberships', [
+            'participant_id' => DB::table('participants')->where('ui_id', 'FMR-MULTI-ASSOCIATION')->value('id'),
+            'association_id' => DB::table('associations')->where('ui_id', 'FA-MULTI-PRIMARY')->value('id'),
+            'role' => 'Secretary',
+            'is_primary' => true,
+        ]);
 
         $primaryAssociation = collect($this->getJson('/ui/data')->assertOk()->json('stores.tmis-farmer-associations'))
             ->firstWhere('id', 'FA-MULTI-PRIMARY');
@@ -612,6 +665,24 @@ class OriginalInterfaceTest extends TestCase
         }
     }
 
+    public function test_inactive_database_participant_is_not_returned_as_active_when_saved_status_is_stale(): void
+    {
+        $this->signIn();
+        $this->save('tmis-farmers', [
+            'id' => 'FMR-STALE-ACTIVE',
+            'fname' => 'Ana',
+            'lname' => 'Santos',
+            'status' => 'Active',
+        ])->assertOk();
+        DB::table('participants')->where('ui_id', 'FMR-STALE-ACTIVE')->update(['is_active' => false]);
+
+        $farmer = collect($this->getJson('/ui/data')->assertOk()->json('stores.tmis-farmers'))
+            ->firstWhere('id', 'FMR-STALE-ACTIVE');
+
+        $this->assertSame('Inactive', $farmer['status']);
+        $this->assertSame('Inactive', $farmer['profileStatus']);
+    }
+
     public function test_farmer_data_includes_each_beneficiary_region_and_office(): void
     {
         $user = $this->signIn();
@@ -638,7 +709,6 @@ class OriginalInterfaceTest extends TestCase
             ->assertJsonPath('stores.tmis-farmers.0.beneficiaryOffices.0.office', 'DA - SAAD')
             ->assertJsonPath('stores.tmis-farmers.0.beneficiaryOffices.1.region', 'Region IV-A')
             ->assertJsonPath('stores.tmis-farmers.0.beneficiaryOffices.1.office', 'DA - 4K');
->>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
     }
 
     public function test_original_training_form_creates_review_and_submission_still_requires_design(): void
@@ -663,6 +733,7 @@ class OriginalInterfaceTest extends TestCase
             'id' => 'RP-OTHER-OFFICE',
             'first_name' => 'Ramon',
             'last_name' => 'Santos',
+            'email' => 'ramon.santos@example.test',
             'region_id' => '4',
             'status' => 'Active',
         ])->assertOk();
@@ -699,6 +770,20 @@ class OriginalInterfaceTest extends TestCase
             'training_id' => $trainingId,
             'resource_person_id' => $resourcePersonId,
         ]);
+    }
+
+    public function test_resource_person_creation_requires_at_least_one_contact_method(): void
+    {
+        $this->signIn();
+
+        $this->save('tmis-resource-persons', [
+            'id' => 'RP-NO-CONTACT',
+            'first_name' => 'Ramon',
+            'last_name' => 'Santos',
+            'status' => 'Active',
+        ])->assertUnprocessable()->assertJsonValidationErrors('phone');
+
+        $this->assertDatabaseMissing('resource_persons', ['ui_id' => 'RP-NO-CONTACT']);
     }
 
     public function test_temporary_training_ids_are_replaced_with_sequential_public_ids(): void

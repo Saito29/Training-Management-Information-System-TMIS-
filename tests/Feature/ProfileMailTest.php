@@ -34,6 +34,6 @@ class ProfileMailTest extends TestCase
         $this->get(route('admin.users.profile'))->assertOk()->assertViewIs('admin.users.profile')
             ->assertSee('id="mail-tab"', false)->assertSee('id="mail-panel"', false)
             ->assertSee('Choose recipients')->assertSee('All regions')->assertSee('All offices')
-            ->assertSee('Load sample users')->assertSee('Rows per page');
+            ->assertSee('Find recipients')->assertSee('Refresh users')->assertSee('Rows per page');
     }
 }

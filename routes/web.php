@@ -136,17 +136,10 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::view('/app/admin/participants/details/fa-all-list', 'admin.participants.details.fa-all-list')->name('admin.participants.details.fa-all-list');
     Route::view('/app/admin/participants/details/fa-inactive', 'admin.participants.details.fa-inactive')->name('admin.participants.details.fa-inactive');
     Route::view('/app/admin/participants/details/inactive', 'admin.participants.details.inactive')->name('admin.participants.details.inactive');
-<<<<<<< HEAD
-    Route::view('/app/admin/participants/id/edit-fa', 'admin.participants.id.edit-fa')->name('admin.participants.id.edit-fa');
-    Route::view('/app/admin/participants/id/edit-farmer/{farmer?}', 'admin.participants.id.edit-farmer')->where('farmer', '[0-9]{8,}')->name('admin.participants.id.edit-farmer');
-    Route::view('/app/admin/participants/id/view-fa', 'admin.participants.id.view-fa')->name('admin.participants.id.view-fa');
-    Route::view('/app/admin/participants/id/view-farmer/{farmer?}', 'admin.participants.id.view-farmer')->where('farmer', '[0-9]{8,}')->name('admin.participants.id.view-farmer');
-=======
     Route::view('/app/admin/participants/id/edit-fa/{id?}', 'admin.participants.id.edit-fa')->where('id', '[A-Za-z0-9:_-]+')->name('admin.participants.id.edit-fa');
-    Route::view('/app/admin/participants/id/edit-farmer/{id?}', 'admin.participants.id.edit-farmer')->name('admin.participants.id.edit-farmer');
+    Route::view('/app/admin/participants/id/edit-farmer/{id?}', 'admin.participants.id.edit-farmer')->where('id', '[A-Za-z0-9:_-]+')->name('admin.participants.id.edit-farmer');
     Route::view('/app/admin/participants/id/view-fa/{id?}', 'admin.participants.id.view-fa')->where('id', '[A-Za-z0-9:_-]+')->name('admin.participants.id.view-fa');
-    Route::view('/app/admin/participants/id/view-farmer/{id?}', 'admin.participants.id.view-farmer')->name('admin.participants.id.view-farmer');
->>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
+    Route::view('/app/admin/participants/id/view-farmer/{id?}', 'admin.participants.id.view-farmer')->where('id', '[A-Za-z0-9:_-]+')->name('admin.participants.id.view-farmer');
     Route::view('/app/admin/training/create/register', 'admin.training.create.register')->name('admin.training.create.register');
     Route::view('/app/admin/training/create/rp-register', 'admin.training.create.rp-register')->name('admin.training.create.rp-register');
     Route::view('/app/admin/training/details/all-status', 'admin.training.details.all-status')->name('admin.training.details.all-status');

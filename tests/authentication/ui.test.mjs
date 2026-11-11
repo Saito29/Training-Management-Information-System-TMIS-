@@ -7,10 +7,24 @@ const authentication = readFileSync('resources/js/authentication/authentication.
 const verification = readFileSync('resources/js/authentication/email-verification.js', 'utf8');
 
 function element(value = '') {
+  const children = {};
+  const classes = new Set();
   return {
     value, handlers: {}, dataset: {}, hidden: false, textContent: '', disabled: false,
-    attributes: {}, classList: { values: new Set(), add(name) { this.values.add(name); }, toggle() {} },
+    attributes: {}, children,
+    classList: {
+      values: classes,
+      add(name) { classes.add(name); },
+      remove(name) { classes.delete(name); },
+      toggle(name, force) {
+        const shouldAdd = force ?? !classes.has(name);
+        if (shouldAdd) classes.add(name);
+        else classes.delete(name);
+        return shouldAdd;
+      },
+    },
     addEventListener(name, callback) { this.handlers[name] = callback; },
+    querySelector(selector) { return children[selector] || null; },
     setAttribute(name, value) { this.attributes[name] = value; }, removeAttribute() {}, focus() {}, reportValidity() { return true; },
   };
 }
@@ -50,6 +64,30 @@ test('blank required fields show an error toast and focus the field', () => {
   form.handlers.invalid({ preventDefault() {}, target: { validationMessage: 'Enter the 6-digit verification code.', focus() { focused = true; } } });
   assert.equal(focused, true);
   assert.equal(browser.toasts[0].type, 'error');
+});
+
+test('sign-in button shows the visibility-style loading state during submission', () => {
+  const form = element();
+  const button = element();
+  const label = element('Sign in');
+  const spinner = element();
+  const arrow = element();
+  spinner.hidden = true;
+  button.children['.auth-submit-label'] = label;
+  button.children['.submit-spinner'] = spinner;
+  button.children['.auth-submit-arrow'] = arrow;
+  form.children['.auth-submit-button'] = button;
+  const browser = context({ authenticator_form: form });
+  vm.runInNewContext(authentication, browser.globals);
+
+  form.handlers.submit();
+
+  assert.equal(button.disabled, true);
+  assert.equal(button.attributes['aria-busy'], 'true');
+  assert.equal(button.classList.values.has('is-loading'), true);
+  assert.equal(label.textContent, 'Signing in...');
+  assert.equal(spinner.hidden, false);
+  assert.equal(arrow.hidden, true);
 });
 
 test('valid reset passwords submit to the server; mismatched passwords show an error', () => {

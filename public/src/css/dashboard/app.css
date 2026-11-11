@@ -396,13 +396,17 @@
   .app-left-main-content-body
   .app-left-main-content-date {
   color: #f7f9f7;
-  padding: 0 20px;
+  width: max-content;
+  max-width: calc(100% - 80px);
+  box-sizing: border-box;
+  padding: 0 12px;
   height: 40px;
-  max-width: 220px;
   margin: auto 40px 20px;
   display: flex;
-  justify-content: space-evenly;
+  justify-content: flex-start;
   align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
   background-color: rgba(247, 249, 247, 0.2);
   backdrop-filter: blur(4px);
   border-radius: 8px;
@@ -414,6 +418,7 @@
   .app-left-main-content-body
   .app-left-main-content-date
   i {
+  flex: 0 0 auto;
   font-size: 18px;
 }
 
@@ -422,8 +427,10 @@
   .app-left-main-content-body
   .app-left-main-content-date
   .app-left-content-date {
+  flex: 0 0 auto;
   font-size: 12px;
   font-weight: 400;
+  white-space: nowrap;
 }
 
 .app-main
@@ -431,6 +438,7 @@
   .app-left-main-content-body
   .app-left-main-content-date
   .app-left-content-divider {
+  flex: 0 0 1px;
   width: 1px;
   height: 50%;
   background-color: #f7f9f7;
@@ -441,8 +449,10 @@
   .app-left-main-content-body
   .app-left-main-content-date
   .app-left-content-day {
+  flex: 0 0 auto;
   font-size: 12px;
   font-weight: 400;
+  white-space: nowrap;
 }
 
 /* Training title: bottom strip of the left welcome panel. */
@@ -483,6 +493,20 @@
 .app-main .app-main-body .card-app-right-main-content:hover {
   box-shadow: 0 14px 32px rgba(38, 50, 56, 0.12);
   transform: translateY(-2px);
+}
+
+.app-main .app-main-body .card-app-right-main-content:hover,
+.app-main .app-main-body .card-app-right-main-content:focus-within {
+  position: relative;
+  z-index: 2;
+}
+
+.app-main .app-main-body .row.first-row-right > [class*='col-']:hover,
+.app-main .app-main-body .row.first-row-right > [class*='col-']:focus-within,
+.app-main .app-main-body .row.second-row > [class*='col-']:hover,
+.app-main .app-main-body .row.second-row > [class*='col-']:focus-within {
+  position: relative;
+  z-index: 3;
 }
 
 /* Chart card header: icon, title, total, and filter button. */
@@ -788,14 +812,19 @@
   Shows the selected month and municipality training values.
   ============================================================ */
 .apexcharts-tooltip {
+  max-width: calc(100vw - 24px);
   pointer-events: none !important;
   overflow: visible !important;
 }
 
 .apexcharts-tooltip-custom {
-  min-width: 220px;
-  max-height: none;
-  overflow: visible;
+  width: min(280px, calc(100vw - 32px));
+  min-width: min(220px, calc(100vw - 32px));
+  max-height: min(45dvh, 360px);
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 12px 14px;
   color: #263238;
   background: #fff;
@@ -889,7 +918,13 @@
   font-size: 11px;
 }
 
+.apexcharts-tooltip-row > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .apexcharts-tooltip-row strong {
+  flex: 0 0 auto;
   color: #263238;
 }
 
@@ -1030,12 +1065,13 @@
   background-color: #f7f9f7;
   outline: 1px solid #e0e0e0;
   padding: 8px 12px;
-  border-radius: 12%;
+  border-radius: 12px;
   color: #2e7d32;
-  height: 46px;
-  width: 46px;
+  height: 56px;
+  width: 52px;
+  flex: 0 0 52px;
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 1.15;
 }
 
 .app-main
@@ -1046,6 +1082,7 @@
   .card-date
   .card-month {
   font-size: 10px;
+  text-transform: uppercase;
 }
 
 .app-main
@@ -1055,7 +1092,8 @@
   .card-wrapper
   .card-date
   .card-date-text {
-  font-size: 10px;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* card training details wrapper */
@@ -1112,13 +1150,30 @@
   .card-wrapper
   .card-dl-range {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: flex-start;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 4px;
   color: #8d8d8d;
   font-size: 10px;
   padding: 4px 0;
-  text-wrap: wrap;
   font-weight: 500;
+}
+
+.app-main .app-main-body .card-upcoming-training .card-date-range,
+.app-main .app-main-body .card-upcoming-training .card-location {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  min-width: 0;
+  width: 100%;
+}
+
+.app-main .app-main-body .card-upcoming-training .card-range-date,
+.app-main .app-main-body .card-upcoming-training .card-location-text {
+  min-width: 0;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 /* card slot */
@@ -1743,23 +1798,23 @@
   flex-wrap: wrap;
 }
 
-/* Keep Excel export, page size, and search in one balanced toolbar row. */
-.dashboard-report-modal .dt-layout-row:has(.dashboard-report-length-top) {
+/* Keep export and page size together while search stays aligned to the right. */
+.dashboard-report-modal .dt-layout-row:has(.dt-buttons) {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(220px, auto);
   align-items: center;
+  gap: 16px;
   margin: 0 0 16px;
 }
 
-.dashboard-report-modal .dt-layout-row:has(.dashboard-report-length-top) .dt-layout-cell:has(.dt-buttons) {
-  justify-self: start;
+.dashboard-report-modal .dt-layout-row:has(.dt-buttons) .dt-layout-cell:has(.dt-buttons) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.dashboard-report-modal .dt-layout-row:has(.dashboard-report-length-top) .dt-layout-cell:has(.dashboard-report-length-top) {
-  justify-self: center;
-}
-
-.dashboard-report-modal .dt-layout-row:has(.dashboard-report-length-top) .dt-layout-cell:has(.dt-search) {
+.dashboard-report-modal .dt-layout-row:has(.dt-buttons) .dt-layout-cell:has(.dt-search) {
   justify-self: end;
 }
 
@@ -2024,15 +2079,18 @@
     font-size: 11px;
   }
 
-  .dashboard-report-modal .dt-layout-row:has(.dashboard-report-length-top) {
+  .dashboard-report-modal .dt-layout-row:has(.dt-buttons) {
     grid-template-columns: 1fr;
     gap: 10px;
   }
 
-  .dashboard-report-modal .dt-layout-row:has(.dashboard-report-length-top) .dt-layout-cell:has(.dt-buttons),
-  .dashboard-report-modal .dt-layout-row:has(.dashboard-report-length-top) .dt-layout-cell:has(.dashboard-report-length-top),
-  .dashboard-report-modal .dt-layout-row:has(.dashboard-report-length-top) .dt-layout-cell:has(.dt-search) {
+  .dashboard-report-modal .dt-layout-row:has(.dt-buttons) .dt-layout-cell:has(.dt-buttons),
+  .dashboard-report-modal .dt-layout-row:has(.dt-buttons) .dt-layout-cell:has(.dt-search) {
     justify-self: stretch;
+  }
+
+  .dashboard-report-modal .dt-layout-row:has(.dt-buttons) .dt-layout-cell:has(.dt-buttons) {
+    justify-content: space-between;
   }
 
   .dashboard-report-modal .dt-search,
@@ -2134,15 +2192,18 @@
     gap: 12px;
   }
 
-  .dashboard-report-modal .dt-layout-row:has(.dashboard-report-length-top) {
+  .dashboard-report-modal .dt-layout-row:has(.dt-buttons) {
     grid-template-columns: 1fr;
     gap: 10px;
   }
 
-  .dashboard-report-modal .dt-layout-row:has(.dashboard-report-length-top) .dt-layout-cell:has(.dt-buttons),
-  .dashboard-report-modal .dt-layout-row:has(.dashboard-report-length-top) .dt-layout-cell:has(.dashboard-report-length-top),
-  .dashboard-report-modal .dt-layout-row:has(.dashboard-report-length-top) .dt-layout-cell:has(.dt-search) {
+  .dashboard-report-modal .dt-layout-row:has(.dt-buttons) .dt-layout-cell:has(.dt-buttons),
+  .dashboard-report-modal .dt-layout-row:has(.dt-buttons) .dt-layout-cell:has(.dt-search) {
     justify-self: stretch;
+  }
+
+  .dashboard-report-modal .dt-layout-row:has(.dt-buttons) .dt-layout-cell:has(.dt-buttons) {
+    justify-content: space-between;
   }
 
   .dashboard-report-modal .dt-search,
@@ -2433,8 +2494,14 @@
 }
 
 .app-main .app-main-body .card-beneficiary .card-chart-beneficiary {
+  display: block;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
+}
+
+.app-main .app-main-body .card-beneficiary .card-chart-beneficiary .apexcharts-canvas {
+  max-width: 100%;
 }
 
 .app-main .app-main-body :is(button, a):focus-visible {

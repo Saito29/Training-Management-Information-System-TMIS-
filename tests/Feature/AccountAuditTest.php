@@ -43,7 +43,7 @@ class AccountAuditTest extends TestCase
     public function test_approval_records_actor_and_before_after_values_atomically(): void
     {
         $actor = $this->signIn();
-        $subject = User::factory()->create(['status' => 'Pending approval', 'active_status' => 0]);
+        $subject = User::factory()->create(['role_id' => 3, 'status' => 'Pending approval', 'active_status' => 0]);
 
         $this->patchJson(route('accounts.update', $subject), ['decision' => 'Approved'])->assertOk();
 
@@ -116,7 +116,9 @@ class AccountAuditTest extends TestCase
         DB::table('users')->where('user_id', $actor->user_id)->update(['first_name' => 'Mark', 'middle_name' => 'Kinnedy', 'last_name' => 'Anda']);
         $subject = User::factory()->create(['first_name' => 'Jamie', 'middle_name' => null, 'last_name' => 'Farmer']);
         $office = DB::table('organization')->where('org_id', $actor->org_id)->value('name');
+        $region = DB::table('region')->where('region_id', $actor->region_id)->value('name');
         $subjectOffice = DB::table('organization')->where('org_id', $subject->org_id)->value('name');
+        $subjectRegion = DB::table('region')->where('region_id', $subject->region_id)->value('name');
         DB::table('users_log')->insert([
             'user_id' => $subject->user_id,
             'actor_user_id' => $actor->user_id,
@@ -127,8 +129,8 @@ class AccountAuditTest extends TestCase
 
         $response = $this->getJson(route('audit.index', ['user' => 'Mark']));
 
-        $response->assertOk()->assertJsonPath('data.0.actor_name', 'Mark K. Anda - '.$office)
-            ->assertJsonPath('data.0.user_name', 'Jamie Farmer - '.$subjectOffice)
+        $response->assertOk()->assertJsonPath('data.0.actor_name', 'Mark K. Anda - '.$office.', '.$region)
+            ->assertJsonPath('data.0.user_name', 'Jamie Farmer - '.$subjectOffice.', '.$subjectRegion)
             ->assertJsonPath('data.0.account_email', $subject->email);
         $entry = $response->json('data.0');
         $this->assertArrayNotHasKey('actor_user_id', $entry);

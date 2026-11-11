@@ -391,6 +391,15 @@ class ModuleAccess
         ];
     }
 
+    public static function authorizeRegistrationScope(User $user, int $regionId, int $officeId, string $message): void
+    {
+        $scope = self::registrationScope($user);
+        $regionIsAllowed = $scope['regionIds'] === null || in_array($regionId, $scope['regionIds'], true);
+        $officeIsAllowed = $scope['officeIds'] === null || in_array($officeId, $scope['officeIds'], true);
+
+        abort_unless($regionIsAllowed && $officeIsAllowed, 403, $message);
+    }
+
     /** Apply ownership before lookup so other offices cannot enumerate records. */
     public static function scope(Builder $query, User $user, bool $preferences = true): Builder
     {

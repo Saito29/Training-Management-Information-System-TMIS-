@@ -359,6 +359,15 @@ class OriginalInterfaceController
         $permissionAction = $existing ? 'edit' : 'create';
         // Authorize the record's exact mutation intent before any metadata or relationship changes.
         ModuleAccess::authorize($request, $module.'.'.$permissionAction);
+        if ($module === 'resource_persons' && ! $existing) {
+            $phone = trim((string) ($record['phone'] ?? $record['mobile_no'] ?? ''));
+            $email = trim((string) ($record['email'] ?? $record['email_account'] ?? ''));
+            if ($phone === '' && $email === '') {
+                throw ValidationException::withMessages([
+                    'phone' => 'A phone number or email address is required.',
+                ]);
+            }
+        }
         if (! $existing) {
             abort_if(DB::table($module)->where('ui_id', $id)->exists(), 404);
         } else {
@@ -711,9 +720,14 @@ class OriginalInterfaceController
         }
         if ($module === 'participants') {
             $payload += ['date_of_birth' => $pick(['date_of_birth', 'dateOfBirth', 'birthDate', 'birthday', 'dob']), 'sex' => $pick(['gender', 'sex']), 'nationality' => $pick(['nationality']), 'place_of_birth' => $pick(['place_of_birth', 'pob']), 'postal_code' => $pick(['postal_code']), 'house_number' => $pick(['house_building_number']), 'street' => $pick(['street_purok_sitio_name', 'street_purok_sitio']), 'telephone' => $pick(['tel_number', 'tel_number']), 'association_role' => $pick(['associate_role', 'role']), 'association_id' => null];
-            $association = $pick(['association_id', 'associate_name']);
+            $associationWasSubmitted = array_key_exists('association_id', $item) || array_key_exists('associate_name', $item);
+            $association = $associationWasSubmitted
+                ? $pick(['association_id', 'associate_name'])
+                : $existing?->association_id;
             if ($association) {
-                $found = OriginalInterfaceData::find($request->user(), 'associations', (string) $association);
+                $found = $associationWasSubmitted
+                    ? OriginalInterfaceData::find($request->user(), 'associations', (string) $association)
+                    : OriginalInterfaceData::query($request->user(), 'associations')->where('id', $association)->first();
                 if (! $found) {
                     $found = OriginalInterfaceData::query($request->user(), 'associations')->where('name', $association)->first();
                 }

@@ -242,22 +242,24 @@ export function initializeDashboard() {
 
       dashboardReportDataTable = new DataTable(dashboardReportTable, {
         layout: {
-          top: 'pageLength',
-          topStart: {
-            buttons: [
-              {
-                extend: 'excelHtml5',
-                text: '<i class="bi bi-file-earmark-excel-fill" aria-hidden="true"></i><span>Export Excel</span>',
-                titleAttr: 'Export this report to Excel',
-                className: 'dashboard-report-excel',
-                filename: report.exportName,
-                title: report.title,
-                sheetName: report.exportName,
-              },
-            ],
-          },
+          topStart: [
+            {
+              buttons: [
+                {
+                  extend: 'excelHtml5',
+                  text: '<i class="bi bi-file-earmark-excel-fill" aria-hidden="true"></i><span>Export Excel</span>',
+                  titleAttr: 'Export this report to Excel',
+                  className: 'dashboard-report-excel',
+                  filename: report.exportName,
+                  title: report.title,
+                  sheetName: report.exportName,
+                },
+              ],
+            },
+            'pageLength',
+          ],
           topEnd: 'search',
-          bottomStart: ['pageLength', 'info'],
+          bottomStart: 'info',
           bottomEnd: 'paging',
         },
         pageLength: 5,
@@ -275,22 +277,6 @@ export function initializeDashboard() {
         },
       });
 
-      const reportTableContainer = dashboardReportTable.closest('.dt-container');
-      const pageLengthControls = reportTableContainer?.querySelectorAll('.dt-length');
-      const topPageLength = pageLengthControls?.[0];
-
-      if (topPageLength) {
-        const pageLengthRow = topPageLength.closest('.dt-layout-row');
-        const pageLengthCell = topPageLength.closest('.dt-layout-cell');
-        const toolbarRow = [...reportTableContainer.querySelectorAll('.dt-layout-row')]
-          .find((row) => row.querySelector('.dt-buttons'));
-
-        if (pageLengthCell && toolbarRow && pageLengthRow !== toolbarRow) {
-          topPageLength.classList.add('dashboard-report-length-top');
-          toolbarRow.appendChild(pageLengthCell);
-          pageLengthRow?.remove();
-        }
-      }
     });
   }
 
@@ -1291,7 +1277,7 @@ export function initializeDashboard() {
         bar: {
           borderRadius: 6,
           // Leave consistent space between category bars for easier comparison.
-          columnWidth: '100 %',
+          columnWidth: '85%',
           dataLabels: { position: 'center' },
         },
       },

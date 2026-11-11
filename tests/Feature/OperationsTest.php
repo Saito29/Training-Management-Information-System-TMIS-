@@ -135,7 +135,7 @@ class OperationsTest extends TestCase
         ]);
 
         $response = $this->get(route('admin.dashboard.dashboard'))->assertOk()
-            ->assertSee('navigation-access.js?v=training-acceptance-1', false)
+            ->assertSee('src/js/shared/navigation-access.js', false)
             ->assertSee('window.TMIS_NAV_ACCESS =', false)
             ->assertSee('trainings.read', false)
             ->assertDontSee('participants.read', false);
@@ -211,7 +211,8 @@ class OperationsTest extends TestCase
 
         $navigationPermissions = ModuleAccess::navigationAccess($user)['permissions'];
         $this->assertContains('trainings.view.details.inactive', $navigationPermissions);
-        $this->assertContains('resource_persons.write', $navigationPermissions);
+        $this->assertContains('resource_persons.create', $navigationPermissions);
+        $this->assertContains('resource_persons.edit', $navigationPermissions);
         $this->assertContains('questionnaires.view.details.list-questionnaire', $navigationPermissions);
         $this->assertNotContains('questionnaires.view.details.inactive', $navigationPermissions);
         $this->assertTrue(ModuleAccess::allowsNavigationPage($user, 'trainings', 'details.inactive'));
@@ -564,6 +565,15 @@ class OperationsTest extends TestCase
         $user = $this->signIn();
         $training = $this->training($user, ['status' => 'Approved & Accepted']);
         $participant = DB::table('participants')->insertGetId(['name' => 'Participant', 'region_id' => 4, 'org_id' => 1, 'created_by' => $user->user_id]);
+        DB::table('participant_beneficiaries')->insert([
+            'participant_id' => $participant,
+            'region_id' => 4,
+            'org_id' => 1,
+            'added_by' => $user->user_id,
+            'is_primary' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
         $questionnaire = DB::table('questionnaires')->insertGetId(['name' => 'Feedback', 'region_id' => 4, 'org_id' => 1, 'created_by' => $user->user_id, 'kind' => 'Training evaluation', 'questions' => json_encode(['Was this useful?'])]);
         $data = ['training_id' => $training, 'participant_id' => $participant, 'questionnaire_id' => $questionnaire, 'answers' => ['Yes']];
         $this->postJson('/operations/evaluations', $data)->assertUnprocessable();

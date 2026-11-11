@@ -79,7 +79,9 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   ));
 
-  let records = [...allRecords];
+  const activeRecords = (items) =>
+    items.filter((record) => String(record.status).toLowerCase() === 'active');
+  let records = activeRecords(allRecords);
 
   // ============================================================
   // Helpers and state
@@ -236,13 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const farmerNumber = encodeURIComponent(r.farmerNumber || r.id);
     return `<tr>
       <td data-column="actions"><div class="table-row-actions">
-<<<<<<< HEAD
         <a class="btn table-action-button view-action" href="../id/view-farmer/${farmerNumber}" target="_blank" rel="noopener" title="View farmer profile" aria-label="View farmer profile"><i class="bi bi-eye-fill"></i></a>
         <a class="btn table-action-button edit-action" href="../id/edit-farmer/${farmerNumber}" target="_blank" rel="noopener" title="Edit farmer profile" aria-label="Edit farmer profile"><i class="bi bi-pencil-fill"></i></a>
-=======
-        <a class="btn table-action-button view-action" href="../id/view-farmer/${id}" target="_blank" rel="noopener" title="View farmer profile" aria-label="View farmer profile"><i class="bi bi-eye-fill"></i></a>
-        <a class="btn table-action-button edit-action" href="../id/edit-farmer/${id}" target="_blank" rel="noopener" title="Edit farmer profile" aria-label="Edit farmer profile"><i class="bi bi-pencil-fill"></i></a>
->>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
         <button type="button" class="btn table-action-button delete-action" data-delete="${esc(r.id)}" title="Delete farmer profile" aria-label="Delete farmer profile"><i class="bi bi-trash-fill"></i></button>
       </div></td>
       <td data-column="status"><span class="status-badge ${statusBadgeClass(r.status)}">${esc(r.status)}</span></td>
@@ -288,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
     empty.hidden = Boolean(rows.length);
     if (!rows.length)
       empty.innerHTML =
-        '<i class="bi bi-search"></i><strong>No farmer profiles match the current filters.</strong>';
+        '<i class="bi bi-search"></i><strong>No active farmer profiles match the current filters.</strong>';
 
     $('#summaryTotalReview').textContent = all.length;
     $('#summaryRowsPerPage').textContent = state.perPage === 'all' ? 'All' : state.perPage;
@@ -398,20 +395,20 @@ document.addEventListener('DOMContentLoaded', () => {
       if (window.TMIS_PAGE) {
         await window.TmisStore.refresh();
         allRecords = window.TmisStore.records('tmis-farmers');
-        records = [...allRecords];
+        records = activeRecords(allRecords);
       }
       resetFilters();
       state.sort = null;
       state.perPage = 10;
       refresh();
-      notify('Farmer Profiles Refreshed', `Table reloaded with ${records.length} farmer profiles.`);
+      notify('Farmer Profiles Refreshed', `Table reloaded with ${records.length} active farmer profiles.`);
     } catch (error) {
       notify('Refresh Failed', error.message || 'The farmer list could not be refreshed.', true);
     }
   });
 
   // ============================================================
-  // Export: every field of every farmer, regardless of filters or hidden columns
+  // Export every active farmer, regardless of filters or hidden columns.
   // ============================================================
   $('#exportReviewTable').addEventListener('click', () => {
     if (!window.XLSX) {
@@ -451,10 +448,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const sheet = XLSX.utils.json_to_sheet(rows, { header: exportColumns.map(([label]) => label) });
     sheet['!cols'] = exportColumns.map(([label]) => ({ wch: Math.max(14, label.length + 4) }));
     const book = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(book, sheet, 'All Farmer Profiles');
+    XLSX.utils.book_append_sheet(book, sheet, 'Active Farmer Profiles');
     const stamp = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(book, `all_farmer_profiles_${stamp}.xlsx`);
-    notify('Export Complete', `${rows.length} farmer profiles exported to Excel.`);
+    XLSX.writeFile(book, `active_farmer_profiles_${stamp}.xlsx`);
+    notify('Export Complete', `${rows.length} active farmer profiles exported to Excel.`);
   });
 
   // ============================================================

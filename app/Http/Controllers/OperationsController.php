@@ -109,6 +109,14 @@ class OperationsController
         ModuleAccess::authorize($request, $module.'.create');
         $this->query($request, $module);
         $data = $this->validated($request, $module);
+        if ($module === 'associations') {
+            ModuleAccess::authorizeRegistrationScope(
+                $request->user(),
+                (int) $data['region_id'],
+                (int) $data['org_id'],
+                'The selected association office is outside your data visibility settings.',
+            );
+        }
         $id = DB::transaction(function () use ($request, $module, $data): int {
             $id = DB::table($module)->insertGetId($data + ['created_by' => $request->user()->user_id, 'created_at' => now(), 'updated_at' => now()]);
             if ($module === 'participants') {
@@ -209,13 +217,6 @@ class OperationsController
         $data = $request->validate($rules);
         if (! ModuleAccess::isAdministrator($request->user())) {
             abort_unless((int) $data['region_id'] === (int) $request->user()->region_id && (int) $data['org_id'] === (int) $request->user()->org_id, 403);
-        }
-        if ($module === 'associations') {
-            $office = ModuleAccess::scope(DB::table('organization')->where('is_active', 1), $request->user())
-                ->where('region_id', $data['region_id'])
-                ->where('org_id', $data['org_id'])
-                ->exists();
-            abort_unless($office, 403, 'The selected association office is outside your data visibility settings.');
         }
         if (! empty($data['association_id'])) {
             abort_unless($this->query($request, 'associations')->where('id', $data['association_id'])->where('region_id', $data['region_id'])->where('org_id', $data['org_id'])->where('is_active', true)->exists(), 422, 'Select an active association in the same office.');
@@ -593,7 +594,6 @@ class OperationsController
         });
     }
 
-    /** Format activity as a readable event summary without exposing internal field names. */
     private function humanActivityDescription(string $action, string $category): string
     {
         $recordName = match ($category) {

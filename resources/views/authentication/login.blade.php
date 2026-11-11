@@ -45,7 +45,12 @@
                 <button type="button" class="password-toggle" id="toggle-password" data-password-target="password_input" aria-label="Show password" aria-pressed="false">Show</button>
               </div>
             </div>
-            <button type="submit" class="form-submit">Continue <span aria-hidden="true">→</span></button>
+            <button type="submit" class="form-submit auth-submit-button" aria-busy="false">
+              <span class="auth-submit-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 19 6v5c0 4.5-2.9 8-7 10-4.1-2-7-5.5-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+              <span class="auth-submit-label">Sign in</span>
+              <span class="submit-spinner" aria-hidden="true" hidden></span>
+              <span class="auth-submit-arrow" aria-hidden="true">→</span>
+            </button>
           </form>
           <div class="account-help"><span class="help-icon" aria-hidden="true">?</span><p>Need access to TMIS?<br /><span>Contact your system administrator for assistance.</span></p></div>
         </div>
@@ -54,6 +59,5 @@
     </main>
   </body>
 </html>
-
 
 

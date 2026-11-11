@@ -13,10 +13,14 @@ class DashboardData
         $today = now('Asia/Manila')->startOfDay();
         $year = (int) $today->year;
         $years = [$year, $year - 1];
-        $trainings = array_values(array_filter($stores['tmis-trainings'] ?? [], fn (array $item): bool => $item['status'] === 'Approved & Accepted'));
+        $activeTrainings = array_values(array_filter(
+            $stores['tmis-trainings'] ?? [],
+            fn (array $item): bool => strtolower(trim((string) ($item['status'] ?? ''))) !== 'inactive',
+        ));
+        $trainings = array_values(array_filter($activeTrainings, fn (array $item): bool => $item['status'] === 'Approved & Accepted'));
         $farmers = array_values(array_filter($stores['tmis-farmers'] ?? [], fn (array $item): bool => $item['status'] === 'Active'));
         $associations = array_values(array_filter($stores['tmis-farmer-associations'] ?? [], fn (array $item): bool => $item['status'] === 'Active'));
-        $towns = array_values(array_unique(array_map(fn (array $item): string => ($item['municipality'] ?? '') ?: 'Not recorded', array_merge($trainings, $farmers, $associations))));
+        $towns = array_values(array_unique(array_map(fn (array $item): string => ($item['municipality'] ?? '') ?: 'Not recorded', array_merge($activeTrainings, $farmers, $associations))));
         $monthly = function (array $items, array $fields) use ($towns, $years): array {
             $totals = array_fill_keys($towns, array_fill_keys($years, array_fill(0, 12, 0)));
             foreach ($items as $item) {
@@ -78,16 +82,29 @@ class DashboardData
                 }
             }
         }
-        $upcoming = array_values(array_filter($trainings, fn (array $item): bool => $this->date($item['startDate'] ?? null)?->format('Y-m-d') >= $today->format('Y-m-d')));
+        $upcomingThrough = $today->copy()->addDays(3)->format('Y-m-d');
+        $upcoming = array_values(array_filter($trainings, function (array $item) use ($today, $upcomingThrough): bool {
+            $startDate = $this->date($item['startDate'] ?? null);
+            $endDate = $this->date($item['endDate'] ?? $item['startDate'] ?? null);
+
+            return $startDate !== null
+                && $endDate !== null
+                && $startDate->format('Y-m-d') <= $upcomingThrough
+                && $endDate->format('Y-m-d') >= $today->format('Y-m-d');
+        }));
         usort($upcoming, fn (array $a, array $b): int => [$a['startDate'], $a['id']] <=> [$b['startDate'], $b['id']]);
 
         return [
             'currentYear' => $year, 'previousYear' => $year - 1, 'today' => $today->format('Y-m-d'),
             'humanDate' => $today->format('F j, Y'), 'weekday' => $today->format('l'),
-            'trainingCount' => count($trainings), 'participantCount' => count($farmers), 'associationCount' => count($associations),
-            'trainingByMunicipality' => $monthly($trainings, ['startDate']),
+            'trainingCount' => array_sum(array_map(
+                fn (array $monthlyCounts): int => array_sum($monthlyCounts[$year]),
+                $monthly($activeTrainings, ['startDate']),
+            )),
+            'participantCount' => count($farmers), 'associationCount' => count($associations),
+            'trainingByMunicipality' => $monthly($activeTrainings, ['startDate']),
             'participantsByMunicipality' => $monthly($farmers, ['registered', 'createdAt']),
-            'fabyMunicipality' => $monthly($associations, ['registration_date', 'createdAt']),
+            'fabyMunicipality' => $monthly($associations, ['createdAt', 'registration_date']),
             'allocatedBudgetByDistrict' => array_values($geography['district']),
             'allocatedBudgetByProvince' => array_values($geography['province']),
             'municipalityAllocation' => array_values($geography['municipality']),

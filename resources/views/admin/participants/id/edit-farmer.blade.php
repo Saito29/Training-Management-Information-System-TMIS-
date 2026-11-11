@@ -1042,7 +1042,7 @@ class="layout-fixed"
                             <span class="form-section-subtitle d-none d-sm-inline">Association and membership details</span>
                           </div>
                           <div class="row g-3 mb-4">
-                            <div class="col-12 col-md-7"><label for="farmer_association_id" class="form-label">Association</label><select class="form-select" id="farmer_association_id" name="association_id"><option value="">No association</option></select></div>
+                            <div class="col-12 col-md-7"><label for="farmer_association_id" class="form-label">Association</label><select class="form-select" id="farmer_association_id" name="association_id" disabled aria-describedby="farmer_association_help"><option value="">No association</option></select><small class="form-text" id="farmer_association_help">Manage farmer association memberships from the association's Farmer Members tab.</small></div>
                             <div class="col-12 col-md-5"><label for="farmer_associate_role" class="form-label">Position / Role</label><input class="form-control" id="farmer_associate_role" name="associate_role" maxlength="255"></div>
                           </div>
                           <section class="farmer-beneficiary-office-panel" aria-labelledby="editBeneficiaryOfficesTitle">

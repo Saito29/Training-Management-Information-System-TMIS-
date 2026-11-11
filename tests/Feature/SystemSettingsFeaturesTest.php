@@ -60,8 +60,8 @@ class SystemSettingsFeaturesTest extends TestCase
             ->assertSee(asset('src/js/shared/system-settings.js?v=visibility-scope-select-all-refresh-1'), false)
             ->assertSee('modal-xl modal-dialog-centered modal-dialog-scrollable', false)
             ->assertSee('class="modal-dialog modal-dialog-centered modal-dialog-scrollable"', false)
-            ->assertSee('Changes apply to every account assigned this credential.', false)
-            ->assertSee('Block inherited role permissions')
+            ->assertSee('Changes apply to every account assigned this profile.', false)
+            ->assertSee('Restrict access for this profile')
             ->assertSee('Their accounts and records will not be deleted.', false)
             ->assertSee(asset('src/js/shared/maintenance-schedule.js?v=auto-expire-1'), false)
             ->assertDontSee('bootstrap@6.0.0-alpha.1', false)
@@ -71,13 +71,13 @@ class SystemSettingsFeaturesTest extends TestCase
             ->assertSee('id="database-tab"', false)
             ->assertSee('Download full SQL backup')
             ->assertSee('Legacy TMIS SQL export')
-            ->assertSee('Uploaded SQL is parsed as data and is never executed as SQL.')
+            ->assertSee('SQL is parsed as data and never executed.')
             ->assertSee('credentialSearch', false)
             ->assertSee('credentialRoleFilter', false)
             ->assertSee('credentialPerPage', false)
-            ->assertSee('aria-label="Credential pagination"', false)
+            ->assertSee('aria-label="Access profile pagination"', false)
             ->assertSee('data-credential-submit', false)
-            ->assertSee('Save name &amp; permissions', false)
+            ->assertSee('Save changes', false)
             ->assertSee('data-credential-delete', false)
             ->assertSee('id="super-admins-tab"', false);
     }
@@ -125,11 +125,11 @@ class SystemSettingsFeaturesTest extends TestCase
         $this->signIn($administrator);
 
         $this->get(route('system.accounts', ['search' => $assignedUser->email]))->assertOk()
-            ->assertSee(asset('src/js/shared/account-management.js?v=ajax-account-filters-1'), false)
+            ->assertSee(asset('src/js/shared/account-management.js'), false)
             ->assertSee('Program Administrator')
             ->assertSee('Field Evaluator');
         $this->get(route('system.accounts', ['search' => $baseRoleUser->email]))->assertOk()
-            ->assertSee('Base role only');
+            ->assertSee('Role permissions only');
     }
 
     public function test_user_administration_hides_system_administrators_and_rejects_direct_edits(): void
@@ -208,19 +208,20 @@ class SystemSettingsFeaturesTest extends TestCase
             ->assertSee('data-account-role', false)
             ->assertSee('data-account-credential', false)
             ->assertSee('account-table', false)
-            ->assertSee('account-summary-line', false)
-            ->assertSee('Account details', false)
+            ->assertSee('account-detail-grid', false)
+            ->assertSee('Role baseline', false)
             ->assertSee('data-bs-target="#manageAccountModal-'.$roleUser->user_id.'"', false)
             ->assertSee('id="manageAccountModal-'.$roleUser->user_id.'"', false)
             ->assertSee('modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable', false)
             ->assertSee('account-detail-grid', false)
-            ->assertSee('Additional credential permissions')
+            ->assertSee('Permissions added by profile')
             ->assertSee('Participants / Read')
-            ->assertSee('Blocked role permissions')
+            ->assertSee('Permissions blocked by profile')
             ->assertSee('Trainings / Submit')
             ->assertSee('Save account changes')
             ->assertSee('Rows per page')
-            ->assertSee('Region & office', false)
+            ->assertSee('All regions')
+            ->assertSee('All offices')
             ->assertSee('data-account-filters', false)
             ->assertSee('data-account-pagination', false);
         $this->assertSame(1, $accountList->viewData('accounts')->total());
@@ -267,7 +268,7 @@ class SystemSettingsFeaturesTest extends TestCase
             ->assertSee('id="updateCredentialSummary"', false);
         $this->get(route('admin.administration.id.view-user'))->assertOk()
             ->assertSee('id="profileAccess"', false)
-            ->assertSee('credential-access-details-1', false);
+            ->assertSee('Role, credential permissions, and assigned office.');
     }
 
     public function test_regular_administrator_cannot_manage_super_admin_settings(): void
@@ -452,14 +453,14 @@ class SystemSettingsFeaturesTest extends TestCase
         DB::table('users')->where('user_id', $assignedUser->user_id)->update(['role_credential_id' => $credentialId]);
         $credentialTable = $this->get(route('system.settings'))->assertOk()
             ->assertSee('credential-table-card', false)
-            ->assertSee('Credential #'.$credentialId)
+            ->assertSee('Access profile #'.$credentialId)
             ->assertSee('Participants / Read')
             ->assertSee('Accounts assigned')
             ->assertSee('Last changed')
             ->assertSee('id="credential-name-'.$credentialId.'"', false)
             ->assertSee('id="updateCredentialForm-'.$credentialId.'"', false)
             ->assertSee('name="denied_permissions[]"', false)
-            ->assertSee('Save name &amp; permissions', false)
+            ->assertSee('Save changes', false)
             ->assertSee(htmlspecialchars(route('system.accounts', ['role_id' => 3, 'role_credential_id' => $credentialId]), ENT_QUOTES), false)
             ->assertSee('Updated');
         $credentialRow = $credentialTable->viewData('credentialTypes')->getCollection()->firstWhere('role_credential_id', $credentialId);
@@ -527,7 +528,7 @@ class SystemSettingsFeaturesTest extends TestCase
 
         $firstPage = $this->get(route('system.settings', ['credential_per_page' => 10]))->assertOk()
             ->assertSee('credential_page=2', false)
-            ->assertSee('Showing 1–10 of 15 credentials');
+            ->assertSee('Showing 1-10 of 15 profiles');
         $credentials = $firstPage->viewData('credentialTypes');
         $this->assertSame(15, $credentials->total());
         $this->assertSame(10, $credentials->count());

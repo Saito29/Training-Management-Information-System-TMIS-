@@ -38,7 +38,7 @@ class AccountDisplayTest extends TestCase
 
     public function test_system_administrator_can_access_user_administration_and_other_account_emails(): void
     {
-        $other = User::factory()->create(['email' => 'other-account@example.test']);
+        $other = User::factory()->create(['role_id' => 3, 'email' => 'other-account@example.test']);
         $administrator = User::factory()->create(['role_id' => 1]);
         $hash = Hash::make('Private-password-123!');
         DB::table('user_auth')->insert(['user_id' => $administrator->user_id, 'password_hash' => $hash]);

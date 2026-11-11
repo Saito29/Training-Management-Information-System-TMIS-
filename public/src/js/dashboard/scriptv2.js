@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const data=window.TmisDashboard;
     const fundKey={totalAllocatedDistrictChart:'allocatedBudgetByDistrict',allocatedProvinceChart:'allocatedBudgetByProvince',allocatedMunicipalityChart:'municipalityAllocation',allocatedMunicipalityChartLegacy:'municipalityAllocation'}[element.id];
     if(fundKey&&data){const rows=data[fundKey];options.series=[{name:String(currentYear),data:rows.map(item=>item.current)},{name:String(previousYear),data:rows.map(item=>item.previous)}];options.xaxis={...options.xaxis,categories:rows.map(item=>item.district||item.municipality&&[item.municipality,item.province].filter(Boolean).join(', ')||item.province)};options.colors=['#2e7d32','#1976d2'];options.legend={...options.legend,show:true,position:'bottom'};options.plotOptions.bar.distributed=false;options.tooltip={...options.tooltip,y:{...options.tooltip?.y,title:{formatter:name=>name}}};}
-    if(element.id==='beneficiaryGroupChart'&&data){options.series=data.groupLabels.map((name,index)=>({name,data:data.groups.map((value,offset)=>offset===index?value:null)}));options.xaxis.categories=data.groupLabels;options.colors=['#1565c0','#2e7d32','#ef6c00','#8e24aa','#00838f'];options.plotOptions.bar.columnWidth='65%';}
+    if(element.id==='beneficiaryGroupChart'&&data){options.series=data.groupLabels.map((name,index)=>({name,data:data.groups.map((value,offset)=>offset===index?value:null)}));options.xaxis.categories=data.groupLabels;options.colors=['#1565c0','#2e7d32','#ef6c00','#8e24aa','#00838f'];options.chart.width='100%';options.chart.parentWidthOffset=0;options.plotOptions.bar.columnWidth='85%';}
     if(element.id==='beneficiaryAgeSexChart'&&data)options.xaxis.categories=data.ageLabels;
     const values=(options.series||[]).flatMap(item=>typeof item==='number'?item:item.data||[]).map(value=>Number(value?.y??value));
     if(!data||!values.some(value=>Number.isFinite(value)&&value>0)){
@@ -397,22 +397,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
       dashboardReportDataTable = new DataTable(dashboardReportTable, {
         layout: {
-          top: 'pageLength',
-          topStart: {
-            buttons: [
-              {
-                extend: 'excelHtml5',
-                text: '<i class="bi bi-file-earmark-excel-fill" aria-hidden="true"></i><span>Export Excel</span>',
-                titleAttr: 'Export this report to Excel',
-                className: 'dashboard-report-excel',
-                filename: report.exportName,
-                title: report.title,
-                sheetName: report.exportName,
-              },
-            ],
-          },
+          topStart: [
+            {
+              buttons: [
+                {
+                  extend: 'excelHtml5',
+                  text: '<i class="bi bi-file-earmark-excel-fill" aria-hidden="true"></i><span>Export Excel</span>',
+                  titleAttr: 'Export this report to Excel',
+                  className: 'dashboard-report-excel',
+                  filename: report.exportName,
+                  title: report.title,
+                  sheetName: report.exportName,
+                },
+              ],
+            },
+            'pageLength',
+          ],
           topEnd: 'search',
-          bottomStart: ['pageLength', 'info'],
+          bottomStart: 'info',
           bottomEnd: 'paging',
         },
         pageLength: 5,
@@ -430,22 +432,6 @@ document.addEventListener('DOMContentLoaded', function () {
         },
       });
 
-      const reportTableContainer = dashboardReportTable.closest('.dt-container');
-      const pageLengthControls = reportTableContainer?.querySelectorAll('.dt-length');
-      const topPageLength = pageLengthControls?.[0];
-
-      if (topPageLength) {
-        const pageLengthRow = topPageLength.closest('.dt-layout-row');
-        const pageLengthCell = topPageLength.closest('.dt-layout-cell');
-        const toolbarRow = [...reportTableContainer.querySelectorAll('.dt-layout-row')]
-          .find((row) => row.querySelector('.dt-buttons'));
-
-        if (pageLengthCell && toolbarRow && pageLengthRow !== toolbarRow) {
-          topPageLength.classList.add('dashboard-report-length-top');
-          toolbarRow.appendChild(pageLengthCell);
-          pageLengthRow?.remove();
-        }
-      }
     });
   }
 

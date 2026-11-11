@@ -131,5 +131,12 @@ input:disabled { background: #f1f3ef; color: #758072; cursor: not-allowed; }
 .compose-toast[data-type="warning"] > i::before { content: "!"; }
 .form-submit .submit-spinner { width: 16px; height: 16px; border: 2px solid #ffffff70; border-top-color: #fff; border-radius: 50%; animation: submit-spinner-rotate .7s linear infinite; }
 .form-submit.is-loading { cursor: wait; }
+.auth-submit-button { justify-content: space-between; gap: 12px; min-height: 58px; padding: 8px 14px; border-radius: 12px; background: linear-gradient(115deg, #226649, #184e37); box-shadow: 0 5px 16px #22664924; }
+.auth-submit-button:hover { background: linear-gradient(115deg, #184e37, #123e32); }
+.auth-submit-icon { display: grid; flex: 0 0 36px; width: 36px; height: 36px; place-items: center; border: 1px solid #ffffff55; border-radius: 10px; background: #ffffff14; color: #e4efd7; }
+.auth-submit-label { flex: 1; text-align: left; font-size: 14px; }
+.auth-submit-arrow { font-size: 20px; line-height: 1; }
+.auth-submit-button:disabled { background: linear-gradient(115deg, #e7efe2, #dce8d7); }
+.auth-submit-button:disabled .submit-spinner { border-color: #28543935; border-top-color: #285439; }
 @keyframes submit-spinner-rotate { to { transform: rotate(360deg); }
 }

@@ -383,9 +383,6 @@ class AuditLogController
             $entry->actor_office_name,
             $entry->actor_region_name,
         );
-        if (is_string($entry->actor_role_name) && $entry->actor_role_name !== '') {
-            $entry->actor_name .= ' ('.$entry->actor_role_name.')';
-        }
         $entry->user_name = $this->accountName(
             $display,
             $entry->subject_first_name,
@@ -481,7 +478,7 @@ class AuditLogController
                 $changes[] = 'removed '.implode(', ', array_map($this->permissionLabel(...), $removed));
             }
 
-            return $actor.' updated account permissions for users with the '.$roleName.' role'.($changes ? ': '.implode('; ', $changes).'.' : '.');
+            return $actor.' updated permissions for the “'.$roleName.'” role'.($changes ? ': '.implode('; ', $changes).'.' : '.');
         }
 
         if (preg_match('/^role_credential_(created|updated|deleted)_\d+$/', $rawEvent, $matches) === 1) {

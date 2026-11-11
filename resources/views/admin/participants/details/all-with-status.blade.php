@@ -60,7 +60,7 @@ class="layout-fixed"
     />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
-    <title>DA-TMIS - All Farmer Profiles</title>
+    <title>DA-TMIS - Active Farmer Profiles</title>
     <link rel="stylesheet" href="{{ asset('src/css/shared/table-loading.css') }}" />
     <script src="{{ asset('src/js/shared/table-loading.js') }}" defer></script>
     <!-- Backend integration disabled for now. Uncomment when ready.
@@ -815,9 +815,9 @@ class="layout-fixed"
                         </li>
                       </ol>
                     </nav>
-                    <h4 class="content-header">All Farmer Profiles</h4>
+                    <h4 class="content-header">Active Farmer Profiles</h4>
                     <span class="content-info"
-                      >Browse and manage farmer profiles of every status, including inactive profiles.</span
+                      >Browse and manage active farmer profiles only.</span
                     >
                   </div>
                   <!-- All with Status Details -->
@@ -833,13 +833,12 @@ class="layout-fixed"
                               <i class="bi bi-list-check"></i>
                             </div>
                             <div class="status-info-content">
-                              <h6>All farmer statuses</h6>
+                              <h6>Active farmer profiles</h6>
                               <p>
-                                This list includes active and inactive farmer profiles.
+                                Inactive farmer profiles are excluded from this list.
                               </p>
                               <div class="status-legend">
                                 <span class="status-badge status-active">Active</span>
-                                <span class="status-badge status-inactive">Inactive</span>
                               </div>
                             </div>
                           </div>
@@ -848,8 +847,8 @@ class="layout-fixed"
                               <i class="bi bi-person-x-fill"></i>
                             </div>
                             <div class="status-info-content">
-                              <h6>Filter by status</h6>
-                              <p>Use the Status column to find inactive, deceased, or removed farmer profiles.</p>
+                              <h6>Inactive farmer profiles</h6>
+                              <p>Use the Inactive page to view inactive, deceased, or removed farmer profiles.</p>
                             </div>
                           </div>
                           <div class="status-info-item">
@@ -867,7 +866,7 @@ class="layout-fixed"
                             </div>
                             <div class="status-info-content">
                               <h6>Row actions</h6>
-                              <p>View and Edit open the farmer profile in a new tab. Delete asks for confirmation first. Export saves every farmer's full record to Excel.</p>
+                              <p>View and Edit open the farmer profile in a new tab. Delete asks for confirmation first. Export saves active farmer profiles to Excel.</p>
                             </div>
                           </div>
                         </div>
@@ -888,10 +887,10 @@ class="layout-fixed"
                 <header class="card-header for-review-table-header">
                   <div>
                     <h5 class="for-review-table-title" id="forReviewTableTitle">
-                      All Farmers
+                      Active Farmers
                     </h5>
                     <p class="for-review-table-description">
-                      View and manage farmer profiles across all statuses.
+                      View and manage active farmer profiles.
                     </p>
                   </div>
                   <div class="table-header-actions">
@@ -1110,7 +1109,7 @@ class="layout-fixed"
 
                   <div class="review-table-summaries">
                     <div class="review-table-summary">
-                      <i class="bi bi-people-fill summary-icon summary-total"></i><span>All Farmers</span><strong id="summaryTotalReview">0</strong>
+                      <i class="bi bi-people-fill summary-icon summary-total"></i><span>Active Farmers</span><strong id="summaryTotalReview">0</strong>
                     </div>
                     <div class="review-table-summary">
                       <i class="bi bi-table summary-icon summary-rows"></i><span>Rows per Page</span><strong id="summaryRowsPerPage">10</strong>
@@ -1173,7 +1172,7 @@ class="layout-fixed"
                       id="forReviewDataTable"
                     >
                       <caption class="visually-hidden">
-                        All farmer profiles
+                        Active farmer profiles
                       </caption>
                       <thead>
                         <tr>
@@ -2014,5 +2013,5 @@ class="layout-fixed"
     <!-- nav -->
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/participants/details/all-status.js?v=all-status-page-size-1') }}"></script>
+    <script src="{{ asset('src/js/participants/details/all-status.js?v=active-farmer-list-1') }}"></script>
 @endsection

@@ -3,12 +3,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const $ = (id) => document.getElementById(id);
   const key = 'tmis-users';
   const form = $('userUpdateForm');
-<<<<<<< HEAD
   form.elements.role.querySelector('option[value="System Administrator"]')?.remove();
-  const editableFields = ['firstName', 'middleName', 'lastName', 'suffix', 'dateOfBirth', 'email', 'phone', 'role', 'credentialTypeId', 'region', 'office', 'position', 'status'];
-=======
   const editableFields = ['firstName', 'middleName', 'lastName', 'suffix', 'dateOfBirth', 'email', 'phone', 'role', 'region', 'office', 'position', 'status'];
->>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
   const officeTypes = ['DA Regional Field Office', 'DA-SAAD', 'DA-AMIA', 'DA-Livestock', 'DA-HVCDP', 'DA-Rice Program', 'DA-Corn Program', 'DA-ATI'];
   let loadedSnapshot = null;
   form.elements.dateOfBirth.max = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());

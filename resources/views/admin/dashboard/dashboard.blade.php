@@ -70,7 +70,7 @@ class="layout-fixed"
       href="https://cdn.datatables.net/buttons/3.2.5/css/buttons.dataTables.min.css"
     />
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
-    <link rel="stylesheet" href="{{ asset('src/css/dashboard/app.css?v=dashboard-image-branding-1') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/dashboard/app.css?v=dashboard-tooltip-report-layout-3') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
     <title>Dashboard | TMIS</title>
@@ -854,7 +854,7 @@ class="layout-fixed"
                         </div>
                         <div class="card-header-title">
                           <h5 class="card-header-text">
-                            Total Capacity-Building Activities Conducted
+                            Active Capacity-Building Activities
                           </h5>
                           <span class="card-header-context">{{ $originalInterfaceData['dashboard']['trainingCount'] ?? 0 }}</span>
                         </div>
@@ -1378,7 +1378,17 @@ class="layout-fixed"
                 <div class="card-body">
                   <div class="row">
 @forelse($originalInterfaceData['dashboard']['upcoming'] ?? [] as $upcomingTraining)
-<div class="card-wrapper col-12 mb-3"><div class="card-date"><span class="card-month">{{ \Illuminate\Support\Carbon::parse($upcomingTraining['startDate'])->format('M') }}</span><span class="card-date-text">{{ \Illuminate\Support\Carbon::parse($upcomingTraining['startDate'])->format('d') }}</span></div><div class="card-training-wrapper"><div class="card-training-title"><a href="{{ route('admin.training.id.view-training', ['id' => $upcomingTraining['id']]) }}" class="card-text-title nav-link">{{ $upcomingTraining['title'] }}</a></div><div class="card-dl-range"><div class="card-date-range"><i class="bi bi-calendar3" aria-hidden="true"></i><span class="card-range-date">{{ \Illuminate\Support\Carbon::parse($upcomingTraining['startDate'])->format('M j, Y') }} - {{ \Illuminate\Support\Carbon::parse($upcomingTraining['endDate'])->format('M j, Y') }}</span></div><div class="card-location"><i class="bi bi-geo-alt" aria-hidden="true"></i><span class="card-location-text">{{ $upcomingTraining['venue'] }}</span></div></div></div><div class="card-slot"><span class="slot-text">Participants</span><span class="slot-number">{{ $upcomingTraining['target_participants'] ?? count($upcomingTraining['participants']) }}</span></div></div>
+@php
+  $upcomingStart = \Illuminate\Support\Carbon::parse($upcomingTraining['startDate'], 'Asia/Manila');
+  $upcomingEnd = \Illuminate\Support\Carbon::parse($upcomingTraining['endDate'] ?? $upcomingTraining['startDate'], 'Asia/Manila');
+  $upcomingDateRange = match (true) {
+    $upcomingStart->format('Y-m-d') === $upcomingEnd->format('Y-m-d') => $upcomingStart->format('M j, Y'),
+    $upcomingStart->format('Y-m') === $upcomingEnd->format('Y-m') => $upcomingStart->format('M j').'–'.$upcomingEnd->format('j, Y'),
+    $upcomingStart->format('Y') === $upcomingEnd->format('Y') => $upcomingStart->format('M j').'–'.$upcomingEnd->format('M j, Y'),
+    default => $upcomingStart->format('M j, Y').'–'.$upcomingEnd->format('M j, Y'),
+  };
+@endphp
+<div class="card-wrapper col-12 mb-3"><div class="card-date" aria-label="Starts {{ $upcomingStart->format('F j, Y') }}"><span class="card-month">{{ $upcomingStart->format('M') }}</span><span class="card-date-text">{{ $upcomingStart->format('j') }}</span></div><div class="card-training-wrapper"><div class="card-training-title"><a href="{{ route('admin.training.id.view-training', ['id' => $upcomingTraining['id']]) }}" class="card-text-title nav-link">{{ $upcomingTraining['title'] }}</a></div><div class="card-dl-range"><div class="card-date-range"><i class="bi bi-calendar3" aria-hidden="true"></i><span class="card-range-date">{{ $upcomingDateRange }}</span></div><div class="card-location"><i class="bi bi-geo-alt" aria-hidden="true"></i><span class="card-location-text">{{ $upcomingTraining['venue'] }}</span></div></div></div><div class="card-slot"><span class="slot-text">Participants</span><span class="slot-number">{{ $upcomingTraining['target_participants'] ?? count($upcomingTraining['participants']) }}</span></div></div>
 @empty
 <div class="card-wrapper col-12 mb-3"><div class="card-date"><span class="card-month"></span><span class="card-date-text"></span></div><div class="card-training-wrapper"><div class="card-training-title"><span class="card-text-title">No upcoming training</span></div><div class="card-dl-range"><div class="card-date-range"><i class="bi bi-calendar3" aria-hidden="true"></i><span class="card-range-date">No upcoming date</span></div><div class="card-location"><span class="card-location-text"></span></div></div></div><div class="card-slot" hidden><span class="slot-number"></span></div></div>
 @endforelse
@@ -2274,6 +2284,6 @@ class="layout-fixed"
 
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/dashboard/scriptv2.js') }}"></script>
+    <script src="{{ asset('src/js/dashboard/scriptv2.js?v=dashboard-report-controls-1') }}"></script>
     <script src="{{ asset('src/js/dashboard/training-highlight-carousel.js') }}"></script>
 @endsection

@@ -10,17 +10,9 @@
 
   const stable = value => JSON.stringify(value, (key, item) => item && !Array.isArray(item) && typeof item === 'object' ? Object.fromEntries(Object.entries(item).sort(([a],[b]) => a.localeCompare(b))) : item);
 
-<<<<<<< HEAD
   const requestedId = () => { const query = new URLSearchParams(location.search); return query.get('id') || query.get('faId') || query.get('farmerId') || ''; };
 
   const farmerNumberFromPath = () => location.pathname.match(/\/participants\/id\/(?:view|edit)-farmer\/(\d+)\/?$/)?.[1] || '';
-=======
-  const selectedId = () => {
-    const query = new URLSearchParams(location.search);
-    const path = location.pathname.match(/\/(?:participants\/id\/(?:view|edit)-fa|participants\/id\/(?:view|edit)-farmer|training\/id\/(?:view|edit)-training)\/([^/]+)\/?$/);
-    return query.get('id') || query.get('faId') || query.get('farmerId') || (path ? decodeURIComponent(path[1]) : '');
-  };
->>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
 
   const records = key => clone(stores[key] || []);
 
@@ -29,7 +21,9 @@
     const farmerPage = /\/participants\/id\/(?:view|edit)-farmer(?:\/|$)/.test(location.pathname);
     const numberFromQuery = farmerPage && /^\d{8,}$/.test(requestedId()) ? requestedId() : '';
     const farmerNumber = number || numberFromQuery;
-    return farmerNumber ? stores['tmis-farmers']?.find(record => record.farmerNumber === farmerNumber)?.id || farmerNumber : requestedId();
+    const path = location.pathname.match(/\/(?:participants\/id\/(?:view|edit)-fa|participants\/id\/(?:view|edit)-farmer|training\/id\/(?:view|edit)-training)\/([^/]+)\/?$/);
+    const pathId = path ? decodeURIComponent(path[1]) : '';
+    return farmerNumber ? stores['tmis-farmers']?.find(record => record.farmerNumber === farmerNumber)?.id || farmerNumber : requestedId() || pathId;
   };
 
   const selected = key => {
@@ -271,7 +265,7 @@
   const dashboard=window.TMIS_PAGE.dashboard;
   if(!dashboard)return;
   const year=dashboard.currentYear;
-  const trainings=store.records('tmis-trainings').filter(item=>item.status==='Approved & Accepted');
+  const trainings=store.records('tmis-trainings').filter(item=>String(item.status||'').trim().toLowerCase()!=='inactive'&&String(item.startDate||item.start_date||'').slice(0,4)===String(year));
   const farmers=store.records('tmis-farmers').filter(item=>item.status==='Active');
   const associations=store.records('tmis-farmer-associations').filter(item=>item.status==='Active');
   const {ageSex,sexes,groups}=dashboard;
@@ -280,9 +274,9 @@
   const ageGroup=farmer=>{if(!farmer.birthDate)return 'Not recorded';const birth=new Date(farmer.birthDate+'T00:00:00');const today=new Date(dashboard.today+'T00:00:00');if(Number.isNaN(+birth)||birth>today)return 'Not recorded';let age=year-birth.getFullYear();if(today.getMonth()<birth.getMonth()||(today.getMonth()===birth.getMonth()&&today.getDate()<birth.getDate()))age--;return age<15?'Below 15':dashboard.ageLabels[age<=30?0:age<60?1:2];};
   function reports(original){
     const copy=structuredClone(original);
-    copy.activities.title='Approved Training Activities';
-    copy.activities.exportName='Approved-Training-Activities';
-    copy.activities.description='Approved training records with schedule, location, enrollment and budget details.';
+    copy.activities.title='Active Capacity-Building Activities';
+    copy.activities.exportName='Active-Capacity-Building-Activities';
+    copy.activities.description='Active capacity-building activities for '+year+' with schedule, location, enrollment and status details.';
     copy.activities.headers=['Training ID','Training','Type','District','Province','Municipality','Schedule','Farmers','Budget','Status'];
     copy.activities.rows=trainings.map(item=>[item.id,item.title,item.type||'',item.district||'',item.province||'',item.municipality||'',[item.startDate,item.endDate].filter(Boolean).join(' - '),item.participants?.length||0,money(Number(item.budget)||0),item.status]);
     copy.participants.title='Active Farmers';
@@ -416,16 +410,6 @@
     if(path.includes('/participants/id/')&&farmer){
       const fields={first_name:farmer.firstName,middle_name:farmer.middleName,last_name:farmer.lastName,extension:farmer.suffix,dob:farmer.birthDate,gender:farmer.sex,civil_status:farmer.civil_status,tupad:farmer.tupad,solo_parent:farmer.soloParent,nationality:farmer.nationality,place_of_birth:farmer.placeOfBirth||farmer.place_of_birth,four_ps:farmer.fourPs,pwd:farmer.pwd,senior_citizen:farmer.seniorCitizen,indigenous_group:farmer.indigenousGroup,tribe_name:farmer.tribeName,dietary_restriction:farmer.dietaryRestriction,allergies_on:farmer.allergies_on,region:farmer.region,district:farmer.district,province:farmer.province,municipality:farmer.municipality,barangay:farmer.barangay,postal_code:farmer.postal_code,mobile_no:farmer.phone,email:farmer.email,street_purok_sitio:farmer.street_purok_sitio_name,house_building_number:farmer.house_building_number,tel_number:farmer.telephone};
       const form=document.getElementById('editFarmerPersonalForm');if(form)for(const[name,value]of Object.entries(fields)){const control=form.elements.namedItem(name);setSelect(control,value);if(control?.tagName==='SELECT')control.dispatchEvent(new Event('change',{bubbles:true}));}
-<<<<<<< HEAD
-      const farmerNumber=farmer.farmerNumber||farmer.id;
-      const details={'Farmer ID':farmerNumber,'Full Name':farmer.name,'Mobile Number':farmer.phone,'Address':[farmer.barangay,farmer.municipality,farmer.province].filter(Boolean).join(', '),'Sex':farmer.sex,'Date of Birth':farmer.birthDate,'Nationality':farmer.nationality,'Place of Birth':farmer.placeOfBirth,'Farmer Association':farmer.organization,'4Ps Beneficiary':farmer.fourPs,'Person with Disability':farmer.pwd};
-      const association=store.records('tmis-farmer-associations').find(item=>item._db_id===farmer.association_id);
-      Object.assign(details,{'TUPAD':farmer.tupad,'Solo Parent':farmer.soloParent,'Email Address':farmer.email,'Gender':farmer.sex,'Civil Status':farmer.civil_status,'4Ps':farmer.fourPs,'Person With Disability':farmer.pwd,'Indigenous Group':farmer.indigenousGroup,'Dietary Restrictions':farmer.dietaryRestriction,'Allergies':farmer.allergies_on,'Senior Citizen':farmer.seniorCitizen,'Telephone Number':farmer.telephone,'Postal Code':farmer.postal_code,'Association ID':association?.id,'Association Name':association?.association_name,'Position / Role':farmer.role,'Date Updated':farmer.updatedAt,'Record Status':farmer.status});
-      const farmerId=document.getElementById('displayFarmerId');if(farmerId)farmerId.textContent=farmerNumber;
-      const interventionReference=document.getElementById('interventionFarmerReference');if(interventionReference){const icon=interventionReference.querySelector('i');interventionReference.replaceChildren(...(icon?[icon]:[]),document.createTextNode(` Intervention records for Farmer ID ${farmerNumber}`));}
-      document.querySelectorAll('.overview-status').forEach(item=>item.textContent=farmer.status);
-      document.querySelectorAll('a[href$="/participants/id/edit-farmer"],a[href$="/participants/id/view-farmer"]').forEach(link=>{const action=link.href.endsWith('/edit-farmer')?'edit':'view';link.href=`/app/admin/participants/id/${action}-farmer/${encodeURIComponent(farmerNumber)}`;});
-=======
       const associationSelect=form?.elements.namedItem('association_id');
       if(associationSelect){
         const memberships=farmer.associationMemberships||[];
@@ -450,6 +434,18 @@
       const association=store.records('tmis-farmer-associations').find(item=>String(item.id)===String(farmer.association_id));
       const associationLocation=[association?.barangay,association?.municipality,association?.district,association?.province].filter(Boolean).join(', ');
       Object.assign(details,{'Association ID':farmer.associationNumber||association?.id,'Association Name':farmer.organization||association?.association_name,'Organization Type':association?.organization_type,'Association Region':association?.region,'Association Office':association?.office,'Association Short Name':association?.short_name,'Association Location':associationLocation,'Location':associationLocation,'Association Registration Date':association?.registration_date,'Association Year Covered':association?.year_covered,'Position / Role':farmer.role,'Date Updated':updatedDate,'Status':association?.status||farmer.status});
+      const publicFarmerId=farmer.farmerNumber||farmer.id;
+      const yearCoveredDisplay=document.querySelector('#farmerYearCovered');if(yearCoveredDisplay)yearCoveredDisplay.textContent=farmer.yearCovered||'Not recorded';
+      const farmerId=document.querySelector('#displayFarmerId');if(farmerId)farmerId.textContent=publicFarmerId;
+      const mobileFarmerId=document.querySelector('#mobileFarmerId');if(mobileFarmerId)mobileFarmerId.textContent=publicFarmerId;
+      const interventionReference=document.querySelector('#interventionFarmerReference');if(interventionReference){const icon=interventionReference.querySelector('i');interventionReference.replaceChildren(...(icon?[icon]:[]),document.createTextNode(` Intervention records for Farmer ID ${publicFarmerId}`));}
+      const statusPill=document.querySelector('.farmer-status-pill');if(statusPill){statusPill.classList.toggle('active-status',farmer.status==='Active');statusPill.textContent=farmer.status||'Active';}
+      const registrationDisplay=document.querySelector('#displayRegistrationDate');if(registrationDisplay&&farmer.registrationDate){const date=new Date(`${String(farmer.registrationDate).slice(0,10)}T00:00:00`);registrationDisplay.textContent=Number.isNaN(date.getTime())?'Not recorded':new Intl.DateTimeFormat('en-PH',{dateStyle:'long',timeZone:'Asia/Manila'}).format(date);}
+      const hasAssociation=Boolean(farmer.association_id||farmer.associationMemberships?.length);
+      const associationCard=document.querySelector('.association-overview-card');
+      if(associationCard){associationCard.classList.toggle('has-no-association',!hasAssociation);const title=associationCard.querySelector('.title-card');if(title&&!hasAssociation)title.textContent='Beneficiary Offices';}
+      document.querySelectorAll('.overview-status').forEach(item=>item.textContent=farmer.status||'Active');
+      document.querySelectorAll('a[href$="/participants/id/edit-farmer"],a[href$="/participants/id/view-farmer"]').forEach(link=>{const action=link.href.endsWith('/edit-farmer')?'edit':'view';link.href=`/app/admin/participants/id/${action}-farmer/${encodeURIComponent(publicFarmerId)}`;});
       renderBeneficiaryOffices(farmer.beneficiaryOffices);
       renderAssociationMemberships(farmer.associationMemberships);
       const trainingTrack=document.querySelector('#overviewTrainingTrack');
@@ -480,8 +476,6 @@
         }
         window.dispatchEvent(new Event('tmis:farmer-training-history-updated'));
       }
-      document.querySelectorAll('a[href$="/participants/id/edit-farmer"]').forEach(link=>link.search='?id='+encodeURIComponent(farmer.id));
->>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
       document.querySelectorAll('.farmer-detail').forEach(item=>{const label=item.querySelector('.farmer-detail-label')?.textContent.trim(),value=item.querySelector('strong');if(value&&Object.hasOwn(details,label))value.textContent=details[label]||'Not recorded';});
     }
     if(path.includes('/administration/id/')){
@@ -499,7 +493,7 @@
       fill();region?.addEventListener('change',fill);
     }
     if(path.includes('/dashboard/')){
-      for(const[key,count]of [['activities',trainings.length],['participants',farmers.length],['fca',associations.length]]){const button=document.querySelector('[data-report-key="'+key+'"]');const card=button?.closest('.card-header-wrapper');const value=card?.querySelector('.card-header-context');if(value)value.textContent=count;}
+      for(const[key,count]of [['activities',dashboard.trainingCount],['participants',farmers.length],['fca',associations.length]]){const button=document.querySelector('[data-report-key="'+key+'"]');const card=button?.closest('.card-header-wrapper');const value=card?.querySelector('.card-header-context');if(value)value.textContent=count;}
       const upcoming=dashboard.upcoming;
       const wrapper=document.querySelector('.card-upcoming-training .card-body .row'),template=wrapper?.querySelector('.card-wrapper')?.cloneNode(true);
       if(wrapper&&template){wrapper.replaceChildren(...(upcoming.length?upcoming:[null]).map(item=>{const card=template.cloneNode(true),date=item?new Date(item.startDate+'T00:00:00'):null;card.querySelector('.card-month').textContent=date?date.toLocaleDateString('en-PH',{month:'short'}):'';card.querySelector('.card-date-text').textContent=date?String(date.getDate()).padStart(2,'0'):'';const title=card.querySelector('.card-text-title');title.textContent=item?.title||'No upcoming trainings';title.href=item?'/app/admin/training/id/view-training/'+encodeURIComponent(item.id):'#';card.querySelector('.card-range-date').textContent=item?[item.startDate,item.endDate].map(value=>new Date(value+'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})).join(' - '):'No upcoming date';card.querySelector('.card-location-text').textContent=item?.venue||'';card.querySelector('.slot-number').textContent=item?.target_participants||'0';return card;}));}

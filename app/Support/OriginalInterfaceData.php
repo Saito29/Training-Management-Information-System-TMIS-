@@ -150,24 +150,17 @@ class OriginalInterfaceData
 
         $trainingQuestionnaires = DB::table('training_questionnaire')->whereIn('training_id', self::query($user, 'trainings')->select('id'))->join('questionnaires', 'training_questionnaire.questionnaire_id', '=', 'questionnaires.id')->whereNull('questionnaires.deleted_at')->get(['training_id', 'questionnaires.id', 'questionnaires.ui_id', 'questionnaires.kind'])->groupBy('training_id');
         $trainingResources = DB::table('training_resource_person')->whereIn('training_id', self::query($user, 'trainings')->select('id'))->join('resource_persons', 'training_resource_person.resource_person_id', '=', 'resource_persons.id')->whereNull('resource_persons.deleted_at')->get(['training_id', 'resource_persons.id', 'resource_persons.ui_id', 'resource_persons.name', 'resource_persons.title'])->groupBy('training_id');
-<<<<<<< HEAD
-        $page = (string) request()->header('X-TMIS-PAGE', '');
-        parse_str((string) parse_url($page, PHP_URL_QUERY), $pageQuery);
-        $pagePath = ltrim((string) parse_url($page, PHP_URL_PATH), '/');
-        $farmerNumber = preg_match('~^app/admin/participants/id/(?:view|edit)-farmer/(\d+)$~', $pagePath, $matches) === 1 ? $matches[1] : '';
-        $selectedFarmer = $farmerNumber !== '' ? self::findFarmerByNumber($user, $farmerNumber) : null;
-        $currentId = $selectedFarmer
-            ? (string) ($selectedFarmer->ui_id ?? $selectedFarmer->id)
-            : (string) request()->query('id', $pageQuery['id'] ?? $pageQuery['faId'] ?? '');
-=======
         $page = (string) request()->header('X-TMIS-PAGE', request()->fullUrl());
         parse_str((string) parse_url($page, PHP_URL_QUERY), $pageQuery);
         $pagePath = (string) parse_url($page, PHP_URL_PATH);
         $pathId = preg_match('~/(?:participants/id/(?:view|edit)-fa|participants/id/(?:view|edit)-farmer|training/id/(?:view|edit)-training)/([^/]+)$~', $pagePath, $matches) === 1
             ? rawurldecode($matches[1])
             : '';
-        $currentId = (string) request()->query('id', $pageQuery['id'] ?? $pageQuery['faId'] ?? $pathId);
->>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
+        $farmerNumber = preg_match('~^app/admin/participants/id/(?:view|edit)-farmer/(\d+)$~', ltrim($pagePath, '/'), $matches) === 1 ? $matches[1] : '';
+        $selectedFarmer = $farmerNumber !== '' ? self::findFarmerByNumber($user, $farmerNumber) : null;
+        $currentId = $selectedFarmer
+            ? (string) ($selectedFarmer->ui_id ?? $selectedFarmer->id)
+            : (string) request()->query('id', $pageQuery['id'] ?? $pageQuery['faId'] ?? $pathId);
         $selectedRecords = [];
         if ($selectedFarmer && ModuleAccess::allows($user, 'participants.read')) {
             $selectedRecords['participants'] = $selectedFarmer;
@@ -194,49 +187,11 @@ class OriginalInterfaceData
                 ->filter(fn ($log): bool => str_ends_with($log->event, '_'.$selectedRecord->id))
                 ->map(function ($log) use ($logModule, $selectedRecord): array {
                     $actorName = trim(implode(' ', array_filter([$log->actor_first_name ?? null, $log->actor_middle_name ?? null, $log->actor_last_name ?? null, $log->actor_extension_name ?? null]))) ?: 'Authorized system user';
-                    $actorRole = $log->actor_role ?: 'Authorized system user';
                     $isFarmerCreation = $logModule === 'participants' && $log->event === 'participants_created_'.$selectedRecord->id;
-<<<<<<< HEAD
-                    $recordName = match ($logModule) {
+                    $recordLabel = match ($logModule) {
                         'participants' => 'Farmer profile',
                         'associations' => 'Farmer association',
-                        'trainings' => 'Training',
                         'resource_persons' => 'Resource person',
-                        default => 'Record',
-                    };
-                    $description = match (true) {
-                        $isFarmerCreation => 'Farmer profile was registered successfully.',
-                        str_contains($log->event, 'beneficiary_added') => 'Farmer was linked to an association office successfully.',
-                        str_contains($log->event, 'attachment') => $recordName.' attachment was updated.',
-                        str_contains($log->event, 'delete') => $recordName.' was removed.',
-                        str_contains($log->event, 'restore') => $recordName.' was restored.',
-                        str_contains($log->event, 'status') => $recordName.' status was updated.',
-                        default => $recordName.' information was updated successfully.',
-                    };
-                    $title = match (true) {
-                        $isFarmerCreation => 'Farmer Profile Created',
-                        str_contains($log->event, 'beneficiary_added') => 'Farmer Association Updated',
-                        str_contains($log->event, 'attachment') => $recordName.' Attachment Updated',
-                        str_contains($log->event, 'delete') => $recordName.' Removed',
-                        str_contains($log->event, 'restore') => $recordName.' Restored',
-                        str_contains($log->event, 'status') => $recordName.' Status Updated',
-                        default => $recordName.' Updated',
-                    };
-
-                    return [
-                        'category' => $isFarmerCreation ? 'profile' : (str_contains($log->event, 'document') ? 'attachment' : (str_contains($log->event, 'enrollment') ? 'participant' : 'profile')),
-                        'title' => $title,
-                        'description' => $description,
-                        'actor' => $actorName.', '.$actorOffice.' - '.$actorRegion,
-                        'date' => $log->created_at,
-                        'status' => ucfirst($log->outcome),
-                        'reference' => $logModule === 'participants' ? self::farmerNumber($selectedRecord) : (string) ($selectedRecord->ui_id ?? $selectedRecord->id),
-                        'icon' => $isFarmerCreation ? 'bi-person-plus' : 'bi-clock-history',
-=======
-                    $recordLabel = match ($logModule) {
-                        'participants' => 'Farmer Profile',
-                        'associations' => 'Farmer Association',
-                        'resource_persons' => 'Resource Person',
                         default => 'Training',
                     };
                     $managementLabel = match ($logModule) {
@@ -261,9 +216,8 @@ class OriginalInterfaceData
                     };
                     $isFarmerProfileUpdate = $logModule === 'participants'
                         && $log->event === 'participants_updated_'.$selectedRecord->id;
-                    $omitActorRole = $isFarmerCreation || $isFarmerProfileUpdate;
                     $isBeneficiaryChange = str_contains($log->event, 'beneficiary');
-                    $isAttachmentChange = str_contains($log->event, 'document');
+                    $isAttachmentChange = str_contains($log->event, 'attachment') || str_contains($log->event, 'document');
                     $category = $isAttachmentChange
                         ? 'attachment'
                         : ($isBeneficiaryChange
@@ -272,16 +226,27 @@ class OriginalInterfaceData
                                 ? (str_contains($log->event, 'enrollment') ? 'participant' : 'training')
                                 : 'profile'));
                     $farmerName = trim(implode(' ', array_filter([$selectedRecord->first_name ?? null, $selectedRecord->middle_name ?? null, $selectedRecord->last_name ?? null, $selectedRecord->suffix ?? null]))) ?: 'the farmer';
-                    $title = $isFarmerCreation ? 'Farmer Profile Created' : ($isBeneficiaryChange ? 'Beneficiary Office Updated' : $recordLabel.' '.ucfirst($action));
+                    $title = match (true) {
+                        $isFarmerCreation => 'Farmer Profile Created',
+                        $isFarmerProfileUpdate => 'Farmer Profile Updated',
+                        $isBeneficiaryChange => 'Farmer Association Updated',
+                        $isAttachmentChange => $recordLabel.' Attachment Updated',
+                        $action === 'created' => $recordLabel.' Created',
+                        $action === 'removed' => $recordLabel.' Removed',
+                        $action === 'restored' => $recordLabel.' Restored',
+                        str_contains($log->event, 'status') => $recordLabel.' Status Updated',
+                        default => $recordLabel.' Updated',
+                    };
                     $description = match (true) {
                         $isFarmerCreation => 'A new farmer profile was successfully registered for '.$farmerName.'.',
                         $isFarmerProfileUpdate => 'Farmer Profile information was updated.',
-                        $isBeneficiaryChange => 'The beneficiary office assignment for '.$recordLabel.' was updated by '.$actorRole.'.',
-                        $action === 'created' => 'A new '.$recordLabel.' record was successfully registered by '.$actorRole.'.',
-                        $action === 'removed' => 'The '.$recordLabel.' record was removed by '.$actorRole.'.',
-                        $action === 'restored' => 'The '.$recordLabel.' record was restored by '.$actorRole.'.',
-                        $action === 'updated' => $recordLabel.' information was updated by '.$actorRole.'.',
-                        default => $recordLabel.' activity was recorded by '.$actorRole.'.',
+                        $isBeneficiaryChange => 'Farmer was linked to an association office successfully.',
+                        $isAttachmentChange => $recordLabel.' attachment was updated.',
+                        $action === 'created' => 'A new '.$recordLabel.' record was successfully created.',
+                        $action === 'removed' => $recordLabel.' was removed.',
+                        $action === 'restored' => $recordLabel.' was restored.',
+                        str_contains($log->event, 'status') => $recordLabel.' status was updated.',
+                        default => $recordLabel.' information was updated successfully.',
                     };
 
                     return [
@@ -290,7 +255,6 @@ class OriginalInterfaceData
                         'title' => $title,
                         'description' => $description,
                         'actor' => $actorName,
-                        ...($omitActorRole ? [] : ['actorRole' => $actorRole]),
                         'actorOffice' => $log->activity_office ?: 'Office not recorded',
                         'actorRegion' => $log->activity_region ?: 'Region not recorded',
                         'date' => $log->created_at,
@@ -301,7 +265,6 @@ class OriginalInterfaceData
                             'participant' => 'bi-people',
                             default => $isFarmerCreation ? 'bi-person-plus' : 'bi-clock-history',
                         },
->>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
                     ];
                 })
                 ->values()
@@ -362,6 +325,9 @@ class OriginalInterfaceData
                 if ($module === 'associations') {
 
                     $item = array_replace($item, ['association_name' => $record->name, 'short_name' => $record->short_name, 'organization_type' => $record->organization_type, 'registration_date' => $record->registration_date, 'year_covered' => $record->year_covered, 'province' => $record->province, 'district' => $record->district, 'municipality' => $record->municipality, 'barangay' => $record->barangay]);
+                    $item['status'] = $record->is_active
+                        ? 'Active'
+                        : (in_array($savedStatus, ['Removed', 'Deceased'], true) ? $savedStatus : 'Inactive');
 
                     $item['documents'] = $documents($associationDocuments[$record->id] ?? [], $module, $id);
 
@@ -370,6 +336,10 @@ class OriginalInterfaceData
                     $stores['tmis-farmer-associations'][] = $item;
 
                 } elseif ($module === 'participants') {
+
+                    $item['status'] = $record->is_active
+                        ? 'Active'
+                        : (in_array($savedStatus, ['Removed', 'Deceased'], true) ? $savedStatus : 'Inactive');
 
                     $sensitive = $record->protected_details ? self::unpack($record->protected_details) : [];
 
@@ -604,9 +574,6 @@ class OriginalInterfaceData
             ->orderBy('name')
             ->get(['org_id', 'region_id', 'name']);
 
-<<<<<<< HEAD
-        return ['registration' => app(RegistrationReferences::class)->choices() + ['regionId' => $user->region_id, 'officeId' => $user->org_id, 'regionIds' => $registrationRegionIds, 'officeIds' => $registrationOfficeIds], 'dashboard' => app(DashboardData::class)->build($stores), 'roles' => $isAdministrator ? DB::table('user_roles')->where('is_active', 1)->where('name', '<>', 'System Administrator')->pluck('name')->all() : [], 'stores' => $stores, 'actor' => (new AccountDisplay)->forUser($user), 'regions' => DB::table('region')->where('is_active', 1)->get(['region_id', 'name']), 'offices' => DB::table('organization')->where('is_active', 1)->get(['org_id', 'region_id', 'name']), 'permissions' => array_values(array_filter(ModuleAccess::permissions(), fn (string $permission): bool => ModuleAccess::allows($user, $permission))), 'administrator' => $isAdministrator];
-=======
         return [
             'registration' => app(RegistrationReferences::class)->choices() + [
                 'regionId' => $user->region_id,
@@ -617,15 +584,14 @@ class OriginalInterfaceData
                 'offices' => $registrationOffices,
             ],
             'dashboard' => app(DashboardData::class)->build($stores),
-            'roles' => $isAdministrator ? DB::table('user_roles')->where('is_active', 1)->pluck('name')->all() : [],
+            'roles' => $isAdministrator ? DB::table('user_roles')->where('is_active', 1)->where('name', '<>', 'System Administrator')->pluck('name')->all() : [],
             'stores' => $stores,
             'actor' => (new AccountDisplay)->forUser($user),
-            'regions' => DB::table('region')->get(['region_id', 'name']),
-            'offices' => DB::table('organization')->get(['org_id', 'region_id', 'name']),
+            'regions' => DB::table('region')->where('is_active', 1)->get(['region_id', 'name']),
+            'offices' => DB::table('organization')->where('is_active', 1)->get(['org_id', 'region_id', 'name']),
             'permissions' => array_values(array_filter(ModuleAccess::permissions(), fn (string $permission): bool => ModuleAccess::allows($user, $permission))),
             'administrator' => $isAdministrator,
         ];
->>>>>>> 332963f28688daffde7d152b170d14b6d358c39e
 
     }
 }
