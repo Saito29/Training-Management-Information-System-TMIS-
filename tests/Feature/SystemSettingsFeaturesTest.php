@@ -9,6 +9,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -48,7 +49,7 @@ class SystemSettingsFeaturesTest extends TestCase
         ])->assertNotFound();
     }
 
-    public function test_administrator_can_manage_additional_statuses_and_cannot_delete_assigned_statuses(): void
+    public function test_administrator_can_manage_farmer_statuses_and_cannot_delete_assigned_statuses(): void
     {
         $administrator = $this->account();
         $this->signIn($administrator);
@@ -61,6 +62,19 @@ class SystemSettingsFeaturesTest extends TestCase
             ->assertJsonPath('status.usage_count', 0);
         $statusId = $created->json('status.id');
 
+        $this->postJson('/ui/sync', [
+            'key' => 'tmis-farmers',
+            'upserts' => [[
+                'id' => 'FMR-STATUS-ASSIGNED',
+                'first_name' => 'Status',
+                'last_name' => 'Farmer',
+                'status' => 'For monitoring',
+                'farmerStatusId' => (string) $statusId,
+            ]],
+            'deletes' => [],
+        ])->assertOk()
+            ->assertJsonPath('stores.tmis-farmers.0.status', 'For monitoring');
+
         $this->patchJson(route('system.record-statuses.update', $statusId), [
             'name' => 'For follow-up',
             'description' => 'Follow up with the assigned office.',
@@ -69,28 +83,31 @@ class SystemSettingsFeaturesTest extends TestCase
             ->assertJsonPath('status.name', 'For follow-up')
             ->assertJsonPath('status.is_active', false);
 
-        DB::table('associations')->insert([
-            'region_id' => 4,
-            'org_id' => 1,
-            'created_by' => $administrator->user_id,
-            'name' => 'Status-linked association',
-            'is_active' => true,
-            'record_status_id' => $statusId,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        $this->getJson(route('system.record-statuses.index'))->assertOk()
-            ->assertJsonPath('statuses.0.association_count', 1)
-            ->assertJsonPath('statuses.0.usage_count', 1);
+        $statuses = $this->getJson(route('system.record-statuses.index'))->assertOk()->json('statuses');
+        $customStatus = collect($statuses)->firstWhere('id', $statusId);
+        $this->assertSame(1, $customStatus['farmer_count']);
+        $this->assertSame(1, $customStatus['usage_count']);
         $this->deleteJson(route('system.record-statuses.destroy', $statusId))
             ->assertConflict()
             ->assertJsonPath('message', 'This status is assigned to saved records and cannot be deleted.');
         $this->assertDatabaseHas('record_statuses', ['id' => $statusId, 'name' => 'For follow-up']);
 
+        $builtIn = collect($statuses)->firstWhere('is_builtin', true);
+        $this->assertNotNull($builtIn);
+        $this->patchJson(route('system.record-statuses.update', $builtIn['id']), [
+            'name' => 'Unavailable',
+            'description' => 'Changed built-in status',
+            'is_active' => false,
+        ])->assertConflict();
+        $this->deleteJson(route('system.record-statuses.destroy', $builtIn['id']))->assertConflict();
         $this->postJson(route('system.record-statuses.store'), ['name' => 'Active'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('name');
+
+        $this->assertTrue(Schema::hasColumn('participants', 'record_status_id'));
+        foreach (['associations', 'trainings', 'resource_persons'] as $table) {
+            $this->assertFalse(Schema::hasColumn($table, 'record_status_id'));
+        }
     }
 
     public function test_additional_status_management_is_limited_to_administrators(): void
@@ -125,7 +142,7 @@ class SystemSettingsFeaturesTest extends TestCase
             ->assertSee('id="database-tab"', false)
             ->assertSee('id="record-statuses-tab"', false)
             ->assertSee('id="record-statuses"', false)
-            ->assertSee('record-status-settings.js?v=record-status-management-1', false)
+            ->assertSee('record-status-settings.js?v=farmer-status-management-2', false)
             ->assertSee('Download full SQL backup')
             ->assertSee('Legacy TMIS SQL export')
             ->assertSee('SQL is parsed as data and never executed.')

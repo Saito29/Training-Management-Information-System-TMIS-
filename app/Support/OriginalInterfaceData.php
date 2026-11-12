@@ -98,7 +98,7 @@ class OriginalInterfaceData
 
         $associations = [];
 
-        $recordStatuses = DB::table('record_statuses')->get(['id', 'name', 'is_active'])->keyBy('id');
+        $recordStatuses = DB::table('record_statuses')->get(['id', 'name', 'is_active', 'is_builtin'])->keyBy('id');
 
         $trainingDocuments = DB::table('training_attachments')->whereIn('training_id', self::query($user, 'trainings')->select('id'))->get()->groupBy('training_id');
 
@@ -147,6 +147,38 @@ class OriginalInterfaceData
             ->groupBy('participant_id');
 
         $trainingMembers = DB::table('training_participant')->whereIn('training_id', self::query($user, 'trainings')->select('id'))->join('participants', 'training_participant.participant_id', '=', 'participants.id')->get(['training_id', 'participants.id', 'participants.ui_id'])->groupBy('training_id');
+
+        $trainingAssociations = collect();
+        $associationTrainings = collect();
+        if (ModuleAccess::allows($user, 'associations.read') && ModuleAccess::allows($user, 'trainings.read')) {
+            $trainingAssociations = DB::table('training_association')
+                ->join('associations', 'training_association.association_id', '=', 'associations.id')
+                ->whereIn('training_association.training_id', self::query($user, 'trainings')->select('id'))
+                ->whereIn('training_association.association_id', self::query($user, 'associations')->select('id'))
+                ->get(['training_association.training_id', 'training_association.association_id', 'associations.ui_id as association_ui_id'])
+                ->groupBy('training_id');
+            $associationTrainings = DB::table('training_association as link')
+                ->join('trainings', 'link.training_id', '=', 'trainings.id')
+                ->join('associations', 'link.association_id', '=', 'associations.id')
+                ->leftJoin('organization as training_offices', 'training_offices.org_id', '=', 'trainings.org_id')
+                ->whereIn('link.training_id', self::query($user, 'trainings')->select('id'))
+                ->whereIn('link.association_id', self::query($user, 'associations')->select('id'))
+                ->whereNull('trainings.deleted_at')
+                ->orderBy('trainings.start_date')
+                ->get([
+                    'link.association_id',
+                    'associations.ui_id as association_ui_id',
+                    'trainings.id',
+                    'trainings.ui_id',
+                    'trainings.name',
+                    'trainings.training_type',
+                    'trainings.start_date',
+                    'trainings.end_date',
+                    'trainings.venue',
+                    'training_offices.name as office_name',
+                ])
+                ->groupBy('association_id');
+        }
 
         $highlights = DB::table('training_highlights')->whereIn('training_id', self::query($user, 'trainings')->select('id'))->get()->groupBy('training_id');
 
@@ -315,10 +347,9 @@ class OriginalInterfaceData
 
                 $id = $record->ui_id ?? (string) $record->id;
 
-                $recordStatusId = in_array($module, ['participants', 'associations', 'trainings', 'resource_persons'], true)
-                    ? $record->record_status_id
-                    : null;
-                $customStatus = $recordStatusId === null ? null : $recordStatuses->get($recordStatusId);
+                $recordStatusId = $module === 'participants' ? $record->record_status_id : null;
+                $farmerStatus = $recordStatusId === null ? null : $recordStatuses->get($recordStatusId);
+                $savedStatus = $item['status'] ?? null;
                 $item = array_replace($item, [
                     'id' => $id,
                     '_db_id' => $record->id,
@@ -330,15 +361,42 @@ class OriginalInterfaceData
                     'description' => $record->description ?? '',
                     'createdAt' => $record->created_at,
                     'updatedAt' => $record->updated_at,
-                    'customStatusId' => $recordStatusId === null ? '' : (string) $recordStatusId,
-                    'customStatus' => $customStatus->name ?? '',
-                    'customStatusActive' => (bool) ($customStatus->is_active ?? false),
                 ]);
 
-                $savedStatus = $item['status'] ?? null;
-                $item['status'] = in_array($savedStatus, ['Active', 'Inactive', 'Removed', 'Deceased'], true)
-                    ? $savedStatus
-                    : ($record->is_active ? 'Active' : 'Inactive');
+                if ($module === 'participants') {
+                    if ($farmerStatus && $farmerStatus->is_builtin
+                        && in_array(mb_strtolower($farmerStatus->name), ['active', 'inactive'], true)) {
+                        $farmerStatus = $recordStatuses->first(
+                            fn (object $status): bool => $status->is_builtin
+                                && mb_strtolower($status->name) === ($record->is_active ? 'active' : 'inactive'),
+                        ) ?? $farmerStatus;
+                    }
+
+                    if (! $farmerStatus) {
+                        $legacyStatus = match (mb_strtolower(trim((string) $savedStatus))) {
+                            'removed', 'waived from farmer association' => 'Waived',
+                            default => trim((string) $savedStatus),
+                        };
+                        if (mb_strtolower($legacyStatus) === 'active' && ! $record->is_active) {
+                            $legacyStatus = 'Inactive';
+                        }
+                        $farmerStatus = $recordStatuses->first(
+                            fn (object $status): bool => mb_strtolower($status->name) === mb_strtolower($legacyStatus),
+                        ) ?? $recordStatuses->first(
+                            fn (object $status): bool => mb_strtolower($status->name) === ($record->is_active ? 'active' : 'inactive'),
+                        );
+                    }
+
+                    $item['farmerStatusId'] = $farmerStatus ? (string) $farmerStatus->id : '';
+                    $item['status'] = $farmerStatus->name ?? ($record->is_active ? 'Active' : 'Inactive');
+                    unset($item['customStatusId'], $item['customStatus'], $item['customStatusActive']);
+                } else {
+                    unset($item['farmerStatusId'], $item['customStatusId'], $item['customStatus'], $item['customStatusActive']);
+                    $item['status'] = in_array($savedStatus, ['Active', 'Inactive', 'Removed', 'Deceased'], true)
+                        ? $savedStatus
+                        : ($record->is_active ? 'Active' : 'Inactive');
+                }
+
                 $item['activityLogs'] = ($selectedRecords[$module]->id ?? null) === $record->id ? ($activityByModule[$module] ?? []) : [];
                 $item['activity_logs'] = $item['activityLogs'];
 
@@ -350,16 +408,20 @@ class OriginalInterfaceData
                         : (in_array($savedStatus, ['Removed', 'Deceased'], true) ? $savedStatus : 'Inactive');
 
                     $item['documents'] = $documents($associationDocuments[$record->id] ?? [], $module, $id);
+                    $item['trainings'] = collect($associationTrainings[$record->id] ?? [])->map(fn ($training): array => [
+                        'id' => $training->ui_id ?? (string) $training->id,
+                        'title' => $training->name,
+                        'category' => $training->training_type ?? '',
+                        'date' => implode(' – ', array_filter([$training->start_date, $training->end_date])),
+                        'location' => $training->venue ?? '',
+                        'organizer' => $training->office_name ?? '',
+                    ])->values()->all();
 
                     $associations[$record->id] = $item;
 
                     $stores['tmis-farmer-associations'][] = $item;
 
                 } elseif ($module === 'participants') {
-
-                    $item['status'] = $record->is_active
-                        ? 'Active'
-                        : (in_array($savedStatus, ['Removed', 'Deceased'], true) ? $savedStatus : 'Inactive');
 
                     $sensitive = $record->protected_details ? self::unpack($record->protected_details) : [];
 
@@ -380,7 +442,7 @@ class OriginalInterfaceData
                         'memberSince' => $membership->member_since,
                     ])->values();
                     $primaryMembership = $membershipDetails->first(fn (array $membership): bool => $membership['isPrimary']) ?? $membershipDetails->first();
-                    $item = array_replace($item, ['name' => $record->name, 'farmerNumber' => self::farmerNumber($record), 'beneficiaryOffices' => collect($participantBeneficiaries[$record->id] ?? [])->map(fn ($office): array => ['region_id' => $office->region_id, 'org_id' => $office->org_id, 'region' => $office->region_name, 'office' => $office->office_name, 'isPrimary' => (bool) $office->is_primary])->values()->all(), 'associationMemberships' => $membershipDetails->all(), 'firstName' => $record->first_name, 'middleName' => $record->middle_name, 'lastName' => $record->last_name, 'suffix' => $record->suffix, 'fname' => $record->first_name, 'mname' => $record->middle_name, 'lname' => $record->last_name, 'sex' => $record->sex, 'gender' => $record->sex, 'nationality' => $record->nationality, 'placeOfBirth' => $record->place_of_birth, 'postal_code' => $record->postal_code, 'house_building_number' => $record->house_number, 'street_purok_sitio_name' => $record->street, 'telephone' => $record->telephone, 'birthDate' => $record->date_of_birth, 'birthday' => $record->date_of_birth, 'dob' => $record->date_of_birth, 'phone' => $record->phone, 'email' => $record->email, 'province' => $record->province, 'municipality' => $record->municipality, 'district' => $record->district, 'barangay' => $record->barangay, 'organization' => $primaryMembership['name'] ?? '', 'association' => $primaryMembership['name'] ?? '', 'associationNumber' => $primaryMembership['id'] ?? '', 'association_id' => $primaryMembership['id'] ?? null, 'association_db_id' => $primaryMembership['databaseId'] ?? null, 'role' => $primaryMembership['role'] ?? '', 'registrationDate' => $item['registration_date'] ?? substr((string) $record->created_at, 0, 10), 'profileStatus' => $item['status'] === 'Active' ? 'Active' : 'Inactive', 'inactiveReason' => $item['status'] === 'Active' ? '' : ($item['status'] === 'Removed' ? 'Waived from Farmer Association' : $item['status']), 'yearCovered' => $item['yearCovered'] ?? $item['year_covered'] ?? '', 'tupad' => $sensitive['tupad'] ?? '', 'soloParent' => $sensitive['solo_parent'] ?? '', 'fourPs' => $sensitive['four_ps'] ?? '', 'pwd' => $sensitive['disability'] ?? '', 'indigenousGroup' => $sensitive['indigenous_group'] ?? '', 'tribeName' => $sensitive['tribe'] ?? '', 'dietaryRestriction' => $sensitive['dietary_restriction'] ?? '', 'allergies_on' => $sensitive['allergies'] ?? '', 'seniorCitizen' => $sensitive['senior_citizen'] ?? '']);
+                    $item = array_replace($item, ['name' => $record->name, 'farmerNumber' => self::farmerNumber($record), 'beneficiaryOffices' => collect($participantBeneficiaries[$record->id] ?? [])->map(fn ($office): array => ['region_id' => $office->region_id, 'org_id' => $office->org_id, 'region' => $office->region_name, 'office' => $office->office_name, 'isPrimary' => (bool) $office->is_primary])->values()->all(), 'associationMemberships' => $membershipDetails->all(), 'firstName' => $record->first_name, 'middleName' => $record->middle_name, 'lastName' => $record->last_name, 'suffix' => $record->suffix, 'fname' => $record->first_name, 'mname' => $record->middle_name, 'lname' => $record->last_name, 'sex' => $record->sex, 'gender' => $record->sex, 'nationality' => $record->nationality, 'placeOfBirth' => $record->place_of_birth, 'postal_code' => $record->postal_code, 'house_building_number' => $record->house_number, 'street_purok_sitio_name' => $record->street, 'telephone' => $record->telephone, 'birthDate' => $record->date_of_birth, 'birthday' => $record->date_of_birth, 'dob' => $record->date_of_birth, 'phone' => $record->phone, 'email' => $record->email, 'province' => $record->province, 'municipality' => $record->municipality, 'district' => $record->district, 'barangay' => $record->barangay, 'organization' => $primaryMembership['name'] ?? '', 'association' => $primaryMembership['name'] ?? '', 'associationNumber' => $primaryMembership['id'] ?? '', 'association_id' => $primaryMembership['id'] ?? null, 'association_db_id' => $primaryMembership['databaseId'] ?? null, 'role' => $primaryMembership['role'] ?? '', 'registrationDate' => $item['registration_date'] ?? substr((string) $record->created_at, 0, 10), 'profileStatus' => $item['status'] === 'Active' ? 'Active' : 'Inactive', 'inactiveReason' => $item['status'] === 'Active' ? '' : $item['status'], 'yearCovered' => $item['yearCovered'] ?? $item['year_covered'] ?? '', 'tupad' => $sensitive['tupad'] ?? '', 'soloParent' => $sensitive['solo_parent'] ?? '', 'fourPs' => $sensitive['four_ps'] ?? '', 'pwd' => $sensitive['disability'] ?? '', 'indigenousGroup' => $sensitive['indigenous_group'] ?? '', 'tribeName' => $sensitive['tribe'] ?? '', 'dietaryRestriction' => $sensitive['dietary_restriction'] ?? '', 'allergies_on' => $sensitive['allergies'] ?? '', 'seniorCitizen' => $sensitive['senior_citizen'] ?? '']);
 
                     $item['attachments'] = $documents($participantDocuments[$record->id] ?? [], $module, $id);
 
@@ -421,6 +483,10 @@ class OriginalInterfaceData
                     $item['designFile'] = collect($trainingDocuments[$record->id] ?? [])->firstWhere('kind', 'Training design')?->original_name;
 
                     $item['participants'] = collect($trainingMembers[$record->id] ?? [])->map(fn ($member): string => $member->ui_id ?? (string) $member->id)->all();
+                    $item['associationIds'] = collect($trainingAssociations[$record->id] ?? [])
+                        ->map(fn ($association): string => $association->association_ui_id ?? (string) $association->association_id)
+                        ->values()
+                        ->all();
 
                     $item['highlights'] = collect($highlights[$record->id] ?? [])->mapWithKeys(fn ($highlight): array => [$highlight->slide => json_decode($highlight->content, true) + ['image' => $highlight->image_path ? route('ui.highlights.image', [$id, $highlight->slide, 'image']) : null, 'logo' => $highlight->logo_path ? route('ui.highlights.image', [$id, $highlight->slide, 'logo']) : null]])->all();
 
@@ -444,6 +510,7 @@ class OriginalInterfaceData
                     'middle_name' => $farmer['middleName'],
                     'sex' => $farmer['sex'],
                     'position' => $membership['role'],
+                    'member_since' => $membership['memberSince'],
                     'province' => $farmer['province'],
                     'municipality' => $farmer['municipality'],
                     'barangay' => $farmer['barangay'],
@@ -607,7 +674,7 @@ class OriginalInterfaceData
             'dashboard' => app(DashboardData::class)->build($stores),
             'roles' => $isAdministrator ? DB::table('user_roles')->where('is_active', 1)->where('name', '<>', 'System Administrator')->pluck('name')->all() : [],
             'stores' => $stores,
-            'recordStatuses' => $recordStatuses->where('is_active', true)->values(),
+            'farmerStatuses' => str_contains($pagePath, '/participants/') ? $recordStatuses->values() : [],
             'actor' => (new AccountDisplay)->forUser($user),
             'regions' => DB::table('region')->where('is_active', 1)->get(['region_id', 'name']),
             'offices' => DB::table('organization')->where('is_active', 1)->get(['org_id', 'region_id', 'name']),

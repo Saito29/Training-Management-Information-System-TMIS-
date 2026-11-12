@@ -81,22 +81,22 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   ));
 
-  // Why a farmer is inactive. Only farmers with one of these reasons are
-  // listed on this page.
-  const inactiveReasons = ['Deceased', 'Inactive', 'Waived from Farmer Association'];
+  // The inactive page includes every farmer whose primary status is not Active.
+  const inactiveReasons = ['Deceased', 'Inactive', 'Waived'];
   let records = [];
   const rebuildInactiveRecords = () => {
     if (hasDatabaseRecords) {
       allRecords.forEach((record) => {
-        const status = record.status || (record.profileStatus === 'Inactive' ? 'Inactive' : 'Active');
+        const status = record.status === 'Removed' || record.status === 'Waived from Farmer Association'
+          ? 'Waived'
+          : record.status || (record.profileStatus === 'Inactive' ? 'Inactive' : 'Active');
+        record.status = status;
         record.profileStatus = status === 'Active' ? 'Active' : 'Inactive';
-        record.inactiveReason = status === 'Removed'
-          ? inactiveReasons[2]
-          : status === 'Deceased'
-            ? inactiveReasons[0]
-            : status === 'Inactive'
-              ? record.inactiveReason || inactiveReasons[1]
-              : '';
+        record.inactiveReason = status === 'Active'
+          ? ''
+          : status === 'Inactive'
+            ? record.inactiveReason || inactiveReasons[1]
+            : status;
       });
     } else {
       allRecords.forEach((record, index) => {
@@ -160,6 +160,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ({
       Deceased: 'reason-deceased',
       Inactive: 'reason-inactive',
+      Waived: 'reason-waived',
+      Removed: 'reason-waived',
       'Waived from Farmer Association': 'reason-waived',
     })[reason] || 'reason-inactive';
 

@@ -875,7 +875,6 @@ class="layout-fixed"
                           <span class="overview-heading-icon"><i class="bi bi-person-vcard" aria-hidden="true"></i></span>
                           <h5 class="title-card">Personal Information</h5>
                           <span class="overview-status">Active</span>
-                          <span class="overview-status" id="farmerCustomStatusBadge" hidden></span>
                         </div>
                       </div>
                       <div class="card-body overview-card-body">
@@ -907,6 +906,10 @@ class="layout-fixed"
                           <div class="farmer-detail">
                             <span class="farmer-detail-icon"><i class="bi bi-calendar2-week" aria-hidden="true"></i></span>
                             <div><span class="farmer-detail-label">Year Covered</span><strong id="farmerYearCovered">Not recorded</strong></div>
+                          </div>
+                          <div class="farmer-detail">
+                            <span class="farmer-detail-icon"><i class="bi bi-calendar2-check" aria-hidden="true"></i></span>
+                            <div><span class="farmer-detail-label">Registration Date</span><strong id="displayRegistrationDate">Not recorded</strong></div>
                           </div>
                           <div class="farmer-detail">
                             <span class="farmer-detail-icon"><i class="bi bi-flag" aria-hidden="true"></i></span>

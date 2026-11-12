@@ -132,6 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
       Active: 'status-active',
       Inactive: 'status-inactive',
       Deceased: 'status-deceased',
+      Waived: 'status-neutral',
       Removed: 'status-neutral',
     })[status] || 'status-neutral';
 
@@ -242,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <a class="btn table-action-button edit-action" href="../id/edit-farmer/${farmerNumber}" target="_blank" rel="noopener" title="Edit farmer profile" aria-label="Edit farmer profile"><i class="bi bi-pencil-fill"></i></a>
         <button type="button" class="btn table-action-button delete-action" data-delete="${esc(r.id)}" title="Delete farmer profile" aria-label="Delete farmer profile"><i class="bi bi-trash-fill"></i></button>
       </div></td>
-      <td data-column="status"><span class="status-badge ${statusBadgeClass(r.status)}">${esc(r.status)}</span>${r.customStatus ? `<span class="status-badge status-neutral ms-1">${esc(r.customStatus)}</span>` : ''}</td>
+      <td data-column="status"><span class="status-badge ${statusBadgeClass(r.status)}">${esc(r.status)}</span></td>
       <td data-column="id">${esc(r.farmerNumber || r.id)}</td>
       <td data-column="region">${esc(r.region)}</td>
       <td data-column="province">${esc(r.province)}</td>

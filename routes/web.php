@@ -76,6 +76,8 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::patch('/operations/notifications/{id}', [OperationsController::class, 'readNotification'])->whereNumber('id')->name('operations.notifications.read');
     Route::get('/operations/evaluations', [OperationsController::class, 'evaluations'])->name('operations.evaluations.index');
     Route::post('/operations/evaluations', [OperationsController::class, 'evaluation'])->name('operations.evaluations.store');
+    Route::patch('/operations/evaluations/{response}', [OperationsController::class, 'updateEvaluation'])->whereNumber('response')->name('operations.evaluations.update');
+    Route::delete('/operations/evaluations/{response}', [OperationsController::class, 'deleteEvaluation'])->whereNumber('response')->name('operations.evaluations.destroy');
     Route::post('/operations/trainings/{id}/status', [OperationsController::class, 'transition'])->whereNumber('id')->name('operations.trainings.status');
     Route::patch('/operations/trainings/{id}/active', [OperationsController::class, 'setActive'])->whereNumber('id')->name('operations.trainings.active');
     Route::post('/operations/trainings/bulk-status', [OperationsController::class, 'bulkTransition'])->middleware('throttle:30,1')->name('operations.trainings.bulk-status');

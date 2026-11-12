@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const guide = byId('rpRatingGuide');
   const previewContext = byId('ratingPreviewContext');
   const storageKey = 'tmis-rp-evaluation-questionnaires';
+  const createTemporaryId = () => `Q-TEMP-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
   const ratingScale = [
     { score: 5, label: 'Very Good', description: 'Performance is excellent and exceeds expectations.', tone: 'very-good' },
     { score: 4, label: 'Good', description: 'Performance is above average and meets expectations.', tone: 'good' },
@@ -204,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
       existingCreatedAt = Array.isArray(previous) ? previous.find((item) => item.id === recordId)?.createdAt : null;
     } catch { message('The saved questionnaires could not be read.', 'error'); return; }
     const record = {
-      id: recordId || (globalThis.crypto?.randomUUID?.() || `rp-evaluation-${Date.now()}`),
+      id: recordId || createTemporaryId(),
       type: 'Resource Person Evaluation',
       status: state,
       questionnaireName,
@@ -227,10 +228,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         records[index] = record;
       }
-      await window.TmisStore.setItem(storageKey, JSON.stringify(records));
-      recordId = record.id;
+      const result = await window.TmisStore.setItem(storageKey, JSON.stringify(records));
+      recordId = result?.idMappings?.[record.id] || record.id;
       if (document.body.classList.contains('questionnaire-edit-page')) {
-        message(state === 'Draft' ? 'Draft updated.' : 'Questionnaire updated.', 'success');
+        message(`${state === 'Draft' ? 'Draft updated.' : 'Questionnaire updated.'} Questionnaire ID: ${recordId}.`, 'success');
         form.querySelectorAll('button').forEach((button) => { button.disabled = true; });
         window.setTimeout(() => { location.href = '../details/list-questionnaire'; }, 700);
         return;
@@ -246,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (new URLSearchParams(location.search).has('id')) history.replaceState(null, '', location.pathname);
         renderQuestions();
       }
-      message(state === 'Draft' ? 'Draft saved. Find it under Evaluation > Details > Draft Questionnaires.' : 'Questionnaire saved.', 'success');
+      message(`${state === 'Draft' ? 'Draft saved. Find it under Evaluation > Details > Draft Questionnaires.' : 'Questionnaire saved.'} Questionnaire ID: ${recordId}.`, 'success');
     } catch { message('The questionnaire could not be saved. Please try again.', 'error'); }
   }
 
@@ -260,9 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (draft) {
         recordId = draft.id;
         form.elements.questionnaireName.value = draft.questionnaireName || '';
-        form.elements.region.value = draft.region || '';
-        if (draft.region) window.syncQuestionnaireOffice?.();
-        form.elements.office.value = draft.office || '';
+        window.setQuestionnaireLocation?.(draft.region, draft.office);
         form.elements.description.value = draft.description || '';
         if (Array.isArray(draft.questions)) {
           questions.push(...draft.questions.map((item) => ({ text: typeof item === 'string' ? item : String(item?.text || '') })));

@@ -374,9 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (draft) {
         recordId = draft.id;
         form.elements.questionnaireName.value = draft.questionnaireName || '';
-        form.elements.region.value = draft.region || '';
-        if (draft.region) window.syncQuestionnaireOffice?.();
-        form.elements.office.value = draft.office || '';
+        window.setQuestionnaireLocation?.(draft.region, draft.office);
         form.elements.description.value = draft.description || '';
         if (Array.isArray(draft.questions)) {
           questions.push(...draft.questions.map((item) => ({ text: typeof item === 'string' ? item : String(item?.text || '') })));
@@ -403,4 +401,3 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   renderQuestions();
 });
-

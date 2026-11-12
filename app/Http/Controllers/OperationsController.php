@@ -109,12 +109,17 @@ class OperationsController
         ModuleAccess::authorize($request, $module.'.create');
         $this->query($request, $module);
         $data = $this->validated($request, $module);
-        if (array_key_exists('record_status_id', $data)) {
-            abort_unless(
-                $data['record_status_id'] === null
-                    || DB::table('record_statuses')->where('id', $data['record_status_id'])->where('is_active', true)->exists(),
-                422,
-                'Select an available additional status.',
+        if ($module === 'participants') {
+            $data['record_status_id'] ??= DB::table('record_statuses')->where('name', 'Active')->value('id');
+            $status = $this->availableFarmerStatus((int) $data['record_status_id']);
+            $data['is_active'] = $status->name === 'Active';
+        }
+        if ($module === 'trainings') {
+            ModuleAccess::authorizeRegistrationScope(
+                $request->user(),
+                (int) $data['region_id'],
+                (int) $data['org_id'],
+                'The selected training office is outside your data visibility settings.',
             );
         }
         if ($module === 'associations') {
@@ -157,13 +162,9 @@ class OperationsController
             $record = $this->query($request, $module)->where('id', $id)->lockForUpdate()->first();
             abort_unless($record, 404);
             abort_unless((int) $record->region_id === (int) $data['region_id'] && (int) $record->org_id === (int) $data['org_id'], 422, 'Record ownership cannot be changed.');
-            if (array_key_exists('record_status_id', $data) && $data['record_status_id'] !== null) {
-                abort_unless(
-                    (int) $record->record_status_id === (int) $data['record_status_id']
-                        || DB::table('record_statuses')->where('id', $data['record_status_id'])->where('is_active', true)->exists(),
-                    422,
-                    'Select an available additional status.',
-                );
+            if ($module === 'participants' && array_key_exists('record_status_id', $data)) {
+                $status = $this->availableFarmerStatus((int) $data['record_status_id'], (int) $record->record_status_id);
+                $data['is_active'] = $status->name === 'Active';
             }
             if ($module === 'trainings') {
                 abort_unless((int) $record->version === $request->integer('version'), 409, 'Training changed. Refresh before editing.');
@@ -215,8 +216,8 @@ class OperationsController
         if ($module === 'resource_persons') {
             $rules['expertise'] = ['nullable', 'string', 'max:255'];
         }
-        if (in_array($module, ['participants', 'associations', 'trainings', 'resource_persons'], true)) {
-            $rules['record_status_id'] = ['nullable', 'integer', Rule::exists('record_statuses', 'id')];
+        if ($module === 'participants') {
+            $rules['record_status_id'] = ['sometimes', 'required', 'integer', Rule::exists('record_statuses', 'id')];
         }
         if ($module === 'questionnaires') {
             $rules += ['kind' => ['required', Rule::in(['Pre-test', 'Post-test', 'Training evaluation', 'Resource person evaluation'])], 'questions' => ['required', 'array', 'min:1', 'max:100'], 'questions.*' => ['required', 'string', 'max:1000']];
@@ -249,6 +250,18 @@ class OperationsController
         }
 
         return $data;
+    }
+
+    private function availableFarmerStatus(int $statusId, ?int $currentStatusId = null): object
+    {
+        $status = DB::table('record_statuses')->where('id', $statusId)->first();
+        abort_unless(
+            $status && ((bool) $status->is_active || $statusId === $currentStatusId),
+            422,
+            'Select an available farmer status.',
+        );
+
+        return $status;
     }
 
     public function transition(Request $request, int $id): JsonResponse|RedirectResponse
@@ -427,8 +440,61 @@ class OperationsController
     public function evaluation(Request $request): JsonResponse|RedirectResponse
     {
         ModuleAccess::authorize($request, 'evaluations.create');
-        $data = $request->validate(['training_id' => ['required', 'integer'], 'questionnaire_id' => ['required', 'integer'], 'participant_id' => ['required', 'integer'], 'answers' => ['required', 'array', 'min:1', 'max:100'], 'answers.*' => ['required', 'string', 'max:4000']]);
-        DB::transaction(function () use ($request, $data): void {
+        $data = $this->validatedEvaluation($request);
+        $this->persistEvaluation($request, $data);
+
+        return $this->respond($request, 'questionnaires', null, 'Evaluation recorded.');
+    }
+
+    public function updateEvaluation(Request $request, int $response): JsonResponse|RedirectResponse
+    {
+        ModuleAccess::authorize($request, 'evaluations.edit');
+        $data = $this->validatedEvaluation($request);
+        $this->persistEvaluation($request, $data, $response);
+
+        return $this->respond($request, 'questionnaires', null, 'Evaluation updated.');
+    }
+
+    public function deleteEvaluation(Request $request, int $response): JsonResponse|RedirectResponse
+    {
+        ModuleAccess::authorize($request, 'evaluations.delete');
+        DB::transaction(function () use ($request, $response): void {
+            $record = DB::table('evaluation_responses')
+                ->whereIn('training_id', $this->query($request, 'trainings')->select('id'))
+                ->where('id', $response)
+                ->lockForUpdate()
+                ->first();
+            abort_unless($record, 404);
+            DB::table('evaluation_responses')->where('id', $response)->delete();
+            $this->audit($request, 'trainings', $record->training_id, 'evaluation_deleted');
+        });
+
+        return $this->respond($request, 'questionnaires', null, 'Evaluation deleted.');
+    }
+
+    private function validatedEvaluation(Request $request): array
+    {
+        return $request->validate([
+            'training_id' => ['required', 'integer'],
+            'questionnaire_id' => ['required', 'integer'],
+            'participant_id' => ['required', 'integer'],
+            'answers' => ['required', 'array', 'min:1', 'max:100'],
+            'answers.*' => ['required', 'string', 'max:4000'],
+        ]);
+    }
+
+    private function persistEvaluation(Request $request, array $data, ?int $responseId = null): void
+    {
+        DB::transaction(function () use ($request, $data, $responseId): void {
+            $existing = null;
+            if ($responseId !== null) {
+                $existing = DB::table('evaluation_responses')
+                    ->whereIn('training_id', $this->query($request, 'trainings')->select('id'))
+                    ->where('id', $responseId)
+                    ->lockForUpdate()
+                    ->first();
+                abort_unless($existing, 404);
+            }
             $training = $this->query($request, 'trainings')->where('id', $data['training_id'])->lockForUpdate()->first();
             abort_unless($training, 404);
             abort_unless($training->status === 'Approved & Accepted' && $training->is_active, 409, 'Only approved and accepted, active trainings accept evaluations.');
@@ -437,19 +503,44 @@ class OperationsController
             abort_unless($this->query($request, 'participants')->where('id', $data['participant_id'])->where('org_id', $training->org_id)->where('region_id', $training->region_id)->where('is_active', true)->exists()
                 && DB::table('training_participant')->where('training_id', $training->id)->where('participant_id', $data['participant_id'])->exists(), 422, 'The participant must be enrolled in this training.');
             abort_unless(count($data['answers']) === count(json_decode($questionnaire->questions, true)), 422, 'Answer every questionnaire item.');
-            abort_if(DB::table('evaluation_responses')->where(Arr::only($data, ['training_id', 'questionnaire_id', 'participant_id']))->exists(), 409, 'This participant already has a response for this questionnaire.');
-            DB::table('evaluation_responses')->insert(Arr::only($data, ['training_id', 'questionnaire_id', 'participant_id']) + ['answers' => json_encode(array_values($data['answers']), JSON_THROW_ON_ERROR), 'encoded_by' => $request->user()->user_id, 'created_at' => now(), 'updated_at' => now()]);
-            $this->audit($request, 'trainings', $training->id, 'evaluation_encoded');
+            $duplicate = DB::table('evaluation_responses')
+                ->where(Arr::only($data, ['training_id', 'questionnaire_id', 'participant_id']))
+                ->when($existing, fn ($query) => $query->where('id', '!=', $existing->id));
+            abort_if($duplicate->exists(), 409, 'This participant already has a response for this questionnaire.');
+            $values = Arr::only($data, ['training_id', 'questionnaire_id', 'participant_id']) + [
+                'answers' => json_encode(array_values($data['answers']), JSON_THROW_ON_ERROR),
+                'updated_at' => now(),
+            ];
+            if ($existing) {
+                DB::table('evaluation_responses')->where('id', $existing->id)->update($values);
+            } else {
+                DB::table('evaluation_responses')->insert($values + [
+                    'encoded_by' => $request->user()->user_id,
+                    'created_at' => now(),
+                ]);
+            }
+            $this->audit($request, 'trainings', $training->id, $existing ? 'evaluation_updated' : 'evaluation_encoded');
         });
-
-        return $this->respond($request, 'questionnaires', null, 'Evaluation recorded.');
     }
 
     public function evaluations(Request $request): View|JsonResponse
     {
         ModuleAccess::authorize($request, 'evaluations.read');
         $trainingIds = ModuleAccess::scope(DB::table('trainings')->whereNull('deleted_at'), $request->user())->select('id');
-        $responses = DB::table('evaluation_responses')->whereIn('training_id', $trainingIds)->orderByDesc('id')->paginate(25);
+        $responses = DB::table('evaluation_responses')
+            ->join('trainings', 'evaluation_responses.training_id', '=', 'trainings.id')
+            ->join('questionnaires', 'evaluation_responses.questionnaire_id', '=', 'questionnaires.id')
+            ->join('participants', 'evaluation_responses.participant_id', '=', 'participants.id')
+            ->whereIn('evaluation_responses.training_id', $trainingIds)
+            ->orderByDesc('evaluation_responses.id')
+            ->select([
+                'evaluation_responses.*',
+                'trainings.name as training_name',
+                'questionnaires.name as questionnaire_name',
+                'questionnaires.questions as questionnaire_questions',
+                'participants.name as participant_name',
+            ])
+            ->paginate(25);
         if ($request->expectsJson()) {
             return response()->json($responses);
         }

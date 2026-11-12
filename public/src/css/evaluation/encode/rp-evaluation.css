@@ -10,6 +10,7 @@
 .guide-card ul{margin:12px 0 0;padding-left:19px;color:var(--color-text-secondary);font-size:12px;line-height:1.6}.guide-card li+li{margin-top:11px}.guide-card li::marker{color:var(--color-primary)}
 .encode-actions>div{margin-left:auto}
 .resource-person-help{margin:12px 0 0;color:var(--color-text-secondary);font-size:12px;line-height:1.5}
+.farmer-table tbody tr:not(.table-empty){cursor:pointer}.farmer-table tbody tr:not(.is-selected):hover td{background:color-mix(in srgb,var(--color-primary-surface) 55%,var(--color-surface))}.farmer-table tbody tr:focus-visible{outline:2px solid var(--color-primary);outline-offset:-2px}
 .resource-person-help[hidden]{display:none}
 .resource-person-help a{color:var(--color-primary-dark);font-weight:650}
 

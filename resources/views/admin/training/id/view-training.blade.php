@@ -837,7 +837,6 @@ class="layout-fixed"
                 <div class="training-overview-reference">
                   <span class="training-status-pill" data-training-field="status" data-status="neutral" aria-label="Workflow status">Status not recorded</span>
                   <span class="training-status-pill" data-training-field="active-status" data-status="neutral" aria-label="Training active status">Status not recorded</span>
-                  <span class="training-status-pill" data-training-field="custom-status" data-status="custom" aria-label="Additional status" hidden></span>
                   <span class="training-reference-label">Training ID</span>
                   <strong data-training-field="id">Reference pending</strong>
                   <small class="training-reference-format">TRN · two-digit year · annual sequence</small>

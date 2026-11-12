@@ -9,6 +9,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -47,7 +48,7 @@ class OriginalInterfaceTest extends TestCase
         $this->get('/app/admin/participants/details/fa-all-list')->assertOk()->assertViewIs('admin.participants.details.fa-all-list')->assertSee('TMIS_PAGE')->assertDontSee('TMIS database operations:');
     }
 
-    public function test_additional_statuses_can_be_assigned_to_each_supported_record_type(): void
+    public function test_custom_statuses_are_primary_farmer_statuses_only(): void
     {
         $this->signIn();
         $statusId = DB::table('record_statuses')->insertGetId([
@@ -62,28 +63,30 @@ class OriginalInterfaceTest extends TestCase
             'association_name' => 'Custom-status association',
             'status' => 'Active',
             'customStatusId' => (string) $statusId,
-        ])->assertOk()
-            ->assertJsonPath('stores.tmis-farmer-associations.0.customStatus', 'For monitoring');
+        ])->assertOk();
+        $this->assertArrayNotHasKey('customStatus', $associationResponse->json('stores.tmis-farmer-associations.0'));
 
-        $this->save('tmis-farmers', [
+        $farmerResponse = $this->save('tmis-farmers', [
             'id' => 'FMR-CUSTOM-STATUS',
             'first_name' => 'Status',
             'last_name' => 'Farmer',
-            'status' => 'Active',
-            'customStatusId' => (string) $statusId,
+            'farmerStatusId' => (string) $statusId,
         ])->assertOk()
-            ->assertJsonPath('stores.tmis-farmers.0.customStatus', 'For monitoring');
+            ->assertJsonPath('stores.tmis-farmers.0.farmerStatusId', (string) $statusId)
+            ->assertJsonPath('stores.tmis-farmers.0.status', 'For monitoring');
+        $this->assertDatabaseHas('participants', ['record_status_id' => $statusId]);
+        $this->assertArrayNotHasKey('customStatus', $farmerResponse->json('stores.tmis-farmers.0'));
 
-        $this->save('tmis-resource-persons', [
+        $resourcePersonResponse = $this->save('tmis-resource-persons', [
             'id' => 'RP-CUSTOM-STATUS',
             'first_name' => 'Status',
             'last_name' => 'Resource',
             'email' => 'resource-status@example.test',
             'customStatusId' => (string) $statusId,
-        ])->assertOk()
-            ->assertJsonPath('stores.tmis-resource-persons.0.customStatus', 'For monitoring');
+        ])->assertOk();
+        $this->assertArrayNotHasKey('customStatus', $resourcePersonResponse->json('stores.tmis-resource-persons.0'));
 
-        $this->save('tmis-trainings', [
+        $trainingResponse = $this->save('tmis-trainings', [
             'id' => 'TRN-CUSTOM-STATUS',
             'training_title' => 'Custom-status training',
             'start_date' => '2026-12-01',
@@ -91,19 +94,28 @@ class OriginalInterfaceTest extends TestCase
             'venue' => 'Training hall',
             'customStatusId' => (string) $statusId,
         ])->assertOk()
-            ->assertJsonPath('stores.tmis-trainings.0.customStatus', 'For monitoring')
             ->assertJsonPath('stores.tmis-trainings.0.workflowStatus', 'For Review');
+        $this->assertArrayNotHasKey('customStatus', $trainingResponse->json('stores.tmis-trainings.0'));
 
-        foreach (['associations', 'participants', 'resource_persons', 'trainings'] as $table) {
-            $this->assertDatabaseHas($table, ['record_status_id' => $statusId]);
+        foreach (['associations', 'trainings', 'resource_persons'] as $table) {
+            $this->assertFalse(Schema::hasColumn($table, 'record_status_id'));
         }
 
         DB::table('record_statuses')->where('id', $statusId)->update(['is_active' => false]);
         $association = $associationResponse->json('stores.tmis-farmer-associations.0');
         $association['association_name'] = 'Updated custom-status association';
         $this->save('tmis-farmer-associations', $association)->assertOk()
-            ->assertJsonPath('stores.tmis-farmer-associations.0.customStatus', 'For monitoring')
             ->assertJsonPath('stores.tmis-farmer-associations.0.status', 'Active');
+        $farmer = $farmerResponse->json('stores.tmis-farmers.0');
+        $farmer['first_name'] = 'Updated';
+        $this->save('tmis-farmers', $farmer)->assertOk()
+            ->assertJsonPath('stores.tmis-farmers.0.status', 'For monitoring');
+        $this->save('tmis-farmers', [
+            'id' => 'FMR-UNAVAILABLE-STATUS',
+            'first_name' => 'Unavailable',
+            'last_name' => 'Farmer',
+            'farmerStatusId' => (string) $statusId,
+        ])->assertUnprocessable();
     }
 
     public function test_dashboard_association_count_uses_database_active_status(): void
@@ -216,6 +228,129 @@ class OriginalInterfaceTest extends TestCase
         $this->assertNull($response->json('registration.officeIds'));
         $this->assertNotEmpty($response->json('regions'));
         $this->assertNotEmpty($response->json('offices'));
+    }
+
+    public function test_administrator_without_saved_visibility_can_register_training_in_another_office(): void
+    {
+        $this->signIn(1, 1);
+        $response = $this->save('tmis-trainings', [
+            'id' => 'TRN-ADMIN-OTHER-OFFICE',
+            'training_title' => 'Administrator cross-office training',
+            'region_id' => '4',
+            'org_id' => '2',
+            'start_date' => '2026-12-01',
+            'end_date' => '2026-12-02',
+            'venue' => 'Training hall',
+        ])->assertOk();
+
+        $training = collect($response->json('stores.tmis-trainings'))
+            ->firstWhere('id', 'TRN-ADMIN-OTHER-OFFICE');
+        $this->assertSame(2, $training['org_id']);
+        $this->assertDatabaseHas('trainings', [
+            'ui_id' => 'TRN-ADMIN-OTHER-OFFICE',
+            'region_id' => 4,
+            'org_id' => 2,
+        ]);
+    }
+
+    public function test_staff_cannot_register_training_outside_their_account_office(): void
+    {
+        $this->signIn(2, 2);
+        DB::table('role_permissions')->insert([
+            'role_id' => 2,
+            'permission' => 'trainings.create',
+        ]);
+
+        $this->save('tmis-trainings', [
+            'id' => 'TRN-STAFF-OTHER-OFFICE',
+            'training_title' => 'Out-of-scope training',
+            'region_id' => '4',
+            'org_id' => '1',
+            'start_date' => '2026-12-01',
+            'end_date' => '2026-12-02',
+            'venue' => 'Training hall',
+        ])->assertForbidden()
+            ->assertJsonPath('message', 'The selected training office is outside your data visibility settings.');
+
+        $this->assertDatabaseMissing('trainings', ['ui_id' => 'TRN-STAFF-OTHER-OFFICE']);
+    }
+
+    public function test_training_affiliations_are_persisted_and_returned_for_association_and_training(): void
+    {
+        $this->signIn();
+        $this->save('tmis-farmer-associations', [
+            'id' => 'FA-TRAINING-LINK',
+            'association_name' => 'Training-linked association',
+            'region_id' => '4',
+            'org_id' => '1',
+            'status' => 'Active',
+        ])->assertOk();
+        $trainingResponse = $this->save('tmis-trainings', [
+            'id' => 'TRN-ASSOCIATION-LINK',
+            'training_title' => 'Association-linked training',
+            'region_id' => '4',
+            'org_id' => '1',
+            'start_date' => '2026-12-01',
+            'end_date' => '2026-12-02',
+            'venue' => 'Training hall',
+            'associationIds' => ['FA-TRAINING-LINK'],
+        ])->assertOk();
+
+        $training = collect($trainingResponse->json('stores.tmis-trainings'))
+            ->firstWhere('id', 'TRN-ASSOCIATION-LINK');
+        $association = collect($trainingResponse->json('stores.tmis-farmer-associations'))
+            ->firstWhere('id', 'FA-TRAINING-LINK');
+        $trainingId = DB::table('trainings')->where('ui_id', 'TRN-ASSOCIATION-LINK')->value('id');
+        $associationId = DB::table('associations')->where('ui_id', 'FA-TRAINING-LINK')->value('id');
+
+        $this->assertDatabaseHas('training_association', [
+            'training_id' => $trainingId,
+            'association_id' => $associationId,
+        ]);
+        $this->assertSame(['FA-TRAINING-LINK'], $training['associationIds']);
+        $this->assertSame('TRN-ASSOCIATION-LINK', $association['trainings'][0]['id']);
+
+        $training['associationIds'] = [];
+        $updated = $this->save('tmis-trainings', $training)->assertOk();
+        $this->assertDatabaseMissing('training_association', [
+            'training_id' => $trainingId,
+            'association_id' => $associationId,
+        ]);
+        $this->assertSame(
+            [],
+            collect($updated->json('stores.tmis-trainings'))->firstWhere('id', 'TRN-ASSOCIATION-LINK')['associationIds'],
+        );
+    }
+
+    public function test_training_affiliation_updates_require_association_read_access(): void
+    {
+        $this->signIn(1, 2);
+        $this->save('tmis-farmer-associations', [
+            'id' => 'FA-PRIVATE-TRAINING-LINK',
+            'association_name' => 'Scoped association',
+            'region_id' => '4',
+            'org_id' => '2',
+            'status' => 'Active',
+        ])->assertOk();
+
+        $this->signIn(2, 2);
+        DB::table('role_permissions')->insert([
+            'role_id' => 2,
+            'permission' => 'trainings.create',
+        ]);
+        $this->save('tmis-trainings', [
+            'id' => 'TRN-PRIVATE-ASSOCIATION-LINK',
+            'training_title' => 'Association permission check',
+            'region_id' => '4',
+            'org_id' => '2',
+            'start_date' => '2026-12-01',
+            'end_date' => '2026-12-02',
+            'venue' => 'Training hall',
+            'associationIds' => ['FA-PRIVATE-TRAINING-LINK'],
+        ])->assertForbidden();
+
+        $this->assertDatabaseMissing('trainings', ['ui_id' => 'TRN-PRIVATE-ASSOCIATION-LINK']);
+        $this->assertDatabaseCount('training_association', 0);
     }
 
     public function test_staff_registration_choices_are_limited_to_their_account_region_and_office(): void
@@ -405,7 +540,7 @@ class OriginalInterfaceTest extends TestCase
             ->assertSee('View and manage active farmer profiles.')
             ->assertSee('Inactive farmer profiles are excluded from this list.')
             ->assertDontSee('This list includes active and inactive farmer profiles.')
-            ->assertSee('all-status.js?v=active-farmer-list-1', false);
+            ->assertSee('all-status.js?v=farmer-status-directory-2', false);
         $farmers = collect($this->getJson('/ui/data')->assertOk()->json('stores.tmis-farmers'));
         $this->assertSame('Active', $farmers->firstWhere('id', 'FMR-LIST-ACTIVE')['status']);
         $this->assertSame('Inactive', $farmers->firstWhere('id', 'FMR-LIST-INACTIVE')['status']);
@@ -665,6 +800,7 @@ class OriginalInterfaceTest extends TestCase
         $this->assertSame('FMR-ROSTER-001', $member['farmer_id']);
         $this->assertMatchesRegularExpression('/^\d{8}$/', $member['farmerNumber']);
         $this->assertSame('Active', $member['status']);
+        $this->assertNotEmpty($member['member_since']);
 
         $association['members'] = [
             ['farmer_id' => 'FMR-ROSTER-001', 'position' => 'Member'],
@@ -833,7 +969,7 @@ class OriginalInterfaceTest extends TestCase
         $statuses = [
             'FMR-STATUS-INACTIVE' => ['Inactive', 'Inactive'],
             'FMR-STATUS-DECEASED' => ['Deceased', 'Deceased'],
-            'FMR-STATUS-REMOVED' => ['Removed', 'Waived from Farmer Association'],
+            'FMR-STATUS-REMOVED' => ['Waived', 'Waived'],
         ];
 
         foreach ($statuses as $id => [$status, $inactiveReason]) {
@@ -1145,6 +1281,120 @@ class OriginalInterfaceTest extends TestCase
         $record['score'] = 8;
         $this->save('tmis-pre-test-encoded', $record)->assertOk()->assertJsonPath('stores.tmis-pre-test-encoded.0.score', 8);
         $this->assertDatabaseHas('assessment_results', ['ui_id' => 'RESULT-1', 'score' => 8, 'state' => 'complete']);
+    }
+
+    public function test_questionnaire_registration_pages_load_account_scoped_location_choices(): void
+    {
+        $user = $this->signIn(1, 1);
+        DB::table('user_data_scopes')->insert([
+            'user_id' => $user->user_id,
+            'region_ids' => json_encode([4], JSON_THROW_ON_ERROR),
+            'office_ids' => json_encode([2], JSON_THROW_ON_ERROR),
+        ]);
+
+        foreach ([
+            '/app/admin/evaluation/create/pre-test-register',
+            '/app/admin/evaluation/create/post-test-register',
+            '/app/admin/evaluation/create/training-evaluation-register',
+            '/app/admin/evaluation/create/rp-evaluation-register',
+            '/app/admin/evaluation/id/edit-pre-test',
+            '/app/admin/evaluation/id/edit-post-test',
+            '/app/admin/evaluation/id/edit-training-evaluation',
+            '/app/admin/evaluation/id/edit-rp-evaluation',
+        ] as $path) {
+            $this->get($path)
+                ->assertOk()
+                ->assertSee('officeIds', false)
+                ->assertSee('src/js/evaluation/create/office-region.js');
+        }
+    }
+
+    public function test_questionnaire_registration_enforces_the_account_location_scope(): void
+    {
+        $this->signIn(2, 2);
+        DB::table('role_permissions')->insert([
+            'role_id' => 2,
+            'permission' => 'questionnaires.create',
+        ]);
+
+        $this->save('tmis-pre-test-questionnaires', [
+            'id' => 'PRE-OUT-OF-SCOPE',
+            'trainingQuestionnaire' => 'Out-of-scope questionnaire',
+            'region_id' => '4',
+            'org_id' => '1',
+            'totalItems' => 10,
+        ])->assertForbidden()
+            ->assertJsonPath('message', 'The selected questionnaire office is outside your data visibility settings.');
+
+        $this->assertDatabaseMissing('questionnaires', ['ui_id' => 'PRE-OUT-OF-SCOPE']);
+
+        $this->save('tmis-pre-test-questionnaires', [
+            'id' => 'PRE-IN-SCOPE',
+            'trainingQuestionnaire' => 'In-scope questionnaire',
+            'region_id' => '4',
+            'org_id' => '2',
+            'totalItems' => 10,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('questionnaires', [
+            'ui_id' => 'PRE-IN-SCOPE',
+            'region_id' => 4,
+            'org_id' => 2,
+        ]);
+    }
+
+    public function test_questionnaire_registration_rejects_an_office_from_a_different_region(): void
+    {
+        $user = $this->signIn(1, 1);
+        DB::table('user_data_scopes')->insert([
+            'user_id' => $user->user_id,
+            'region_ids' => json_encode([4, 5], JSON_THROW_ON_ERROR),
+            'office_ids' => json_encode([2], JSON_THROW_ON_ERROR),
+        ]);
+
+        $this->save('tmis-pre-test-questionnaires', [
+            'id' => 'PRE-MISMATCHED-LOCATION',
+            'trainingQuestionnaire' => 'Mismatched questionnaire',
+            'region_id' => '5',
+            'org_id' => '2',
+            'totalItems' => 10,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('office')
+            ->assertJsonPath('errors.office.0', 'Select a registered office belonging to the selected region.');
+
+        $this->assertDatabaseMissing('questionnaires', ['ui_id' => 'PRE-MISMATCHED-LOCATION']);
+    }
+
+    public function test_new_questionnaires_receive_sequential_year_based_ids_across_types(): void
+    {
+        $this->signIn();
+        $this->travelTo(Carbon::parse('2026-11-12 14:00:00'));
+
+        $questionnaireTypes = [
+            ['tmis-pre-test-questionnaires', 'Pre-test', 'trainingQuestionnaire'],
+            ['tmis-post-test-questionnaires', 'Post-test', 'trainingQuestionnaire'],
+            ['tmis-training-evaluation-questionnaires', 'Training evaluation', 'questionnaireName'],
+            ['tmis-rp-evaluation-questionnaires', 'Resource person evaluation', 'questionnaireName'],
+        ];
+
+        foreach ($questionnaireTypes as $index => [$key, $kind, $nameField]) {
+            $temporaryId = 'Q-TEMP-questionnaire-'.$index;
+            $questionnaireId = '26'.str_pad((string) ($index + 1), 4, '0', STR_PAD_LEFT);
+            $response = $this->save($key, [
+                'id' => $temporaryId,
+                $nameField => 'Questionnaire '.$kind,
+                'region_id' => '4',
+                'org_id' => '2',
+                'totalItems' => 3,
+                'status' => 'Draft',
+            ])->assertOk();
+
+            $this->assertSame($questionnaireId, $response->json('idMappings.'.$temporaryId));
+            $this->assertDatabaseHas('questionnaires', [
+                'ui_id' => $questionnaireId,
+                'kind' => $kind,
+            ]);
+        }
     }
 
     public function test_cross_office_records_are_not_loaded_or_deleted_and_role_delete_permission_applies(): void

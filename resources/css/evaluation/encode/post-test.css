@@ -9,3 +9,4 @@
 .farmer-table-top{margin:0 0 14px;padding:0}.refresh-farmers{height:34px;padding:0 11px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface);color:var(--color-primary-dark);font-size:11px;font-weight:700;white-space:nowrap}.refresh-farmers:hover{border-color:var(--color-primary);background:var(--color-primary-surface)}.refresh-farmers:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
 .guide-card ul{margin:12px 0 0;padding-left:19px;color:var(--color-text-secondary);font-size:12px;line-height:1.6}.guide-card li+li{margin-top:11px}.guide-card li::marker{color:var(--color-primary)}
 .encode-actions>div{margin-left:auto}
+.farmer-table tbody tr:not(.table-empty){cursor:pointer}.farmer-table tbody tr:not(.is-selected):hover td{background:color-mix(in srgb,var(--color-primary-surface) 55%,var(--color-surface))}.farmer-table tbody tr:focus-visible{outline:2px solid var(--color-primary);outline-offset:-2px}

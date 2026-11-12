@@ -64,7 +64,7 @@
     resume();
     return dismiss;
   }
-  function show(message, type = 'success', options = {}) {
+  function show(message, type = 'success') {
     if (!message) return;
     const titles = { success: 'Success', warning: 'Warning', error: 'Error' };
     if (!titles[type]) type = 'success';
@@ -85,7 +85,7 @@
     const existing = region.querySelectorAll('.compose-toast');
     if (existing.length >= 3) { lifetimes.get(existing[0])?.cleanup(); existing[0].remove(); }
     region.append(toast);
-    const dismiss = lifetime(toast, () => toast.remove(), options.persistent === true);
+    const dismiss = lifetime(toast, () => toast.remove());
     return { element: toast, dismiss };
   }
   function legacyType(toast) {

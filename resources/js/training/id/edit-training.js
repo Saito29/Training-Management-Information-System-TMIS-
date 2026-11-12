@@ -50,23 +50,8 @@ document.addEventListener('DOMContentLoaded', () => {
     trainingTypeSelect.value = selectedType || '';
   }
 
-  const customStatusSelect = form.elements.namedItem('customStatusId');
-  if (customStatusSelect instanceof HTMLSelectElement) {
-    const availableStatuses = window.TMIS_PAGE?.recordStatuses || [];
-    const customStatusId = String(selectedTraining?.customStatusId || '');
-    const options = availableStatuses.map(status => new Option(status.name, String(status.id)));
-    if (customStatusId && !options.some(option => option.value === customStatusId)) {
-      const currentStatus = new Option(selectedTraining?.customStatus || 'Inactive status', customStatusId);
-      currentStatus.disabled = true;
-      options.push(currentStatus);
-    }
-    customStatusSelect.replaceChildren(new Option('No additional status', ''), ...options);
-    customStatusSelect.value = customStatusId;
-  }
-
   const trainingStatusBadge = document.getElementById('editTrainingStatusBadge');
   const trainingActiveBadge = document.getElementById('editTrainingActiveBadge');
-  const trainingCustomStatusBadge = document.getElementById('editTrainingCustomStatusBadge');
   if (selectedTraining && trainingStatusBadge) {
     const trainingStatus = selectedTraining.workflowStatus || selectedTraining.status || 'Status not recorded';
     trainingStatusBadge.textContent = trainingStatus;
@@ -76,10 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const activeStatus = selectedTraining.is_active === false ? 'Inactive' : 'Active';
       trainingActiveBadge.textContent = activeStatus;
       trainingActiveBadge.dataset.status = activeStatus.toLowerCase();
-    }
-    if (trainingCustomStatusBadge && selectedTraining.customStatus) {
-      trainingCustomStatusBadge.textContent = selectedTraining.customStatus;
-      trainingCustomStatusBadge.hidden = false;
     }
   }
   const statusButton = document.getElementById('editTrainingStatusButton');
@@ -170,6 +151,18 @@ document.addEventListener('DOMContentLoaded', () => {
     pretest: document.getElementById('editPretestList'),
     posttest: document.getElementById('editPosttestList'),
   };
+  const associationSelect = form.elements.namedItem('associationIds[]');
+  if (associationSelect instanceof HTMLSelectElement) {
+    const linkedIds = new Set((selectedTraining?.associationIds || []).map(String));
+    const associations = window.TmisStore.records('tmis-farmer-associations')
+      .filter(association => association.status !== 'Inactive' || linkedIds.has(String(association.id)));
+    associationSelect.replaceChildren(...associations.map(association => {
+      const option = new Option(association.association_name || association.name || association.id, association.id);
+      option.disabled = association.status === 'Inactive' && !linkedIds.has(String(association.id));
+      return option;
+    }));
+    [...associationSelect.options].forEach(option => { option.selected = linkedIds.has(option.value); });
+  }
   const officeSelect = field('implementing_office');
   if (selectedTraining) {
     const officeById = window.TMIS_PAGE?.offices?.find(office =>
@@ -361,6 +354,9 @@ document.addEventListener('DOMContentLoaded', () => {
       email: row.querySelector('[data-trainer-email]').value,
     }));
     for (const type of ['pretest', 'posttest']) values[type] = [...questionnaireLists[type].querySelectorAll('select')].map(select => select.value);
+    if (associationSelect instanceof HTMLSelectElement) {
+      values.associationIds = [...associationSelect.selectedOptions].map(option => option.value);
+    }
     if (window.TMIS_PAGE) {
       for (const name of addressNames) {
         const control = field(name);
@@ -388,21 +384,25 @@ document.addEventListener('DOMContentLoaded', () => {
     barangay_id: selectedTraining.barangay_id || selectedTraining.barangay || '',
     delivery_mode: selectedTraining.delivery_mode || 'In-person',
     target_participants: String(selectedTraining.target_participants || ''),
-    customStatusId: String(selectedTraining.customStatusId || ''),
     trainers: selectedTraining.trainers || [],
     pretest: selectedTraining.pretest || [],
     posttest: selectedTraining.posttest || [],
+    associationIds: selectedTraining.associationIds || [],
   } : null;
   let saved;
   try { saved = JSON.parse(window.TmisStore.getItem(storageKey) || 'null') || initialValues; } catch { saved = initialValues; }
   if (saved && typeof saved === 'object') {
     Object.entries(saved).forEach(([name, value]) => {
-      if (name === 'trainers' || name === 'pretest' || name === 'posttest' || addressNames.includes(name) || name === 'delivery_mode' || name === 'implementing_office') return;
+      if (name === 'trainers' || name === 'pretest' || name === 'posttest' || name === 'associationIds' || addressNames.includes(name) || name === 'delivery_mode' || name === 'implementing_office') return;
       const control = field(name);
       if (control && typeof value === 'string') control.value = value;
     });
     const mode = [...form.querySelectorAll('[name="delivery_mode"]')].find(input => input.value === saved.delivery_mode);
     if (mode) mode.checked = true;
+    if (associationSelect instanceof HTMLSelectElement) {
+      const linkedIds = new Set((saved.associationIds || []).map(String));
+      [...associationSelect.options].forEach(option => { option.selected = linkedIds.has(option.value); });
+    }
   }
   (saved?.trainers?.length ? saved.trainers : [{}]).forEach(addTrainer);
   for (const type of ['pretest', 'posttest']) {

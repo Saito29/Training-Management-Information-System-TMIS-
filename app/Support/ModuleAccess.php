@@ -376,8 +376,8 @@ class ModuleAccess
         $scope = DB::table('user_data_scopes')->where('user_id', $user->user_id)->first();
         if (! $scope) {
             return [
-                'regionIds' => $user->region_id === null ? null : [(int) $user->region_id],
-                'officeIds' => $user->org_id === null ? null : [(int) $user->org_id],
+                'regionIds' => null,
+                'officeIds' => null,
             ];
         }
 
@@ -413,22 +413,6 @@ class ModuleAccess
         }
         $scope = $preferences ? DB::table('user_data_scopes')->where('user_id', $user->user_id)->first() : null;
         if ($preferences && ! $scope) {
-            if ($isParticipants) {
-                return self::scopeParticipants(
-                    $query,
-                    $user->region_id === null ? null : [(int) $user->region_id],
-                    $user->org_id === null ? null : [(int) $user->org_id],
-                );
-            }
-
-            if ($user->region_id !== null) {
-                $query->where('region_id', $user->region_id);
-            }
-
-            if ($user->org_id !== null) {
-                $query->where('org_id', $user->org_id);
-            }
-
             return $query;
         }
 

@@ -2013,5 +2013,5 @@ class="layout-fixed"
     <!-- nav -->
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/participants/details/all-status.js?v=active-farmer-list-1') }}"></script>
+    <script src="{{ asset('src/js/participants/details/all-status.js?v=farmer-status-directory-2') }}"></script>
 @endsection

@@ -2,7 +2,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.querySelector('#recordStatusRegistration');
   if (!form) return;
 
-  const statuses = JSON.parse(document.querySelector('#registeredRecordStatuses').textContent);
+  const statusData = JSON.parse(document.querySelector('#registeredRecordStatuses').textContent);
+  if (!Array.isArray(statusData)) throw new Error('The farmer status directory is not available.');
+
+  const statuses = statusData;
   const nameInput = form.elements.name;
   const descriptionInput = form.elements.description;
   const search = document.querySelector('#recordStatusSearch');
@@ -11,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const previous = document.querySelector('[data-record-status-previous]');
   const next = document.querySelector('[data-record-status-next]');
   const body = document.querySelector('[data-record-status-rows]');
+  const createModal = bootstrap.Modal.getOrCreateInstance(document.querySelector('#recordStatusCreateModal'));
   const editModalElement = document.querySelector('#recordStatusEditModal');
   const editForm = document.querySelector('#recordStatusEditForm');
   const editNameInput = editForm.elements.name;
@@ -25,10 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let sortDirection = 'asc';
 
   const isActive = status => status.is_active === true || status.is_active === 1 || status.is_active === '1';
+  const isBuiltIn = status => status.is_builtin === true || status.is_builtin === 1 || status.is_builtin === '1';
 
   function updateSummary() {
     document.querySelector('[data-record-status-stat-total]').textContent = String(statuses.length);
-    document.querySelector('[data-record-status-stat-used]').textContent = String(statuses.reduce((total, status) => total + Number(status.usage_count || 0), 0));
+    document.querySelector('[data-record-status-stat-used]').textContent = String(statuses.reduce((total, status) => total + Number(status.farmer_count || 0), 0));
     document.querySelector('[data-record-status-stat-active]').textContent = String(statuses.filter(isActive).length);
     document.querySelector('[data-record-status-stat-inactive]').textContent = String(statuses.filter(status => !isActive(status)).length);
   }
@@ -37,8 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const query = search.value.trim().toLocaleLowerCase('en-PH');
     const filtered = statuses.filter(status => [status.name, status.description || ''].join(' ').toLocaleLowerCase('en-PH').includes(query));
     filtered.sort((left, right) => {
-      const first = sortField === 'usage_count' ? Number(left.usage_count || 0) : String(left.name || '');
-      const second = sortField === 'usage_count' ? Number(right.usage_count || 0) : String(right.name || '');
+      const first = sortField === 'usage_count' ? Number(left.farmer_count || 0) : String(left.name || '');
+      const second = sortField === 'usage_count' ? Number(right.farmer_count || 0) : String(right.name || '');
       const comparison = typeof first === 'number' && typeof second === 'number'
         ? first - second
         : String(first).localeCompare(String(second), 'en-PH', { numeric: true, sensitivity: 'base' });
@@ -59,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     body.replaceChildren();
 
     for (const status of filtered.slice(start, start + size)) {
+      const builtIn = isBuiltIn(status);
       const row = document.createElement('tr');
       const actions = document.createElement('td');
       actions.className = 'directory-row-actions';
@@ -67,8 +73,9 @@ document.addEventListener('DOMContentLoaded', () => {
       edit.type = 'button';
       edit.className = 'btn directory-icon-action is-edit';
       edit.dataset.recordStatusEdit = String(status.id);
-      edit.title = `Edit ${status.name}`;
+      edit.title = builtIn ? `${status.name} is a built-in status` : `Edit ${status.name}`;
       edit.setAttribute('aria-label', edit.title);
+      edit.disabled = builtIn;
       const editIcon = document.createElement('i');
       editIcon.className = 'bi bi-pencil-square';
       editIcon.setAttribute('aria-hidden', 'true');
@@ -78,11 +85,13 @@ document.addEventListener('DOMContentLoaded', () => {
       remove.type = 'button';
       remove.className = 'btn directory-icon-action is-delete';
       remove.dataset.recordStatusDelete = String(status.id);
-      remove.title = Number(status.usage_count) > 0
-        ? `Cannot delete ${status.name}; it is assigned to records`
-        : `Delete ${status.name}`;
+      remove.title = builtIn
+        ? `${status.name} is a built-in status`
+        : Number(status.farmer_count) > 0
+          ? `Cannot delete ${status.name}; farmers are assigned to it`
+          : `Delete ${status.name}`;
       remove.setAttribute('aria-label', remove.title);
-      remove.disabled = Number(status.usage_count) > 0;
+      remove.disabled = builtIn || Number(status.farmer_count) > 0;
       const deleteIcon = document.createElement('i');
       deleteIcon.className = 'bi bi-trash3';
       deleteIcon.setAttribute('aria-hidden', 'true');
@@ -95,25 +104,22 @@ document.addEventListener('DOMContentLoaded', () => {
       const name = document.createElement('strong');
       name.textContent = status.name;
       const detail = document.createElement('small');
-      detail.textContent = status.description || 'Shared across farmers, associations, trainings, and resource persons';
+      detail.textContent = status.description || (builtIn ? 'Built-in farmer status' : 'Custom farmer status');
       nameCell.append(name, detail);
       row.append(nameCell);
 
       const countCell = document.createElement('td');
       const count = document.createElement('span');
       count.className = 'directory-count-badge';
-      count.textContent = Number(status.usage_count || 0).toLocaleString('en-PH');
-      count.setAttribute('aria-label', `${count.textContent} assigned records`);
-      const breakdown = document.createElement('small');
-      breakdown.className = 'd-block mt-1 text-body-secondary';
-      breakdown.textContent = `${Number(status.farmer_count || 0)} farmers · ${Number(status.association_count || 0)} associations · ${Number(status.training_count || 0)} trainings · ${Number(status.resource_person_count || 0)} resource persons`;
-      countCell.append(count, breakdown);
+      count.textContent = Number(status.farmer_count || 0).toLocaleString('en-PH');
+      count.setAttribute('aria-label', `${count.textContent} assigned farmers`);
+      countCell.append(count);
       row.append(countCell);
 
       const stateCell = document.createElement('td');
       const state = document.createElement('span');
       state.className = `directory-status ${isActive(status) ? 'is-active' : 'is-inactive'}`;
-      state.textContent = isActive(status) ? 'Available' : 'Inactive';
+      state.textContent = isActive(status) ? 'Available' : 'Unavailable';
       stateCell.append(state);
       row.append(stateCell);
       body.append(row);
@@ -124,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const cell = document.createElement('td');
       cell.colSpan = 4;
       cell.className = 'directory-empty';
-      cell.textContent = statuses.length ? 'No statuses match your search.' : 'No additional statuses have been added yet.';
+      cell.textContent = statuses.length ? 'No statuses match your search.' : 'No farmer statuses are available.';
       row.append(cell);
       body.append(row);
     }
@@ -151,16 +157,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     const result = await response.json().catch(() => null);
     if (!response.ok || !result) {
-      throw new Error(Object.values(result?.errors || {}).flat()[0] || result?.message || 'Status could not be saved.');
+      throw new Error(Object.values(result?.errors || {}).flat()[0] || result?.message || 'Farmer status could not be saved.');
     }
+
     return result;
   }
 
   function confirmDelete(status) {
     const modal = bootstrap.Modal.getOrCreateInstance(deleteModalElement);
     const confirmButton = deleteModalElement.querySelector('[data-settings-delete-confirm]');
-    deleteModalElement.querySelector('[data-settings-delete-record]').textContent = `“${status.name}” will be removed from the shared status directory.`;
-    deleteModalElement.querySelector('[data-settings-delete-note]').textContent = 'This action cannot be undone. Statuses assigned to saved records are protected from deletion.';
+    const description = status.description ? ` Details: ${status.description}` : '';
+    deleteModalElement.querySelector('[data-settings-delete-record]').textContent = `"${status.name}" will be removed from farmer status choices.${description}`;
+    deleteModalElement.querySelector('[data-settings-delete-note]').textContent = `${Number(status.farmer_count || 0)} farmers are currently assigned. This action cannot be undone.`;
 
     return new Promise(resolve => {
       const finish = value => {
@@ -199,12 +207,12 @@ document.addEventListener('DOMContentLoaded', () => {
     refresh.setAttribute('aria-busy', 'true');
     try {
       const result = await request(form.action, 'GET');
-      if (!Array.isArray(result.statuses)) throw new Error('The server did not return the statuses.');
+      if (!Array.isArray(result.statuses)) throw new Error('The server did not return farmer statuses.');
       statuses.splice(0, statuses.length, ...result.statuses);
       render();
-      window.TmisToast?.show('Statuses refreshed.', 'success');
+      window.TmisToast?.show('Farmer statuses refreshed.', 'success');
     } catch (error) {
-      window.TmisToast?.show(error.message || 'Statuses could not be refreshed.', 'error');
+      window.TmisToast?.show(error.message || 'Farmer statuses could not be refreshed.', 'error');
     } finally {
       refresh.disabled = false;
       refresh.removeAttribute('aria-busy');
@@ -222,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const control = event.target.closest('[data-record-status-edit],[data-record-status-delete]');
     if (!control || saving) return;
     const status = statuses.find(item => String(item.id) === (control.dataset.recordStatusEdit || control.dataset.recordStatusDelete));
-    if (!status) return;
+    if (!status || isBuiltIn(status)) return;
 
     if (control.dataset.recordStatusEdit) {
       editing = status;
@@ -234,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    if (Number(status.usage_count) > 0 || !await confirmDelete(status)) return;
+    if (Number(status.farmer_count) > 0 || !await confirmDelete(status)) return;
     saving = true;
     control.disabled = true;
     try {
@@ -243,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
       render();
       window.TmisToast?.show(result.message, 'success');
     } catch (error) {
-      window.TmisToast?.show(error.message || 'Status could not be deleted.', 'error');
+      window.TmisToast?.show(error.message || 'Farmer status could not be deleted.', 'error');
     } finally {
       saving = false;
       control.disabled = false;
@@ -266,8 +274,9 @@ document.addEventListener('DOMContentLoaded', () => {
         description: editDescriptionInput.value.trim(),
         is_active: editActiveInput.checked,
       });
-      if (!result.status) throw new Error('The server did not return the updated status.');
+      if (!result.status) throw new Error('The server did not return the updated farmer status.');
       const index = statuses.findIndex(item => String(item.id) === String(result.status.id));
+      if (index < 0) throw new Error('The updated farmer status is no longer in the directory.');
       statuses[index] = result.status;
       search.value = '';
       page = Math.max(1, Math.ceil(statuses.length / Number(pageSize.value)));
@@ -275,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
       editModal.hide();
       window.TmisToast?.show(result.message, 'success');
     } catch (error) {
-      window.TmisToast?.show(error.message || 'Status could not be updated.', 'error');
+      window.TmisToast?.show(error.message || 'Farmer status could not be updated.', 'error');
     } finally {
       saving = false;
       submitButton.disabled = false;
@@ -294,15 +303,16 @@ document.addEventListener('DOMContentLoaded', () => {
         name: nameInput.value.trim(),
         description: descriptionInput.value.trim(),
       });
-      if (!result.status) throw new Error('The server did not return the new status.');
+      if (!result.status) throw new Error('The server did not return the new farmer status.');
       statuses.push(result.status);
       form.reset();
       search.value = '';
       page = Math.max(1, Math.ceil(statuses.length / Number(pageSize.value)));
       render();
+      createModal.hide();
       window.TmisToast?.show(result.message, 'success');
     } catch (error) {
-      window.TmisToast?.show(error.message || 'Status could not be added.', 'error');
+      window.TmisToast?.show(error.message || 'Farmer status could not be added.', 'error');
     } finally {
       saving = false;
       submitButton.disabled = false;

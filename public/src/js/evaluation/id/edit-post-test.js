@@ -124,9 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const item = Array.isArray(saved) ? saved.find((entry) => entry.id === editId) : null;
       if (item) {
         form.elements.training_questionnaire.value = item.trainingQuestionnaire || '';
-        form.elements.region.value = item.region || '';
-        if (item.region) window.syncQuestionnaireOffice?.();
-        form.elements.implementing_office.value = item.implementingOffice || '';
+        window.setQuestionnaireLocation?.(item.region, item.implementingOffice);
         form.elements.total_items.value = item.totalItems || '';
         form.elements.description.value = item.description || '';
       }
@@ -182,4 +180,3 @@ document.addEventListener('DOMContentLoaded', () => {
     status.hidden = false;
   });
 });
-

@@ -11,5 +11,18 @@
 <label class="col-md-4">Participant<select name="participant_id" required class="form-select"><option value="">Select an enrolled participant</option>@foreach($participantOptions as $participant)<option value="{{ $participant->id }}">{{ $participant->name }}</option>@endforeach</select></label>
 <label class="col-md-4">Questionnaire<select name="questionnaire_id" required class="form-select" data-evaluation-questionnaire><option value="">Select a questionnaire</option>@foreach($questionnaireOptions as $questionnaire)<option value="{{ $questionnaire->id }}" data-questions="{{ $questionnaire->questions }}">{{ $questionnaire->name }}</option>@endforeach</select></label>
 <fieldset class="col-12" data-evaluation-answers><legend class="fs-5">Answers</legend><p>Select a questionnaire to load its questions.</p></fieldset><div><button class="btn btn-success">Record evaluation</button></div></form>@endif
-<div class="table-responsive"><table class="table"><thead><tr><th>Training ID</th><th>Questionnaire ID</th><th>Participant ID</th><th>Answers</th><th>Encoded at</th></tr></thead><tbody>@forelse($responses as $response)<tr><td>{{ $response->training_id }}</td><td>{{ $response->questionnaire_id }}</td><td>{{ $response->participant_id }}</td><td><ol>@foreach(json_decode($response->answers, true) as $answer)<li>{{ $answer }}</li>@endforeach</ol></td><td>{{ $response->created_at }}</td></tr>@empty<tr><td colspan="5">No evaluations recorded.</td></tr>@endforelse</tbody></table></div><nav class="d-flex gap-3" aria-label="Evaluation pagination">@if($responses->previousPageUrl())<a href="{{ $responses->previousPageUrl() }}">Previous</a>@endif @if($responses->nextPageUrl())<a href="{{ $responses->nextPageUrl() }}">Next</a>@endif</nav></main>
+<div class="table-responsive"><table class="table"><thead><tr><th>Training</th><th>Questionnaire</th><th>Participant</th><th>Answers</th><th>Encoded at</th><th>Actions</th></tr></thead><tbody>@forelse($responses as $response)
+@php($questions = json_decode($response->questionnaire_questions, true) ?? [])
+@php($answers = json_decode($response->answers, true) ?? [])
+<tr><td>{{ $response->training_name }}</td><td>{{ $response->questionnaire_name }}</td><td>{{ $response->participant_name }}</td><td><ol>@foreach($answers as $answer)<li>{{ $answer }}</li>@endforeach</ol></td><td>{{ $response->created_at }}</td><td class="d-flex flex-column gap-2">
+@if(\App\Support\ModuleAccess::allows(auth()->user(), 'evaluations.edit'))
+<details><summary>Edit response</summary><form method="post" action="{{ route('operations.evaluations.update', $response->id) }}" class="mt-2">@csrf @method('PATCH')
+<input type="hidden" name="training_id" value="{{ $response->training_id }}"><input type="hidden" name="questionnaire_id" value="{{ $response->questionnaire_id }}"><input type="hidden" name="participant_id" value="{{ $response->participant_id }}">
+@foreach($questions as $index => $question)<label class="d-block mb-2">{{ $question }}<textarea class="form-control" name="answers[]" maxlength="4000" required>{{ $answers[$index] ?? '' }}</textarea></label>@endforeach
+<button class="btn btn-sm btn-primary" type="submit">Save response</button></form></details>
+@endif
+@if(\App\Support\ModuleAccess::allows(auth()->user(), 'evaluations.delete'))
+<form method="post" action="{{ route('operations.evaluations.destroy', $response->id) }}" data-confirm-evaluation-delete>@csrf @method('DELETE')<button class="btn btn-sm btn-outline-danger" type="submit">Delete response</button></form>
+@endif
+</td></tr>@empty<tr><td colspan="6">No evaluations recorded.</td></tr>@endforelse</tbody></table></div><nav class="d-flex gap-3" aria-label="Evaluation pagination">@if($responses->previousPageUrl())<a href="{{ $responses->previousPageUrl() }}">Previous</a>@endif @if($responses->nextPageUrl())<a href="{{ $responses->nextPageUrl() }}">Next</a>@endif</nav></main>
 @endsection

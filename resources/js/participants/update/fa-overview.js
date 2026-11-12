@@ -59,9 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
     title.textContent = association.association_name || 'Farmer Association';
     status.textContent = association.status || 'Active';
     status.classList.toggle('is-inactive', association.status === 'Inactive');
-    const customStatus = document.getElementById('faOverviewCustomStatus');
-    customStatus.textContent = association.customStatus || '';
-    customStatus.hidden = !association.customStatus;
     fields.forEach(field => {
       const key = field.dataset.faField;
       field.textContent = association[key] || '—';
@@ -81,8 +78,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const previousPage = document.getElementById('faMemberPrevious');
   const nextPage = document.getElementById('faMemberNext');
   const pageStatus = document.getElementById('faMemberPageStatus');
-  const columns = ['Status', 'Farmer ID', 'Last Name', 'First Name', 'Middle Name', 'Extension', 'Date of Birth', 'Gender', 'Age', 'Farmer Role', 'Date Registered', 'Province', 'District', 'Municipality', 'Barangay', 'Sitio/Purok'];
-  const visibleColumns = new Set(columns.map((_, index) => index).filter(index => index < 11));
+  const columns = ['Status', 'Farmer ID', 'Last Name', 'First Name', 'Middle Name', 'Extension', 'Date of Birth', 'Gender', 'Age', 'Farmer Role', 'Date Registered', 'Member Since', 'Province', 'District', 'Municipality', 'Barangay', 'Sitio/Purok'];
+  const visibleColumns = new Set(columns.map((_, index) => index).filter(index => index < 12));
   const labelRow = document.createElement('tr');
   const filterRow = document.createElement('tr');
   filterRow.className = 'fa-member-filters';
@@ -141,6 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
       first(member, 'age') || ageFromBirth(birth),
       first(member, 'farmer_role', 'associate_role', 'role', 'position'),
       formatDate(first(member, 'date_registered', 'registration_date', 'savedAt')),
+      formatDate(first(member, 'member_since', 'memberSince')),
       first(member, 'province'), first(member, 'district'), first(member, 'municipality'),
       first(member, 'barangay'), first(member, 'sitio', 'purok', 'sitio_purok'),
     ];

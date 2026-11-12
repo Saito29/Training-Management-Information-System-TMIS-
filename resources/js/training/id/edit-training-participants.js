@@ -271,8 +271,10 @@ document.addEventListener('DOMContentLoaded', () => {
       button.disabled = false;
     }
   }));
-  panel.querySelector('[data-export-participants="current"]')?.addEventListener('click', () => {
-    const records = currentFiltered();
+  function exportParticipants(type) {
+    const records = type === 'current' ? currentFiltered() : availableFiltered();
+    const participantGroup = type === 'current' ? 'current participants' : 'available farmers';
+    const sheetName = type === 'current' ? 'Current Participants' : 'Available Farmers';
     if (!window.XLSX?.utils) {
       const message = 'Excel export is unavailable. Check your connection and try again.';
       if (window.TmisToast) window.TmisToast.show(message, 'error');
@@ -293,16 +295,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const sheet = window.XLSX.utils.aoa_to_sheet([headers, ...rows]);
       sheet['!cols'] = [16, 28, 20, 20, 24, 22].map(wch => ({ wch }));
       const workbook = window.XLSX.utils.book_new();
-      window.XLSX.utils.book_append_sheet(workbook, sheet, 'Current Participants');
+      window.XLSX.utils.book_append_sheet(workbook, sheet, sheetName);
       const trainingId = String(training?.id || 'sample').replace(/[^a-zA-Z0-9_-]/g, '-');
-      window.XLSX.writeFile(workbook, `training-current-${trainingId}.xlsx`);
-      feedback = `Exported ${records.length} current participants.`;
+      window.XLSX.writeFile(workbook, `training-${type}-${trainingId}.xlsx`);
+      feedback = `Exported ${records.length} ${participantGroup}.`;
       render();
     } catch (error) {
-      const message = error.message || 'Unable to export the current participant list.';
+      const message = error.message || `Unable to export the ${participantGroup} list.`;
       if (window.TmisToast) window.TmisToast.show(message, 'error');
       else window.alert(message);
     }
+  }
+  panel.querySelectorAll('[data-export-participants]').forEach(button => {
+    button.addEventListener('click', () => exportParticipants(button.dataset.exportParticipants));
   });
   const actionHeading = document.createElement('th');
   actionHeading.scope = 'col';

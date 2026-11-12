@@ -892,7 +892,6 @@ class="layout-fixed"
                               <span class="farmer-status-pill active-status">
                                 <i class="bi bi-patch-check-fill"></i> Active
                               </span>
-                              <span class="farmer-status-pill" id="farmerCustomStatusBadge" hidden></span>
                               <button type="button" class="btn farmer-status-action mt-2" data-bs-toggle="modal" data-bs-target="#farmerStatusModal"><i class="bi bi-arrow-left-right" aria-hidden="true"></i><span>Update status</span><i class="bi bi-arrow-right ms-auto" aria-hidden="true"></i></button>
                             </div>
                           </div>
@@ -977,14 +976,6 @@ class="layout-fixed"
                               </select>
                             </div>
                             <div class="col-12 col-sm-6 col-lg-3">
-                              <label for="farmer_custom_status" class="form-label">Additional status</label>
-                              <select class="form-select" id="farmer_custom_status" name="customStatusId">
-                                <option value="">No additional status</option>
-                              </select>
-                              <small class="form-text">Independent of Active / Inactive.</small>
-                            </div>
-
-                            <div class="col-12 col-sm-6 col-lg-3">
                               <label for="farmer_place_of_birth" class="form-label">Place of Birth <span class="text-required">*</span></label>
                               <input type="text" class="form-control" id="farmer_place_of_birth" name="place_of_birth" value="Gumaca, Quezon" placeholder="Enter place of birth" required>
                             </div>
@@ -1012,6 +1003,7 @@ class="layout-fixed"
                             <div class="col-12 col-sm-6 col-lg-3">
                               <label for="farmer_registration_date" class="form-label">Registration Date <span class="text-required">*</span></label>
                               <input type="date" class="form-control" id="farmer_registration_date" name="registration_date" value="2023-09-15" required>
+                              <div class="form-text" id="farmerRegistrationDateReadable">September 15, 2023</div>
                             </div>
                             <div class="col-12 col-sm-6 col-lg-3">
                               <label for="farmer_year_covered" class="form-label">Year Covered</label>
@@ -2126,14 +2118,11 @@ class="layout-fixed"
           <div class="modal-body">
             <span class="farmer-status-modal-eyebrow">PROFILE MANAGEMENT</span>
             <h2 id="farmerStatusModalTitle">Update farmer status</h2>
-            <p>Record the participant’s current standing. Supporting documents are optional for inactive, removed, or deceased status.</p>
+            <p>Record the farmer’s current status. Supporting documents are optional for non-active statuses.</p>
             <div class="mb-3">
               <label class="form-label" for="farmerStatusSelect">Status</label>
-              <select class="form-select" id="farmerStatusSelect" name="status" required>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Removed">Removed</option>
-                <option value="Deceased">Deceased</option>
+              <select class="form-select" id="farmerStatusSelect" name="farmerStatusId" required>
+                <option value="">Loading farmer statuses…</option>
               </select>
             </div>
             <div id="farmerStatusReasonFields" hidden>
@@ -2600,5 +2589,5 @@ class="layout-fixed"
     <script src="{{ asset('src/js/participants/update/farmer-activity-logs.js?v=actor-role-omission-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/attachment-manager.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/edit-farmer.js') }}"></script>
-    <script src="{{ asset('src/js/participants/update/farmer-status.js?v=status-supporting-file-1') }}"></script>
+    <script src="{{ asset('src/js/participants/update/farmer-status.js?v=farmer-primary-status-1') }}"></script>
 @endsection

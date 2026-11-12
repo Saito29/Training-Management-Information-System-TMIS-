@@ -379,10 +379,10 @@ class OriginalInterfaceController
 
             return null;
         }
-        $record = $this->validatedRecord($raw);
+        $record = $this->validatedRecord($raw, $module);
         if ($module === 'participants') {
             Validator::make($record, [
-                'status' => ['sometimes', 'required', Rule::in(['Active', 'Inactive', 'Removed', 'Deceased'])],
+                'status' => ['sometimes', 'required', 'string', 'max:100'],
                 'yearCovered' => ['sometimes', 'nullable', 'integer', 'min:2000', 'max:2200'],
                 'year_covered' => ['sometimes', 'nullable', 'integer', 'min:2000', 'max:2200'],
             ])->validate();
@@ -422,9 +422,37 @@ class OriginalInterfaceController
             abort_unless(isset($record['_version']) && (int) $record['_version'] === (int) $locked->ui_version, 409, 'This record changed. Refresh before saving.');
             $existing = $locked;
         }
+        $temporaryId = null;
+        if ($module === 'questionnaires' && ! $existing && preg_match('/^Q-TEMP-[A-Za-z0-9-]{1,80}$/i', $id) === 1) {
+            $temporaryId = $id;
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            $year = now()->format('y');
+            $sequence = 0;
+            foreach (DB::table('questionnaires')->where('ui_id', 'like', $year.'%')->pluck('ui_id') as $publicId) {
+                if (is_string($publicId) && preg_match('/^'.preg_quote($year, '/').'([0-9]{4})$/D', $publicId, $matches) === 1) {
+                    $sequence = max($sequence, (int) $matches[1]);
+                }
+            }
+            abort_if($sequence >= 9999, 409, 'The questionnaire ID sequence limit has been reached for this year.');
+            $sequence++;
+            $id = $year.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+            while (DB::table('questionnaires')->where('ui_id', $id)->exists()) {
+                abort_if($sequence >= 9999, 409, 'The questionnaire ID sequence limit has been reached for this year.');
+                $sequence++;
+                $id = $year.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+            }
+            $record['id'] = $id;
+        }
         $payload = $this->canonical($request, $key, $module, $record, $existing);
         $copy = $this->payload($request, $payload);
         $metadata = $record;
+        if ($module === 'participants') {
+            $metadata['status'] = DB::table('record_statuses')->where('id', $payload['record_status_id'])->value('name');
+            $metadata['farmerStatusId'] = (string) $payload['record_status_id'];
+            unset($metadata['customStatusId'], $metadata['customStatus'], $metadata['customStatusActive']);
+        } else {
+            unset($metadata['farmerStatusId'], $metadata['customStatusId'], $metadata['customStatus'], $metadata['customStatusActive']);
+        }
         if (isset($record['csv'])) {
             $metadata['civil_status'] = $record['csv'];
         }
@@ -461,7 +489,6 @@ class OriginalInterfaceController
                 $operations->update($copy, $module, $databaseId);
             }
         }
-        $temporaryId = null;
         if ($module === 'trainings' && ! $existing && preg_match('/^TRN-TEMP-[0-9a-f-]{36}$/i', $id) === 1) {
             $temporaryId = $id;
             DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
@@ -517,7 +544,7 @@ class OriginalInterfaceController
         }
         $oldMetadata = $existing ? OriginalInterfaceData::unpack($existing->ui_data) : [];
         $assignmentChanged = false;
-        foreach (['pretest', 'posttest', 'trainers'] as $field) {
+        foreach (['pretest', 'posttest', 'trainers', 'associationIds'] as $field) {
             if (isset($record[$field]) && $record[$field] !== ($oldMetadata[$field] ?? [])) {
                 $assignmentChanged = true;
             }
@@ -557,6 +584,28 @@ class OriginalInterfaceController
                 DB::table('training_resource_person')->where('training_id', $databaseId)->delete();
                 foreach (array_unique($trainerIds) as $resourceId) {
                     DB::table('training_resource_person')->insert(['training_id' => $databaseId, 'resource_person_id' => $resourceId]);
+                }
+            }
+            if (isset($record['associationIds'])) {
+                ModuleAccess::authorize($request, 'associations.read');
+                $associationIds = [];
+                foreach ($record['associationIds'] as $associationId) {
+                    $association = OriginalInterfaceData::find($request->user(), 'associations', $associationId);
+                    $currentlyLinked = DB::table('training_association')
+                        ->where('training_id', $databaseId)
+                        ->where('association_id', $association?->id)
+                        ->exists();
+                    abort_unless($association && ($association->is_active || $currentlyLinked), 422, 'Select an active association available to your account.');
+                    $associationIds[] = $association->id;
+                }
+                DB::table('training_association')->where('training_id', $databaseId)->delete();
+                foreach (array_unique($associationIds) as $associationId) {
+                    DB::table('training_association')->insert([
+                        'training_id' => $databaseId,
+                        'association_id' => $associationId,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
                 }
             }
         }
@@ -685,12 +734,14 @@ class OriginalInterfaceController
         return response()->json($interface->bootstrap($request->user()));
     }
 
-    private function validatedRecord(array $raw): array
+    private function validatedRecord(array $raw, string $module): array
     {
         $scalar = ['id', 'name', 'title', 'description', 'status', 'statusRemarks', 'remarks', 'training_title', 'training_type', 'type', 'delivery_mode', 'target_participants', 'partner_organization', 'training_description', 'training_budget', 'budget', 'venue', 'venue_location', 'start_date', 'end_date', 'startDate', 'endDate', 'region', 'region_id', 'office', 'org_id', 'implementing_office', 'implementingOffice', 'province', 'province_id', 'district', 'district_id', 'municipality', 'municipality_id', 'barangay', 'barangay_id', 'yearCovered', 'year_covered', 'firstName', 'middleName', 'lastName', 'first_name', 'middle_name', 'last_name', 'fname', 'mname', 'lname', 'sfname', 'suffix', 'sex', 'gender', 'date_of_birth', 'dateOfBirth', 'birthDate', 'birthday', 'dob', 'email', 'email_account', 'phone', 'mobile_no', 'nationality', 'place_of_birth', 'pob', 'house_building_number', 'street_purok_sitio_name', 'postal_code', 'tel_number', 'associate_name', 'association_id', 'associate_role', 'role', 'tupad', 'soloParent', 'solo_parent', 'fourPs', 'four_ps', '4ps', 'pwd', 'indigenousGroup', 'idp', 'tribeName', 'tbname', 'dietaryRestriction', 'dtrestriction', 'allergies_on', 'seniorCitizen', 'sncitizen', 'association_name', 'short_name', 'organization_type', 'registration_date', 'qualification', 'expertise', 'organization_name', 'questionnaireName', 'trainingQuestionnaire', 'totalItems', 'questionnaireId', 'trainingId', 'trainingTitle', 'trainingLocation', 'trainingVenue', 'trainingOrganization', 'trainingStartDate', 'trainingEndDate', 'farmerId', 'resourcePersonId', 'date', 'commodity', 'score', 'comments', 'csv', 'civil_status', 'extension', 'senior_citizen', 'indigenous_group', 'tribe_name', 'dietary_restriction', 'street_purok_sitio', 'tel_number', 'dashboardSlide', '_version'];
-        $allowed = array_merge($scalar, ['questions', 'ratingScale', 'members', 'ratings', 'pretest', 'posttest', 'trainers', 'interventions', 'bullets']);
+        $allowed = array_merge($scalar, ['questions', 'ratingScale', 'members', 'ratings', 'pretest', 'posttest', 'trainers', 'interventions', 'bullets', 'associationIds']);
         $input = Arr::only($raw, $allowed);
-        $input += Arr::only($raw, ['customStatusId']);
+        if ($module === 'participants' && array_key_exists('farmerStatusId', $raw)) {
+            $input += Arr::only($raw, ['farmerStatusId']);
+        }
         $rules = ['id' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9:_-]+$/']];
         foreach ($scalar as $field) {
             if ($field !== 'id') {
@@ -703,11 +754,13 @@ class OriginalInterfaceController
                 $rules[$field] = ['nullable', 'string', 'max:'.(in_array($field, ['description', 'training_description', 'comments', 'remarks', 'statusRemarks'], true) ? 10000 : 255)];
             }
         }
-        $rules['customStatusId'] = ['nullable', 'integer'];
-        foreach (['questions', 'ratingScale', 'members', 'ratings', 'pretest', 'posttest', 'trainers', 'interventions', 'bullets'] as $field) {
+        if (array_key_exists('farmerStatusId', $input)) {
+            $rules['farmerStatusId'] = ['nullable', 'integer'];
+        }
+        foreach (['questions', 'ratingScale', 'members', 'ratings', 'pretest', 'posttest', 'trainers', 'interventions', 'bullets', 'associationIds'] as $field) {
             $rules[$field] = ['sometimes', 'array', 'max:500'];
         }
-        $rules += ['pretest.*' => ['string', 'max:100'], 'posttest.*' => ['string', 'max:100'], 'trainers.*' => ['array'], 'trainers.*.id' => ['sometimes', 'string', 'max:100'], 'trainers.*.name' => ['sometimes', 'string', 'max:255'], 'questions.*.text' => ['sometimes', 'string', 'max:1000'], 'questions.*.maxRating' => ['sometimes', 'integer', 'min:1', 'max:10'], 'ratingScale.*.score' => ['required', 'integer', 'min:1', 'max:10'], 'ratingScale.*.label' => ['nullable', 'string', 'max:100'], 'ratingScale.*.description' => ['nullable', 'string', 'max:1000'], 'members.*.farmer_id' => ['sometimes', 'string', 'max:100'], 'members.*.position' => ['sometimes', 'nullable', 'string', 'max:255'], 'members.*.associate_role' => ['sometimes', 'nullable', 'string', 'max:255'], 'members.*.role' => ['sometimes', 'nullable', 'string', 'max:255'], 'ratings.*.rating' => ['nullable', 'numeric', 'min:0', 'max:10'], 'interventions.*.qty' => ['nullable', 'numeric', 'min:0'], 'interventions.*.title' => ['nullable', 'string', 'max:255'], 'interventions.*.remarks' => ['nullable', 'string', 'max:1000'], 'bullets.*' => ['array', 'max:100'], 'bullets.*.*' => ['string', 'max:1000']];
+        $rules += ['pretest.*' => ['string', 'max:100'], 'posttest.*' => ['string', 'max:100'], 'associationIds.*' => ['string', 'distinct', 'max:100'], 'trainers.*' => ['array'], 'trainers.*.id' => ['sometimes', 'string', 'max:100'], 'trainers.*.name' => ['sometimes', 'string', 'max:255'], 'questions.*.text' => ['sometimes', 'string', 'max:1000'], 'questions.*.maxRating' => ['sometimes', 'integer', 'min:1', 'max:10'], 'ratingScale.*.score' => ['required', 'integer', 'min:1', 'max:10'], 'ratingScale.*.label' => ['nullable', 'string', 'max:100'], 'ratingScale.*.description' => ['nullable', 'string', 'max:1000'], 'members.*.farmer_id' => ['sometimes', 'string', 'max:100'], 'members.*.position' => ['sometimes', 'nullable', 'string', 'max:255'], 'members.*.associate_role' => ['sometimes', 'nullable', 'string', 'max:255'], 'members.*.role' => ['sometimes', 'nullable', 'string', 'max:255'], 'ratings.*.rating' => ['nullable', 'numeric', 'min:0', 'max:10'], 'interventions.*.qty' => ['nullable', 'numeric', 'min:0'], 'interventions.*.title' => ['nullable', 'string', 'max:255'], 'interventions.*.remarks' => ['nullable', 'string', 'max:1000'], 'bullets.*' => ['array', 'max:100'], 'bullets.*.*' => ['string', 'max:1000']];
 
         return Validator::make($input, $rules)->validate();
     }
@@ -740,6 +793,30 @@ class OriginalInterfaceController
                 throw ValidationException::withMessages(['office' => 'Select a registered office belonging to the selected region.']);
             }
         }
+        if ($module === 'questionnaires') {
+            $officeBelongsToRegion = DB::table('organization')
+                ->where('org_id', $office)
+                ->where('region_id', $region)
+                ->exists();
+            if (! $officeBelongsToRegion) {
+                throw ValidationException::withMessages(['office' => 'Select a registered office belonging to the selected region.']);
+            }
+
+            ModuleAccess::authorizeRegistrationScope(
+                $request->user(),
+                (int) $region,
+                (int) $office,
+                'The selected questionnaire office is outside your data visibility settings.',
+            );
+        }
+        if ($module === 'trainings' && ! $existing) {
+            ModuleAccess::authorizeRegistrationScope(
+                $request->user(),
+                (int) $region,
+                (int) $office,
+                'The selected training office is outside your data visibility settings.',
+            );
+        }
         $name = $pick(match ($module) {
             'trainings' => ['training_title', 'title', 'name'], 'associations' => ['association_name', 'name'], 'questionnaires' => ['trainingQuestionnaire', 'questionnaireName', 'name'], default => ['name']
         });
@@ -750,19 +827,35 @@ class OriginalInterfaceController
             $name = trim(implode(' ', array_filter([$first, $middle, $last, $pick(['suffix', 'sfname', 'extension'])])));
         }
         $payload = ['name' => $name, 'region_id' => $region, 'org_id' => $office, 'description' => $pick(['training_description', 'description']), 'is_active' => ! in_array($item['status'] ?? '', ['Inactive', 'Removed', 'Deceased', 'Draft'], true)];
-        if (in_array($module, ['participants', 'associations', 'trainings', 'resource_persons'], true)) {
-            $statusWasSubmitted = array_key_exists('customStatusId', $item);
-            $customStatusId = $statusWasSubmitted
-                ? (blank($item['customStatusId']) ? null : (int) $item['customStatusId'])
-                : ($existing->record_status_id ?? null);
-            if ($customStatusId !== null) {
-                $statusQuery = DB::table('record_statuses')->where('id', $customStatusId);
-                if ((int) ($existing->record_status_id ?? 0) !== $customStatusId) {
-                    $statusQuery->where('is_active', true);
-                }
-                abort_unless($statusQuery->exists(), 422, 'Select an available additional status.');
+        if ($module === 'participants') {
+            $selectedStatusId = array_key_exists('farmerStatusId', $item) && filled($item['farmerStatusId'])
+                ? (int) $item['farmerStatusId']
+                : null;
+
+            if ($selectedStatusId !== null) {
+                $statusQuery = DB::table('record_statuses')->where('id', $selectedStatusId);
+            } elseif (array_key_exists('status', $item)) {
+                $statusName = trim((string) $item['status']);
+                $statusName = match (mb_strtolower($statusName)) {
+                    'removed', 'waived from farmer association' => 'Waived',
+                    default => $statusName,
+                };
+                $statusQuery = DB::table('record_statuses')->whereRaw('LOWER(name) = ?', [mb_strtolower($statusName)]);
+            } elseif ($existing?->record_status_id !== null) {
+                $statusQuery = DB::table('record_statuses')->where('id', $existing->record_status_id);
+            } else {
+                $statusQuery = DB::table('record_statuses')->where('name', 'Active');
             }
-            $payload['record_status_id'] = $customStatusId;
+
+            $farmerStatus = $statusQuery->first();
+            abort_unless(
+                $farmerStatus
+                    && ((bool) $farmerStatus->is_active || (int) ($existing->record_status_id ?? 0) === (int) $farmerStatus->id),
+                422,
+                'Select an available farmer status.',
+            );
+            $payload['record_status_id'] = (int) $farmerStatus->id;
+            $payload['is_active'] = $farmerStatus->name === 'Active';
         }
         foreach (['province', 'district', 'municipality', 'barangay'] as $field) {
             if (isset($item[$field])) {
@@ -828,7 +921,7 @@ class OriginalInterfaceController
 
     private function assessment(Request $request, string $key, array $raw): void
     {
-        $item = $this->validatedRecord($raw);
+        $item = $this->validatedRecord($raw, 'evaluations');
         $existing = OriginalInterfaceData::find($request->user(), 'evaluations', $item['id']);
         ModuleAccess::authorize($request, 'evaluations.'.($existing ? 'edit' : 'create'));
         abort_if(! $existing && DB::table('assessment_results')->where('ui_id', $item['id'])->exists(), 404);

@@ -673,8 +673,28 @@ class OperationsTest extends TestCase
         $this->postJson('/operations/evaluations', $data)->assertOk();
         $this->postJson('/operations/evaluations', $data)->assertConflict();
         $this->assertDatabaseCount('evaluation_responses', 1);
-        $this->get('/operations/evaluations')->assertOk()->assertSee('Yes');
+        $this->get('/operations/evaluations')->assertOk()->assertSee('Yes')->assertSee('Edit response')->assertSee('Delete response');
         $this->get('/operations/questionnaires?id='.$questionnaire)->assertOk()->assertSee('Was this useful?');
+
+        $responseId = (int) DB::table('evaluation_responses')->value('id');
+        $updatedData = $data;
+        $updatedData['answers'] = ['Updated answer'];
+        $this->patchJson('/operations/evaluations/'.$responseId, $updatedData)->assertOk();
+        $this->assertDatabaseHas('evaluation_responses', [
+            'id' => $responseId,
+            'answers' => json_encode(['Updated answer']),
+        ]);
+
+        $this->deleteJson('/operations/evaluations/'.$responseId)->assertOk();
+        $this->assertDatabaseMissing('evaluation_responses', ['id' => $responseId]);
+    }
+
+    public function test_evaluation_update_and_delete_require_their_specific_permissions(): void
+    {
+        $this->signIn(3);
+
+        $this->patchJson('/operations/evaluations/1', [])->assertForbidden();
+        $this->deleteJson('/operations/evaluations/1')->assertForbidden();
     }
 
     public function test_account_access_changes_are_admin_only_and_trash_blocks_login(): void

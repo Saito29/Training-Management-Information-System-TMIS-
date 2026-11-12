@@ -27,10 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const regionSelect = document.getElementById('faEditRegion');
   const officeSelect = document.getElementById('faEditOffice');
   const editMessage = document.getElementById('faEditMessage');
+  const registrationDateInput = document.getElementById('faEditDate');
+  const registrationDateReadable = document.getElementById('faEditDateReadable');
   const pageData = window.TMIS_PAGE || {};
   const registration = pageData.registration || {};
-  const customStatusSelect = document.getElementById('faEditCustomStatus');
-  const customStatuses = Array.isArray(pageData.recordStatuses) ? pageData.recordStatuses : [];
   const read = () => {
     try { const records = JSON.parse(window.TmisStore.getItem(storageKey) || '[]'); return Array.isArray(records) ? records : []; }
     catch { return []; }
@@ -39,7 +39,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const isInScope = (ids, id) => ids == null || ids.some(value => String(value) === String(id));
   const today = new Date();
   const todayValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  document.getElementById('faEditDate').max = todayValue;
+  registrationDateInput.max = todayValue;
+  function showReadableRegistrationDate() {
+    if (!registrationDateInput.value) {
+      registrationDateReadable.textContent = '';
+      return;
+    }
+    const date = new Date(`${registrationDateInput.value}T00:00:00`);
+    registrationDateReadable.textContent = Number.isNaN(date.getTime())
+      ? ''
+      : date.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+  registrationDateInput.addEventListener('change', showReadableRegistrationDate);
 
   const year = document.getElementById('faEditYear');
   year.add(new Option('Choose year', ''));
@@ -105,23 +116,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (['region_id', 'org_id', 'province', 'district', 'municipality', 'barangay'].includes(control.name)) return;
       control.value = record[control.name] || (control.name === 'year_covered' ? String(record.registration_date || '').slice(0, 4) : '');
     });
-    const statusOptions = customStatuses.map(status => new Option(status.name, String(status.id)));
-    if (record.customStatusId && !statusOptions.some(option => option.value === String(record.customStatusId))) {
-      const currentStatus = new Option(record.customStatus || 'Inactive status', String(record.customStatusId));
-      currentStatus.disabled = true;
-      statusOptions.push(currentStatus);
-    }
-    customStatusSelect.replaceChildren(new Option('No additional status', ''), ...statusOptions);
-    customStatusSelect.value = String(record.customStatusId || '');
     setRegistrationLocation(record);
     setLocation(record);
+    showReadableRegistrationDate();
     document.getElementById('faOverviewTitle').textContent = record.association_name || 'Farmer Association';
     const badge = document.getElementById('faOverviewStatus');
     badge.textContent = record.status || 'Active';
     badge.classList.toggle('is-inactive', record.status === 'Inactive');
-    const customStatusBadge = document.getElementById('faOverviewCustomStatus');
-    customStatusBadge.textContent = record.customStatus || '';
-    customStatusBadge.hidden = !record.customStatus;
   }
   editForm.addEventListener('submit', async event => {
     event.preventDefault();

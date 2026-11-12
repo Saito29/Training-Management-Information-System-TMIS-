@@ -824,6 +824,7 @@ class SystemSettingsController
                 'name' => $name,
                 'description' => trim((string) ($data['description'] ?? '')) ?: null,
                 'is_active' => true,
+                'is_builtin' => false,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -849,6 +850,7 @@ class SystemSettingsController
         $updated = DB::transaction(function () use ($request, $data, $name, $status): array {
             $existing = DB::table('record_statuses')->where('id', $status)->lockForUpdate()->first();
             abort_unless($existing, 404);
+            abort_if((bool) $existing->is_builtin, 409, 'Built-in farmer statuses cannot be edited.');
             $this->ensureUniqueRecordStatusName($name, $status);
             DB::table('record_statuses')->where('id', $status)->update([
                 'name' => $name,
@@ -870,6 +872,7 @@ class SystemSettingsController
         DB::transaction(function () use ($request, $status): void {
             $existing = DB::table('record_statuses')->where('id', $status)->lockForUpdate()->first();
             abort_unless($existing, 404);
+            abort_if((bool) $existing->is_builtin, 409, 'Built-in farmer statuses cannot be deleted.');
             $usageCount = $this->recordStatusUsageCount($status);
             abort_if($usageCount > 0, 409, 'This status is assigned to saved records and cannot be deleted.');
             DB::table('record_statuses')->where('id', $status)->delete();
@@ -888,26 +891,15 @@ class SystemSettingsController
                 'farmer_count' => DB::table('participants')
                     ->selectRaw('COUNT(*)')
                     ->whereColumn('participants.record_status_id', 'record_statuses.id'),
-                'association_count' => DB::table('associations')
-                    ->selectRaw('COUNT(*)')
-                    ->whereColumn('associations.record_status_id', 'record_statuses.id'),
-                'training_count' => DB::table('trainings')
-                    ->selectRaw('COUNT(*)')
-                    ->whereColumn('trainings.record_status_id', 'record_statuses.id'),
-                'resource_person_count' => DB::table('resource_persons')
-                    ->selectRaw('COUNT(*)')
-                    ->whereColumn('resource_persons.record_status_id', 'record_statuses.id'),
             ])
             ->orderBy('name')
             ->get();
 
         return $statuses->map(function (object $status): object {
             $status->is_active = (bool) $status->is_active;
+            $status->is_builtin = (bool) $status->is_builtin;
             $status->farmer_count = (int) $status->farmer_count;
-            $status->association_count = (int) $status->association_count;
-            $status->training_count = (int) $status->training_count;
-            $status->resource_person_count = (int) $status->resource_person_count;
-            $status->usage_count = $status->farmer_count + $status->association_count + $status->training_count + $status->resource_person_count;
+            $status->usage_count = $status->farmer_count;
 
             return $status;
         });
@@ -916,21 +908,21 @@ class SystemSettingsController
     /** @return array<string, mixed> */
     private function recordStatus(int $statusId): array
     {
-        return (array) $this->recordStatusOptions()->firstWhere('id', $statusId);
+        $status = $this->recordStatusOptions()->firstWhere('id', $statusId);
+        abort_unless($status, 404);
+
+        return (array) $status;
     }
 
     private function recordStatusUsageCount(int $statusId): int
     {
-        return (int) DB::table('participants')->where('record_status_id', $statusId)->count()
-            + (int) DB::table('associations')->where('record_status_id', $statusId)->count()
-            + (int) DB::table('trainings')->where('record_status_id', $statusId)->count()
-            + (int) DB::table('resource_persons')->where('record_status_id', $statusId)->count();
+        return (int) DB::table('participants')->where('record_status_id', $statusId)->count();
     }
 
     private function validateRecordStatusName(string $name): void
     {
-        if ($name === '' || in_array(mb_strtolower($name), ['active', 'inactive'], true)) {
-            throw ValidationException::withMessages(['name' => 'Enter a name other than the built-in Active or Inactive status.']);
+        if ($name === '' || in_array(mb_strtolower($name), ['active', 'inactive', 'waived', 'deceased'], true)) {
+            throw ValidationException::withMessages(['name' => 'Enter a name other than a built-in farmer status.']);
         }
     }
 

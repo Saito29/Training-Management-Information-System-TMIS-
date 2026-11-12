@@ -104,12 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
     activeStatusElement.textContent = activeStatus;
     activeStatusElement.dataset.status = activeStatus.toLowerCase();
   }
-  const customStatusElement = field('custom-status');
-  if (customStatusElement) {
-    customStatusElement.textContent = training.customStatus || '';
-    customStatusElement.hidden = !training.customStatus;
-  }
-
   const chart = document.querySelector('[data-gender-chart]');
   if (chart) chart.setAttribute('aria-label', `${maleCount} male and ${femaleCount} female participants`);
   document.querySelectorAll('[data-gender-count]').forEach(element => {

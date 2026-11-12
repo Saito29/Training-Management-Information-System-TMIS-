@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   content.innerHTML = `
     <form id="rpEditForm" class="rp-edit-form">
-      <div class="rp-edit-form-header"><div><span class="rp-section-eyebrow">Editable overview</span><h2>Personal Information</h2><p>Update the resource person's profile details below.</p></div><div class="rp-edit-header-meta"><span class="rp-edit-record-id" id="rpEditRecordId"></span><span class="rp-status" id="rpEditStatusBadge" aria-label="Resource person status">Active</span><span class="rp-status" id="rpEditCustomStatusBadge" hidden aria-label="Additional status"></span><span class="rp-edit-update-status" id="rpEditUpdateStatus" data-state="saved" role="status" aria-live="polite">Up to date</span></div></div>
+      <div class="rp-edit-form-header"><div><span class="rp-section-eyebrow">Editable overview</span><h2>Personal Information</h2><p>Update the resource person's profile details below.</p></div><div class="rp-edit-header-meta"><span class="rp-edit-record-id" id="rpEditRecordId"></span><span class="rp-status" id="rpEditStatusBadge" aria-label="Resource person status">Active</span><span class="rp-edit-update-status" id="rpEditUpdateStatus" data-state="saved" role="status" aria-live="polite">Up to date</span></div></div>
       <section class="rp-edit-section"><h3><i class="bi bi-person-vcard" aria-hidden="true"></i> Personal details</h3><div class="rp-edit-fields">
         <div><label for="rpEditFirst">First name <span aria-hidden="true">*</span></label><input id="rpEditFirst" name="first_name" type="text" maxlength="80" autocomplete="given-name" required /></div>
         <div><label for="rpEditMiddle">Middle name</label><input id="rpEditMiddle" name="middle_name" type="text" maxlength="80" autocomplete="additional-name" /></div>
@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <div><label for="rpEditSuffix">Suffix</label><input id="rpEditSuffix" name="suffix" type="text" maxlength="20" placeholder="e.g. Jr., III" /></div>
         <div><label for="rpEditTitle">Professional title</label><select id="rpEditTitle" name="title"><option value="">No title</option><option>Dr.</option><option>Prof.</option><option>Assoc. Prof.</option><option>Asst. Prof.</option><option>Engr.</option><option>Atty.</option><option>Arch.</option><option>Ar.</option><option>Geol.</option><option>Dent.</option><option>Vet.</option><option>RAgr</option><option>Mr.</option><option>Ms.</option><option>Mrs.</option><option>Mx.</option><option>Rev.</option><option>Fr.</option><option>Sr.</option></select></div>
         <div><label for="rpEditStatus">Status</label><select id="rpEditStatus" name="status"><option>Active</option><option>Inactive</option></select></div>
-        <div><label for="rpEditCustomStatus">Additional status</label><select id="rpEditCustomStatus" name="customStatusId"><option value="">No additional status</option></select></div>
         <div class="rp-edit-field-wide rp-edit-remarks" id="rpEditRemarksWrap" hidden><label for="rpEditRemarks">Inactive remarks <small>(optional)</small></label><textarea id="rpEditRemarks" name="status_remarks" rows="3" maxlength="500" placeholder="Add a reason or note for the inactive status"></textarea></div>
       </div></section>
       <section class="rp-edit-section"><h3><i class="bi bi-building" aria-hidden="true"></i> Affiliation and credentials</h3><div class="rp-edit-fields">
@@ -40,21 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
     </form>`;
   const form = document.getElementById('rpEditForm');
   document.getElementById('rpEditRecordId').textContent = id;
-  const customStatusSelect = form.elements.customStatusId;
-  const customStatuses = Array.isArray(window.TMIS_PAGE?.recordStatuses) ? window.TMIS_PAGE.recordStatuses : [];
-  const customStatusOptions = customStatuses.map(status => new Option(status.name, String(status.id)));
-  if (record.customStatusId && !customStatusOptions.some(option => option.value === String(record.customStatusId))) {
-    const currentStatus = new Option(record.customStatus || 'Inactive status', String(record.customStatusId));
-    currentStatus.disabled = true;
-    customStatusOptions.push(currentStatus);
-  }
-  customStatusSelect.replaceChildren(new Option('No additional status', ''), ...customStatusOptions);
-  for (const key of ['first_name', 'middle_name', 'last_name', 'suffix', 'title', 'status', 'customStatusId', 'office', 'phone', 'email']) {
+  for (const key of ['first_name', 'middle_name', 'last_name', 'suffix', 'title', 'status', 'office', 'phone', 'email']) {
     form.elements[key].value = record[key] || (key === 'status' ? 'Active' : '');
   }
-  const customStatusBadge = document.getElementById('rpEditCustomStatusBadge');
-  customStatusBadge.textContent = record.customStatus || '';
-  customStatusBadge.hidden = !record.customStatus;
   const statusBadge = document.getElementById('rpEditStatusBadge');
   const remarksWrap = document.getElementById('rpEditRemarksWrap');
   form.elements.status_remarks.value = record.status_remarks || '';

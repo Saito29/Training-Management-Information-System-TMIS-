@@ -4,6 +4,9 @@
   document.querySelectorAll('[data-confirm-delete]').forEach(form => form.addEventListener('submit', event => {
     if (!confirm('Move this record to trash? Its audit history will be retained.')) event.preventDefault();
   }));
+  document.querySelectorAll('[data-confirm-evaluation-delete]').forEach(form => form.addEventListener('submit', event => {
+    if (!confirm('Delete this evaluation response? This action cannot be undone.')) event.preventDefault();
+  }));
   const region = document.querySelector('[data-region-select]');
   const office = document.querySelector('[data-office-select]');
   if (region && office) {
@@ -43,4 +46,3 @@ document.querySelector('[data-evaluation-questionnaire]')?.addEventListener('cha
     fieldset.append(label);
   }
 });
-

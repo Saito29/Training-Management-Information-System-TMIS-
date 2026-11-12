@@ -824,13 +824,12 @@ class="layout-fixed"
           </nav>
           <section id="overview-panel" class="training-panel" role="tabpanel" aria-labelledby="overview-tab">
             <form id="editTrainingForm" class="training-edit-form training-card" autocomplete="on">
-              <header class="training-edit-header"><div class="training-edit-header-icon"><i class="bi bi-mortarboard" aria-hidden="true"></i></div><div><div class="training-edit-meta"><span class="training-edit-eyebrow" id="editTrainingId">Training record</span><span class="training-status-pill" id="editTrainingStatusBadge" data-status="neutral" aria-label="Workflow status">Status not recorded</span><span class="training-status-pill" id="editTrainingActiveBadge" data-status="neutral" aria-label="Training active status">Status not recorded</span><span class="training-status-pill" id="editTrainingCustomStatusBadge" data-status="custom" aria-label="Additional status" hidden></span></div><h2 id="editTrainingHeading">Good Agricultural Practices (GAP)</h2><p>Edit the details used when registering this training.</p></div><span id="editTrainingState" class="training-edit-state" role="status" aria-live="polite">Up to date</span></header>
+              <header class="training-edit-header"><div class="training-edit-header-icon"><i class="bi bi-mortarboard" aria-hidden="true"></i></div><div><div class="training-edit-meta"><span class="training-edit-eyebrow" id="editTrainingId">Training record</span><span class="training-status-pill" id="editTrainingStatusBadge" data-status="neutral" aria-label="Workflow status">Status not recorded</span><span class="training-status-pill" id="editTrainingActiveBadge" data-status="neutral" aria-label="Training active status">Status not recorded</span></div><h2 id="editTrainingHeading">Good Agricultural Practices (GAP)</h2><p>Edit the details used when registering this training.</p></div><span id="editTrainingState" class="training-edit-state" role="status" aria-live="polite">Up to date</span></header>
               <div class="training-edit-body">
                 <section class="training-edit-section" aria-labelledby="editBasicTitle"><div class="training-edit-section-heading"><span>01</span><div><h3 id="editBasicTitle">Training information</h3><p>Title, office, category, and objectives</p></div></div><div class="training-edit-grid">
                   <label>Training title <input class="form-control" name="training_title" maxlength="150" value="Good Agricultural Practices (GAP)" required></label>
                   <label>Implementing office / division / unit <select class="form-select" name="implementing_office" required disabled aria-describedby="implementingOfficeHelp"><option value="">Loading current office</option><option>DA-SAAD</option><option>DA-AMIA</option><option>DA-Livestock</option><option>DA-HVCDP</option><option value="DA-Rice">DA-Rice Program</option><option value="DA-Corn">DA-Corn Program</option><option>DA-ATI</option><option value="Agricultural Training Division (ATD)" selected>Agricultural Training Division (ATD)</option></select><small class="form-text" id="implementingOfficeHelp">The implementing office is fixed for this training and cannot be changed here.</small></label>
                   <label>Training type <select class="form-select" name="training_type" required><option value="">Choose type</option><option>Crop Production</option><option>Organic Agriculture</option><option>Agribusiness</option><option>Livestock and Poultry</option><option>Fisheries</option><option>Post-harvest and Processing</option><option>Farm Mechanization</option><option selected>In-Plant Training</option></select></label>
-                  <label>Additional status <select class="form-select" name="customStatusId"><option value="">No additional status</option></select><small class="form-text">Independent of training workflow and Active / Inactive status.</small></label>
                   <label>Partner organization <input class="form-control" name="partner_organization" maxlength="150" placeholder="Optional partner or program"></label>
                   <label class="training-edit-wide">Brief description / objective <textarea class="form-control" name="training_description" rows="3" required>This training aims to enhance the knowledge and skills of farmers on Good Agricultural Practices (GAP) to promote safe, sustainable, and productive farming.</textarea></label>
                 </div></section>
@@ -846,6 +845,9 @@ class="layout-fixed"
                   <label>Target number of participants <input class="form-control" type="number" name="target_participants" min="1" step="1" value="24" required></label><span></span>
                   <div class="training-edit-wide"><span class="training-edit-label">Pre-test questionnaires</span><div id="editPretestList" class="training-edit-repeat"></div><button class="btn training-edit-add" type="button" data-add-questionnaire="pretest"><i class="bi bi-plus-lg"></i> Add pre-test</button></div>
                   <div class="training-edit-wide"><span class="training-edit-label">Post-test questionnaires</span><div id="editPosttestList" class="training-edit-repeat"></div><button class="btn training-edit-add" type="button" data-add-questionnaire="posttest"><i class="bi bi-plus-lg"></i> Add post-test</button></div>
+                  @if(\App\Support\ModuleAccess::allows(auth()->user(), 'associations.read'))
+                    <label class="training-edit-wide">Affiliated farmer associations <select class="form-select" name="associationIds[]" multiple size="6" aria-describedby="trainingAssociationsHelp"></select><small class="form-text" id="trainingAssociationsHelp">Select the associations participating in this training. Use Ctrl or Command to select multiple associations.</small></label>
+                  @endif
                 </div></section>
               </div><footer class="training-edit-footer"><span>Review the update details before saving.</span><button class="btn training-edit-save" type="submit" disabled><i class="bi bi-check2-circle"></i> Save changes</button></footer>
             </form>
@@ -949,6 +951,9 @@ class="layout-fixed"
                   </label>
                   <button class="btn edit-participants-icon" type="button" data-refresh-participants="available" aria-label="Refresh available farmers">
                     <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Refresh
+                  </button>
+                  <button class="btn edit-participants-export" type="button" data-export-participants="available">
+                    <i class="bi bi-file-earmark-excel" aria-hidden="true"></i> Export XLSX
                   </button>
                 </div>
                 <div class="edit-participants-table-wrap">

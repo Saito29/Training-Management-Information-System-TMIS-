@@ -335,6 +335,12 @@
       if(empty)empty.hidden=offices.length>0;
     });
   }
+  function formatFarmerDate(value){
+    if(!value)return '';
+    if(window.TmisDate?.format)return window.TmisDate.format(value,{dateStyle:'long'});
+    const date=new Date(`${String(value).slice(0,10)}T00:00:00`);
+    return Number.isNaN(date.getTime())?'Date not recorded':new Intl.DateTimeFormat('en-PH',{dateStyle:'long',timeZone:'Asia/Manila'}).format(date);
+  }
   function renderAssociationMemberships(memberships){
     const records=Array.isArray(memberships)?memberships:[];
     document.querySelectorAll('[data-association-memberships]').forEach(container=>{
@@ -356,10 +362,10 @@
           ['Region',membership.region],
           ['Office',membership.office],
           ['Location',membership.location],
-          ['Registration Date',membership.registrationDate],
+          ['Registration Date',formatFarmerDate(membership.registrationDate)],
           ['Year Covered',membership.yearCovered],
           ['Association Status',membership.status],
-          ['Member Since',membership.memberSince?.slice(0,10)],
+          ['Member Since',formatFarmerDate(membership.memberSince)],
         ];
         for(const[label,value]of fields){
           const field=document.createElement('div');field.className='farmer-association-membership-field';
@@ -414,16 +420,8 @@
 
     }
     if(path.includes('/participants/id/')&&farmer){
-      const fields={first_name:farmer.firstName,middle_name:farmer.middleName,last_name:farmer.lastName,extension:farmer.suffix,dob:farmer.birthDate,gender:farmer.sex,civil_status:farmer.civil_status,tupad:farmer.tupad,solo_parent:farmer.soloParent,nationality:farmer.nationality,place_of_birth:farmer.placeOfBirth||farmer.place_of_birth,four_ps:farmer.fourPs,pwd:farmer.pwd,senior_citizen:farmer.seniorCitizen,indigenous_group:farmer.indigenousGroup,tribe_name:farmer.tribeName,dietary_restriction:farmer.dietaryRestriction,allergies_on:farmer.allergies_on,region:farmer.region,district:farmer.district,province:farmer.province,municipality:farmer.municipality,barangay:farmer.barangay,postal_code:farmer.postal_code,mobile_no:farmer.phone,email:farmer.email,street_purok_sitio:farmer.street_purok_sitio_name,house_building_number:farmer.house_building_number,tel_number:farmer.telephone,customStatusId:farmer.customStatusId};
+      const fields={first_name:farmer.firstName,middle_name:farmer.middleName,last_name:farmer.lastName,extension:farmer.suffix,dob:farmer.birthDate,registration_date:farmer.registrationDate,gender:farmer.sex,civil_status:farmer.civil_status,tupad:farmer.tupad,solo_parent:farmer.soloParent,nationality:farmer.nationality,place_of_birth:farmer.placeOfBirth||farmer.place_of_birth,four_ps:farmer.fourPs,pwd:farmer.pwd,senior_citizen:farmer.seniorCitizen,indigenous_group:farmer.indigenousGroup,tribe_name:farmer.tribeName,dietary_restriction:farmer.dietaryRestriction,allergies_on:farmer.allergies_on,region:farmer.region,district:farmer.district,province:farmer.province,municipality:farmer.municipality,barangay:farmer.barangay,postal_code:farmer.postal_code,mobile_no:farmer.phone,email:farmer.email,street_purok_sitio:farmer.street_purok_sitio_name,house_building_number:farmer.house_building_number,tel_number:farmer.telephone};
       const form=document.getElementById('editFarmerPersonalForm');if(form)for(const[name,value]of Object.entries(fields)){const control=form.elements.namedItem(name);setSelect(control,value);if(control?.tagName==='SELECT')control.dispatchEvent(new Event('change',{bubbles:true}));}
-      const customStatus=form?.elements.namedItem('customStatusId');
-      if(customStatus){
-        const statuses=Array.isArray(window.TMIS_PAGE?.recordStatuses)?window.TMIS_PAGE.recordStatuses:[];
-        const options=statuses.map(status=>new Option(status.name,String(status.id)));
-        const selectedId=String(farmer.customStatusId||'');
-        if(selectedId&&!options.some(option=>option.value===selectedId)){const current=new Option(farmer.customStatus||'Inactive status',selectedId);current.disabled=true;options.push(current);}
-        customStatus.replaceChildren(new Option('No additional status',''),...options);customStatus.value=selectedId;
-      }
       const associationSelect=form?.elements.namedItem('association_id');
       if(associationSelect){
         const memberships=farmer.associationMemberships||[];
@@ -447,15 +445,14 @@
       const updatedDateDisplay=document.querySelector('#displayUpdatedDate');if(updatedDateDisplay)updatedDateDisplay.textContent=updatedDate;
       const association=store.records('tmis-farmer-associations').find(item=>String(item.id)===String(farmer.association_id));
       const associationLocation=[association?.barangay,association?.municipality,association?.district,association?.province].filter(Boolean).join(', ');
-      Object.assign(details,{'Association ID':farmer.associationNumber||association?.id,'Association Name':farmer.organization||association?.association_name,'Organization Type':association?.organization_type,'Association Region':association?.region,'Association Office':association?.office,'Association Short Name':association?.short_name,'Association Location':associationLocation,'Location':associationLocation,'Association Registration Date':association?.registration_date,'Association Year Covered':association?.year_covered,'Position / Role':farmer.role,'Date Updated':updatedDate,'Status':association?.status||farmer.status});
+      Object.assign(details,{'Association ID':farmer.associationNumber||association?.id,'Association Name':farmer.organization||association?.association_name,'Organization Type':association?.organization_type,'Association Region':association?.region,'Association Office':association?.office,'Association Short Name':association?.short_name,'Association Location':associationLocation,'Location':associationLocation,'Association Registration Date':association?.registration_date,'Association Year Covered':association?.year_covered,'Position / Role':farmer.role,'Date Updated':updatedDate,'Status':farmer.status});
       const publicFarmerId=farmer.farmerNumber||farmer.id;
       const yearCoveredDisplay=document.querySelector('#farmerYearCovered');if(yearCoveredDisplay)yearCoveredDisplay.textContent=farmer.yearCovered||'Not recorded';
       const farmerId=document.querySelector('#displayFarmerId');if(farmerId)farmerId.textContent=publicFarmerId;
       const mobileFarmerId=document.querySelector('#mobileFarmerId');if(mobileFarmerId)mobileFarmerId.textContent=publicFarmerId;
       const interventionReference=document.querySelector('#interventionFarmerReference');if(interventionReference){const icon=interventionReference.querySelector('i');interventionReference.replaceChildren(...(icon?[icon]:[]),document.createTextNode(` Intervention records for Farmer ID ${publicFarmerId}`));}
       const statusPill=document.querySelector('.farmer-status-pill');if(statusPill){statusPill.classList.toggle('active-status',farmer.status==='Active');statusPill.textContent=farmer.status||'Active';}
-      const customStatusPill=document.getElementById('farmerCustomStatusBadge');if(customStatusPill){customStatusPill.textContent=farmer.customStatus||'';customStatusPill.hidden=!farmer.customStatus;}
-      const registrationDisplay=document.querySelector('#displayRegistrationDate');if(registrationDisplay&&farmer.registrationDate){const date=new Date(`${String(farmer.registrationDate).slice(0,10)}T00:00:00`);registrationDisplay.textContent=Number.isNaN(date.getTime())?'Not recorded':new Intl.DateTimeFormat('en-PH',{dateStyle:'long',timeZone:'Asia/Manila'}).format(date);}
+      const registrationDisplay=document.querySelector('#displayRegistrationDate');if(registrationDisplay)registrationDisplay.textContent=formatFarmerDate(farmer.registrationDate)||'Not recorded';
       const hasAssociation=Boolean(farmer.association_id||farmer.associationMemberships?.length);
       const associationCard=document.querySelector('.association-overview-card');
       if(associationCard){associationCard.classList.toggle('has-no-association',!hasAssociation);const title=associationCard.querySelector('.title-card');if(title&&!hasAssociation)title.textContent='Beneficiary Offices';}
@@ -504,7 +501,8 @@
       const region=form.querySelector('select[name="region"],select[name="region_id"]');
       const office=form.querySelector('select[name="implementing_office"],select[name="implementingOffice"],select[name="office"]');
       if(!office||path.includes('rp-register')||path.includes('edit-rp'))continue;
-      const fill=()=>{const value=office.value,label=office.selectedOptions[0]?.textContent;const selected=region?.selectedOptions[0]?.textContent.replace(/\s*\(.*\)/,'').trim();const area=window.TMIS_PAGE.regions.find(item=>String(item.region_id)===region?.value||item.name===selected);const options=window.TMIS_PAGE.offices.filter(item=>!area||String(item.region_id)===String(area.region_id));office.replaceChildren(new Option('Select an office',''),...options.map(item=>new Option(item.name,item.name)));if(options.some(item=>item.name===value||item.name===label))office.value=options.find(item=>item.name===value||item.name===label).name;};
+      const registration=window.TMIS_PAGE.registration||{};
+      const fill=()=>{const value=office.value,label=office.selectedOptions[0]?.textContent;const selected=region?.selectedOptions[0]?.textContent.replace(/\s*\(.*\)/,'').trim();const area=(registration.regions||[]).find(item=>String(item.region_id)===region?.value||item.name===selected);const options=(registration.offices||[]).filter(item=>!area||String(item.region_id)===String(area.region_id));office.replaceChildren(new Option(options.length?'Select an office':'No offices available',''),...options.map(item=>new Option(item.name,item.name)));if(options.some(item=>item.name===value||item.name===label))office.value=options.find(item=>item.name===value||item.name===label).name;};
       fill();region?.addEventListener('change',fill);
     }
     if(path.includes('/dashboard/')){

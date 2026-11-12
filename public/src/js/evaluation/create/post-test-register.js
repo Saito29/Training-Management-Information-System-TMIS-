@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!form || !status) return;
   const storageKey = 'tmis-post-test-questionnaires';
   let editId = new URLSearchParams(location.search).get('id');
+  const isEditPage = Boolean(editId);
+  const createTemporaryId = () => `Q-TEMP-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
 
   if (editId) {
     try {
@@ -12,9 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const item = Array.isArray(saved) ? saved.find((entry) => entry?.id === editId) : null;
       if (item) {
         form.elements.training_questionnaire.value = item.trainingQuestionnaire || '';
-        form.elements.region.value = item.region || '';
-        if (item.region) window.syncQuestionnaireOffice?.();
-        form.elements.implementing_office.value = item.implementingOffice || '';
+        window.setQuestionnaireLocation?.(item.region, item.implementingOffice);
         form.elements.total_items.value = item.totalItems ?? '';
         form.elements.description.value = item.description || '';
       }
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const previous = index >= 0 ? saved[index] : null;
       const record = {
         ...previous,
-        id: editId || globalThis.crypto?.randomUUID?.() || `post-test-${Date.now()}`,
+        id: editId || createTemporaryId(),
         trainingQuestionnaire: name,
         implementingOffice: office,
         region,
@@ -68,11 +68,16 @@ document.addEventListener('DOMContentLoaded', () => {
         updatedAt: now,
       };
       if (index < 0) saved.push(record); else saved[index] = record;
-      await window.TmisStore.setItem(storageKey, JSON.stringify(saved));
-      status.textContent = mode === 'Draft' ? 'Post-test draft saved.' : 'Post-test questionnaire registered.';
+      const result = await window.TmisStore.setItem(storageKey, JSON.stringify(saved));
+      editId = result?.idMappings?.[record.id] || editId;
+      const questionnaireId = editId || record.id;
+      status.textContent = `${mode === 'Draft' ? 'Post-test draft saved.' : 'Post-test questionnaire registered.'} Questionnaire ID: ${questionnaireId}.`;
       window.showQuestionnaireToast(status.textContent);
       form.reset();
-      if (editId) { editId = null; history.replaceState(null, '', location.pathname); }
+      if (isEditPage || mode === 'Active') {
+        editId = null;
+        if (isEditPage) history.replaceState(null, '', location.pathname);
+      }
     } catch {
       status.textContent = 'The questionnaire could not be saved. Please try again.';
       window.showQuestionnaireToast(status.textContent, 'error');

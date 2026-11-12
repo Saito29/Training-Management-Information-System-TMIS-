@@ -491,12 +491,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Registration Date Sync to Display Banner
   const regDateInput = document.getElementById('farmer_registration_date');
   const displayRegDate = document.getElementById('displayRegistrationDate');
+  const readableRegDate = document.getElementById('farmerRegistrationDateReadable');
   const updateDisplayDate = () => {
-    if (!regDateInput || !displayRegDate || !regDateInput.value) return;
-    const dateObj = new Date(regDateInput.value + 'T00:00:00');
-    if (!isNaN(dateObj)) {
-      displayRegDate.textContent = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    }
+    if (!regDateInput || !regDateInput.value) return;
+    const formattedDate = window.TmisDate?.format(regDateInput.value, { dateStyle: 'long' }) || 'Date not recorded';
+    if (displayRegDate) displayRegDate.textContent = formattedDate;
+    if (readableRegDate) readableRegDate.textContent = formattedDate;
   };
   regDateInput?.addEventListener('change', updateDisplayDate);
   updateDisplayDate();
