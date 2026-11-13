@@ -127,7 +127,7 @@ class SystemSettingsFeaturesTest extends TestCase
         $this->get(route('system.settings'))->assertOk()
             ->assertSee('https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js', false)
             ->assertSee('https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css', false)
-            ->assertSee(asset('src/css/shared/system-settings.css?v=system-settings-ui-restored-1'), false)
+            ->assertSee(asset('src/css/shared/system-settings.css?v=role-access-actions-1'), false)
             ->assertSee(asset('src/js/shared/system-settings.js?v=visibility-scope-select-all-refresh-1'), false)
             ->assertSee('modal-xl modal-dialog-centered modal-dialog-scrollable', false)
             ->assertSee('class="modal-dialog modal-dialog-centered modal-dialog-scrollable"', false)
@@ -337,12 +337,89 @@ class SystemSettingsFeaturesTest extends TestCase
         $this->get(route('admin.administration.create.register'))->assertOk()
             ->assertSee('id="userCredentialType"', false)
             ->assertSee('id="userCredentialSummary"', false);
-        $this->get(route('admin.administration.id.edit-user'))->assertOk()
+        $this->get(route('admin.administration.id.edit-user', ['user_id' => $administrator->user_id]))->assertOk()
             ->assertSee('id="update-credentialTypeId"', false)
             ->assertSee('id="updateCredentialSummary"', false);
-        $this->get(route('admin.administration.id.view-user'))->assertOk()
+        $this->get('/app/admin/administration/id/edit-user.html?id='.$administrator->user_id)
+            ->assertRedirect(route('admin.administration.id.edit-user', ['user_id' => $administrator->user_id]));
+        $this->get(route('admin.administration.id.view-user', ['user_id' => $administrator->user_id]))->assertOk()
             ->assertSee('id="profileAccess"', false)
             ->assertSee('Role, credential permissions, and assigned office.');
+    }
+
+    public function test_deleted_accounts_page_shows_detailed_actions_and_restores_accounts_as_inactive(): void
+    {
+        $administrator = $this->account();
+        $deletedAccount = $this->account(2);
+        $activeAccount = $this->account(2);
+        $protectedAdministrator = $this->account();
+        $this->signIn($administrator);
+
+        $this->patchJson(route('system.accounts.update', $deletedAccount->user_id), ['action' => 'delete'])->assertOk();
+        DB::table('users')->where('user_id', $protectedAdministrator->user_id)->update([
+            'deleted_at' => now(),
+            'active_status' => 0,
+        ]);
+
+        $deletedAccountsPage = $this->get(route('admin.administration.details.trash'))->assertOk()
+            ->assertSee('Deleted accounts')
+            ->assertSee('deleted-accounts-page', false)
+            ->assertSee('account-filter-card', false)
+            ->assertSee('account-table-card', false)
+            ->assertSee('deleted-account-table', false)
+            ->assertSee('Deleted on')
+            ->assertSee('Registered')
+            ->assertSee('aria-label="TMIS operations"', false)
+            ->assertSee('id="administrationHeaderCollapse"', false)
+            ->assertSee('id="administrationMobile"', false)
+            ->assertSee('id="participantHeaderCollapse"', false)
+            ->assertSee('id="trainingHeaderCollapse"', false)
+            ->assertSee('id="evaluationHeaderCollapse"', false)
+            ->assertSee(route('admin.participants.details.trash'))
+            ->assertSee(route('admin.administration.details.trash'))
+            ->assertSee('Restore this account?')
+            ->assertSee($deletedAccount->email)
+            ->assertSee(route('admin.administration.id.view-user', ['user_id' => $deletedAccount->user_id]))
+            ->assertSee(route('admin.administration.id.edit-user', ['user_id' => $deletedAccount->user_id]))
+            ->assertSee($protectedAdministrator->email)
+            ->assertDontSee(route('admin.administration.id.edit-user', ['user_id' => $protectedAdministrator->user_id]))
+            ->assertDontSee(route('system.accounts.update', $protectedAdministrator->user_id));
+        $this->assertSame(
+            2,
+            substr_count(
+                $deletedAccountsPage->getContent(),
+                'href="'.route('admin.participants.details.trash').'"',
+            ),
+        );
+        $this->assertNotContains(
+            $activeAccount->email,
+            $deletedAccountsPage->viewData('accounts')->getCollection()->pluck('email')->all(),
+        );
+
+        $this->withHeaders([
+            'X-TMIS-PAGE' => route('admin.administration.id.edit-user', ['user_id' => $deletedAccount->user_id]),
+        ])->getJson('/ui/data')->assertOk()->assertJsonFragment(['id' => (string) $deletedAccount->user_id]);
+
+        $this->patchJson(route('system.accounts.update', $deletedAccount->user_id), [
+            'action' => 'update',
+            'role_id' => $deletedAccount->role_id,
+            'region_id' => $deletedAccount->region_id,
+            'org_id' => $deletedAccount->org_id,
+            'status' => 'Approved & Accepted',
+            'active_status' => 1,
+        ])->assertOk();
+        $this->assertDatabaseHas('users', [
+            'user_id' => $deletedAccount->user_id,
+            'active_status' => 0,
+        ]);
+        $this->assertNotNull(DB::table('users')->where('user_id', $deletedAccount->user_id)->value('deleted_at'));
+
+        $this->patchJson(route('system.accounts.update', $deletedAccount->user_id), ['action' => 'restore'])->assertOk();
+        $this->assertDatabaseHas('users', [
+            'user_id' => $deletedAccount->user_id,
+            'deleted_at' => null,
+            'active_status' => 0,
+        ]);
     }
 
     public function test_regular_administrator_cannot_manage_super_admin_settings(): void
@@ -443,7 +520,11 @@ class SystemSettingsFeaturesTest extends TestCase
         $settings = $this->get(route('system.settings'))->assertOk()
             ->assertSee('Delete records')
             ->assertSee('Limit access to selected pages')
-            ->assertSee('Details > All status');
+            ->assertSee('Details > All status')
+            ->assertSee('Details > Deleted accounts')
+            ->assertSee('Individual > Details > Deleted farmers')
+            ->assertSee('value="administration.view.details.trash"', false)
+            ->assertSee('value="participants.view.details.trash"', false);
         foreach (['trainings', 'participants', 'associations', 'resource_persons', 'questionnaires', 'evaluations'] as $module) {
             $settings->assertSee('value="'.$module.'.delete"', false);
         }
@@ -457,6 +538,10 @@ class SystemSettingsFeaturesTest extends TestCase
                 'trainings.page_access',
                 'trainings.view.details.all-status',
                 'trainings.view.details.approved-accepted',
+                'participants.page_access',
+                'participants.view.details.trash',
+                'administration.page_access',
+                'administration.view.details.trash',
             ],
         ])->assertOk();
 
@@ -465,11 +550,126 @@ class SystemSettingsFeaturesTest extends TestCase
         $this->assertDatabaseHas('role_permissions', ['role_id' => $roleId, 'permission' => 'trainings.page_access']);
         $this->assertDatabaseHas('role_permissions', ['role_id' => $roleId, 'permission' => 'trainings.view.details.all-status']);
         $this->assertDatabaseHas('role_permissions', ['role_id' => $roleId, 'permission' => 'trainings.view.details.approved-accepted']);
+        $this->assertDatabaseHas('role_permissions', ['role_id' => $roleId, 'permission' => 'participants.view.details.trash']);
+        $this->assertDatabaseHas('role_permissions', ['role_id' => $roleId, 'permission' => 'administration.view.details.trash']);
         $this->postJson(route('system.roles.store'), [
             'name' => 'Invalid page role',
             'permissions' => ['trainings.view.details.inactive'],
         ])->assertUnprocessable();
         $this->assertDatabaseMissing('user_roles', ['name' => 'Invalid page role']);
+    }
+
+    public function test_super_administrator_can_view_role_and_profile_access_from_the_settings_tables(): void
+    {
+        $administrator = $this->account();
+        $assignedUser = $this->account(3);
+        $credentialId = DB::table('role_credentials')->insertGetId([
+            'role_id' => $assignedUser->role_id,
+            'name' => 'Read-only operations',
+            'created_at' => now(),
+        ], 'role_credential_id');
+        DB::table('users')->where('user_id', $assignedUser->user_id)->update(['role_credential_id' => $credentialId]);
+        DB::table('role_permissions')->insert([
+            'role_id' => $assignedUser->role_id,
+            'permission' => 'participants.read',
+        ]);
+        DB::table('role_credential_denied_permissions')->insert([
+            'role_credential_id' => $credentialId,
+            'permission' => 'trainings.submit',
+        ]);
+        $this->signIn($administrator);
+
+        $this->get(route('system.settings'))->assertOk()
+            ->assertSee('id="role-access-table"', false)
+            ->assertSee('data-bs-target="#viewRoleModal-'.$assignedUser->role_id.'"', false)
+            ->assertSee('data-bs-target="#editRoleModal-'.$assignedUser->role_id.'"', false)
+            ->assertSee('data-bs-target="#viewCredentialModal-'.$credentialId.'"', false)
+            ->assertSee('Read-only operations')
+            ->assertSee('Permissions granted by role')
+            ->assertSee('Permissions blocked by profile')
+            ->assertSee(htmlspecialchars(route('system.accounts', ['role_id' => $assignedUser->role_id]), ENT_QUOTES), false)
+            ->assertSee(htmlspecialchars(route('system.accounts', [
+                'role_id' => $assignedUser->role_id,
+                'role_credential_id' => $credentialId,
+            ]), ENT_QUOTES), false);
+    }
+
+    public function test_regular_administrator_cannot_delete_roles(): void
+    {
+        $administrator = $this->account();
+        DB::table('system_super_admins')->where('user_id', $administrator->user_id)->delete();
+        $roleId = DB::table('user_roles')->insertGetId([
+            'name' => 'Restricted role deletion',
+            'details' => 'A role used to verify authorization.',
+            'is_active' => 1,
+            'created_at' => now(),
+        ], 'role_id');
+        $this->signIn($administrator);
+
+        $this->deleteJson(route('system.roles.destroy', $roleId))->assertForbidden();
+        $this->assertDatabaseHas('user_roles', ['role_id' => $roleId, 'name' => 'Restricted role deletion']);
+    }
+
+    public function test_super_administrator_can_delete_an_unused_role_and_its_permissions(): void
+    {
+        $administrator = $this->account();
+        $roleId = DB::table('user_roles')->insertGetId([
+            'name' => 'Temporary reviewer',
+            'details' => 'A role created for deletion coverage.',
+            'is_active' => 1,
+            'created_at' => now(),
+        ], 'role_id');
+        DB::table('role_permissions')->insert([
+            'role_id' => $roleId,
+            'permission' => 'participants.read',
+        ]);
+        $this->signIn($administrator);
+
+        $this->deleteJson(route('system.roles.destroy', $roleId))
+            ->assertOk()
+            ->assertJsonPath('message', 'Role permanently deleted.');
+
+        $this->assertDatabaseMissing('user_roles', ['role_id' => $roleId]);
+        $this->assertDatabaseMissing('role_permissions', ['role_id' => $roleId]);
+        $this->assertDatabaseHas('users_log', [
+            'actor_user_id' => $administrator->user_id,
+            'event' => 'role_deleted_'.$roleId,
+            'category' => 'settings',
+        ]);
+    }
+
+    public function test_super_administrator_cannot_delete_a_role_with_assigned_accounts_or_profiles(): void
+    {
+        $administrator = $this->account();
+        $assignedUser = $this->account(3);
+        $credentialId = DB::table('role_credentials')->insertGetId([
+            'role_id' => $assignedUser->role_id,
+            'name' => 'Assigned profile',
+            'created_at' => now(),
+        ], 'role_credential_id');
+        DB::table('users')->where('user_id', $assignedUser->user_id)->update(['role_credential_id' => $credentialId]);
+        $this->signIn($administrator);
+
+        $this->deleteJson(route('system.roles.destroy', $assignedUser->role_id))
+            ->assertConflict()
+            ->assertJsonPath('message', 'A role cannot be deleted while accounts or access profiles are assigned.');
+
+        $this->assertDatabaseHas('user_roles', ['role_id' => $assignedUser->role_id]);
+        $this->assertDatabaseHas('users', ['user_id' => $assignedUser->user_id, 'role_id' => $assignedUser->role_id]);
+        $this->assertDatabaseHas('role_credentials', ['role_credential_id' => $credentialId, 'role_id' => $assignedUser->role_id]);
+    }
+
+    public function test_super_administrator_cannot_delete_the_system_administrator_role(): void
+    {
+        $administrator = $this->account();
+        $this->signIn($administrator);
+        $systemAdministratorRoleId = (int) DB::table('user_roles')->where('name', 'System Administrator')->value('role_id');
+
+        $this->deleteJson(route('system.roles.destroy', $systemAdministratorRoleId))
+            ->assertConflict()
+            ->assertJsonPath('message', 'The System Administrator role is protected.');
+
+        $this->assertDatabaseHas('user_roles', ['role_id' => $systemAdministratorRoleId, 'name' => 'System Administrator']);
     }
 
     public function test_super_administrator_can_manage_additive_role_credentials(): void
@@ -482,11 +682,19 @@ class SystemSettingsFeaturesTest extends TestCase
             ->assertSee('id="credentials-tab"', false)
             ->assertSee('Encoder (default)')
             ->assertSee('Evaluator')
-            ->assertSee('Data Encoder - Head');
+            ->assertSee('Data Encoder - Head')
+            ->assertSee('value="administration.view.details.trash"', false)
+            ->assertSee('value="participants.view.details.trash"', false);
         $this->postJson(route('system.role-credentials.store'), [
             'role_id' => 3,
             'name' => 'Training evaluator',
-            'permissions' => ['trainings.read', 'trainings.page_access', 'trainings.view.details.all-status'],
+            'permissions' => [
+                'trainings.read',
+                'trainings.page_access',
+                'trainings.view.details.all-status',
+                'participants.page_access',
+                'participants.view.details.trash',
+            ],
         ])->assertOk()->assertJsonPath('message', 'Credential type created.');
 
         $credentialId = DB::table('role_credentials')->where('role_id', 3)->where('name', 'Training evaluator')->value('role_credential_id');
@@ -494,21 +702,30 @@ class SystemSettingsFeaturesTest extends TestCase
             'role_credential_id' => $credentialId,
             'permission' => 'trainings.view.details.all-status',
         ]);
+        $this->assertDatabaseHas('role_credential_permissions', [
+            'role_credential_id' => $credentialId,
+            'permission' => 'participants.view.details.trash',
+        ]);
         DB::table('role_permissions')->where('role_id', 3)->delete();
         DB::table('role_permissions')->insert([
-            'role_id' => 3,
-            'permission' => 'trainings.submit',
+            ['role_id' => 3, 'permission' => 'trainings.submit'],
+            ['role_id' => 3, 'permission' => 'participants.page_access'],
+            ['role_id' => 3, 'permission' => 'participants.view.details.all-with-status'],
+            ['role_id' => 3, 'permission' => 'administration.page_access'],
+            ['role_id' => 3, 'permission' => 'administration.view.details.trash'],
         ]);
         $this->patchJson(route('system.role-credentials.update', $credentialId), [
             'role_id' => 3,
             'name' => 'Training reviewer',
-            'permissions' => ['participants.read'],
-            'denied_permissions' => ['trainings.submit'],
+            'permissions' => ['participants.read', 'participants.page_access', 'participants.view.details.trash'],
+            'denied_permissions' => ['trainings.submit', 'administration.view.details.trash'],
         ])->assertOk()->assertJsonPath('message', 'Credential type updated.');
         $this->assertDatabaseHas('role_credentials', ['role_credential_id' => $credentialId, 'name' => 'Training reviewer']);
         $this->assertDatabaseHas('role_credential_permissions', ['role_credential_id' => $credentialId, 'permission' => 'participants.read']);
+        $this->assertDatabaseHas('role_credential_permissions', ['role_credential_id' => $credentialId, 'permission' => 'participants.view.details.trash']);
         $this->assertDatabaseMissing('role_credential_permissions', ['role_credential_id' => $credentialId, 'permission' => 'trainings.read']);
         $this->assertDatabaseHas('role_credential_denied_permissions', ['role_credential_id' => $credentialId, 'permission' => 'trainings.submit']);
+        $this->assertDatabaseHas('role_credential_denied_permissions', ['role_credential_id' => $credentialId, 'permission' => 'administration.view.details.trash']);
         $this->patchJson(route('system.role-credentials.update', $credentialId), [
             'role_id' => 3,
             'name' => 'Training reviewer',
@@ -520,11 +737,12 @@ class SystemSettingsFeaturesTest extends TestCase
         $this->patchJson(route('system.role-credentials.update', $credentialId), [
             'role_id' => 3,
             'name' => 'Training reviewer',
-            'permissions' => ['participants.read'],
+            'permissions' => ['participants.read', 'participants.page_access', 'participants.view.details.trash'],
             'denied_permissions' => ['trainings.page_access'],
         ])->assertUnprocessable()->assertJsonValidationErrors('denied_permissions');
 
         DB::table('users')->where('user_id', $assignedUser->user_id)->update(['role_credential_id' => $credentialId]);
+        $assignedUser->refresh();
         $credentialTable = $this->get(route('system.settings'))->assertOk()
             ->assertSee('credential-table-card', false)
             ->assertSee('Access profile #'.$credentialId)
@@ -541,6 +759,11 @@ class SystemSettingsFeaturesTest extends TestCase
         $this->assertSame(1, (int) $credentialRow->assigned_accounts_count);
         $this->assertDatabaseHas('role_credential_denied_permissions', ['role_credential_id' => $credentialId, 'permission' => 'trainings.submit']);
 
+        $this->signIn($assignedUser);
+        $this->get(route('admin.participants.details.trash'))->assertOk();
+        $this->get(route('admin.administration.details.trash'))->assertNotFound();
+
+        $this->signIn($administrator);
         $this->deleteJson(route('system.role-credentials.destroy', $credentialId))
             ->assertOk()
             ->assertJsonPath('message', 'Access profile permanently deleted. Assigned accounts have returned to their role permissions.');

@@ -16,11 +16,13 @@ function refresh() {
     const count = document.querySelector('.notification-count');
     if (count) { count.textContent = unread; count.hidden = !unread; }
     const subtitle = document.querySelector('.notification-menu-subtitle');
-    if (subtitle) subtitle.textContent = `${unread} unread updates`;
+    if (subtitle) subtitle.textContent = `${unread} unread update${unread === 1 ? '' : 's'}`;
     list.replaceChildren(...items.slice(0, 10).map(item => {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = `notification-menu-item ${item.readAt ? '' : 'is-unread'}`;
+      const isUnread = !item.readAt;
+      button.className = `notification-menu-item ${isUnread ? 'is-unread' : ''}`;
+      button.setAttribute('aria-label', `${isUnread ? 'Unread' : 'Read'} notification: ${item.title}`);
       const content = document.createElement('span');
       content.className = 'notification-item-copy';
       const title = document.createElement('span'); title.className = 'notification-item-title'; title.textContent = item.title;

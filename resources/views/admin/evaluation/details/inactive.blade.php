@@ -1523,5 +1523,5 @@ class="layout-fixed" data-questionnaire-status="inactive"
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/evaluation/details/sample-data.js') }}"></script>
-    <script src="{{ asset('src/js/evaluation/details/list-questionnaire.js') }}"></script>
+    <script src="{{ asset('src/js/evaluation/details/list-questionnaire.js?v=profile-specific-table-actions-1') }}"></script>
 @endsection

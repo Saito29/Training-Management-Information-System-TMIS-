@@ -34,7 +34,13 @@ class SystemSettingsController
 
     public function accounts(Request $request): View|string
     {
-        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        if ($request->routeIs('admin.administration.details.trash')) {
+            ModuleAccess::authorizeNavigationPage($request, 'administration', 'details.trash');
+        } else {
+            abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        }
+        $isAdministrator = ModuleAccess::isAdministrator($request->user());
+        $scope = ModuleAccess::registrationScope($request->user());
         $data = $request->validate([
             'state' => ['nullable', Rule::in(['active', 'inactive', 'trash', 'pending'])],
             'search' => ['nullable', 'string', 'max:100'],
@@ -52,7 +58,9 @@ class SystemSettingsController
                 $join->on('users.role_credential_id', '=', 'account_credentials.role_credential_id')
                     ->on('users.role_id', '=', 'account_credentials.role_id');
             })
-            ->where('account_roles.name', '<>', 'System Administrator')
+            ->when(($data['state'] ?? '') !== 'trash', fn ($query) => $query->where('account_roles.name', '<>', 'System Administrator'))
+            ->when(! $isAdministrator && $scope['regionIds'] !== null, fn ($query) => $query->whereIn('users.region_id', $scope['regionIds']))
+            ->when(! $isAdministrator && $scope['officeIds'] !== null, fn ($query) => $query->whereIn('users.org_id', $scope['officeIds']))
             ->select([
                 'users.*',
                 'account_roles.name as role_name',
@@ -121,8 +129,18 @@ class SystemSettingsController
                 ->orderBy('role_credentials.role_id')
                 ->orderBy('role_credentials.name')
                 ->get(['role_credentials.role_credential_id', 'role_credentials.role_id', 'role_credentials.name']),
-            'regions' => DB::table('region')->where('is_active', 1)->orderBy('name')->get(),
-            'offices' => DB::table('organization')->where('is_active', 1)->orderBy('name')->get(),
+            'regions' => DB::table('region')->where('is_active', 1)
+                ->when(! $isAdministrator && $scope['regionIds'] !== null, fn ($query) => $query->whereIn('region_id', $scope['regionIds']))
+                ->orderBy('name')->get(),
+            'offices' => DB::table('organization')->where('is_active', 1)
+                ->when(! $isAdministrator && $scope['regionIds'] !== null, fn ($query) => $query->whereIn('region_id', $scope['regionIds']))
+                ->when(! $isAdministrator && $scope['officeIds'] !== null, fn ($query) => $query->whereIn('org_id', $scope['officeIds']))
+                ->orderBy('name')->get(),
+            'canEditAccounts' => ModuleAccess::allows($request->user(), 'administration.edit'),
+            'canDeleteAccounts' => ModuleAccess::allows($request->user(), 'administration.delete'),
+            'canViewAccountProfiles' => ModuleAccess::allowsNavigationPage($request->user(), 'administration', 'id.view-user'),
+            'canEditAccountProfiles' => ModuleAccess::allows($request->user(), 'administration.edit')
+                && ModuleAccess::allowsNavigationPage($request->user(), 'administration', 'id.edit-user'),
         ]);
 
         if ($request->header('X-Account-Table') === '1' && $request->routeIs('system.accounts')) {
@@ -135,7 +153,11 @@ class SystemSettingsController
     /** Update another account's access and notify its owner with the acting administrator's identity. */
     public function manageAccount(Request $request, int $id): JsonResponse|RedirectResponse
     {
-        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $permission = match ($request->input('action')) {
+            'delete' => 'administration.delete',
+            default => 'administration.edit',
+        };
+        ModuleAccess::authorize($request, $permission);
         $data = $request->validate([
             'action' => ['required', Rule::in(['update', 'delete', 'restore'])],
             'role_id' => ['required_if:action,update', 'integer', Rule::exists('user_roles', 'role_id')->where('is_active', 1)->whereNot('name', 'System Administrator')],
@@ -145,14 +167,33 @@ class SystemSettingsController
             'status' => ['required_if:action,update', Rule::in(['Pending approval', 'Rejected', 'Approved & Accepted'])],
             'active_status' => ['required_if:action,update', 'boolean'],
         ]);
+        if ($data['action'] === 'update' && ! ModuleAccess::isAdministrator($request->user())) {
+            ModuleAccess::authorizeRegistrationScope(
+                $request->user(),
+                (int) $data['region_id'],
+                (int) $data['org_id'],
+                'Select an office within your account scope.',
+            );
+        }
         DB::transaction(function () use ($request, $id, $data): void {
             $user = User::where('user_id', $id)->lockForUpdate()->firstOrFail();
             abort_if((int) $request->user()->user_id === $id, 422, 'Use your profile for personal changes. You cannot change your own access or delete your own account.');
             abort_if(DB::table('user_roles')->where('role_id', $user->role_id)->where('name', 'System Administrator')->exists(), 404);
+            if (! ModuleAccess::isAdministrator($request->user())) {
+                abort_unless(
+                    ModuleAccess::withinRegistrationScope($request->user(), (int) $user->region_id, (int) $user->org_id),
+                    404,
+                );
+            }
             if ($data['action'] === 'update') {
-                abort_if($user->deleted_at !== null, 409, 'Restore this account before editing access.');
+                if ($data['status'] !== $user->status && in_array($data['status'], ['Approved & Accepted', 'Rejected'], true)) {
+                    ModuleAccess::authorize($request, 'administration.approve');
+                }
                 abort_if($data['status'] !== 'Approved & Accepted' && $data['active_status'], 422, 'Only approved accounts can be activated.');
                 $changes = Arr::only($data, ['role_id', 'region_id', 'org_id', 'status', 'active_status']);
+                if ($user->deleted_at !== null) {
+                    $changes['active_status'] = 0;
+                }
                 $credentialMatchesRole = $user->role_credential_id
                     && DB::table('role_credentials')
                         ->where('role_credential_id', $user->role_credential_id)
@@ -186,7 +227,7 @@ class SystemSettingsController
 
     public function accountProfile(Request $request, User $user): JsonResponse
     {
-        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        ModuleAccess::authorize($request, 'administration.read');
 
         $account = DB::table('users')
             ->leftJoin('user_roles', 'users.role_id', '=', 'user_roles.role_id')
@@ -197,6 +238,12 @@ class SystemSettingsController
             ->leftJoin('region', 'users.region_id', '=', 'region.region_id')
             ->leftJoin('organization', 'users.org_id', '=', 'organization.org_id')
             ->where('users.user_id', $user->user_id)
+            ->when(! ModuleAccess::isAdministrator($request->user()), function ($query) use ($request): void {
+                $scope = ModuleAccess::registrationScope($request->user());
+                $query->where('user_roles.name', '<>', 'System Administrator')
+                    ->when($scope['regionIds'] !== null, fn ($builder) => $builder->whereIn('users.region_id', $scope['regionIds']))
+                    ->when($scope['officeIds'] !== null, fn ($builder) => $builder->whereIn('users.org_id', $scope['officeIds']));
+            })
             ->first([
                 'users.user_id as id', 'users.first_name as firstName', 'users.middle_name as middleName',
                 'users.last_name as lastName', 'users.extension_name as suffix', 'users.date_of_birth as dateOfBirth',
@@ -228,6 +275,13 @@ class SystemSettingsController
     {
         abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
         $isSuperAdministrator = ModuleAccess::isSuperAdministrator($request->user());
+        $roles = $isSuperAdministrator ? DB::table('user_roles')->orderBy('role_id')->get() : collect();
+        $roleAccountCounts = $isSuperAdministrator
+            ? DB::table('users')->select('role_id')->selectRaw('COUNT(*) as account_count')->groupBy('role_id')->pluck('account_count', 'role_id')
+            : collect();
+        $roleCredentialCounts = $isSuperAdministrator
+            ? DB::table('role_credentials')->select('role_id')->selectRaw('COUNT(*) as credential_count')->groupBy('role_id')->pluck('credential_count', 'role_id')
+            : collect();
         $superAdminFilters = $isSuperAdministrator ? $request->validate([
             'super_admin_search' => ['nullable', 'string', 'max:100'],
             'super_admin_region' => ['nullable', 'integer', Rule::exists('region', 'region_id')],
@@ -355,7 +409,9 @@ class SystemSettingsController
 
         return view('admin.system-settings', [
             'settings' => DB::table('system_settings')->where('id', 1)->first(),
-            'roles' => $isSuperAdministrator ? DB::table('user_roles')->orderBy('role_id')->get() : collect(),
+            'roles' => $roles,
+            'roleAccountCounts' => $roleAccountCounts,
+            'roleCredentialCounts' => $roleCredentialCounts,
             'credentialTypes' => $credentialTypes,
             'credentialGrants' => $credentialGrants,
             'credentialDenials' => $credentialDenials,
@@ -1391,6 +1447,50 @@ class SystemSettingsController
         });
 
         return $request->expectsJson() ? response()->json(['message' => 'Role permissions saved.']) : back()->with('operation_message', 'Role permissions saved.');
+    }
+
+    public function destroyRole(Request $request, int $role): RedirectResponse|JsonResponse
+    {
+        abort_unless(ModuleAccess::isSuperAdministrator($request->user()), 403);
+
+        DB::transaction(function () use ($request, $role): void {
+            $existing = DB::table('user_roles')->where('role_id', $role)->lockForUpdate()->first();
+            abort_unless($existing, 404);
+            abort_if($existing->name === 'System Administrator', 409, 'The System Administrator role is protected.');
+
+            $assignedAccounts = DB::table('users')->where('role_id', $role)->count();
+            $assignedProfiles = DB::table('role_credentials')->where('role_id', $role)->count();
+            abort_if(
+                $assignedAccounts > 0 || $assignedProfiles > 0,
+                409,
+                'A role cannot be deleted while accounts or access profiles are assigned.',
+            );
+
+            $permissions = ModuleAccess::normalizePermissions(
+                DB::table('role_permissions')->where('role_id', $role)->orderBy('permission')->pluck('permission')->all(),
+            );
+
+            DB::table('user_roles')->where('role_id', $role)->delete();
+
+            AuditTrail::record(
+                $request,
+                'role_deleted_'.$role,
+                $request->user(),
+                [
+                    'role_name' => $existing->name,
+                    'details' => $existing->details,
+                    'permissions' => $permissions,
+                    'assigned_accounts' => $assignedAccounts,
+                    'assigned_profiles' => $assignedProfiles,
+                ],
+                ['deleted' => true],
+                category: 'settings',
+            );
+        });
+
+        return $request->expectsJson()
+            ? response()->json(['message' => 'Role permanently deleted.'])
+            : back()->with('operation_message', 'Role permanently deleted.');
     }
 
     public function roleCredential(Request $request, ?int $credential = null): RedirectResponse|JsonResponse

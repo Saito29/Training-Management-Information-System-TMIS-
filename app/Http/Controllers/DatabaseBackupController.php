@@ -29,12 +29,24 @@ class DatabaseBackupController
         $binary = $this->findPostgresBinary('pg_dump');
         abort_unless($binary, 503, 'PostgreSQL pg_dump is not installed or configured on this server.');
 
+        $restrictKey = bin2hex(random_bytes(16));
         $directory = storage_path('app/private/database-backups');
         File::ensureDirectoryExists($directory, 0700);
         $path = tempnam($directory, 'tmis-backup-');
         abort_unless($path !== false, 500, 'A secure temporary backup file could not be created.');
 
-        $connection = config('database.connections.pgsql');
+        $connection = DB::connection()->getConfig();
+        $processEnvironment = [
+            'PGPASSWORD' => $connection['password'],
+            'PGCONNECT_TIMEOUT' => '10',
+        ];
+        foreach (['SystemRoot', 'WINDIR', 'PATH', 'TEMP', 'TMP'] as $name) {
+            $value = getenv($name) ?: ($_SERVER[$name] ?? null);
+            if (is_string($value) && $value !== '') {
+                $processEnvironment[$name] = $value;
+            }
+        }
+
         $process = new Process([
             $binary,
             '--format=plain',
@@ -43,15 +55,13 @@ class DatabaseBackupController
             '--no-owner',
             '--no-privileges',
             '--no-password',
+            '--restrict-key='.$restrictKey,
             '--host='.$connection['host'],
             '--port='.$connection['port'],
             '--username='.$connection['username'],
             '--dbname='.$connection['database'],
             '--file='.$path,
-        ], base_path(), [
-            'PGPASSWORD' => $connection['password'],
-            'PGCONNECT_TIMEOUT' => '10',
-        ]);
+        ], base_path(), $processEnvironment);
         $process->setTimeout(600);
 
         try {
@@ -151,7 +161,7 @@ class DatabaseBackupController
         $binary = $this->findPostgresBinary('psql');
         abort_unless($binary, 503, 'PostgreSQL psql is not installed or configured on this server.');
 
-        $connection = config('database.connections.pgsql');
+        $connection = DB::connection()->getConfig();
         $process = new Process([
             $binary,
             '--no-psqlrc',

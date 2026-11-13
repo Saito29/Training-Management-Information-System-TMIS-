@@ -138,3 +138,29 @@
     .account-assignment-line strong { font-size:.68rem; }
     .account-assignment-line small { font-size:.63rem; }
 }
+
+.deleted-accounts-page .account-filter-card { max-width:72rem; }
+.deleted-account-filter-grid { grid-template-columns:minmax(0,1fr) minmax(12rem,15rem) auto; }
+.deleted-account-filter-grid .account-filter-actions { align-items:center; }
+.deleted-account-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.35rem; }
+.deleted-account-actions .btn { padding:.38rem .5rem; font-size:.68rem; }
+.deleted-accounts-page .deleted-account-table { min-width:1540px; table-layout:fixed; }
+.deleted-accounts-page .deleted-account-table thead th:first-child { width:13%; }
+.deleted-accounts-page .deleted-account-table thead th:nth-child(2) { width:8%; }
+.deleted-accounts-page .deleted-account-table thead th:nth-child(3) { width:18%; }
+.deleted-accounts-page .deleted-account-table thead th:nth-child(4) { width:14%; }
+.deleted-accounts-page .deleted-account-table thead th:nth-child(5) { width:10%; }
+.deleted-accounts-page .deleted-account-table thead th:nth-child(6) { width:12%; }
+.deleted-accounts-page .deleted-account-table thead th:nth-child(7) { width:11%; }
+.deleted-accounts-page .deleted-account-table thead th:nth-child(8),
+.deleted-accounts-page .deleted-account-table thead th:nth-child(9) { width:7%; }
+.deleted-account-empty { min-height:180px; padding:2rem; }
+@media (max-width:900px) {
+    .deleted-account-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .deleted-account-filter-grid .account-filter-actions { grid-column:1/-1; }
+}
+@media (max-width:600px) {
+    .deleted-account-filter-grid { grid-template-columns:1fr; }
+    .deleted-account-filter-grid .account-filter-actions { grid-column:auto; }
+}
+[data-theme='dark'] .deleted-accounts-page .account-state.is-trashed { color:#ffb9b9; }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\UserNotificationEmail;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -31,6 +32,48 @@ class OriginalInterfaceTest extends TestCase
     private function save(string $key, array $record): TestResponse
     {
         return $this->postJson('/ui/sync', ['key' => $key, 'upserts' => [$record], 'deletes' => []]);
+    }
+
+    public function test_accounts_with_the_same_role_receive_their_credential_specific_permissions(): void
+    {
+        DB::table('role_permissions')->where('role_id', 3)->delete();
+        DB::table('role_permissions')->insert([
+            ['role_id' => 3, 'permission' => 'participants.read'],
+            ['role_id' => 3, 'permission' => 'participants.edit'],
+        ]);
+        $evaluatorCredentialId = DB::table('role_credentials')->insertGetId([
+            'role_id' => 3,
+            'name' => 'Evaluator permissions',
+            'created_at' => now(),
+        ], 'role_credential_id');
+        $encoderCredentialId = DB::table('role_credentials')->insertGetId([
+            'role_id' => 3,
+            'name' => 'Encoder permissions',
+            'created_at' => now(),
+        ], 'role_credential_id');
+        DB::table('role_credential_permissions')->insert([
+            'role_credential_id' => $evaluatorCredentialId,
+            'permission' => 'participants.delete',
+        ]);
+
+        $evaluator = $this->signIn(3);
+        DB::table('users')->where('user_id', $evaluator->user_id)->update(['role_credential_id' => $evaluatorCredentialId]);
+        $evaluator->role_credential_id = $evaluatorCredentialId;
+        $evaluatorPermissions = $this->getJson('/ui/data')->assertOk()->json('permissions');
+
+        $encoder = $this->signIn(3);
+        DB::table('users')->where('user_id', $encoder->user_id)->update(['role_credential_id' => $encoderCredentialId]);
+        $encoder->role_credential_id = $encoderCredentialId;
+        $encoderPermissions = $this->getJson('/ui/data')->assertOk()->json('permissions');
+
+        $this->assertSame(3, $evaluator->role_id);
+        $this->assertSame(3, $encoder->role_id);
+        $this->assertContains('participants.read', $evaluatorPermissions);
+        $this->assertContains('participants.edit', $evaluatorPermissions);
+        $this->assertContains('participants.delete', $evaluatorPermissions);
+        $this->assertContains('participants.read', $encoderPermissions);
+        $this->assertContains('participants.edit', $encoderPermissions);
+        $this->assertNotContains('participants.delete', $encoderPermissions);
     }
 
     public function test_original_association_form_saves_database_record_and_versioned_data(): void
@@ -633,7 +676,7 @@ class OriginalInterfaceTest extends TestCase
             ->assertSee('View and manage active farmer profiles.')
             ->assertSee('Inactive farmer profiles are excluded from this list.')
             ->assertDontSee('This list includes active and inactive farmer profiles.')
-            ->assertSee('all-status.js?v=farmer-status-directory-2', false);
+            ->assertSee('all-status.js?v=profile-specific-table-actions-1', false);
         $farmers = collect($this->getJson('/ui/data')->assertOk()->json('stores.tmis-farmers'));
         $this->assertSame('Active', $farmers->firstWhere('id', 'FMR-LIST-ACTIVE')['status']);
         $this->assertSame('Inactive', $farmers->firstWhere('id', 'FMR-LIST-INACTIVE')['status']);
@@ -1639,14 +1682,88 @@ class OriginalInterfaceTest extends TestCase
 
     public function test_notification_creation_and_recipient_state_persist_without_client_privilege(): void
     {
+        Mail::fake();
         $this->signIn();
         $recipient = User::factory()->create();
+        $secondRecipient = User::factory()->create();
         $record = ['id' => 'NOTICE-1', 'batchId' => 'BATCH-1', 'recipientId' => (string) $recipient->user_id, 'title' => 'Office update', 'message' => 'Read the update', 'type' => 'system', 'priority' => 'normal', 'href' => ''];
-        $this->save('tmis-notifications', $record)->assertOk();
+        $secondRecord = [...$record, 'id' => 'NOTICE-2', 'recipientId' => (string) $secondRecipient->user_id];
+        $this->postJson('/ui/sync', ['key' => 'tmis-notifications', 'upserts' => [$record, $secondRecord], 'deletes' => []])
+            ->assertOk()
+            ->assertJsonPath('emailDelivery.attempted', 2)
+            ->assertJsonPath('emailDelivery.accepted', 2)
+            ->assertJsonPath('emailDelivery.failed', 0);
         $this->assertDatabaseHas('user_notifications', ['recipient_id' => $recipient->user_id, 'title' => 'Office update']);
+        $this->assertDatabaseHas('user_notifications', ['recipient_id' => $secondRecipient->user_id, 'title' => 'Office update']);
+        Mail::assertSent(UserNotificationEmail::class, function (UserNotificationEmail $mail) use ($recipient, $secondRecipient): bool {
+            $mail->assertHasBcc($recipient->email);
+            $mail->assertHasBcc($secondRecipient->email);
+            $mail->assertHasSubject('TMIS notification: Office update');
+            $mail->assertSeeInHtml('Read the update');
+
+            return true;
+        });
         $other = $this->signIn(3);
         $this->save('tmis-notification-state:'.$other->user_id, ['id' => 'NOTICE-1', 'readAt' => now()->toDateTimeString()])->assertNotFound();
         $this->save('tmis-notifications', $record)->assertForbidden();
+    }
+
+    public function test_notification_is_saved_when_recipient_email_is_invalid(): void
+    {
+        Mail::fake();
+        $this->signIn();
+        $recipient = User::factory()->create(['email' => 'invalid-email']);
+        $record = ['id' => 'NOTICE-INVALID-EMAIL', 'batchId' => 'BATCH-INVALID-EMAIL', 'recipientId' => (string) $recipient->user_id, 'title' => 'Office update', 'message' => 'Read the update', 'type' => 'system', 'priority' => 'normal', 'href' => ''];
+
+        $this->save('tmis-notifications', $record)
+            ->assertOk()
+            ->assertJsonPath('emailDelivery.attempted', 1)
+            ->assertJsonPath('emailDelivery.accepted', 0)
+            ->assertJsonPath('emailDelivery.failed', 1);
+        $this->assertDatabaseHas('user_notifications', ['recipient_id' => $recipient->user_id, 'title' => 'Office update']);
+        Mail::assertNothingSent();
+    }
+
+    public function test_notification_cannot_be_sent_to_the_signed_in_sender(): void
+    {
+        Mail::fake();
+        $sender = $this->signIn();
+        $record = [
+            'id' => 'NOTICE-SELF',
+            'batchId' => 'BATCH-SELF',
+            'recipientId' => (string) $sender->user_id,
+            'title' => 'Office update',
+            'message' => 'Read the update',
+            'type' => 'system',
+            'priority' => 'normal',
+            'href' => '',
+        ];
+
+        $this->save('tmis-notifications', $record)->assertUnprocessable();
+
+        $this->assertDatabaseMissing('user_notifications', ['ui_id' => 'NOTICE-SELF']);
+        Mail::assertNothingSent();
+    }
+
+    public function test_notification_draft_collection_saves_large_unicode_content_and_is_returned_on_refresh(): void
+    {
+        $user = $this->signIn();
+        $draftKey = 'tmis-notification-drafts:'.$user->user_id;
+        $draftId = 'DRAFT-UNICODE';
+        $message = str_repeat('🌾', 6000);
+        $drafts = [[
+            'id' => $draftId,
+            'actorId' => (string) $user->user_id,
+            'savedAt' => '2026-03-05T12:00:00.000Z',
+            'data' => ['title' => 'Long message', 'message' => $message],
+        ]];
+
+        $this->postJson('/ui/draft', ['key' => $draftKey, 'value' => $drafts])->assertOk();
+
+        $this->getJson('/ui/data')
+            ->assertOk()
+            ->assertJsonPath('stores.'.$draftKey.'.0.id', $draftId)
+            ->assertJsonPath('stores.'.$draftKey.'.0.data.message', $message);
     }
 
     public function test_original_design_upload_allows_status_email_outbox_and_locks_documents_until_review(): void
@@ -1897,6 +2014,192 @@ class OriginalInterfaceTest extends TestCase
         $this->get('/app/admin/administration/details/trash')->assertOk()->assertViewIs('admin.administration.details.trash')->assertSee('updated-office@example.test');
         $this->patchJson('/system/accounts/'.$account->user_id, ['action' => 'restore'])->assertOk();
         $this->assertDatabaseHas('users', ['user_id' => $account->user_id, 'active_status' => 0, 'deleted_at' => null]);
+    }
+
+    public function test_deleted_farmer_page_lists_trashed_records_and_restores_them_as_inactive(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-13 12:00:00'));
+        $this->signIn();
+        $this->save('tmis-farmers', [
+            'id' => 'FMR-TRASH-TEST',
+            'fname' => 'Deleted',
+            'lname' => 'Farmer',
+            'status' => 'Active',
+        ])->assertOk();
+        $this->save('tmis-farmers', [
+            'id' => 'FMR-ACTIVE-TEST',
+            'fname' => 'Current',
+            'lname' => 'Farmer',
+            'status' => 'Active',
+        ])->assertOk();
+        $this->postJson('/ui/sync', [
+            'key' => 'tmis-farmers',
+            'upserts' => [],
+            'deletes' => ['FMR-TRASH-TEST'],
+        ])->assertOk();
+
+        $deletedRecord = DB::table('participants')->where('ui_id', 'FMR-TRASH-TEST')->first();
+        $farmerNumber = '26'.str_pad((string) $deletedRecord->id, 6, '0', STR_PAD_LEFT);
+
+        $this->get(route('admin.participants.details.trash'))
+            ->assertOk()
+            ->assertViewIs('admin.participants.details.trash')
+            ->assertSee('Deleted farmers')
+            ->assertSee('aria-label="TMIS operations"', false)
+            ->assertSee('class="app-header-main d-flex justify-content-between align-items-center"', false)
+            ->assertSee('id="mobileNavMenu"', false)
+            ->assertSee('id="participantMobile"', false)
+            ->assertSee('id="trainingMobile"', false)
+            ->assertSee('id="evaluationMobile"', false)
+            ->assertSee('id="administrationMobile"', false)
+            ->assertSee(route('admin.participants.create.register'))
+            ->assertSee(route('admin.training.create.register'))
+            ->assertSee(route('admin.evaluation.encode.pre-test'))
+            ->assertSee(route('admin.administration.details.trash'))
+            ->assertSee('Permanent deletion')
+            ->assertSee('Dec 13, 2026')
+            ->assertSee('Deleted Farmer</span>', false)
+            ->assertDontSee('Current Farmer</span>', false);
+
+        $this->get(route('admin.participants.id.view-farmer', ['id' => $farmerNumber]))
+            ->assertOk()
+            ->assertViewIs('admin.participants.id.view-farmer')
+            ->assertSee('Deleted farmer profile')
+            ->assertSee('Scheduled permanent deletion')
+            ->assertSee('Deleted Farmer');
+
+        $this->get(route('admin.participants.details.trash', ['search' => 'Deleted']))
+            ->assertOk()
+            ->assertSee('Deleted Farmer</span>', false);
+
+        $this->assertDatabaseHas('participants', [
+            'ui_id' => 'FMR-TRASH-TEST',
+            'deleted_at' => '2026-11-13 12:00:00',
+            'permanent_deletion_at' => '2026-12-13 12:00:00',
+        ]);
+
+        $this->patch(route('ui.participants.trash.restore', ['participant' => 'FMR-TRASH-TEST']))
+            ->assertRedirect(route('admin.participants.details.trash'))
+            ->assertSessionHas('operation_message', 'Farmer profile restored as inactive.');
+
+        $this->assertDatabaseHas('participants', [
+            'ui_id' => 'FMR-TRASH-TEST',
+            'deleted_at' => null,
+            'permanent_deletion_at' => null,
+            'is_active' => false,
+        ]);
+        $this->get(route('admin.participants.details.trash'))->assertDontSee('Deleted Farmer</span>', false);
+    }
+
+    public function test_permanent_deletion_is_blocked_until_retention_has_expired(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-13 12:00:00'));
+        $user = $this->signIn();
+        $this->save('tmis-farmers', [
+            'id' => 'FMR-PURGE-EARLY',
+            'fname' => 'Retained',
+            'lname' => 'Farmer',
+        ])->assertOk();
+        $this->postJson('/ui/sync', [
+            'key' => 'tmis-farmers',
+            'upserts' => [],
+            'deletes' => ['FMR-PURGE-EARLY'],
+        ])->assertOk();
+
+        $this->delete(route('admin.participants.details.trash.destroy', ['participant' => 'FMR-PURGE-EARLY']))
+            ->assertRedirect(route('admin.participants.details.trash'))
+            ->assertSessionHas('operation_error', 'This farmer cannot be permanently deleted before the scheduled date.');
+
+        $this->assertDatabaseHas('participants', [
+            'ui_id' => 'FMR-PURGE-EARLY',
+            'created_by' => $user->user_id,
+            'deleted_at' => '2026-11-13 12:00:00',
+            'permanent_deletion_at' => '2026-12-13 12:00:00',
+        ]);
+    }
+
+    public function test_permanent_deletion_preserves_farmer_when_linked_records_exist(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-13 12:00:00'));
+        $user = $this->signIn();
+        $this->save('tmis-farmers', [
+            'id' => 'FMR-PURGE-LINKED',
+            'fname' => 'Linked',
+            'lname' => 'Farmer',
+        ])->assertOk();
+        $this->postJson('/ui/sync', [
+            'key' => 'tmis-farmers',
+            'upserts' => [],
+            'deletes' => ['FMR-PURGE-LINKED'],
+        ])->assertOk();
+        $participantId = (int) DB::table('participants')->where('ui_id', 'FMR-PURGE-LINKED')->value('id');
+        DB::table('participant_beneficiaries')->insertOrIgnore([
+            'participant_id' => $participantId,
+            'region_id' => 4,
+            'org_id' => 1,
+            'added_by' => $user->user_id,
+            'is_primary' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->travelTo(Carbon::parse('2026-12-13 12:00:00'));
+
+        $this->delete(route('admin.participants.details.trash.destroy', ['participant' => 'FMR-PURGE-LINKED']))
+            ->assertRedirect(route('admin.participants.details.trash'))
+            ->assertSessionHas('operation_error', 'This farmer still has linked records. Remove or retain those records before attempting permanent deletion.');
+
+        $this->assertDatabaseHas('participants', ['id' => $participantId, 'deleted_at' => '2026-11-13 12:00:00']);
+        $this->assertDatabaseHas('participant_beneficiaries', ['participant_id' => $participantId]);
+    }
+
+    public function test_permanent_deletion_succeeds_after_retention_when_no_linked_records_exist(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-13 12:00:00'));
+        $user = $this->signIn();
+        $participantId = DB::table('participants')->insertGetId([
+            'region_id' => 4,
+            'org_id' => 1,
+            'created_by' => $user->user_id,
+            'name' => 'Purgeable Farmer',
+            'first_name' => 'Purgeable',
+            'last_name' => 'Farmer',
+            'is_active' => false,
+            'ui_id' => 'FMR-PURGE-EMPTY',
+            'created_at' => now(),
+            'updated_at' => now(),
+            'deleted_at' => now(),
+            'permanent_deletion_at' => now()->addDays(30),
+        ]);
+        $this->travelTo(Carbon::parse('2026-12-13 12:00:00'));
+
+        $this->delete(route('admin.participants.details.trash.destroy', ['participant' => 'FMR-PURGE-EMPTY']))
+            ->assertRedirect(route('admin.participants.details.trash'))
+            ->assertSessionHas('operation_message', 'Farmer profile permanently deleted.');
+
+        $this->assertDatabaseMissing('participants', ['id' => $participantId]);
+    }
+
+    public function test_non_administrator_cannot_restore_or_permanently_delete_a_deleted_farmer(): void
+    {
+        $this->signIn();
+        $this->save('tmis-farmers', [
+            'id' => 'FMR-TRASH-LOCKED',
+            'fname' => 'Private',
+            'lname' => 'Farmer',
+            'status' => 'Active',
+        ])->assertOk();
+        $this->postJson('/ui/sync', [
+            'key' => 'tmis-farmers',
+            'upserts' => [],
+            'deletes' => ['FMR-TRASH-LOCKED'],
+        ])->assertOk();
+        $dataEncoderRole = (int) DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id');
+        $this->signIn($dataEncoderRole);
+
+        $this->patch(route('ui.participants.trash.restore', ['participant' => 'FMR-TRASH-LOCKED']))->assertNotFound();
+        $this->delete(route('admin.participants.details.trash.destroy', ['participant' => 'FMR-TRASH-LOCKED']))->assertNotFound();
+
+        $this->assertDatabaseMissing('participants', ['ui_id' => 'FMR-TRASH-LOCKED', 'deleted_at' => null]);
     }
 
     public function test_assessment_scores_use_database_question_count_even_when_client_spoofs_metadata(): void

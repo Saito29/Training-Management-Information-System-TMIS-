@@ -2559,6 +2559,14 @@ body {
   background-color: color-mix(in srgb, var(--color-primary-surface) 58%, var(--color-surface));
 }
 
+[data-theme='dark'] .app-header .app-notification .notification-menu .notification-menu-item.is-unread {
+  background-color: color-mix(in srgb, var(--color-primary-surface) 42%, var(--color-surface));
+}
+
+[data-theme='dark'] .app-header .app-notification .notification-menu .notification-menu-item.is-unread .notification-item-title {
+  color: var(--color-primary) !important;
+}
+
 [data-theme='dark'] .app-header .app-notification .notification-menu :is(
   .notification-item-icon--approval,
   .notification-item-icon--budget,

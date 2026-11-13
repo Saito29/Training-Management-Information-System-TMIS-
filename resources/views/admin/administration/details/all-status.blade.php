@@ -1453,5 +1453,5 @@ class="layout-fixed"
     <!-- nav -->
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/administration/details/all-status.js') }}"></script>
+    <script src="{{ asset('src/js/administration/details/all-status.js?v=admin-role-table-2') }}"></script>
 @endsection

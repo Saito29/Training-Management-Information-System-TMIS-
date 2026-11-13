@@ -33,6 +33,9 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::get('/system/locations/template', [LocationController::class, 'template'])->name('system.locations.template');
     Route::post('/system/locations/import', [LocationController::class, 'import'])->middleware('throttle:5,1')->name('system.locations.import');
     Route::post('/ui/training-enrollment', [OriginalInterfaceController::class, 'enrollment'])->name('ui.enrollment');
+    Route::patch('/ui/participants/trash/{participant}/restore', [OperationsController::class, 'restoreDeletedParticipant'])
+        ->where('participant', '[A-Za-z0-9:_-]+')
+        ->name('ui.participants.trash.restore');
     Route::post('/ui/documents/{module}/{id}', [OriginalDocumentController::class, 'store'])->name('ui.documents.store');
     Route::get('/ui/documents/{module}/{id}/{document}', [OriginalDocumentController::class, 'show'])->whereNumber('document')->name('ui.documents.show');
     Route::patch('/ui/documents/{module}/{id}/{document}', [OriginalDocumentController::class, 'update'])->whereNumber('document')->name('ui.documents.update');
@@ -74,6 +77,7 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::post('/system/offices', [SystemSettingsController::class, 'office'])->name('system.offices.store');
     Route::post('/system/roles', [SystemSettingsController::class, 'role'])->name('system.roles.store');
     Route::patch('/system/roles/{role}', [SystemSettingsController::class, 'role'])->whereNumber('role')->name('system.roles.update');
+    Route::delete('/system/roles/{role}', [SystemSettingsController::class, 'destroyRole'])->whereNumber('role')->name('system.roles.destroy');
     Route::post('/system/role-credentials', [SystemSettingsController::class, 'roleCredential'])->name('system.role-credentials.store');
     Route::patch('/system/role-credentials/{credential}', [SystemSettingsController::class, 'roleCredential'])->whereNumber('credential')->name('system.role-credentials.update');
     Route::delete('/system/role-credentials/{credential}', [SystemSettingsController::class, 'destroyRoleCredential'])->whereNumber('credential')->name('system.role-credentials.destroy');
@@ -82,6 +86,10 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::get('/operations/training-queue-counts', [OperationsController::class, 'queueCounts'])->name('operations.training-queue-counts');
     Route::patch('/operations/notifications/{id}', [OperationsController::class, 'readNotification'])->whereNumber('id')->name('operations.notifications.read');
     Route::get('/operations/evaluations', [OperationsController::class, 'evaluations'])->name('operations.evaluations.index');
+    Route::get('/app/admin/participants/details/trash', [OperationsController::class, 'deletedParticipants'])->name('admin.participants.details.trash');
+    Route::delete('/app/admin/participants/details/trash/{participant}', [OperationsController::class, 'permanentlyDeleteParticipant'])
+        ->where('participant', '[A-Za-z0-9:_-]+')
+        ->name('admin.participants.details.trash.destroy');
     Route::post('/operations/evaluations', [OperationsController::class, 'evaluation'])->name('operations.evaluations.store');
     Route::patch('/operations/evaluations/{response}', [OperationsController::class, 'updateEvaluation'])->whereNumber('response')->name('operations.evaluations.update');
     Route::delete('/operations/evaluations/{response}', [OperationsController::class, 'deleteEvaluation'])->whereNumber('response')->name('operations.evaluations.destroy');
@@ -91,10 +99,10 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::post('/operations/trainings/{id}/attachments', [OperationsController::class, 'attachment'])->whereNumber('id')->name('operations.trainings.attachments');
     Route::get('/operations/trainings/{id}/attachments/{attachment}', [OperationsController::class, 'download'])->whereNumber(['id', 'attachment'])->name('operations.trainings.download');
     Route::post('/operations/trainings/{id}/enrollment', [OperationsController::class, 'link'])->whereNumber('id')->name('operations.trainings.enrollment');
-    Route::get('/operations/{module}', [OperationsController::class, 'index'])->whereIn('module', ModuleAccess::MODULES)->name('operations.index');
-    Route::post('/operations/{module}', [OperationsController::class, 'store'])->whereIn('module', ModuleAccess::MODULES)->middleware('throttle:60,1')->name('operations.store');
-    Route::patch('/operations/{module}/{id}', [OperationsController::class, 'update'])->whereIn('module', ModuleAccess::MODULES)->whereNumber('id')->name('operations.update');
-    Route::delete('/operations/{module}/{id}', [OperationsController::class, 'destroy'])->whereIn('module', ModuleAccess::MODULES)->whereNumber('id')->name('operations.destroy');
+    Route::get('/operations/{module}', [OperationsController::class, 'index'])->whereIn('module', ModuleAccess::RECORD_MODULES)->name('operations.index');
+    Route::post('/operations/{module}', [OperationsController::class, 'store'])->whereIn('module', ModuleAccess::RECORD_MODULES)->middleware('throttle:60,1')->name('operations.store');
+    Route::patch('/operations/{module}/{id}', [OperationsController::class, 'update'])->whereIn('module', ModuleAccess::RECORD_MODULES)->whereNumber('id')->name('operations.update');
+    Route::delete('/operations/{module}/{id}', [OperationsController::class, 'destroy'])->whereIn('module', ModuleAccess::RECORD_MODULES)->whereNumber('id')->name('operations.destroy');
     Route::get('/administration/audit-logs', [AuditLogController::class, 'index'])->name('audit.index');
     Route::get('/administration/audit-logs/export', [AuditLogController::class, 'export'])->name('audit.export');
     Route::delete('/administration/audit-logs', [AuditLogController::class, 'destroy'])->middleware('throttle:10,1')->name('audit.destroy');
@@ -110,8 +118,14 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::view('/app/admin/administration/details/approved-accepted', 'admin.administration.details.approved-accepted')->name('admin.administration.details.approved-accepted');
     Route::view('/app/admin/administration/details/inactive', 'admin.administration.details.inactive')->name('admin.administration.details.inactive');
     Route::get('/app/admin/administration/details/trash', [SystemSettingsController::class, 'trash'])->name('admin.administration.details.trash');
-    Route::view('/app/admin/administration/id/edit-user', 'admin.administration.id.edit-user')->name('admin.administration.id.edit-user');
-    Route::view('/app/admin/administration/id/view-user', 'admin.administration.id.view-user')->name('admin.administration.id.view-user');
+    Route::view('/app/admin/administration/id/edit-user', 'admin.administration.id.edit-user')->name('admin.administration.id.edit-user.legacy');
+    Route::view('/app/admin/administration/id/edit/{user_id}', 'admin.administration.id.edit-user')
+        ->where('user_id', '[A-Za-z0-9:_-]+')
+        ->name('admin.administration.id.edit-user');
+    Route::view('/app/admin/administration/id/view-user', 'admin.administration.id.view-user')->name('admin.administration.id.view-user.legacy');
+    Route::view('/app/admin/administration/id/view/{user_id}', 'admin.administration.id.view-user')
+        ->where('user_id', '[A-Za-z0-9:_-]+')
+        ->name('admin.administration.id.view-user');
     Route::view('/app/admin/administration/update/for-approval', 'admin.administration.update.for-approval')->name('admin.administration.update.for-approval');
     Route::get('/app/admin/dashboard/dashboard', [OperationsController::class, 'dashboard'])->name('admin.dashboard.dashboard');
     Route::view('/app/admin/evaluation/create/post-test-register', 'admin.evaluation.create.post-test-register')->name('admin.evaluation.create.post-test-register');
@@ -153,7 +167,9 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::view('/app/admin/participants/id/edit-fa/{id?}', 'admin.participants.id.edit-fa')->where('id', '[A-Za-z0-9:_-]+')->name('admin.participants.id.edit-fa');
     Route::view('/app/admin/participants/id/edit-farmer/{id?}', 'admin.participants.id.edit-farmer')->where('id', '[A-Za-z0-9:_-]+')->name('admin.participants.id.edit-farmer');
     Route::view('/app/admin/participants/id/view-fa/{id?}', 'admin.participants.id.view-fa')->where('id', '[A-Za-z0-9:_-]+')->name('admin.participants.id.view-fa');
-    Route::view('/app/admin/participants/id/view-farmer/{id?}', 'admin.participants.id.view-farmer')->where('id', '[A-Za-z0-9:_-]+')->name('admin.participants.id.view-farmer');
+    Route::get('/app/admin/participants/id/view-farmer/{id?}', [OperationsController::class, 'viewFarmerProfile'])
+        ->where('id', '[A-Za-z0-9:_-]+')
+        ->name('admin.participants.id.view-farmer');
     Route::view('/app/admin/training/create/register', 'admin.training.create.register')->name('admin.training.create.register');
     Route::view('/app/admin/training/create/rp-register', 'admin.training.create.rp-register')->name('admin.training.create.rp-register');
     Route::view('/app/admin/training/details/all-status', 'admin.training.details.all-status')->name('admin.training.details.all-status');
@@ -182,8 +198,28 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::get('/app/admin/administration/details/approved-accepted.html', fn (Request $request) => redirect()->route('admin.administration.details.approved-accepted', $request->query(), 301));
     Route::get('/app/admin/administration/details/inactive.html', fn (Request $request) => redirect()->route('admin.administration.details.inactive', $request->query(), 301));
     Route::get('/app/admin/administration/details/trash.html', fn (Request $request) => redirect()->route('admin.administration.details.trash', $request->query(), 301));
-    Route::get('/app/admin/administration/id/edit-user.html', fn (Request $request) => redirect()->route('admin.administration.id.edit-user', $request->query(), 301));
-    Route::get('/app/admin/administration/id/view-user.html', fn (Request $request) => redirect()->route('admin.administration.id.view-user', $request->query(), 301));
+    Route::get('/app/admin/administration/id/edit-user.html', function (Request $request) {
+        $id = $request->query('id');
+        if (is_string($id) && preg_match('/\A[A-Za-z0-9:_-]+\z/', $id) === 1) {
+            $query = $request->query();
+            unset($query['id']);
+
+            return redirect()->route('admin.administration.id.edit-user', ['user_id' => $id] + $query, 301);
+        }
+
+        return redirect()->route('admin.administration.id.edit-user.legacy', $request->query(), 301);
+    });
+    Route::get('/app/admin/administration/id/view-user.html', function (Request $request) {
+        $id = $request->query('id');
+        if (is_string($id) && preg_match('/\A[A-Za-z0-9:_-]+\z/', $id) === 1) {
+            $query = $request->query();
+            unset($query['id']);
+
+            return redirect()->route('admin.administration.id.view-user', ['user_id' => $id] + $query, 301);
+        }
+
+        return redirect()->route('admin.administration.id.view-user.legacy', $request->query(), 301);
+    });
     Route::get('/app/admin/administration/update/for-approval.html', fn (Request $request) => redirect()->route('admin.administration.update.for-approval', $request->query(), 301));
     Route::get('/app/admin/dashboard/dashboard.html', fn (Request $request) => redirect()->route('admin.dashboard.dashboard', $request->query(), 301));
     Route::get('/app/admin/evaluation/create/post-test-register.html', fn (Request $request) => redirect()->route('admin.evaluation.create.post-test-register', $request->query(), 301));

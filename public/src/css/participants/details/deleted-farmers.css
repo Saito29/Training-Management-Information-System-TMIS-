@@ -1,0 +1,525 @@
+.deleted-farmers-page {
+  min-height: 100vh;
+  padding-right: clamp(1rem, 3vw, 2.5rem);
+  padding-left: clamp(1rem, 3vw, 2.5rem);
+  color: var(--color-text-primary);
+  background: var(--color-bg);
+}
+
+.deleted-farmers-content {
+  max-width: 1440px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.deleted-farmers-breadcrumb {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.82rem;
+}
+
+.deleted-farmers-breadcrumb a {
+  color: var(--color-primary-dark);
+  text-decoration: none;
+}
+
+.deleted-farmers-breadcrumb .breadcrumb-item,
+.deleted-farmers-breadcrumb .breadcrumb-item.active {
+  color: var(--color-text-muted);
+}
+
+.deleted-farmers-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  background: linear-gradient(120deg, var(--color-primary-surface), var(--color-surface) 72%);
+  border: 1px solid var(--color-border);
+  border-radius: 1.15rem;
+  box-shadow: 0 12px 32px rgba(38, 50, 56, 0.06);
+}
+
+.deleted-farmers-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.55rem;
+  color: var(--color-primary-dark);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.deleted-farmers-hero h1 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: clamp(1.7rem, 3vw, 2.3rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.deleted-farmers-hero p {
+  max-width: 42rem;
+  margin: 0.55rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.deleted-farmers-page-actions,
+.deleted-farmers-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.deleted-farmers-page-actions .btn,
+.deleted-farmers-filter-actions .btn,
+.deleted-farmers-restore,
+.deleted-farmers-view {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  border-radius: 0.7rem;
+  font-weight: 600;
+}
+
+.deleted-farmers-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1.25rem;
+  border-radius: 0.8rem;
+}
+
+.deleted-farmers-card {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  box-shadow: 0 12px 32px rgba(38, 50, 56, 0.07);
+}
+
+.deleted-farmers-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.4rem 1.5rem;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.deleted-farmers-card-header .deleted-farmers-eyebrow {
+  margin-bottom: 0.35rem;
+}
+
+.deleted-farmers-card-header h2 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.deleted-farmers-card-header p {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.deleted-farmers-total {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 0 0 auto;
+  min-width: 9.5rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+}
+
+.deleted-farmers-total-icon,
+.deleted-farmers-empty-icon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 2.45rem;
+  height: 2.45rem;
+  place-items: center;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-surface);
+  border-radius: 0.75rem;
+  font-size: 1.1rem;
+}
+
+.deleted-farmers-total strong,
+.deleted-farmers-total small {
+  display: block;
+}
+
+.deleted-farmers-total strong {
+  color: var(--color-text-primary);
+  font-size: 1.2rem;
+  line-height: 1.1;
+}
+
+.deleted-farmers-total small {
+  margin-top: 0.2rem;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+}
+
+.deleted-farmers-card-body {
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.deleted-farmers-filters {
+  display: grid;
+  grid-template-columns: minmax(15rem, 1fr) minmax(9rem, 12rem) auto;
+  align-items: end;
+  gap: 0.9rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+}
+
+.deleted-farmers-filters label {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.deleted-farmers-filters .input-group-text,
+.deleted-farmers-filters .form-control,
+.deleted-farmers-filters .form-select {
+  min-height: 2.65rem;
+  color: var(--color-text-primary);
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+  font-size: 0.85rem;
+}
+
+.deleted-farmers-filters .input-group-text {
+  color: var(--color-primary);
+}
+
+.deleted-farmers-filters .form-control:focus,
+.deleted-farmers-filters .form-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 0.2rem var(--color-primary-surface);
+}
+
+.deleted-farmers-filter-actions {
+  min-height: 2.65rem;
+}
+
+.deleted-farmers-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+}
+
+.deleted-farmers-table {
+  min-width: 1300px;
+  color: var(--color-text-primary);
+  --bs-table-bg: var(--color-surface);
+  --bs-table-color: var(--color-text-primary);
+  --bs-table-border-color: var(--color-border);
+}
+
+.deleted-farmers-table thead th {
+  padding: 0.9rem 0.85rem;
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.deleted-farmers-table tbody td {
+  padding: 0.9rem 0.85rem;
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+  font-size: 0.82rem;
+  vertical-align: middle;
+}
+
+.deleted-farmers-table tbody tr:hover td {
+  background: var(--color-primary-surface);
+}
+
+.deleted-farmers-id {
+  color: var(--color-primary-dark);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.deleted-farmers-name {
+  min-width: 10rem;
+  font-weight: 600;
+}
+
+.deleted-farmers-status {
+  display: inline-flex;
+  padding: 0.3rem 0.55rem;
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.deleted-farmers-date,
+.deleted-farmers-time {
+  display: block;
+  white-space: nowrap;
+}
+
+.deleted-farmers-date {
+  font-weight: 600;
+}
+
+.deleted-farmers-time {
+  margin-top: 0.2rem;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+}
+
+.deleted-farmers-restore {
+  min-height: 2.2rem;
+  white-space: nowrap;
+}
+
+.deleted-farmers-row-actions {
+  white-space: nowrap;
+}
+
+.deleted-farmers-row-actions-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.deleted-farmers-deadline-badge {
+  display: block;
+  width: fit-content;
+  margin-top: 0.35rem;
+  padding: 0.2rem 0.45rem;
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.deleted-farmers-deadline-badge.is-due {
+  color: #7a3d08;
+  background: #fff3cd;
+  border-color: #f0d98a;
+}
+
+.deleted-farmers-deadline-badge.is-missing {
+  color: #842029;
+  background: #f8d7da;
+  border-color: #f1aeb5;
+}
+
+.deleted-farmers-empty-cell {
+  padding: 0 !important;
+}
+
+.deleted-farmers-empty {
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+  padding: 3rem 1.25rem;
+  text-align: center;
+}
+
+.deleted-farmers-empty-icon {
+  width: 3.2rem;
+  height: 3.2rem;
+  font-size: 1.35rem;
+}
+
+.deleted-farmers-empty h3 {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.deleted-farmers-empty p {
+  max-width: 28rem;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.deleted-farmers-card-footer {
+  padding: 0.8rem 1.5rem;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+
+.deleted-farmers-card-footer .pagination {
+  justify-content: flex-end;
+  margin: 0;
+}
+
+.deleted-farmers-card-footer .page-link {
+  color: var(--color-primary-dark);
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.deleted-farmers-card-footer .page-item.active .page-link {
+  color: #fff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.deleted-farmer-dialog {
+  width: min(36rem, calc(100vw - 2rem));
+  max-width: none;
+  padding: 0;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.25);
+}
+
+.deleted-farmer-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(2px);
+}
+
+.deleted-farmer-dialog > header,
+.deleted-farmer-dialog > form > footer {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+}
+
+.deleted-farmer-dialog > header {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.deleted-farmer-dialog > header h2 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.deleted-farmer-dialog-icon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 2.4rem;
+  height: 2.4rem;
+  place-items: center;
+  color: #b42318;
+  background: #fee4e2;
+  border-radius: 0.75rem;
+}
+
+.deleted-farmer-dialog .compose-close {
+  margin-left: auto;
+}
+
+.deleted-farmer-dialog .compose-dialog-body {
+  padding: 1.25rem;
+}
+
+.deleted-farmer-dialog .compose-dialog-body dl {
+  margin: 1rem 0 0;
+  padding: 0.85rem 1rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+}
+
+.deleted-farmer-dialog .compose-dialog-body dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0;
+}
+
+.deleted-farmer-dialog .compose-dialog-body dt {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.deleted-farmer-dialog .compose-dialog-body dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+.deleted-farmer-dialog > form > footer {
+  justify-content: flex-end;
+  border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 767.98px) {
+  .deleted-farmers-hero,
+  .deleted-farmers-card-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .deleted-farmers-page-actions {
+    width: 100%;
+  }
+
+  .deleted-farmers-page-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  .deleted-farmers-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .deleted-farmers-filter-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  .deleted-farmers-card-body {
+    padding: 1rem;
+  }
+
+  .deleted-farmers-card-footer {
+    padding: 0.75rem 1rem;
+  }
+
+  .deleted-farmer-dialog > header,
+  .deleted-farmer-dialog > form > footer {
+    padding: 0.85rem 1rem;
+  }
+}
+

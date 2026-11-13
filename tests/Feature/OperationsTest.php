@@ -189,6 +189,52 @@ class OperationsTest extends TestCase
         $this->get('/app/admin/training/create/rp-register')->assertOk();
     }
 
+    public function test_administration_edit_route_requires_edit_permission(): void
+    {
+        $user = $this->signIn(3);
+        DB::table('role_permissions')->where('role_id', 3)->where('permission', 'like', 'administration.%')->delete();
+        DB::table('role_permissions')->insert(['role_id' => 3, 'permission' => 'administration.read']);
+
+        $path = '/app/admin/administration/id/edit/'.$user->user_id;
+        $this->get($path)->assertNotFound();
+
+        DB::table('role_permissions')->insert(['role_id' => 3, 'permission' => 'administration.edit']);
+        $this->get($path)->assertOk();
+    }
+
+    public function test_administration_edit_route_obeys_page_access_permissions(): void
+    {
+        $user = $this->signIn(3);
+        DB::table('role_permissions')->where('role_id', 3)->where('permission', 'like', 'administration.%')->delete();
+        DB::table('role_permissions')->insert([
+            ['role_id' => 3, 'permission' => 'administration.read'],
+            ['role_id' => 3, 'permission' => 'administration.edit'],
+            ['role_id' => 3, 'permission' => 'administration.page_access'],
+        ]);
+        $path = '/app/admin/administration/id/edit/'.$user->user_id;
+
+        $this->get($path)->assertNotFound();
+
+        DB::table('role_permissions')->insert(['role_id' => 3, 'permission' => 'administration.view.id.edit-user']);
+        $this->get($path)->assertOk();
+    }
+
+    public function test_administration_view_route_obeys_page_access_permissions(): void
+    {
+        $user = $this->signIn(3);
+        DB::table('role_permissions')->where('role_id', 3)->where('permission', 'like', 'administration.%')->delete();
+        DB::table('role_permissions')->insert([
+            ['role_id' => 3, 'permission' => 'administration.read'],
+            ['role_id' => 3, 'permission' => 'administration.page_access'],
+        ]);
+        $path = '/app/admin/administration/id/view/'.$user->user_id;
+
+        $this->get($path)->assertNotFound();
+
+        DB::table('role_permissions')->insert(['role_id' => 3, 'permission' => 'administration.view.id.view-user']);
+        $this->get($path)->assertOk();
+    }
+
     public function test_credential_grants_add_access_without_narrowing_base_role_pages(): void
     {
         $user = $this->signIn(3);

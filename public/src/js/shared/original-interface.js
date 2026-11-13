@@ -91,7 +91,7 @@
 
     if (/notification-state:/.test(key)) return '{}';
 
-    if (/notification-draft:/.test(key)) return null;
+    if (/^tmis-notification-drafts?:/.test(key)) return null;
 
     if (/(columns|theme|page-size|table-state|filters|navigation)/.test(key)) return localStorage.getItem(key);
 
@@ -135,7 +135,12 @@
 
     }
 
-    if (key.startsWith('tmis-notification-draft:')) { await request('/ui/draft',{key,value}); stores[key]=value; return; }
+    if (/^tmis-notification-drafts?:/.test(key)) {
+      const result = await request('/ui/draft', {key, value});
+      stores[key] = value;
+      window.dispatchEvent(new Event('tmis:data-updated'));
+      return result;
+    }
 
     if (key.startsWith('tmis-notification-state:')) {
 
@@ -192,7 +197,12 @@
 
   async function removeItem(key) {
 
-    if (key.startsWith('tmis-notification-draft:')) { await request('/ui/draft',{key,value:null}); delete stores[key]; return; }
+    if (/^tmis-notification-drafts?:/.test(key)) {
+      const result = await request('/ui/draft', {key, value:null});
+      delete stores[key];
+      window.dispatchEvent(new Event('tmis:data-updated'));
+      return result;
+    }
 
     throw new Error('Use the record deletion action.');
 
@@ -231,7 +241,8 @@
   }
 
   const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[character]);
-  window.TmisStore = {escape,getItem,setItem,removeItem,records,selected,request,publish,refresh,selectedId,saveRecord,upload,documentAction};
+  const can = permission => Array.isArray(window.TMIS_PAGE.permissions) && window.TMIS_PAGE.permissions.includes(permission);
+  window.TmisStore = {escape,getItem,setItem,removeItem,records,selected,request,publish,refresh,selectedId,saveRecord,upload,documentAction,can};
 
   window.TMIS_SESSION = {source:'database',userId:String(window.TMIS_PAGE.actor.id),user:{...window.TMIS_PAGE.actor,id:String(window.TMIS_PAGE.actor.id)}};
 
@@ -319,6 +330,7 @@
   const {ageSex,sexes,groups}=dashboard;
   const money=value=>new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP'}).format(value);
   const aggregate=field=>dashboard[{district:'allocatedBudgetByDistrict',province:'allocatedBudgetByProvince',municipality:'municipalityAllocation'}[field]];
+  const trainingDisplayId=item=>dashboard.trainingDisplayIds?.[item.id]||item.id;
   const ageGroup=farmer=>{if(!farmer.birthDate)return 'Not recorded';const birth=new Date(farmer.birthDate+'T00:00:00');const today=new Date(dashboard.today+'T00:00:00');if(Number.isNaN(+birth)||birth>today)return 'Not recorded';let age=year-birth.getFullYear();if(today.getMonth()<birth.getMonth()||(today.getMonth()===birth.getMonth()&&today.getDate()<birth.getDate()))age--;return age<15?'Below 15':dashboard.ageLabels[age<=30?0:age<60?1:2];};
   function reports(original){
     const copy=structuredClone(original);
@@ -326,13 +338,13 @@
     copy.activities.exportName='Active-Capacity-Building-Activities';
     copy.activities.description='Active capacity-building activities for '+year+' with schedule, location, enrollment and status details.';
     copy.activities.headers=['Training ID','Training','Type','District','Province','Municipality','Schedule','Farmers','Budget','Status'];
-    copy.activities.rows=trainings.map(item=>[item.id,item.title,item.type||'',item.district||'',item.province||'',item.municipality||'',[item.startDate,item.endDate].filter(Boolean).join(' - '),item.participants?.length||0,money(Number(item.budget)||0),item.status]);
+    copy.activities.rows=trainings.map(item=>[trainingDisplayId(item),item.title,item.type||'',item.district||'',item.province||'',item.municipality||'',[item.startDate,item.endDate].filter(Boolean).join(' - '),item.participants?.length||0,money(Number(item.budget)||0),item.status]);
     copy.upcoming.title='Upcoming Capacity-Building Activities';
     copy.upcoming.exportName='Upcoming-Capacity-Building-Activities';
     copy.upcoming.description='Capacity-building activities scheduled today through the next three days.';
     copy.upcoming.headers=['Training ID','Training','Type','District','Province','Municipality','Start Date','End Date','Venue','Participants','Status'];
     const formatDate=value=>{if(!value)return '';const date=new Date(String(value).slice(0,10)+'T00:00:00+08:00');return Number.isNaN(date.getTime())?String(value):date.toLocaleDateString('en-PH',{year:'numeric',month:'short',day:'numeric',timeZone:'Asia/Manila'});};
-    copy.upcoming.rows=dashboard.upcoming.map(item=>[item.id,item.title,item.type||'',item.district||'',item.province||'',item.municipality||'',formatDate(item.startDate),formatDate(item.endDate||item.startDate),item.venue||'',item.target_participants??item.participants?.length??0,item.status||'']);
+    copy.upcoming.rows=dashboard.upcoming.map(item=>[trainingDisplayId(item),item.title,item.type||'',item.district||'',item.province||'',item.municipality||'',formatDate(item.startDate),formatDate(item.endDate||item.startDate),item.venue||'',item.target_participants??item.participants?.length??0,item.status||'']);
     copy.participants.title='Active Farmers';
     copy.participants.exportName='Active-Farmers';
     copy.participants.description='Active farmer profiles with demographic, association and registration details.';

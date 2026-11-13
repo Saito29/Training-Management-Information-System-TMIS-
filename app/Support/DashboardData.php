@@ -93,6 +93,17 @@ class DashboardData
                 && $endDate->format('Y-m-d') >= $today->format('Y-m-d');
         }));
         usort($upcoming, fn (array $a, array $b): int => [$a['startDate'], $a['id']] <=> [$b['startDate'], $b['id']]);
+        $trainingDisplayIds = [];
+        foreach ($activeTrainings as $training) {
+            $id = (string) ($training['id'] ?? '');
+            if ($id === '') {
+                continue;
+            }
+
+            $trainingDisplayIds[$id] = preg_match('/^TRN-\d{2}-\d{6}$/D', $id) === 1
+                ? $id
+                : (string) ($training['_db_id'] ?? $id);
+        }
 
         return [
             'currentYear' => $year, 'previousYear' => $year - 1, 'today' => $today->format('Y-m-d'),
@@ -111,6 +122,7 @@ class DashboardData
             'funds' => ['current' => $funds[$year], 'previous' => $funds[$year - 1]],
             'ageLabels' => $ageLabels, 'ageSex' => $ageSex, 'sexes' => $sexes,
             'groups' => $groups, 'groupLabels' => ['PWD', '4Ps', 'IP', 'TUPAD', 'Solo parent'],
+            'trainingDisplayIds' => $trainingDisplayIds,
             'excludedAgeCount' => $excludedAgeCount, 'upcoming' => $upcoming,
         ];
     }

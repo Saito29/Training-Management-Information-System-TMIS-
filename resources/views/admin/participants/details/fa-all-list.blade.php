@@ -1508,5 +1508,5 @@ class="layout-fixed" data-fa-list-status="Active"
     <!-- nav -->
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/participants/details/fa-all-list.js?v=association-active-inactive-status-1') }}"></script>
+    <script src="{{ asset('src/js/participants/details/fa-all-list.js?v=profile-specific-table-actions-1') }}"></script>
 @endsection

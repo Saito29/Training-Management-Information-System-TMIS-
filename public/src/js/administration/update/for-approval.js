@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const $ = (id) => document.getElementById(id);
   const key = 'tmis-users';
+  const can = (permission) => window.TmisStore.can(`administration.${permission}`);
   const fields = ['firstName', 'middleName', 'lastName', 'suffix', 'dateOfBirth', 'email', 'phone', 'role', 'region', 'office', 'position', 'createdAt'];
   const labels = ['First name', 'Middle name', 'Last name', 'Suffix', 'Date of birth', 'Work email', 'Mobile number', 'User role', 'Region', 'Office / organization', 'Position', 'Registered date'];
   const reviewModal = bootstrap.Modal.getOrCreateInstance($('accountReviewModal'));
@@ -19,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (header && globalThis.ResizeObserver) new ResizeObserver(positionToast).observe(header);
   let records = [], selectedId = null, page = 1, pageSize = '20', pendingDelete = null, timer = null, refreshing = false;
   const name = (user) => [user.firstName, user.middleName, user.lastName, user.suffix].filter(Boolean).join(' ') || 'Unnamed user';
+  const isSystemAdministrator = (user) => user.role === 'System Administrator';
   const isPending = (user) => ['Pending approval', 'For Review'].includes(user.status);
   const statusLabel = (user) => user.status;
   const statusClass = (user) => isPending(user) ? 'pending' : 'rejected';
@@ -42,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function refresh() {
     try {
       const response = await fetch(window.accountApprovalUrl, { headers: { Accept: 'application/json' }, cache: 'no-store' });
-      if (!response.ok || response.redirected) throw new Error('Only an active System Administrator can review accounts.');
+      if (!response.ok || response.redirected) throw new Error('Your account does not have permission to review users, or your session has expired.');
       records = (await response.json()).users; render();
     } catch (error) { feedback(error.message || 'User registrations could not be loaded.', 'error'); }
   }
@@ -82,7 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function action(user, type, icon, handler) {
     const button = document.createElement('button');
-    if (type === 'Delete') { button.hidden = true; button.disabled = true; }
     button.type = 'button'; button.className = `btn account-action ${type === 'Delete' ? 'btn-outline-danger' : 'btn-outline-success'}`;
     button.title = `${type} user`; button.setAttribute('aria-label', `${type} ${name(user)}`);
     const symbol = document.createElement('i'); symbol.className = `bi ${icon}`; symbol.setAttribute('aria-hidden', 'true'); button.append(symbol);
@@ -102,8 +103,21 @@ document.addEventListener('DOMContentLoaded', () => {
     page = Math.min(page, pages);
     $('approvalTableBody').replaceChildren(...visible.slice((page - 1) * size, page * size).map((user) => {
       const row = document.createElement('tr'), actions = document.createElement('div'); actions.className = 'account-actions';
-      actions.append(action(user, 'Review', 'bi-eye', () => { selectedId = user.id; details('accountReviewDetails', user); $('approveUser').hidden = $('rejectUser').hidden = !isPending(user); reviewModal.show(); }),
-        action(user, 'Delete', 'bi-trash3', () => { selectedId = user.id; details('accountDeleteDetails', user, true); deleteModal.show(); }));
+      if (can('read')) {
+        actions.append(action(user, 'Review', 'bi-eye', () => {
+          selectedId = user.id;
+          details('accountReviewDetails', user);
+          $('approveUser').hidden = $('rejectUser').hidden = !isPending(user) || !can('approve') || isSystemAdministrator(user);
+          reviewModal.show();
+        }));
+      }
+      if (can('delete') && !isSystemAdministrator(user)) {
+        actions.append(action(user, 'Delete', 'bi-trash3', () => {
+          selectedId = user.id;
+          details('accountDeleteDetails', user, true);
+          deleteModal.show();
+        }));
+      }
       [actions, statusLabel(user), user.id, ...fields.map((field) => display(user, field))].forEach((value, i) => {
         const cell = document.createElement('td');
         if (value instanceof Node) cell.append(value); else cell.textContent = value || '—';

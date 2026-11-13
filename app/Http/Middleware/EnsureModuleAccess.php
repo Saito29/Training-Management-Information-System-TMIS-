@@ -15,7 +15,21 @@ class EnsureModuleAccess
         $path = $request->path();
         $page = basename($path, '.html');
         if (str_starts_with($path, 'app/admin/administration/')) {
-            abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+            $navigationPage = ModuleAccess::navigationPage($path);
+            if ($navigationPage && $navigationPage['module'] === 'administration') {
+                ModuleAccess::authorizeNavigationPage($request, 'administration', $navigationPage['page']);
+            } else {
+                ModuleAccess::authorize($request, 'administration.read');
+            }
+            if (str_contains($path, '/create/')) {
+                ModuleAccess::authorize($request, 'administration.create');
+            }
+            if (str_contains($path, '/id/edit-') || str_contains($path, '/id/edit/')) {
+                ModuleAccess::authorize($request, 'administration.edit');
+            }
+            if (str_contains($path, '/update/for-approval')) {
+                ModuleAccess::authorize($request, 'administration.approve');
+            }
         }
         if ($request->is('app/admin/notification/notification', 'app/admin/notification/notification.html')) {
             abort_unless(ModuleAccess::isAdministrator($request->user()), 403);

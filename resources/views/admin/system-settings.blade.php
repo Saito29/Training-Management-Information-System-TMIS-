@@ -7,7 +7,7 @@ class="layout-fixed"
 @endsection
 
 @section('head')
-<link rel="stylesheet" href="{{ asset('src/css/shared/system-settings.css?v=system-settings-ui-restored-1') }}">
+<link rel="stylesheet" href="{{ asset('src/css/shared/system-settings.css?v=role-access-actions-1') }}">
 <script src="{{ asset('src/js/shared/system-settings.js?v=visibility-scope-select-all-refresh-1') }}" defer></script>
 <script src="{{ asset('src/js/shared/maintenance-schedule.js?v=auto-expire-1') }}" defer></script>
 {{-- Load the toast API before the settings feedback script that displays flashed messages. --}}
@@ -1679,7 +1679,89 @@ class="layout-fixed"
 <div class="settings-section-heading"><div><h2>Roles & access</h2><p>Roles define baseline permissions for a user's responsibilities.</p></div><span class="settings-count-badge">{{ $roles->count() }} roles</span></div>
 <div class="settings-info mt-0 mb-4"><i class="bi bi-shield-lock" aria-hidden="true"></i><p>Use page-specific View switches to limit which pages a role can open, and deletion switches to control which records it can delete. Optional access profiles can fine-tune one role with extra grants or blocks. System settings remain exclusive to System Administrators.</p></div>
 <div class="settings-card mb-4"><header class="settings-card-header"><span class="settings-section-icon"><i class="bi bi-person-plus" aria-hidden="true"></i></span><div><h3>Create a role</h3><p>Set a name, then choose the permissions to grant.</p></div></header><form method="post" action="{{ route('system.roles.store') }}" data-settings-form>@csrf<div class="settings-card-body"><div class="row g-3 mb-4"><div class="col-md-5"><label class="form-label" for="newRoleName">Role name</label><input id="newRoleName" name="name" required maxlength="255" class="form-control" placeholder="e.g. Training Reviewer"></div><div class="col-md-7"><label class="form-label" for="newRoleDescription">Description <span class="settings-optional">Optional</span></label><input id="newRoleDescription" name="details" maxlength="300" class="form-control" placeholder="Describe what this role is responsible for"></div></div><fieldset><legend class="settings-permission-legend">Access permissions</legend>@include('admin.settings-permissions', ['prefix' => 'new-role', 'selectedPermissions' => []])</fieldset></div><footer class="settings-card-footer"><span>Only selected permissions are granted.</span><button type="submit" class="btn btn-success"><i class="bi bi-plus-lg" aria-hidden="true"></i> Create role</button></footer></form></div>
-<h3 class="settings-existing-title">Existing roles</h3><div class="accordion settings-role-accordion" id="rolesAccordion">@foreach($roles as $role)<article class="accordion-item"><h4 class="accordion-header" id="role-heading-{{ $role->role_id }}"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#role-body-{{ $role->role_id }}" aria-expanded="false" aria-controls="role-body-{{ $role->role_id }}"><span class="settings-role-icon"><i class="bi {{ $role->name === 'System Administrator' ? 'bi-shield-lock' : 'bi-person-badge' }}" aria-hidden="true"></i></span><span class="settings-role-name">{{ $role->name }}<small>{{ $role->name === 'System Administrator' ? 'Full system access' : (($grants[$role->role_id] ?? collect())->count().' permissions') }}</small></span>@if($role->name === 'System Administrator')<span class="settings-protected">Protected</span>@endif</button></h4><div id="role-body-{{ $role->role_id }}" class="accordion-collapse collapse" aria-labelledby="role-heading-{{ $role->role_id }}" data-bs-parent="#rolesAccordion">@if($role->name === 'System Administrator')<div class="settings-card-body"><p class="mb-0">This role has full access. Its permissions cannot be reduced or renamed.</p></div>@else<form method="post" action="{{ route('system.roles.update', $role->role_id) }}" data-settings-form>@csrf @method('PATCH')<div class="settings-card-body"><div class="row g-3 mb-4"><div class="col-md-5"><label class="form-label" for="role-name-{{ $role->role_id }}">Role name</label><input id="role-name-{{ $role->role_id }}" name="name" class="form-control" required maxlength="255" value="{{ $role->name }}"></div><div class="col-md-7"><label class="form-label" for="role-description-{{ $role->role_id }}">Description</label><input id="role-description-{{ $role->role_id }}" name="details" class="form-control" maxlength="300" value="{{ $role->details }}" placeholder="Describe this role"></div></div><fieldset><legend class="settings-permission-legend">Access permissions</legend>@include('admin.settings-permissions', ['prefix' => 'role-'.$role->role_id, 'selectedPermissions' => ($grants[$role->role_id] ?? collect())->pluck('permission')->all()])</fieldset></div><footer class="settings-card-footer"><span>Review permissions before saving.</span><button type="submit" class="btn btn-success"><i class="bi bi-check2" aria-hidden="true"></i> Save role</button></footer></form>@endif</div></article>@endforeach</div>
+<h3 class="settings-existing-title">Existing roles</h3>
+<div class="table-responsive settings-card credential-table-card">
+<table id="role-access-table" class="table align-middle mb-0 credential-table">
+<caption class="visually-hidden">Roles, permissions, assigned accounts, and actions</caption>
+<thead><tr><th scope="col">Role</th><th scope="col">Permissions</th><th scope="col">Assigned accounts</th><th scope="col">Access profiles</th><th scope="col" class="text-end">Actions</th></tr></thead>
+<tbody>
+@foreach($roles as $role)
+@php
+    $rolePermissions = $grants[$role->role_id] ?? collect();
+    $assignedAccountsCount = (int) ($roleAccountCounts[$role->role_id] ?? 0);
+    $assignedProfilesCount = (int) ($roleCredentialCounts[$role->role_id] ?? 0);
+    $isProtectedRole = $role->name === 'System Administrator';
+@endphp
+<tr>
+<td><div class="credential-identity"><span class="credential-identity-icon"><i class="bi {{ $isProtectedRole ? 'bi-shield-lock' : 'bi-person-badge' }}" aria-hidden="true"></i></span><div><strong>{{ $role->name }}</strong><small>{{ $role->details ?: ($isProtectedRole ? 'Full system access' : 'No description') }}</small></div></div></td>
+<td><span class="credential-assignment-count">{{ $isProtectedRole ? 'Full' : $rolePermissions->count() }}</span><small class="credential-assignment-label">{{ $isProtectedRole ? 'system access' : 'permissions' }}</small></td>
+<td><span class="credential-assignment-count">{{ $assignedAccountsCount }}</span><small class="credential-assignment-label">{{ $assignedAccountsCount === 1 ? 'account' : 'accounts' }}</small><a class="credential-manage-link" href="{{ $isProtectedRole ? route('system.settings').'#super-admins' : route('system.accounts', ['role_id' => $role->role_id]) }}"><i class="bi bi-people" aria-hidden="true"></i> {{ $isProtectedRole ? 'Manage administrators' : 'Manage accounts' }}</a></td>
+<td><span class="credential-assignment-count">{{ $assignedProfilesCount }}</span><small class="credential-assignment-label">{{ $assignedProfilesCount === 1 ? 'profile' : 'profiles' }}</small>@if(!$isProtectedRole)<a class="credential-manage-link" href="{{ route('system.settings', ['credential_role_id' => $role->role_id]).'#credentials' }}"><i class="bi bi-person-vcard" aria-hidden="true"></i> View profiles</a>@endif</td>
+<td><div class="credential-row-actions">
+<button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#viewRoleModal-{{ $role->role_id }}" aria-label="View {{ $role->name }}"><i class="bi bi-eye" aria-hidden="true"></i><span>View</span></button>
+@if(!$isProtectedRole)
+<button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editRoleModal-{{ $role->role_id }}" aria-label="Edit {{ $role->name }}"><i class="bi bi-pencil-square" aria-hidden="true"></i><span>Edit</span></button>
+<button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteRoleModal-{{ $role->role_id }}" aria-label="Delete {{ $role->name }}" title="{{ $assignedAccountsCount > 0 || $assignedProfilesCount > 0 ? 'Remove assigned accounts and access profiles before deleting this role.' : 'Delete role' }}" @disabled($assignedAccountsCount > 0 || $assignedProfilesCount > 0)><i class="bi bi-trash" aria-hidden="true"></i><span>Delete</span></button>
+@else
+<span class="settings-protected">Protected</span>
+@endif
+</div></td>
+</tr>
+@endforeach
+</tbody></table></div>
+@foreach($roles as $role)
+@php
+    $rolePermissions = $grants[$role->role_id] ?? collect();
+    $assignedAccountsCount = (int) ($roleAccountCounts[$role->role_id] ?? 0);
+    $assignedProfilesCount = (int) ($roleCredentialCounts[$role->role_id] ?? 0);
+    $isProtectedRole = $role->name === 'System Administrator';
+@endphp
+<div class="modal fade credential-modal" id="viewRoleModal-{{ $role->role_id }}" tabindex="-1" aria-labelledby="viewRoleTitle-{{ $role->role_id }}" aria-hidden="true">
+<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+<div class="modal-content">
+<div class="modal-header"><div><span class="credential-modal-eyebrow">ROLE ACCESS SUMMARY</span><h2 class="modal-title fs-5" id="viewRoleTitle-{{ $role->role_id }}">{{ $role->name }}</h2><p class="credential-modal-subtitle mb-0">{{ $role->details ?: 'No description has been added for this role.' }}</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+<div class="modal-body">
+<div class="credential-modal-context"><span class="credential-role-badge"><i class="bi bi-shield-lock" aria-hidden="true"></i>{{ $isProtectedRole ? 'Protected system role' : 'Role baseline' }}</span><span class="credential-role-badge"><i class="bi bi-people" aria-hidden="true"></i>{{ $assignedAccountsCount }} assigned {{ $assignedAccountsCount === 1 ? 'account' : 'accounts' }}</span><span class="credential-role-badge"><i class="bi bi-person-vcard" aria-hidden="true"></i>{{ $assignedProfilesCount }} linked {{ $assignedProfilesCount === 1 ? 'profile' : 'profiles' }}</span></div>
+<div class="settings-info"><i class="bi bi-info-circle" aria-hidden="true"></i><p>Accounts with this role receive the permissions listed below. An assigned access profile may add or block permissions for an individual account.</p></div>
+<h3 class="credential-modal-section-title">Permissions granted by role</h3>
+@if($isProtectedRole)
+<p class="settings-field-help">System Administrator accounts have full system access.</p>
+@elseif($rolePermissions->isEmpty())
+<p class="credential-no-permissions">No role permissions are currently granted.</p>
+@else
+<div class="credential-permission-list role-access-permissions">@foreach($rolePermissions as $permission)<span class="credential-permission-chip" title="{{ $permission->permission }}">{{ ucwords(str_replace(['.', '_', '-'], [' / ', ' ', ' '], $permission->permission)) }}</span>@endforeach</div>
+@endif
+<div class="role-access-detail-grid">
+<section><h3>Assigned accounts</h3><p>{{ $assignedAccountsCount }} {{ $assignedAccountsCount === 1 ? 'account uses' : 'accounts use' }} this role.</p><a class="credential-manage-link" href="{{ $isProtectedRole ? route('system.settings').'#super-admins' : route('system.accounts', ['role_id' => $role->role_id]) }}"><i class="bi bi-people" aria-hidden="true"></i> {{ $isProtectedRole ? 'Review administrators' : 'View assigned accounts and effective access' }}</a></section>
+<section><h3>Linked access profiles</h3><p>{{ $assignedProfilesCount }} {{ $assignedProfilesCount === 1 ? 'profile fine-tunes' : 'profiles fine-tune' }} this role.</p>@if(!$isProtectedRole)<a class="credential-manage-link" href="{{ route('system.settings', ['credential_role_id' => $role->role_id]).'#credentials' }}"><i class="bi bi-person-vcard" aria-hidden="true"></i> View linked profiles</a>@else<p class="settings-field-help">System Administrator accounts cannot use access profiles.</p>@endif</section>
+</div>
+</div>
+<div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button></div>
+</div></div></div>
+@if(!$isProtectedRole)
+<div class="modal fade credential-modal" id="editRoleModal-{{ $role->role_id }}" tabindex="-1" aria-labelledby="editRoleTitle-{{ $role->role_id }}" aria-hidden="true">
+<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable credential-editor-dialog">
+<div class="modal-content">
+<form method="post" action="{{ route('system.roles.update', $role->role_id) }}" data-settings-form>@csrf @method('PATCH')
+<div class="modal-header"><div><span class="credential-modal-eyebrow">ROLE ACCESS</span><h2 class="modal-title fs-5" id="editRoleTitle-{{ $role->role_id }}">Edit {{ $role->name }}</h2><p class="credential-modal-subtitle mb-0">Changes apply to every account assigned this role.</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+<div class="modal-body">
+<div class="row g-3 mb-4"><div class="col-md-5"><label class="form-label" for="role-name-{{ $role->role_id }}">Role name</label><input id="role-name-{{ $role->role_id }}" name="name" class="form-control" required maxlength="255" value="{{ $role->name }}"></div><div class="col-md-7"><label class="form-label" for="role-description-{{ $role->role_id }}">Description</label><input id="role-description-{{ $role->role_id }}" name="details" class="form-control" maxlength="300" value="{{ $role->details }}" placeholder="Describe this role"></div></div>
+<fieldset><legend class="settings-permission-legend">Access permissions</legend>@include('admin.settings-permissions', ['prefix' => 'role-'.$role->role_id, 'selectedPermissions' => $rolePermissions->pluck('permission')->all()])</fieldset>
+</div>
+<div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success"><i class="bi bi-check2" aria-hidden="true"></i> Save role</button></div>
+</form>
+</div></div></div>
+<div class="modal fade credential-modal" id="deleteRoleModal-{{ $role->role_id }}" tabindex="-1" aria-labelledby="deleteRoleTitle-{{ $role->role_id }}" aria-hidden="true">
+<div class="modal-dialog modal-dialog-centered">
+<div class="modal-content">
+<form method="post" action="{{ route('system.roles.destroy', $role->role_id) }}">@csrf @method('DELETE')
+<div class="modal-header"><div><span class="credential-modal-eyebrow">PERMANENTLY REMOVE ROLE</span><h2 class="modal-title fs-5" id="deleteRoleTitle-{{ $role->role_id }}">Delete role permanently?</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+<div class="modal-body"><p class="mb-0">This permanently removes <strong>{{ $role->name }}</strong> and its permission grants. Roles with assigned accounts or access profiles cannot be deleted.</p></div>
+<div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-danger"><i class="bi bi-trash" aria-hidden="true"></i> Permanently delete role</button></div>
+</form>
+</div></div></div>
+@endif
+@endforeach
 </section>
 @if($isSuperAdministrator)
 <section class="tab-pane fade" id="credentials" role="tabpanel" aria-labelledby="credentials-tab" tabindex="0">
@@ -1734,6 +1816,7 @@ class="layout-fixed"
 <td><span class="credential-assignment-count">{{ $credentialType->assigned_accounts_count }}</span><small class="credential-assignment-label">{{ (int) $credentialType->assigned_accounts_count === 1 ? 'account' : 'accounts' }}</small><a class="credential-manage-link" href="{{ route('system.accounts', ['role_id' => $credentialType->role_id, 'role_credential_id' => $credentialType->role_credential_id]) }}"><i class="bi bi-people" aria-hidden="true"></i> Manage assigned users</a></td>
 <td><time class="credential-last-changed" datetime="{{ $lastChangedAt->toIso8601String() }}">{{ $lastChangedAt->format('M j, Y') }}</time><small class="credential-last-changed-time">{{ $lastChangedAt->format('g:i A') }} | {{ $credentialType->updated_at ? 'Updated' : 'Created' }}</small></td>
 <td><div class="credential-row-actions">
+<button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#viewCredentialModal-{{ $credentialType->role_credential_id }}" aria-label="View {{ $credentialType->name }}"><i class="bi bi-eye" aria-hidden="true"></i><span>View</span></button>
 <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editCredentialModal-{{ $credentialType->role_credential_id }}" aria-label="Edit {{ $credentialType->name }}"><i class="bi bi-pencil-square" aria-hidden="true"></i><span>Edit</span></button>
 <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteCredentialModal-{{ $credentialType->role_credential_id }}" aria-label="Delete {{ $credentialType->name }}"><i class="bi bi-trash" aria-hidden="true"></i><span>Delete</span></button>
 </div></td>
@@ -1745,6 +1828,36 @@ class="layout-fixed"
 @foreach($credentialTypes as $credentialType)
 @php($credentialPermissions = $credentialGrants[$credentialType->role_credential_id] ?? collect())
 @php($credentialDeniedPermissions = $credentialDenials[$credentialType->role_credential_id] ?? collect())
+@php($roleBaselinePermissions = $grants[$credentialType->role_id] ?? collect())
+<div class="modal fade credential-modal" id="viewCredentialModal-{{ $credentialType->role_credential_id }}" tabindex="-1" aria-labelledby="viewCredentialTitle-{{ $credentialType->role_credential_id }}" aria-hidden="true">
+<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+<div class="modal-content">
+<div class="modal-header"><div><span class="credential-modal-eyebrow">ACCOUNT ACCESS PROFILE</span><h2 class="modal-title fs-5" id="viewCredentialTitle-{{ $credentialType->role_credential_id }}">{{ $credentialType->name }}</h2><p class="credential-modal-subtitle mb-0">Linked role: {{ $credentialType->role_name }}</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+<div class="modal-body">
+<div class="credential-modal-context"><span class="credential-role-badge"><i class="bi bi-person-badge" aria-hidden="true"></i>{{ $credentialType->role_name }} baseline</span><span class="credential-role-badge"><i class="bi bi-people" aria-hidden="true"></i>{{ $credentialType->assigned_accounts_count }} assigned {{ (int) $credentialType->assigned_accounts_count === 1 ? 'account' : 'accounts' }}</span></div>
+<div class="settings-info"><i class="bi bi-info-circle" aria-hidden="true"></i><p>Effective access combines the linked role's permissions with the profile grants, then removes permissions blocked by this profile. A block takes precedence over a role grant.</p></div>
+<h3 class="credential-modal-section-title">Permissions granted by role</h3>
+@if($roleBaselinePermissions->isEmpty())
+<p class="credential-no-permissions">No role permissions are currently granted.</p>
+@else
+<div class="credential-permission-list role-access-permissions">@foreach($roleBaselinePermissions as $permission)<span class="credential-permission-chip" title="{{ $permission->permission }}">{{ ucwords(str_replace(['.', '_', '-'], [' / ', ' ', ' '], $permission->permission)) }}</span>@endforeach</div>
+@endif
+<h3 class="credential-modal-section-title">Permissions added by profile</h3>
+@if($credentialPermissions->isEmpty())
+<p class="credential-no-permissions">This profile does not add permissions.</p>
+@else
+<div class="credential-permission-list role-access-permissions">@foreach($credentialPermissions as $permission)<span class="credential-permission-chip" title="{{ $permission->permission }}">{{ ucwords(str_replace(['.', '_', '-'], [' / ', ' ', ' '], $permission->permission)) }}</span>@endforeach</div>
+@endif
+<h3 class="credential-modal-section-title">Permissions blocked by profile</h3>
+@if($credentialDeniedPermissions->isEmpty())
+<p class="credential-no-permissions">This profile does not block permissions.</p>
+@else
+<div class="credential-permission-list role-access-permissions">@foreach($credentialDeniedPermissions as $permission)<span class="credential-permission-chip text-danger" title="{{ $permission->permission }}">{{ ucwords(str_replace(['.', '_', '-'], [' / ', ' ', ' '], $permission->permission)) }}</span>@endforeach</div>
+@endif
+<div class="role-access-detail-grid"><section><h3>Accounts assigned</h3><p>{{ $credentialType->assigned_accounts_count }} {{ (int) $credentialType->assigned_accounts_count === 1 ? 'account uses' : 'accounts use' }} this profile.</p><a class="credential-manage-link" href="{{ route('system.accounts', ['role_id' => $credentialType->role_id, 'role_credential_id' => $credentialType->role_credential_id]) }}"><i class="bi bi-people" aria-hidden="true"></i> View assigned accounts and effective access</a></section></div>
+</div>
+<div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button></div>
+</div></div></div>
 <div class="modal fade credential-modal" id="editCredentialModal-{{ $credentialType->role_credential_id }}" tabindex="-1" aria-labelledby="editCredentialTitle-{{ $credentialType->role_credential_id }}" aria-hidden="true">
 <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable credential-editor-dialog">
 <div class="modal-content">

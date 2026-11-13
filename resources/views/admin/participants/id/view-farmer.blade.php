@@ -58,6 +58,10 @@ class="layout-fixed"
       rel="stylesheet"
       href="{{ asset('src/css/participants/update/view-farmer.css?v=farmer-association-memberships-1') }}"
     />
+    @if(isset($deletedFarmerReview))
+      <link rel="stylesheet" href="{{ asset('src/css/participants/details/deleted-farmers.css?v=deleted-farmer-profile-1') }}" />
+      <script src="{{ asset('src/js/participants/details/deleted-farmers.js?v=deleted-farmer-profile-1') }}" defer></script>
+    @endif
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/activity-logs.css?v=design-20261109-1') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
@@ -827,6 +831,42 @@ class="layout-fixed"
               </div>
             </div>
           </div>
+          @if(isset($deletedFarmerReview))
+            @php($deletedParticipant = $deletedFarmerReview['participant'])
+            <section class="alert alert-warning d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mt-3" role="status" aria-label="Deleted farmer retention review">
+              <div>
+                <strong>Deleted farmer profile · {{ $deletedFarmerReview['farmerNumber'] }}</strong>
+                <div>Deleted {{ \Illuminate\Support\Carbon::parse($deletedParticipant->deleted_at)->timezone('Asia/Manila')->format('M j, Y g:i A') }}. Scheduled permanent deletion: {{ $deletedParticipant->permanent_deletion_at ? \Illuminate\Support\Carbon::parse($deletedParticipant->permanent_deletion_at)->timezone('Asia/Manila')->format('M j, Y g:i A') : 'Not scheduled' }}.</div>
+                @if(! $deletedParticipant->permanent_deletion_at)
+                  <div class="mt-1">Permanent deletion is unavailable because no retention date is scheduled.</div>
+                @elseif(\Illuminate\Support\Carbon::parse($deletedParticipant->permanent_deletion_at)->isFuture())
+                  <div class="mt-1">Permanent deletion will be available for manual review after the scheduled date.</div>
+                @elseif($deletedFarmerReview['purgeBlockers'] !== [])
+                  <div class="mt-1"><strong>Permanent deletion is blocked to preserve linked records.</strong></div>
+                  <ul class="mb-0 mt-1">
+                    @foreach($deletedFarmerReview['purgeBlockers'] as $relation => $count)
+                      <li>{{ $relation }}: {{ $count }}</li>
+                    @endforeach
+                  </ul>
+                @elseif($deletedFarmerReview['canPermanentlyDelete'])
+                  <div class="mt-1">Retention has passed and no linked records remain. Permanent deletion is manual and cannot be undone.</div>
+                @endif
+              </div>
+              <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-outline-secondary" href="{{ route('admin.participants.details.trash') }}">Back to deleted farmers</a>
+                @if($deletedFarmerReview['canRestore'])
+                  <form method="post" action="{{ route('ui.participants.trash.restore', ['participant' => $deletedParticipant->ui_id ?: $deletedParticipant->id]) }}">
+                    @csrf
+                    @method('PATCH')
+                    <button class="btn btn-outline-success" type="submit">Restore as inactive</button>
+                  </form>
+                @endif
+                @if($deletedFarmerReview['canPermanentlyDelete'])
+                  <button class="btn btn-danger" type="button" data-open-purge-dialog>Permanently delete</button>
+                @endif
+              </div>
+            </section>
+          @endif
           <!-- FOR REVIEW TABLE MODULE: filters, workflow actions, pagination, and modal markup -->
           <div class="row second-row">    
             <div class="col-12 mb-2">
@@ -3035,6 +3075,32 @@ class="layout-fixed"
       </div>
       <button type="button" class="btn btn-sm btn-light" id="cancelAttachmentDelete">Undo</button>
     </div>
+
+    @if(isset($deletedFarmerReview) && $deletedFarmerReview['canPermanentlyDelete'])
+      <dialog id="permanentlyDeleteFarmerDialog" class="deleted-farmer-dialog" aria-labelledby="permanentlyDeleteFarmerTitle" aria-describedby="permanentlyDeleteFarmerDescription">
+        <header>
+          <span class="deleted-farmer-dialog-icon"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></span>
+          <div><span class="deleted-farmers-eyebrow">IRREVERSIBLE ACTION</span><h2 id="permanentlyDeleteFarmerTitle">Permanently delete this farmer?</h2></div>
+          <button type="button" class="compose-close" data-close-purge-dialog aria-label="Close dialog"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+        </header>
+        <div class="compose-dialog-body">
+          <p id="permanentlyDeleteFarmerDescription">This permanently removes the farmer profile from the database. The retention date has passed and no linked records were found. This action cannot be undone.</p>
+          <dl>
+            <div><dt>Farmer ID</dt><dd>{{ $deletedFarmerReview['farmerNumber'] }}</dd></div>
+            <div><dt>Name</dt><dd>{{ trim(implode(' ', array_filter([$deletedParticipant->first_name, $deletedParticipant->middle_name, $deletedParticipant->last_name, $deletedParticipant->suffix]))) ?: $deletedParticipant->name }}</dd></div>
+            <div><dt>Deleted</dt><dd>{{ \Illuminate\Support\Carbon::parse($deletedParticipant->deleted_at)->timezone('Asia/Manila')->format('M j, Y g:i A') }}</dd></div>
+          </dl>
+        </div>
+        <form method="post" action="{{ route('admin.participants.details.trash.destroy', ['participant' => $deletedParticipant->ui_id ?: $deletedParticipant->id]) }}">
+          @csrf
+          @method('DELETE')
+          <footer>
+            <button type="button" class="btn btn-outline-secondary" data-close-purge-dialog>Cancel</button>
+            <button type="submit" class="btn btn-danger">Delete permanently</button>
+          </footer>
+        </form>
+      </dialog>
+    @endif
 
     <!-- Scripts -->
     <script

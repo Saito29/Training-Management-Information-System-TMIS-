@@ -10,9 +10,21 @@ use Illuminate\Support\Facades\DB;
 
 class ModuleAccess
 {
-    public const MODULES = ['trainings', 'participants', 'associations', 'resource_persons', 'questionnaires', 'evaluations'];
+    public const MODULES = ['trainings', 'participants', 'associations', 'resource_persons', 'questionnaires', 'evaluations', 'administration'];
+
+    public const RECORD_MODULES = ['trainings', 'participants', 'associations', 'resource_persons', 'questionnaires', 'evaluations'];
 
     private const NAVIGATION_PAGES = [
+        'administration' => [
+            'create.register' => ['label' => 'Create > Register', 'path' => 'app/admin/administration/create/register'],
+            'update.for-approval' => ['label' => 'Update > For approval', 'path' => 'app/admin/administration/update/for-approval'],
+            'details.all-status' => ['label' => 'Details > All status', 'path' => 'app/admin/administration/details/all-status'],
+            'details.approved-accepted' => ['label' => 'Details > Approved & accepted', 'path' => 'app/admin/administration/details/approved-accepted'],
+            'details.inactive' => ['label' => 'Details > Inactive', 'path' => 'app/admin/administration/details/inactive'],
+            'details.trash' => ['label' => 'Details > Deleted accounts', 'path' => 'app/admin/administration/details/trash'],
+            'id.view-user' => ['label' => 'User profile > View', 'path' => 'app/admin/administration/id/view'],
+            'id.edit-user' => ['label' => 'User profile > Edit', 'path' => 'app/admin/administration/id/edit'],
+        ],
         'trainings' => [
             'create.register' => ['label' => 'Create > Register', 'path' => 'app/admin/training/create/register'],
             'update.for-review' => ['label' => 'Update > For review', 'path' => 'app/admin/training/update/for-review'],
@@ -27,6 +39,7 @@ class ModuleAccess
             'create.register' => ['label' => 'Individual > Create > Register', 'path' => 'app/admin/participants/create/register'],
             'details.all-with-status' => ['label' => 'Individual > Details > List of Farmers', 'path' => 'app/admin/participants/details/all-with-status'],
             'details.inactive' => ['label' => 'Individual > Details > Inactive', 'path' => 'app/admin/participants/details/inactive'],
+            'details.trash' => ['label' => 'Individual > Details > Deleted farmers', 'path' => 'app/admin/participants/details/trash'],
         ],
         'associations' => [
             'create.fa-register' => ['label' => 'Farmer association > Create > Register', 'path' => 'app/admin/participants/create/fa-register'],
@@ -90,7 +103,7 @@ class ModuleAccess
     /** @return list<string> */
     public static function permissions(): array
     {
-        $permissions = ['trainings.submit', 'trainings.approve', 'trainings.accept'];
+        $permissions = ['trainings.submit', 'trainings.approve', 'trainings.accept', 'administration.approve'];
         foreach (self::MODULES as $module) {
             foreach (['read', 'create', 'edit', 'write', 'delete'] as $action) {
                 $permissions[] = $module.'.'.$action;
@@ -172,7 +185,13 @@ class ModuleAccess
 
         foreach (self::navigationPages() as $module => $pages) {
             foreach ($pages as $page => $details) {
-                if ($normalizedPath === $details['path']) {
+                $isAdministrationProfilePage = $module === 'administration'
+                    && in_array($page, ['id.edit-user', 'id.view-user'], true);
+                $legacyProfilePath = 'app/admin/administration/id/'.($page === 'id.edit-user' ? 'edit-user' : 'view-user');
+                if ($normalizedPath === $details['path']
+                    || ($isAdministrationProfilePage
+                        && (preg_match('~^'.preg_quote($details['path'], '~').'/[A-Za-z0-9:_-]+$~', $normalizedPath) === 1
+                            || $normalizedPath === $legacyProfilePath))) {
                     return ['module' => $module, 'page' => $page];
                 }
             }
@@ -393,11 +412,15 @@ class ModuleAccess
 
     public static function authorizeRegistrationScope(User $user, int $regionId, int $officeId, string $message): void
     {
-        $scope = self::registrationScope($user);
-        $regionIsAllowed = $scope['regionIds'] === null || in_array($regionId, $scope['regionIds'], true);
-        $officeIsAllowed = $scope['officeIds'] === null || in_array($officeId, $scope['officeIds'], true);
+        abort_unless(self::withinRegistrationScope($user, $regionId, $officeId), 403, $message);
+    }
 
-        abort_unless($regionIsAllowed && $officeIsAllowed, 403, $message);
+    public static function withinRegistrationScope(User $user, int $regionId, int $officeId): bool
+    {
+        $scope = self::registrationScope($user);
+
+        return ($scope['regionIds'] === null || in_array($regionId, $scope['regionIds'], true))
+            && ($scope['officeIds'] === null || in_array($officeId, $scope['officeIds'], true));
     }
 
     /** Apply ownership before lookup so other offices cannot enumerate records. */

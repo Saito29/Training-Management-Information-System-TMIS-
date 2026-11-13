@@ -154,14 +154,14 @@ class OriginalInterfaceData
         return ($year !== '' ? $year : '00').str_pad((string) $participant->id, 6, '0', STR_PAD_LEFT);
     }
 
-    private static function findFarmerByNumber(User $user, string $farmerNumber): ?object
+    public static function findFarmerByNumber(User $user, string $farmerNumber, bool $trash = false): ?object
     {
         if (! preg_match('/^\d{8,}$/', $farmerNumber)) {
             return null;
         }
 
         $participantId = (int) substr($farmerNumber, 2);
-        $participant = self::query($user, 'participants')->where('id', $participantId)->first();
+        $participant = self::query($user, 'participants', $trash)->where('id', $participantId)->first();
 
         return $participant && hash_equals(self::farmerNumber($participant), $farmerNumber) ? $participant : null;
     }
@@ -180,17 +180,45 @@ class OriginalInterfaceData
 
         $recordStatuses = DB::table('record_statuses')->get(['id', 'name', 'is_active', 'is_builtin'])->keyBy('id');
 
+        $page = (string) request()->header('X-TMIS-PAGE', request()->fullUrl());
+        $pagePath = (string) parse_url($page, PHP_URL_PATH);
+        $normalizedPagePath = ltrim($pagePath, '/');
+        $farmerNumber = preg_match('~^app/admin/participants/id/(?:view|edit)-farmer/(\d+)$~', $normalizedPagePath, $matches) === 1
+            ? $matches[1]
+            : '';
+        $isFarmerProfileView = preg_match('~^app/admin/participants/id/view-farmer/\d+$~', $normalizedPagePath) === 1;
+        $canReadParticipants = ModuleAccess::allows($user, 'participants.read');
+        $canViewDeletedFarmer = $canReadParticipants
+            && ModuleAccess::allowsNavigationPage($user, 'participants', 'details.trash');
+        $selectedFarmer = $farmerNumber !== '' && $canReadParticipants
+            ? self::findFarmerByNumber($user, $farmerNumber)
+            : null;
+        $selectedFarmerIsDeleted = false;
+        if (! $selectedFarmer && $isFarmerProfileView && $canViewDeletedFarmer) {
+            $selectedFarmer = self::findFarmerByNumber($user, $farmerNumber, true);
+            $selectedFarmerIsDeleted = $selectedFarmer !== null;
+        }
+
+        $participantIds = self::query($user, 'participants')->select('participants.id');
+        if ($selectedFarmerIsDeleted) {
+            $participantIds->union(
+                self::query($user, 'participants', true)
+                    ->where('participants.id', $selectedFarmer->id)
+                    ->select('participants.id'),
+            );
+        }
+
         $trainingIds = self::trainingDataQuery($user)->select('id');
 
         $trainingDocuments = DB::table('training_attachments')->whereIn('training_id', $trainingIds)->get()->groupBy('training_id');
         $associationDocuments = DB::table('association_attachments')->whereIn('association_id', self::query($user, 'associations')->select('id'))->get()->groupBy('association_id');
 
-        $participantDocuments = DB::table('participant_attachments')->whereIn('participant_id', self::query($user, 'participants')->select('id'))->get()->groupBy('participant_id');
+        $participantDocuments = DB::table('participant_attachments')->whereIn('participant_id', clone $participantIds)->get()->groupBy('participant_id');
 
         $participantBeneficiaries = DB::table('participant_beneficiaries as beneficiary')
             ->join('organization as beneficiary_offices', 'beneficiary.org_id', '=', 'beneficiary_offices.org_id')
             ->join('region as beneficiary_regions', 'beneficiary.region_id', '=', 'beneficiary_regions.region_id')
-            ->whereIn('beneficiary.participant_id', self::query($user, 'participants')->select('id'))
+            ->whereIn('beneficiary.participant_id', clone $participantIds)
             ->orderBy('beneficiary.is_primary', 'desc')
             ->orderBy('beneficiary_regions.name')
             ->orderBy('beneficiary_offices.name')
@@ -201,7 +229,7 @@ class OriginalInterfaceData
             ->join('associations as participant_associations', 'participant_associations.id', '=', 'membership.association_id')
             ->join('region as association_regions', 'association_regions.region_id', '=', 'participant_associations.region_id')
             ->join('organization as association_offices', 'association_offices.org_id', '=', 'participant_associations.org_id')
-            ->whereIn('membership.participant_id', self::query($user, 'participants')->select('id'))
+            ->whereIn('membership.participant_id', clone $participantIds)
             ->whereNull('participant_associations.deleted_at')
             ->orderByDesc('membership.is_primary')
             ->orderBy('participant_associations.name')
@@ -265,17 +293,13 @@ class OriginalInterfaceData
 
         $trainingQuestionnaires = DB::table('training_questionnaire')->whereIn('training_id', $trainingIds)->join('questionnaires', 'training_questionnaire.questionnaire_id', '=', 'questionnaires.id')->whereNull('questionnaires.deleted_at')->get(['training_id', 'questionnaires.id', 'questionnaires.ui_id', 'questionnaires.kind'])->groupBy('training_id');
         $trainingResources = DB::table('training_resource_person')->whereIn('training_id', $trainingIds)->join('resource_persons', 'training_resource_person.resource_person_id', '=', 'resource_persons.id')->whereNull('resource_persons.deleted_at')->get(['training_id', 'resource_persons.id', 'resource_persons.ui_id', 'resource_persons.name', 'resource_persons.title'])->groupBy('training_id');
-        $page = (string) request()->header('X-TMIS-PAGE', request()->fullUrl());
         parse_str((string) parse_url($page, PHP_URL_QUERY), $pageQuery);
-        $pagePath = (string) parse_url($page, PHP_URL_PATH);
         $pathId = self::trainingViewPageId();
         if ($pathId === '') {
             $pathId = preg_match('~/(?:participants/id/(?:view|edit)-fa|participants/id/(?:view|edit)-farmer|training/id/edit-training|evaluation/id/(?:view|edit)-(?:pre-test|post-test|rp-evaluation|training-evaluation))/([^/]+)$~', $pagePath, $matches) === 1
                 ? rawurldecode($matches[1])
                 : '';
         }
-        $farmerNumber = preg_match('~^app/admin/participants/id/(?:view|edit)-farmer/(\d+)$~', ltrim($pagePath, '/'), $matches) === 1 ? $matches[1] : '';
-        $selectedFarmer = $farmerNumber !== '' ? self::findFarmerByNumber($user, $farmerNumber) : null;
         $currentId = $selectedFarmer
             ? (string) ($selectedFarmer->ui_id ?? $selectedFarmer->id)
             : (string) request()->query('id', $pageQuery['id'] ?? $pageQuery['faId'] ?? $pathId);
@@ -438,7 +462,12 @@ class OriginalInterfaceData
                 ? self::trainingDataQuery($user)
                 : self::query($user, $module);
 
-            foreach ($records->orderBy('id')->get() as $record) {
+            $moduleRecords = $records->orderBy('id')->get();
+            if ($module === 'participants' && $selectedFarmerIsDeleted) {
+                $moduleRecords->push($selectedFarmer);
+            }
+
+            foreach ($moduleRecords as $record) {
 
                 $item = self::unpack($record->ui_data);
 
@@ -521,6 +550,8 @@ class OriginalInterfaceData
                 } elseif ($module === 'participants') {
 
                     $sensitive = $record->protected_details ? self::unpack($record->protected_details) : [];
+                    $item['deletedAt'] = $record->deleted_at;
+                    $item['permanentDeletionAt'] = $record->permanent_deletion_at;
 
                     $membershipDetails = collect($participantAssociationMemberships[$record->id] ?? [])->map(fn ($membership): array => [
                         'databaseId' => (string) $membership->association_id,
@@ -639,24 +670,36 @@ class OriginalInterfaceData
 
         }
 
-        $users = DB::table('users')->whereNull('deleted_at')->orderBy('user_id');
+        $page = (string) request()->header('X-TMIS-PAGE', request()->path());
+        $pagePath = (string) parse_url($page, PHP_URL_PATH);
+        $normalizedPage = trim($pagePath, '/');
+        $deletedProfileId = preg_match('~^app/admin/administration/id/(?:edit|view)/(\d+)$~', $normalizedPage, $matches) === 1
+            ? (int) $matches[1]
+            : null;
+        $users = DB::table('users')
+            ->where(function ($query) use ($deletedProfileId): void {
+                $query->whereNull('deleted_at');
+                if ($deletedProfileId !== null) {
+                    $query->orWhere(fn ($deletedQuery) => $deletedQuery->where('user_id', $deletedProfileId)->whereNotNull('deleted_at'));
+                }
+            })
+            ->orderBy('user_id');
 
-        $page = request()->header('X-TMIS-PAGE', request()->path());
-
-        $normalizedPage = ltrim($page, '/');
         $isAccountManagement = str_starts_with($normalizedPage, 'app/admin/administration/');
         $needsAccounts = $isAccountManagement
             || str_starts_with($normalizedPage, 'app/admin/notification/notification')
             || $normalizedPage === 'app/admin/users/profile';
 
-        if (! ModuleAccess::isAdministrator($user) || ! $needsAccounts) {
-
+        $isAdministrator = ModuleAccess::isAdministrator($user);
+        if ($isAccountManagement && ModuleAccess::allows($user, 'administration.read')) {
+            if (! $isAdministrator) {
+                $scope = ModuleAccess::registrationScope($user);
+                $users
+                    ->when($scope['regionIds'] !== null, fn ($query) => $query->whereIn('users.region_id', $scope['regionIds']))
+                    ->when($scope['officeIds'] !== null, fn ($query) => $query->whereIn('users.org_id', $scope['officeIds']));
+            }
+        } elseif (! $isAdministrator || ! $needsAccounts) {
             $users->where('user_id', $user->user_id);
-
-        } elseif ($isAccountManagement) {
-
-            $users->whereNotIn('users.role_id', DB::table('user_roles')->where('name', 'System Administrator')->select('role_id'));
-
         }
 
         $roles = DB::table('user_roles')->pluck('name', 'role_id');

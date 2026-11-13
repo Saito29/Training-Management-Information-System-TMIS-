@@ -2,7 +2,8 @@
 document.addEventListener('DOMContentLoaded', () => {
   const $ = (id) => document.getElementById(id);
   const key = 'tmis-users';
-  const id = new URLSearchParams(location.search).get('id');
+  const id = location.pathname.match(/\/id\/view\/([A-Za-z0-9:_-]+)\/?$/)?.[1]
+    || new URLSearchParams(location.search).get('id');
   const modal = bootstrap.Modal.getOrCreateInstance($('accountDeleteModal'));
   const toast = bootstrap.Toast.getOrCreateInstance($('reviewToast'), { delay: 5500 });
   let pending = null, timer = null;
@@ -61,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
       $('profileOffice').textContent = user.office || 'Office not assigned'; badge('profileStatus', user);
       $('profileUserId').textContent = user.id;
       $('profileRegistered').textContent = formatDate(user.createdAt); $('profileUpdated').textContent = formatDate(user.updatedAt);
-      $('editUserProfile').href = `edit-user?id=${encodeURIComponent(user.id)}`;
+      $('editUserProfile').href = `/app/admin/administration/id/edit/${encodeURIComponent(user.id)}`;
       fields('profilePersonal', [['First name', user.firstName], ['Middle name', user.middleName], ['Last name', user.lastName], ['Extension', user.suffix], ['Date of birth', formatDate(user.dateOfBirth, false)], ['Work email', user.email], ['Mobile number', user.phone]]);
       fields('profileAccess', [['User role', user.role], ['Region', user.region], ['Office / organization', user.office], ['Position', user.position]]);
       $('profileStatusInfo').textContent = {

@@ -1963,5 +1963,5 @@ class="layout-fixed"
     <!-- nav -->
     <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/administration/id/edit-user.js?v=role-access-profile-2') }}"></script>
+    <script src="{{ asset('src/js/administration/id/edit-user.js?v=account-permission-actions-1') }}"></script>
 @endsection

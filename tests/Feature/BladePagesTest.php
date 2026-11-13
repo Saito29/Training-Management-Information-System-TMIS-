@@ -38,8 +38,16 @@ class BladePagesTest extends TestCase
     public function test_legacy_page_urls_redirect_with_query_parameters(string $path, string $view): void
     {
         $this->withoutMiddleware(EnsureEligibleUser::class);
+        $route = $view;
+        $parameters = ['id' => '42', 'filter' => 'active'];
+        if ($view === 'admin.administration.id.edit-user') {
+            $parameters = ['user_id' => '42', 'filter' => 'active'];
+        } elseif ($view === 'admin.administration.id.view-user') {
+            $parameters = ['user_id' => '42', 'filter' => 'active'];
+        }
+
         $this->get('/app/'.$path.'.html?id=42&filter=active')->assertStatus(301)
-            ->assertRedirect(route($view, ['id' => '42', 'filter' => 'active']));
+            ->assertRedirect(route($route, $parameters));
     }
 
     public function test_existing_authentication_pages_still_render(): void

@@ -261,7 +261,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const pages = state.perPage === 'all' ? 1 : Math.max(1, Math.ceil(all.length / state.perPage));
     if (state.page > pages) state.page = 1;
     const rows = state.perPage === 'all' ? all : all.slice((state.page - 1) * state.perPage, state.page * state.perPage);
-    body.innerHTML = rows.map((r) => `<tr data-record-id="${esc(r.id)}"><td data-column="actions"><div class="table-row-actions"><a class="btn table-action-button view-action" href="../id/view-training/${encodeURIComponent(r.id)}" target="_blank" rel="noopener" title="View training" aria-label="View ${esc(r.id)}"><i class="bi bi-eye-fill"></i></a><a class="btn table-action-button edit-action" href="../id/edit-training/${encodeURIComponent(r.id)}" target="_blank" rel="noopener" title="Edit training" aria-label="Edit ${esc(r.id)}"><i class="bi bi-pencil-fill"></i></a>${window.TmisTrainingStatusActions?.render(r) || ''}<button type="button" class="btn table-action-button delete-action" data-delete="${esc(r.id)}" title="Delete training" aria-label="Delete ${esc(r.id)}"><i class="bi bi-trash-fill"></i></button></div></td>${COLUMNS.map(([key]) => `<td data-column="${key}">${key === 'status' ? `<span class="status-badge ${statusClass(r.status)}">${esc(r.status)}</span>` : key === 'missingAttachments' ? missingBadges(r) : esc(['startDate', 'endDate', 'dateEncoded'].includes(key) ? formatDate(r[key]) : r[key])}</td>`).join('')}</tr>`).join('');
+    body.innerHTML = rows.map((r) => {
+      const actions = [
+        window.TmisStore.can('trainings.read') ? `<a class="btn table-action-button view-action" href="../id/view-training/${encodeURIComponent(r.id)}" target="_blank" rel="noopener" title="View training" aria-label="View ${esc(r.id)}"><i class="bi bi-eye-fill"></i></a>` : '',
+        window.TmisStore.can('trainings.edit') ? `<a class="btn table-action-button edit-action" href="../id/edit-training/${encodeURIComponent(r.id)}" target="_blank" rel="noopener" title="Edit training" aria-label="Edit ${esc(r.id)}"><i class="bi bi-pencil-fill"></i></a>` : '',
+        window.TmisTrainingStatusActions?.render(r) || '',
+        window.TmisStore.can('trainings.delete') ? `<button type="button" class="btn table-action-button delete-action" data-delete="${esc(r.id)}" title="Delete training" aria-label="Delete ${esc(r.id)}"><i class="bi bi-trash-fill"></i></button>` : '',
+      ].join('');
+      return `<tr data-record-id="${esc(r.id)}"><td data-column="actions"><div class="table-row-actions">${actions}</div></td>${COLUMNS.map(([key]) => `<td data-column="${key}">${key === 'status' ? `<span class="status-badge ${statusClass(r.status)}">${esc(r.status)}</span>` : key === 'missingAttachments' ? missingBadges(r) : esc(['startDate', 'endDate', 'dateEncoded'].includes(key) ? formatDate(r[key]) : r[key])}</td>`).join('')}</tr>`;
+    }).join('');
     applyColumnVisibility();
     empty.hidden = rows.length > 0;
     if (!rows.length) empty.innerHTML = '<i class="bi bi-check2-circle"></i><strong>No incomplete trainings match these filters.</strong>';

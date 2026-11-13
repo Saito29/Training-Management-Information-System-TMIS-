@@ -129,6 +129,7 @@
 .compose-recipient-table th { position:sticky; top:0; z-index:1; background:var(--color-bg); font-size:.7rem; white-space:nowrap; }
 .compose-recipient-table td { background:var(--color-surface); }
 .compose-recipient-table tr.is-selected td,.compose-recipient-table tr:hover td { background:var(--color-primary-surface); }
+.compose-recipient-table tbody tr.recipient-row-selectable { cursor:pointer; }
 .compose-recipient-table :is(th,td):first-child { position:sticky; left:0; width:5rem; text-align:center; border-right:1px solid var(--color-border); }
 .compose-recipient-table th:first-child { z-index:3; }
 .compose-card-body .compose-select-column { display:flex; flex-direction:column; align-items:center; gap:.35rem; margin:0; }

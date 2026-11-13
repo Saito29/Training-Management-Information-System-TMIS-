@@ -83,14 +83,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   function addCell(row, field, record) {
     const td = document.createElement('td'); td.dataset.column = field;
     if (field === 'actions') {
-      [['view', 'eye', 'View'], ['edit', 'pencil-square', 'Edit'], ['delete', 'trash', 'Delete']].forEach(([action, icon, label]) => {
+      [['view', 'eye', 'View', 'associations.read'], ['edit', 'pencil-square', 'Edit', 'associations.edit'], ['delete', 'trash', 'Delete', 'associations.delete']]
+        .filter(([, , , permission]) => window.TmisStore.can(permission))
+        .forEach(([action, icon, label]) => {
         const control = action === 'delete' ? document.createElement('button') : document.createElement('a');
         if (action === 'delete') control.type = 'button';
         else { control.href = `../id/${action}-fa/${encodeURIComponent(record.id)}`; control.target = '_blank'; control.rel = 'noopener noreferrer'; }
         control.className = 'btn btn-sm fa-row-action'; control.dataset.action = action; control.dataset.id = record.id;
         control.title = action === 'delete' ? label : `${label} in a new tab`; control.setAttribute('aria-label', `${label} ${record.association_name}${action === 'delete' ? '' : ' in a new tab'}`);
         const image = document.createElement('i'); image.className = `bi bi-${icon}`; image.setAttribute('aria-hidden', 'true'); control.append(image); td.append(control);
-      });
+        });
     } else if (field === 'status') {
       const status = associationStatus(record);
       const badge = document.createElement('span'); badge.className = `status-badge ${status === 'Active' ? 'status-active' : 'status-inactive'}`; badge.textContent = status; td.append(badge);

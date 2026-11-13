@@ -31,7 +31,7 @@ class AccountDisplayTest extends TestCase
             $this->assertSame(DB::table('organization')->where('org_id', $user->org_id)->value('name'), $profile['office']);
         }
         $this->get(route('system.accounts'))->assertNotFound()->assertDontSee($other->email);
-        $this->get(route('admin.administration.id.view-user'))->assertNotFound();
+        $this->get(route('admin.administration.id.view-user', ['user_id' => $user->user_id]))->assertNotFound();
         DB::table('users')->where('user_id', $user->user_id)->update(['first_name' => 'Updated', 'middle_name' => null]);
         $this->get(route('admin.dashboard.dashboard'))->assertOk()->assertSee('Updated Santos')->assertDontSee('Updated . Santos');
     }
@@ -45,7 +45,7 @@ class AccountDisplayTest extends TestCase
         $this->actingAs($administrator)->withSession(['auth.verified_user_id' => $administrator->user_id, 'auth.password_fingerprint' => hash('sha256', $hash)]);
 
         $this->assertDatabaseMissing('system_super_admins', ['user_id' => $administrator->user_id]);
-        $this->get(route('admin.administration.id.view-user'))->assertOk();
+        $this->get(route('admin.administration.id.view-user', ['user_id' => $other->user_id]))->assertOk();
         $this->get(route('system.accounts'))->assertOk()->assertSee($other->email);
     }
 

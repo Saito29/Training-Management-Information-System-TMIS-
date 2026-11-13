@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let records = [], page = 1, pageSize = 10, pendingDelete = null;
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
   const date = (value) => value && !Number.isNaN(Date.parse(value)) ? new Date(value).toLocaleDateString() : '-';
+  const can = (permission) => window.TmisStore.can(permission);
   const sample = { id: 'QUE-SAMPLE-001', title: 'Good Agricultural Practices Pre-test', type: 'Pre-test', status: 'Sample', region: 'Region IV-A', office: 'DA Regional Field Office - Region IV-A', count: 20, createdAt: new Date().toISOString(), description: 'Example of a recently submitted questionnaire.', view: '../id/view-pre-test', sample: true };
 
   function updateOptions(select, values, label) {
@@ -74,12 +75,16 @@ document.addEventListener('DOMContentLoaded', () => {
     page = Math.min(Math.max(1, page), pages);
     const start = pageSize === Infinity ? 0 : (page - 1) * pageSize;
     const shown = pageSize === Infinity ? found : found.slice(start, start + pageSize);
-    rows.innerHTML = shown.map((item) => `<tr><td><div class="questionnaire-actions">${item.sample ? `    <a class="btn btn-sm btn-outline-success" href="${window.TmisStore.escape(item.view)}/${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="View sample in new tab" title="View in new tab"><i class="bi bi-eye"></i></a>` : `
-    <a class="btn btn-sm btn-outline-success" href="${window.TmisStore.escape(item.view)}/${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="View ${esc(item.title)} in new tab" title="View in new tab"><i class="bi bi-eye"></i></a>
-    <a class="btn btn-sm btn-outline-primary" href="${window.TmisStore.escape(item.edit)}/${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="Edit ${esc(item.title)} in new tab" title="Edit in new tab"><i class="bi bi-pencil-square"></i></a>
-      <button class="btn btn-sm btn-outline-danger" type="button" data-action="delete" data-id="${esc(item.id)}" data-type="${esc(item.type)}" aria-label="Delete ${esc(item.title)}" title="Delete"><i class="bi bi-trash"></i></button>`}</div></td>
+    rows.innerHTML = shown.map((item) => {
+      const actions = [
+        can('questionnaires.read') ? `<a class="btn btn-sm btn-outline-success" href="${window.TmisStore.escape(item.view)}/${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="View ${item.sample ? 'sample' : esc(item.title)} in a new tab" title="View in new tab"><i class="bi bi-eye"></i></a>` : '',
+        !item.sample && can('questionnaires.edit') ? `<a class="btn btn-sm btn-outline-primary" href="${window.TmisStore.escape(item.edit)}/${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="Edit ${esc(item.title)} in new tab" title="Edit in new tab"><i class="bi bi-pencil-square"></i></a>` : '',
+        !item.sample && can('questionnaires.delete') ? `<button class="btn btn-sm btn-outline-danger" type="button" data-action="delete" data-id="${esc(item.id)}" data-type="${esc(item.type)}" aria-label="Delete ${esc(item.title)}" title="Delete"><i class="bi bi-trash"></i></button>` : '',
+      ].join('');
+      return `<tr><td><div class="questionnaire-actions">${actions}</div></td>
       <td><span class="badge ${['draft', 'inactive'].includes(item.status.toLowerCase()) ? 'text-bg-secondary' : item.sample ? 'text-bg-info' : 'text-bg-success'}">${esc(item.status)}</span></td>
-      <td class="questionnaire-id" title="${esc(item.id)}">${esc(item.id)}</td><td>${esc(item.title)}</td><td>${esc(item.type)}</td><td>${esc(item.region || '-')}</td><td>${esc(item.office || '-')}</td><td>${window.TmisStore.escape(item.count)}</td><td>${date(item.createdAt)}</td></tr>`).join('') || `<tr><td colspan="9" class="text-center py-4">No ${inactiveOnly ? 'inactive ' : ''}questionnaires found.</td></tr>`;
+      <td class="questionnaire-id" title="${esc(item.id)}">${esc(item.id)}</td><td>${esc(item.title)}</td><td>${esc(item.type)}</td><td>${esc(item.region || '-')}</td><td>${esc(item.office || '-')}</td><td>${window.TmisStore.escape(item.count)}</td><td>${date(item.createdAt)}</td></tr>`;
+    }).join('') || `<tr><td colspan="9" class="text-center py-4">No ${inactiveOnly ? 'inactive ' : ''}questionnaires found.</td></tr>`;
     pagers.forEach((pager) => { pager.innerHTML = `<span>${found.length ? start + 1 : 0}-${Math.min(start + shown.length, found.length)} of ${found.length}</span><div class="d-flex gap-2 align-items-center"><button class="btn btn-sm btn-outline-secondary" data-page="first" ${page === 1 ? 'disabled' : ''} aria-label="First page">&laquo;</button><button class="btn btn-sm btn-outline-secondary" data-page="previous" ${page === 1 ? 'disabled' : ''}>Previous</button><span>Page ${page} of ${pages}</span><button class="btn btn-sm btn-outline-secondary" data-page="next" ${page === pages ? 'disabled' : ''}>Next</button><button class="btn btn-sm btn-outline-secondary" data-page="last" ${page === pages ? 'disabled' : ''} aria-label="Last page">&raquo;</button></div>`; });
     sizes.forEach((select) => { select.value = pageSize === Infinity ? 'all' : String(pageSize); });
   }

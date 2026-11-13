@@ -27,6 +27,41 @@ class AccountRegistrationTest extends TestCase
         return $user;
     }
 
+    private function signInAccountManager(array $permissions): User
+    {
+        $roleId = (int) DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id');
+        DB::table('role_permissions')->where('role_id', $roleId)->delete();
+        if ($permissions !== []) {
+            DB::table('role_permissions')->insert(array_map(
+                static fn (string $permission): array => ['role_id' => $roleId, 'permission' => $permission],
+                $permissions,
+            ));
+        }
+
+        $user = User::factory()->create(['role_id' => $roleId, 'region_id' => 4, 'org_id' => 1]);
+        $hash = Hash::make('Account-manager-password-123!');
+        DB::table('user_auth')->insert(['user_id' => $user->user_id, 'password_hash' => $hash]);
+        $this->actingAs($user)->withSession(['auth.verified_user_id' => $user->user_id, 'auth.password_fingerprint' => hash('sha256', $hash)]);
+
+        return $user;
+    }
+
+    private function createAccountManager(int $roleId, int $credentialId, int $officeId, string $email): User
+    {
+        $user = User::factory()->create([
+            'email' => $email,
+            'role_id' => $roleId,
+            'role_credential_id' => $credentialId,
+            'region_id' => 4,
+            'org_id' => $officeId,
+        ]);
+        $hash = Hash::make('Account-manager-password-123!');
+        DB::table('user_auth')->insert(['user_id' => $user->user_id, 'password_hash' => $hash]);
+        $this->actingAs($user)->withSession(['auth.verified_user_id' => $user->user_id, 'auth.password_fingerprint' => hash('sha256', $hash)]);
+
+        return $user;
+    }
+
     private function registration(): array
     {
         return ['firstName' => 'New', 'lastName' => 'Account', 'email' => 'new@example.com', 'role' => 'Data Encoder', 'region' => 'Region IV-A', 'office' => 'DA - SAAD', 'position' => 'Officer'];
@@ -122,7 +157,7 @@ class AccountRegistrationTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'mismatched@example.com']);
     }
 
-    public function test_system_administrator_accounts_and_role_choices_are_hidden_from_account_management(): void
+    public function test_system_administrator_accounts_are_visible_without_becoming_assignable_roles(): void
     {
         $this->signInAdministrator();
         $administratorRoleId = DB::table('user_roles')->where('name', 'System Administrator')->value('role_id');
@@ -131,6 +166,12 @@ class AccountRegistrationTest extends TestCase
             'email' => 'pending-admin@example.com',
             'role_id' => $administratorRoleId,
             'status' => 'Pending approval',
+            'active_status' => 0,
+        ]);
+        User::factory()->create([
+            'email' => 'inactive-admin@example.com',
+            'role_id' => $administratorRoleId,
+            'status' => 'Approved & Accepted',
             'active_status' => 0,
         ]);
         User::factory()->create([
@@ -148,17 +189,20 @@ class AccountRegistrationTest extends TestCase
 
         $this->getJson(route('accounts.index'))
             ->assertOk()
-            ->assertJsonCount(1, 'users')
-            ->assertJsonPath('users.0.email', 'pending-encoder@example.com');
+            ->assertJsonCount(2, 'users')
+            ->assertJsonFragment(['email' => 'pending-admin@example.com', 'role' => 'System Administrator'])
+            ->assertJsonFragment(['email' => 'pending-encoder@example.com', 'role' => 'Data Encoder']);
         $options = $this->getJson(route('accounts.options'))->assertOk();
         $this->assertSame(false, in_array('System Administrator', $options->json('roles'), true));
         $this->assertSame(false, array_key_exists('System Administrator', $options->json('credentialTypes')));
 
         $managementData = $this->getJson('/ui/data', ['X-TMIS-PAGE' => '/app/admin/administration/details/all-status'])
             ->assertOk()
-            ->assertJsonCount(2, 'stores.tmis-users');
+            ->assertJsonCount(5, 'stores.tmis-users');
         $this->assertSame(false, in_array('System Administrator', $managementData->json('roles'), true));
-        $this->assertSame(false, in_array($pendingAdministrator->email, array_column($managementData->json('stores.tmis-users'), 'email'), true));
+        $managementAccounts = $managementData->json('stores.tmis-users');
+        $this->assertSame(true, in_array($pendingAdministrator->email, array_column($managementAccounts, 'email'), true));
+        $this->assertSame(true, in_array('Inactive', array_column($managementAccounts, 'status'), true));
         $this->patchJson(route('accounts.update', $pendingAdministrator), ['decision' => 'Approved'])->assertNotFound();
         $this->assertDatabaseHas('users', [
             'user_id' => $pendingAdministrator->user_id,
@@ -210,5 +254,124 @@ class AccountRegistrationTest extends TestCase
         Mail::shouldReceive('to')->once()->with('new@example.com')->andReturn($pending);
         $this->postJson(route('accounts.store'), $this->registration())->assertCreated()->assertJsonPath('mailSent', false);
         $this->assertDatabaseHas('users', ['email' => 'new@example.com', 'status' => 'Pending approval', 'active_status' => 0]);
+    }
+
+    public function test_account_permissions_allow_scoped_registration_but_require_approval_permission(): void
+    {
+        Mail::fake();
+        $this->signInAccountManager(['administration.read', 'administration.create']);
+
+        $this->get(route('admin.administration.create.register'))->assertOk();
+        $this->get(route('admin.administration.update.for-approval'))->assertNotFound();
+        $this->getJson(route('accounts.options'))->assertOk();
+
+        $this->postJson(route('accounts.store'), $this->registration())->assertCreated();
+        $pendingAccount = User::where('email', 'new@example.com')->firstOrFail();
+        $this->patchJson(route('accounts.update', $pendingAccount), ['decision' => 'Approved'])->assertForbidden();
+        $this->assertDatabaseHas('users', ['user_id' => $pendingAccount->user_id, 'status' => 'Pending approval']);
+
+        DB::table('role_permissions')->insert([
+            'role_id' => $pendingAccount->role_id,
+            'permission' => 'administration.approve',
+        ]);
+        $this->get(route('admin.administration.update.for-approval'))->assertOk();
+        $this->patchJson(route('accounts.update', $pendingAccount), ['decision' => 'Approved'])->assertOk();
+        $this->assertDatabaseHas('users', ['user_id' => $pendingAccount->user_id, 'status' => 'Approved & Accepted', 'active_status' => 1]);
+
+        $otherOffice = DB::table('organization')->where('org_id', 2)->value('name');
+        $outOfScopeRegistration = $this->registration();
+        $outOfScopeRegistration['email'] = 'out-of-scope@example.com';
+        $outOfScopeRegistration['office'] = $otherOffice;
+
+        $this->postJson(route('accounts.store'), $outOfScopeRegistration)->assertForbidden();
+        $this->assertDatabaseMissing('users', ['email' => 'out-of-scope@example.com']);
+    }
+
+    public function test_account_edit_permission_cannot_approve_a_pending_account(): void
+    {
+        $manager = $this->signInAccountManager(['administration.read', 'administration.edit']);
+        $pendingAccount = User::factory()->create([
+            'role_id' => DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id'),
+            'region_id' => 4,
+            'org_id' => 1,
+            'status' => 'Pending approval',
+            'active_status' => 0,
+        ]);
+
+        $this->patchJson(route('system.accounts.update', $pendingAccount->user_id), [
+            'action' => 'update',
+            'role_id' => $pendingAccount->role_id,
+            'region_id' => 4,
+            'org_id' => 1,
+            'status' => 'Approved & Accepted',
+            'active_status' => 1,
+        ])->assertForbidden();
+
+        $this->assertDatabaseHas('users', [
+            'user_id' => $pendingAccount->user_id,
+            'status' => 'Pending approval',
+            'active_status' => 0,
+            'role_id' => $manager->role_id,
+        ]);
+    }
+
+    public function test_same_role_account_profiles_have_distinct_permissions_and_office_scoped_lists(): void
+    {
+        $roleId = (int) DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id');
+        DB::table('role_permissions')->where('role_id', $roleId)->delete();
+        DB::table('role_permissions')->insert([
+            ['role_id' => $roleId, 'permission' => 'administration.read'],
+            ['role_id' => $roleId, 'permission' => 'administration.edit'],
+        ]);
+        $evaluatorCredentialId = DB::table('role_credentials')->insertGetId([
+            'role_id' => $roleId,
+            'name' => 'Account evaluator',
+            'created_at' => now(),
+        ], 'role_credential_id');
+        $encoderCredentialId = DB::table('role_credentials')->insertGetId([
+            'role_id' => $roleId,
+            'name' => 'Account encoder',
+            'created_at' => now(),
+        ], 'role_credential_id');
+        DB::table('role_credential_permissions')->insert([
+            ['role_credential_id' => $evaluatorCredentialId, 'permission' => 'administration.delete'],
+            ['role_credential_id' => $evaluatorCredentialId, 'permission' => 'administration.approve'],
+        ]);
+        DB::table('role_credential_denied_permissions')->insert([
+            'role_credential_id' => $encoderCredentialId,
+            'permission' => 'administration.edit',
+        ]);
+        $evaluator = $this->createAccountManager($roleId, $evaluatorCredentialId, 1, 'account-evaluator@example.com');
+        $encoder = $this->createAccountManager($roleId, $encoderCredentialId, 1, 'account-encoder@example.com');
+        $outOfOfficeAccount = User::factory()->create([
+            'email' => 'other-office@example.com',
+            'role_id' => $roleId,
+            'region_id' => 4,
+            'org_id' => 2,
+            'status' => 'Pending approval',
+            'active_status' => 0,
+        ]);
+        $page = '/app/admin/administration/details/all-status';
+
+        $this->actingAs($evaluator)->withSession([
+            'auth.verified_user_id' => $evaluator->user_id,
+            'auth.password_fingerprint' => hash('sha256', DB::table('user_auth')->where('user_id', $evaluator->user_id)->value('password_hash')),
+        ]);
+        $evaluatorPermissions = $this->withHeaders(['X-TMIS-PAGE' => $page])->getJson('/ui/data')->assertOk()->json('permissions');
+        $this->assertSame(true, in_array('administration.read', $evaluatorPermissions, true));
+        $this->assertSame(true, in_array('administration.delete', $evaluatorPermissions, true));
+        $this->getJson('/operations/administration')->assertNotFound();
+        $this->getJson(route('accounts.index'))->assertOk()->assertJsonMissing(['email' => $outOfOfficeAccount->email]);
+        $this->patchJson(route('accounts.update', $outOfOfficeAccount), ['decision' => 'Approved'])->assertNotFound();
+
+        $encoderPermissions = $this->actingAs($encoder)->withSession([
+            'auth.verified_user_id' => $encoder->user_id,
+            'auth.password_fingerprint' => hash('sha256', DB::table('user_auth')->where('user_id', $encoder->user_id)->value('password_hash')),
+        ])->withHeaders(['X-TMIS-PAGE' => $page])->getJson('/ui/data')->assertOk()->json('permissions');
+        $this->assertSame(true, in_array('administration.read', $encoderPermissions, true));
+        $this->assertSame(false, in_array('administration.edit', $encoderPermissions, true));
+        $this->assertSame(false, in_array('administration.delete', $encoderPermissions, true));
+        $this->assertSame(false, in_array('administration.approve', $encoderPermissions, true));
+        $this->assertSame($evaluator->role_id, $encoder->role_id);
     }
 }

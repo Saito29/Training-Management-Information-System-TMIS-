@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Authentication\AuditTrail;
+use App\Mail\UserNotificationEmail;
 use App\Models\User;
 use App\Support\AccountUpdateNotifier;
 use App\Support\ModuleAccess;
@@ -13,11 +14,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\InputBag;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 /** Adapts the existing screen contracts to authorized, transactional database mutations. */
 class OriginalInterfaceController
@@ -372,7 +376,8 @@ class OriginalInterfaceController
     {
         $input = $request->validate(['key' => ['required', 'string', 'max:120'], 'upserts' => ['present', 'array', 'max:100'], 'upserts.*' => ['array'], 'deletes' => ['present', 'array', 'max:100'], 'deletes.*' => ['string', 'max:100']]);
         $idMappings = [];
-        DB::transaction(function () use ($request, $input, $operations, &$idMappings): void {
+        $notificationEmailBatches = [];
+        DB::transaction(function () use ($request, $input, $operations, &$idMappings, &$notificationEmailBatches): void {
             $module = OriginalInterfaceData::KEYS[$input['key']] ?? null;
             if ($module) {
                 foreach ($input['deletes'] as $id) {
@@ -395,7 +400,7 @@ class OriginalInterfaceController
             } elseif ($input['key'] === 'tmis-users') {
                 $this->accounts($request, $input);
             } elseif ($input['key'] === 'tmis-notifications') {
-                $this->notifications($request, $input['upserts']);
+                $notificationEmailBatches = $this->notifications($request, $input['upserts']);
             } elseif ($input['key'] === 'tmis-notification-state:'.$request->user()->user_id) {
                 foreach ($input['upserts'] as $state) {
                     $this->notificationState($request, $state);
@@ -405,7 +410,12 @@ class OriginalInterfaceController
             }
         });
 
-        return response()->json($data->bootstrap($request->user()) + ['message' => 'Changes saved to the database.', 'idMappings' => $idMappings]);
+        $response = $data->bootstrap($request->user()) + ['message' => 'Changes saved to the database.', 'idMappings' => $idMappings];
+        if ($notificationEmailBatches !== []) {
+            $response['emailDelivery'] = $this->sendNotificationEmails($notificationEmailBatches);
+        }
+
+        return response()->json($response);
     }
 
     /** @return array{temporaryId: string, id: string}|null */
@@ -436,7 +446,15 @@ class OriginalInterfaceController
         $trashed = ! $existing ? OriginalInterfaceData::find($request->user(), $module, $id, true) : null;
         if ($trashed) {
             abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
-            DB::table($module)->where('id', $trashed->id)->update(['deleted_at' => null, 'is_active' => false]);
+            $restoreChanges = [
+                'deleted_at' => null,
+                'is_active' => false,
+                'updated_at' => now(),
+            ];
+            if ($module === 'participants') {
+                $restoreChanges['permanent_deletion_at'] = null;
+            }
+            DB::table($module)->where('id', $trashed->id)->update($restoreChanges);
             $existing = OriginalInterfaceData::find($request->user(), $module, $id);
             AuditTrail::record($request, $module.'_restored_'.$existing->id, $request->user(), category: $module);
         }
@@ -1055,14 +1073,21 @@ class OriginalInterfaceController
     /** Persist synchronized account changes and send one consolidated notice with the updater's identity. */
     private function accounts(Request $request, array $input): void
     {
-        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
         $settings = new SystemSettingsController;
         foreach ($input['deletes'] as $id) {
+            ModuleAccess::authorize($request, 'administration.delete');
             $settings->manageAccount($this->payload($request, ['action' => 'delete']), (int) $id);
         }
         foreach ($input['upserts'] as $record) {
+            ModuleAccess::authorize($request, 'administration.edit');
             $id = (int) ($record['id'] ?? 0);
             $user = User::where('user_id', $id)->firstOrFail();
+            if (! ModuleAccess::isAdministrator($request->user())) {
+                abort_unless(
+                    ModuleAccess::withinRegistrationScope($request->user(), (int) $user->region_id, (int) $user->org_id),
+                    404,
+                );
+            }
             $region = DB::table('region')->where('name', $record['region'] ?? '')->value('region_id');
             $office = DB::table('organization')->where('name', $record['office'] ?? '')->where('region_id', $region)->value('org_id');
             $role = DB::table('user_roles')->where('name', $record['role'] ?? '')->where('is_active', 1)->value('role_id');
@@ -1097,11 +1122,44 @@ class OriginalInterfaceController
         }
     }
 
-    private function notifications(Request $request, array $records): void
+    /**
+     * @param  array<int, array<string, mixed>>  $records
+     * @return array<int, array{batchId: string, title: string, summary: string, message: string, type: string, priority: string, reference: string, href: string, recipientIds: array<int, int>, emailAddresses: array<int, string>, invalidEmailCount: int}>
+     */
+    private function notifications(Request $request, array $records): array
     {
         abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $batches = [];
         foreach ($records as $raw) {
-            $record = Validator::make($raw, ['id' => ['required', 'string', 'max:100', Rule::unique('user_notifications', 'ui_id')], 'batchId' => ['required', 'string', 'max:100'], 'recipientId' => ['required', 'integer', Rule::exists('users', 'user_id')->whereNull('deleted_at')->where('active_status', 1)->where('status', 'Approved & Accepted')], 'title' => ['required', 'string', 'max:100'], 'summary' => ['nullable', 'string', 'max:240'], 'message' => ['required', 'string', 'max:10000'], 'type' => ['required', Rule::in(['account', 'training', 'participants', 'evaluation', 'system'])], 'priority' => ['required', Rule::in(['normal', 'high'])], 'reference' => ['nullable', 'string', 'max:80'], 'href' => ['nullable', Rule::in(['', 'users/profile', 'administration/update/for-approval', 'administration/details/all-status', 'training/details/all-status', 'participants/details/all-with-status', 'evaluation/details/list-questionnaire'])]])->validate();
+            $record = Validator::make($raw, ['id' => ['required', 'string', 'max:100', Rule::unique('user_notifications', 'ui_id')], 'batchId' => ['required', 'string', 'max:100'], 'recipientId' => ['required', 'integer', Rule::notIn([(string) $request->user()->user_id]), Rule::exists('users', 'user_id')->whereNull('deleted_at')->where('active_status', 1)->where('status', 'Approved & Accepted')], 'title' => ['required', 'string', 'max:100'], 'summary' => ['nullable', 'string', 'max:240'], 'message' => ['required', 'string', 'max:10000'], 'type' => ['required', Rule::in(['account', 'training', 'participants', 'evaluation', 'system'])], 'priority' => ['required', Rule::in(['normal', 'high'])], 'reference' => ['nullable', 'string', 'max:80'], 'href' => ['nullable', Rule::in(['', 'users/profile', 'administration/update/for-approval', 'administration/details/all-status', 'training/details/all-status', 'participants/details/all-with-status', 'evaluation/details/list-questionnaire'])]])->validate();
+            $batchId = $record['batchId'];
+            $content = [
+                'title' => trim($record['title']),
+                'summary' => trim((string) ($record['summary'] ?? '')),
+                'message' => trim($record['message']),
+                'type' => $record['type'],
+                'priority' => $record['priority'],
+                'reference' => trim((string) ($record['reference'] ?? '')),
+                'href' => (string) ($record['href'] ?? ''),
+            ];
+            if (isset($batches[$batchId]) && Arr::only($batches[$batchId], array_keys($content)) !== $content) {
+                throw ValidationException::withMessages([
+                    'upserts' => 'All recipients in a notification batch must receive the same message.',
+                ]);
+            }
+            $recipientId = (int) $record['recipientId'];
+            $batches[$batchId] ??= $content + [
+                'batchId' => $batchId,
+                'recipientIds' => [],
+                'emailAddresses' => [],
+                'invalidEmailCount' => 0,
+            ];
+            if (in_array($recipientId, $batches[$batchId]['recipientIds'], true)) {
+                throw ValidationException::withMessages([
+                    'upserts' => 'A user can only appear once in a notification batch.',
+                ]);
+            }
+            $batches[$batchId]['recipientIds'][] = $recipientId;
             DB::table('user_notifications')->insert(['ui_id' => $record['id'], 'batch_id' => $record['batchId'], 'recipient_id' => $record['recipientId'], 'creator_id' => $request->user()->user_id, 'title' => $record['title'], 'summary' => $record['summary'] ?? null, 'message' => $record['message'], 'type' => $record['type'], 'priority' => $record['priority'], 'reference' => $record['reference'] ?? null, 'related_page' => $record['href'] ?? null, 'created_at' => now(), 'updated_at' => now()]);
         }
         if ($records !== []) {
@@ -1118,6 +1176,71 @@ class OriginalInterfaceController
                 category: 'notification',
             );
         }
+
+        foreach ($batches as &$batch) {
+            $users = DB::table('users')
+                ->whereIn('user_id', $batch['recipientIds'])
+                ->whereNull('deleted_at')
+                ->where('active_status', 1)
+                ->where('status', 'Approved & Accepted')
+                ->get(['user_id', 'email'])
+                ->keyBy('user_id');
+            foreach ($batch['recipientIds'] as $recipientId) {
+                $email = $users->get($recipientId)?->email;
+                if (! is_string($email) || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+                    $batch['invalidEmailCount']++;
+
+                    continue;
+                }
+                $batch['emailAddresses'][] = $email;
+            }
+        }
+        unset($batch);
+
+        return array_values($batches);
+    }
+
+    /**
+     * @param  array<int, array{batchId: string, title: string, summary: string, message: string, type: string, priority: string, reference: string, href: string, recipientIds: array<int, int>, emailAddresses: array<int, string>, invalidEmailCount: int}>  $batches
+     * @return array{attempted: int, accepted: int, failed: int}
+     */
+    private function sendNotificationEmails(array $batches): array
+    {
+        $delivery = ['attempted' => 0, 'accepted' => 0, 'failed' => 0];
+        foreach ($batches as $batch) {
+            $delivery['attempted'] += count($batch['recipientIds']);
+            $delivery['failed'] += $batch['invalidEmailCount'];
+            foreach (array_chunk($batch['emailAddresses'], 50) as $emailAddresses) {
+                try {
+                    Mail::send(new UserNotificationEmail(
+                        $emailAddresses,
+                        $batch['title'],
+                        $batch['summary'],
+                        $batch['message'],
+                        $batch['type'],
+                        $batch['priority'],
+                        $batch['reference'],
+                        $batch['href'] !== '' ? url('/app/admin/'.$batch['href']) : null,
+                    ));
+                    $delivery['accepted'] += count($emailAddresses);
+                } catch (TransportExceptionInterface $exception) {
+                    $delivery['failed'] += count($emailAddresses);
+                    Log::error('TMIS notification email transport failed.', [
+                        'batch_id' => $batch['batchId'],
+                        'recipient_count' => count($emailAddresses),
+                        'exception_type' => $exception::class,
+                    ]);
+                }
+            }
+            if ($batch['invalidEmailCount'] > 0) {
+                Log::warning('TMIS notification email skipped for recipients without a valid email address.', [
+                    'batch_id' => $batch['batchId'],
+                    'recipient_count' => $batch['invalidEmailCount'],
+                ]);
+            }
+        }
+
+        return $delivery;
     }
 
     private function notificationState(Request $request, array $raw): void

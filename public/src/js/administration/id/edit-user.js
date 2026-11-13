@@ -20,9 +20,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (form.elements.region.value) [...new Set([...officeTypes, selected].filter(Boolean))].forEach((value) => office.add(new Option(value, value)));
     office.value = selected;
   }
-  const id = new URLSearchParams(location.search).get('id');
+  const id = location.pathname.match(/\/id\/edit\/([A-Za-z0-9:_-]+)\/?$/)?.[1]
+    || new URLSearchParams(location.search).get('id');
   const modal = bootstrap.Modal.getOrCreateInstance($('accountDeleteModal'));
   const toast = bootstrap.Toast.getOrCreateInstance($('reviewToast'), { delay: 5500 });
+  $('deleteUserProfile').hidden = !window.TmisStore.can('administration.delete');
   let pending = null, timer = null;
   const fullName = (user) => [user.firstName, user.middleName, user.lastName, user.suffix].filter(Boolean).join(' ') || 'Unnamed user';
   const initials = (user) => [user.firstName, user.lastName].map((part) => String(part || '').charAt(0)).join('').toUpperCase() || 'U';
@@ -79,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
       $('profileOffice').textContent = user.office || 'Office not assigned'; badge('profileStatus', user);
       $('profileUserId').textContent = user.id;
       $('profileRegistered').textContent = formatDate(user.createdAt); $('profileUpdated').textContent = formatDate(user.updatedAt);
-      $('editUserProfile').href = `view-user?id=${encodeURIComponent(user.id)}`;
+      $('editUserProfile').href = `/app/admin/administration/id/view/${encodeURIComponent(user.id)}`;
       editableFields.forEach((field) => { if (field !== 'office') form.elements[field].value = user[field] || ''; });
       form.elements.status.value = /^(approved|accepted|approved\s*&\s*accepted)$/i.test(user.status || '') ? 'Approved & Accepted' : /^inactive$/i.test(user.status || '') ? 'Inactive' : '';
       syncOffices(user.office || '');

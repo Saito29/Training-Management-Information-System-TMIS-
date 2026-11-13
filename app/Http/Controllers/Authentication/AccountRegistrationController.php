@@ -6,6 +6,7 @@ use App\Http\Authentication\AuditTrail;
 use App\Mail\Authentication\PasswordResetLink;
 use App\Models\User;
 use App\Support\AccountUpdateNotifier;
+use App\Support\ModuleAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,14 +20,21 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class AccountRegistrationController
 {
-    private function authorize(Request $request): void
+    private function authorize(Request $request, string $permission): void
     {
-        abort_unless(DB::table('user_roles')->where('role_id', $request->user()->role_id)->where('name', 'System Administrator')->where('is_active', 1)->exists(), 403);
+        ModuleAccess::authorize($request, $permission);
     }
 
     public function options(Request $request): JsonResponse
     {
-        $this->authorize($request);
+        abort_unless(
+            ModuleAccess::allows($request->user(), 'administration.create')
+                || ModuleAccess::allows($request->user(), 'administration.edit'),
+            403,
+        );
+        $scope = ModuleAccess::isAdministrator($request->user())
+            ? ['regionIds' => null, 'officeIds' => null]
+            : ModuleAccess::registrationScope($request->user());
         $credentialTypes = DB::table('role_credentials')
             ->join('user_roles', 'user_roles.role_id', '=', 'role_credentials.role_id')
             ->where('user_roles.is_active', 1)
@@ -61,14 +69,19 @@ class AccountRegistrationController
                     'deniedPermissions' => $deniedCredentialPermissions->get($credential->id, collect())->pluck('permission')->all(),
                 ])->values())
                 ->all(),
-            'regions' => DB::table('region')->where('is_active', 1)->get(['region_id as id', 'name']),
-            'offices' => DB::table('organization')->where('is_active', 1)->get(['region_id', 'name']),
+            'regions' => DB::table('region')->where('is_active', 1)
+                ->when($scope['regionIds'] !== null, fn ($query) => $query->whereIn('region_id', $scope['regionIds']))
+                ->get(['region_id as id', 'name']),
+            'offices' => DB::table('organization')->where('is_active', 1)
+                ->when($scope['regionIds'] !== null, fn ($query) => $query->whereIn('region_id', $scope['regionIds']))
+                ->when($scope['officeIds'] !== null, fn ($query) => $query->whereIn('org_id', $scope['officeIds']))
+                ->get(['region_id', 'name']),
         ]);
     }
 
     public function store(Request $request): JsonResponse
     {
-        $this->authorize($request);
+        $this->authorize($request, 'administration.create');
         if (is_string($request->input('email'))) {
             $request->merge(['email' => strtolower(trim($request->input('email')))]);
         }
@@ -91,6 +104,9 @@ class AccountRegistrationController
         $officeId = DB::table('organization')->where('name', $data['office'])->where('region_id', $regionId)->where('is_active', 1)->value('org_id');
         if (! $officeId) {
             throw ValidationException::withMessages(['office' => 'Select an active organization belonging to the selected region.']);
+        }
+        if (! ModuleAccess::isAdministrator($request->user())) {
+            ModuleAccess::authorizeRegistrationScope($request->user(), (int) $regionId, (int) $officeId, 'Select an office within your account scope.');
         }
         $user = DB::transaction(function () use ($request, $data, $regionId, $officeId): User {
             $user = new User;
@@ -128,11 +144,14 @@ class AccountRegistrationController
 
     public function index(Request $request): JsonResponse
     {
-        $this->authorize($request);
+        $this->authorize($request, 'administration.read');
+        $scope = ModuleAccess::registrationScope($request->user());
         $users = DB::table('users')->leftJoin('user_roles', 'users.role_id', '=', 'user_roles.role_id')
             ->leftJoin('role_credentials', 'users.role_credential_id', '=', 'role_credentials.role_credential_id')
             ->leftJoin('region', 'users.region_id', '=', 'region.region_id')->leftJoin('organization', 'users.org_id', '=', 'organization.org_id')
-            ->whereNull('users.deleted_at')->whereIn('users.status', ['Pending approval', 'Rejected'])->where('user_roles.name', '<>', 'System Administrator')
+            ->whereNull('users.deleted_at')->whereIn('users.status', ['Pending approval', 'Rejected'])
+            ->when(! ModuleAccess::isAdministrator($request->user()) && $scope['regionIds'] !== null, fn ($query) => $query->whereIn('users.region_id', $scope['regionIds']))
+            ->when(! ModuleAccess::isAdministrator($request->user()) && $scope['officeIds'] !== null, fn ($query) => $query->whereIn('users.org_id', $scope['officeIds']))
             ->select('users.user_id as id', 'users.first_name as firstName', 'users.middle_name as middleName', 'users.last_name as lastName', 'users.extension_name as suffix', 'users.date_of_birth as dateOfBirth', 'users.email', 'users.mobile_number as phone', 'users.position', 'users.status', 'users.is_created_at as createdAt', 'user_roles.name as role', 'role_credentials.name as credentialType', 'region.name as region', 'organization.name as office')->get();
 
         return response()->json(['users' => $users]);
@@ -141,8 +160,14 @@ class AccountRegistrationController
     /** Record the approving administrator and notify the account owner of the decision. */
     public function update(Request $request, User $user): JsonResponse
     {
-        $this->authorize($request);
+        $this->authorize($request, 'administration.approve');
         abort_if(DB::table('user_roles')->where('role_id', $user->role_id)->where('name', 'System Administrator')->exists(), 404);
+        if (! ModuleAccess::isAdministrator($request->user())) {
+            abort_unless(
+                ModuleAccess::withinRegistrationScope($request->user(), (int) $user->region_id, (int) $user->org_id),
+                404,
+            );
+        }
         $data = $request->validate(['decision' => ['required', Rule::in(['Approved', 'Rejected'])]]);
         $approved = $data['decision'] === 'Approved';
         DB::transaction(function () use ($request, $user, $approved): void {

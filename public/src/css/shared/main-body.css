@@ -449,6 +449,23 @@ body::-webkit-scrollbar-thumb:hover,
   background: #f7f9f7;
   outline: none;
 }
+.notification-menu-item.is-unread {
+  background: #edf7ee;
+}
+.notification-menu-item.is-unread .notification-item-title {
+  color: #1b5e20;
+  font-weight: 800;
+}
+.notification-menu-item.is-unread::after {
+  position: absolute;
+  top: 18px;
+  right: 16px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2e7d32;
+  content: '';
+}
 .notification-item-icon,
 .notification-detail-icon {
   display: inline-flex;

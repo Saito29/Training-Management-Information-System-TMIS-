@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\AttachmentTypeCatalog;
 use App\Support\ModuleAccess;
 use App\Support\OperationalFields;
+use App\Support\OriginalInterfaceData;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Query\Builder;
@@ -26,9 +27,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OperationsController
 {
+    private const PARTICIPANT_RETENTION_DAYS = 30;
+
     private function query(Request $request, string $module): Builder
     {
-        abort_unless(in_array($module, ModuleAccess::MODULES, true) && $module !== 'evaluations', 404);
+        abort_unless(in_array($module, ModuleAccess::RECORD_MODULES, true) && $module !== 'evaluations', 404);
 
         return ModuleAccess::scope(DB::table($module)->whereNull('deleted_at'), $request->user());
     }
@@ -37,7 +40,7 @@ class OperationsController
     {
         $summary = [];
         if ($request->user()) {
-            foreach (ModuleAccess::MODULES as $module) {
+            foreach (ModuleAccess::RECORD_MODULES as $module) {
                 if ($module !== 'evaluations' && ModuleAccess::allows($request->user(), $module.'.read')) {
                     $summary[$module] = $this->query($request, $module)->where('is_active', true)->count();
                 }
@@ -104,6 +107,203 @@ class OperationsController
             'trainingAttachmentTypes' => $module === 'trainings' ? AttachmentTypeCatalog::names('training') : collect(),
             'history' => $selected && $module === 'trainings' ? DB::table('training_status_changes')->where('training_id', $selected->id)->orderByDesc('id')->get() : collect(),
         ]);
+    }
+
+    public function deletedParticipants(Request $request): View
+    {
+        ModuleAccess::authorizeNavigationPage($request, 'participants', 'details.trash');
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'per_page' => ['nullable', 'integer', Rule::in([20, 50, 100])],
+        ]);
+        $perPage = (int) ($filters['per_page'] ?? 20);
+        $participants = OriginalInterfaceData::query($request->user(), 'participants', true)
+            ->select([
+                'participants.id',
+                'participants.ui_id',
+                'participants.name',
+                'participants.first_name',
+                'participants.middle_name',
+                'participants.last_name',
+                'participants.suffix',
+                'participants.sex',
+                'participants.province',
+                'participants.municipality',
+                'participants.barangay',
+                'participants.is_active',
+                'participants.created_at',
+                'participants.deleted_at',
+                'participants.permanent_deletion_at',
+            ])
+            ->selectSub(DB::table('region')->select('name')->whereColumn('region.region_id', 'participants.region_id'), 'region_name')
+            ->selectSub(DB::table('organization')->select('name')->whereColumn('organization.org_id', 'participants.org_id'), 'office_name')
+            ->selectSub(DB::table('record_statuses')->select('name')->whereColumn('record_statuses.id', 'participants.record_status_id'), 'record_status_name')
+            ->when(array_key_exists('search', $filters), function (Builder $query) use ($filters): void {
+                $search = (string) $filters['search'];
+                if ($search === '') {
+                    return;
+                }
+                $term = '%'.$search.'%';
+                $query->where(function (Builder $query) use ($term): void {
+                    $query->where('participants.ui_id', 'like', $term)
+                        ->orWhere('participants.name', 'like', $term)
+                        ->orWhere('participants.first_name', 'like', $term)
+                        ->orWhere('participants.last_name', 'like', $term)
+                        ->orWhere('participants.province', 'like', $term)
+                        ->orWhere('participants.municipality', 'like', $term)
+                        ->orWhere('participants.barangay', 'like', $term)
+                        ->orWhereExists(fn (Builder $region): Builder => $region->selectRaw('1')
+                            ->from('region')
+                            ->whereColumn('region.region_id', 'participants.region_id')
+                            ->where('region.name', 'like', $term))
+                        ->orWhereExists(fn (Builder $office): Builder => $office->selectRaw('1')
+                            ->from('organization')
+                            ->whereColumn('organization.org_id', 'participants.org_id')
+                            ->where('organization.name', 'like', $term));
+                });
+            })
+            ->orderByDesc('participants.deleted_at')
+            ->orderByDesc('participants.id')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('admin.participants.details.trash', [
+            'participants' => $participants,
+            'canRestore' => ModuleAccess::isAdministrator($request->user()),
+        ]);
+    }
+
+    public function viewFarmerProfile(Request $request, ?string $id = null): View
+    {
+        ModuleAccess::authorize($request, 'participants.read');
+
+        if ($id === null
+            || ! preg_match('/^\d{8,}$/', $id)
+            || OriginalInterfaceData::findFarmerByNumber($request->user(), $id)) {
+            return view('admin.participants.id.view-farmer');
+        }
+
+        ModuleAccess::authorizeNavigationPage($request, 'participants', 'details.trash');
+        $record = OriginalInterfaceData::findFarmerByNumber($request->user(), $id, true);
+        abort_unless($record, 404);
+
+        $purgeBlockers = $this->participantPurgeBlockers((int) $record->id);
+        $permanentDeletionAt = $record->permanent_deletion_at
+            ? Carbon::parse($record->permanent_deletion_at)
+            : null;
+
+        return view('admin.participants.id.view-farmer', [
+            'deletedFarmerReview' => [
+                'participant' => $record,
+                'farmerNumber' => OriginalInterfaceData::farmerNumber($record),
+                'purgeBlockers' => $purgeBlockers,
+                'canRestore' => ModuleAccess::isAdministrator($request->user()),
+                'canPermanentlyDelete' => ModuleAccess::isAdministrator($request->user())
+                    && $permanentDeletionAt !== null
+                    && $permanentDeletionAt->lte(now())
+                    && $purgeBlockers === [],
+            ],
+        ]);
+    }
+
+    public function restoreDeletedParticipant(Request $request, string $participant): RedirectResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $record = OriginalInterfaceData::find($request->user(), 'participants', $participant, true);
+        abort_unless($record, 404);
+
+        DB::transaction(function () use ($request, $record): void {
+            $restored = DB::table('participants')
+                ->where('id', $record->id)
+                ->whereNotNull('deleted_at')
+                ->update([
+                    'deleted_at' => null,
+                    'permanent_deletion_at' => null,
+                    'is_active' => false,
+                    'updated_at' => now(),
+                ]);
+            abort_unless($restored === 1, 404);
+            $this->audit($request, 'participants', (int) $record->id, 'restored', [
+                'deleted_at' => $record->deleted_at,
+                'permanent_deletion_at' => $record->permanent_deletion_at,
+                'is_active' => (bool) $record->is_active,
+            ], [
+                'deleted_at' => null,
+                'permanent_deletion_at' => null,
+                'is_active' => false,
+            ]);
+        });
+
+        return redirect()->route('admin.participants.details.trash')
+            ->with('operation_message', 'Farmer profile restored as inactive.');
+    }
+
+    public function permanentlyDeleteParticipant(Request $request, string $participant): RedirectResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $record = OriginalInterfaceData::find($request->user(), 'participants', $participant, true);
+        abort_unless($record, 404);
+
+        $result = DB::transaction(function () use ($request, $record): array {
+            $lockedRecord = OriginalInterfaceData::query($request->user(), 'participants', true)
+                ->where('id', $record->id)
+                ->lockForUpdate()
+                ->first();
+            abort_unless($lockedRecord, 404);
+
+            if (! $lockedRecord->permanent_deletion_at
+                || Carbon::parse($lockedRecord->permanent_deletion_at)->isFuture()) {
+                return [
+                    'deleted' => false,
+                    'message' => 'This farmer cannot be permanently deleted before the scheduled date.',
+                ];
+            }
+
+            $blockers = $this->participantPurgeBlockers((int) $lockedRecord->id);
+            if ($blockers !== []) {
+                return [
+                    'deleted' => false,
+                    'message' => 'This farmer still has linked records. Remove or retain those records before attempting permanent deletion.',
+                ];
+            }
+
+            $this->audit($request, 'participants', (int) $lockedRecord->id, 'permanently_deleted', [
+                'deleted_at' => $lockedRecord->deleted_at,
+                'permanent_deletion_at' => $lockedRecord->permanent_deletion_at,
+                'ui_id' => $lockedRecord->ui_id,
+            ]);
+
+            $deleted = DB::table('participants')
+                ->where('id', $lockedRecord->id)
+                ->whereNotNull('deleted_at')
+                ->delete();
+            abort_unless($deleted === 1, 404);
+
+            return [
+                'deleted' => true,
+                'message' => 'Farmer profile permanently deleted.',
+            ];
+        });
+
+        return redirect()->route('admin.participants.details.trash')
+            ->with($result['deleted'] ? 'operation_message' : 'operation_error', $result['message']);
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function participantPurgeBlockers(int $participantId): array
+    {
+        $references = [
+            'Training attendance' => DB::table('training_participant')->where('participant_id', $participantId)->count(),
+            'Evaluation responses' => DB::table('evaluation_responses')->where('participant_id', $participantId)->count(),
+            'Assessment results' => DB::table('assessment_results')->where('participant_id', $participantId)->count(),
+            'Association memberships' => DB::table('participant_association_memberships')->where('participant_id', $participantId)->count(),
+            'Beneficiary office links' => DB::table('participant_beneficiaries')->where('participant_id', $participantId)->count(),
+            'Profile attachments' => DB::table('participant_attachments')->where('participant_id', $participantId)->count(),
+        ];
+
+        return array_filter($references, static fn (int $count): bool => $count > 0);
     }
 
     public function store(Request $request, string $module): JsonResponse|RedirectResponse
@@ -190,7 +390,12 @@ class OperationsController
         DB::transaction(function () use ($request, $module, $id): void {
             $record = $this->query($request, $module)->where('id', $id)->lockForUpdate()->first();
             abort_unless($record, 404);
-            DB::table($module)->where('id', $id)->update(['deleted_at' => now(), 'updated_at' => now()]);
+            $deletedAt = now();
+            $changes = ['deleted_at' => $deletedAt, 'updated_at' => $deletedAt];
+            if ($module === 'participants') {
+                $changes['permanent_deletion_at'] = $deletedAt->copy()->addDays(self::PARTICIPANT_RETENTION_DAYS);
+            }
+            DB::table($module)->where('id', $id)->update($changes);
             $this->audit($request, $module, $id, 'deleted');
         });
 

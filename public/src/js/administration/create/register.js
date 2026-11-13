@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
   syncOffices();
   next.disabled = true;
   fetch(form.dataset.optionsUrl, { headers: { Accept: 'application/json' } }).then(async response => {
-    if (!response.ok || response.redirected) throw new Error('Only an active System Administrator can register accounts.');
+    if (!response.ok || response.redirected) throw new Error('Your account does not have permission to register users, or your session has expired.');
     const data = await response.json();
     allowedRoles = new Set(data.roles); offices = data.offices; regions = data.regions;
     form.elements.role.replaceChildren(new Option('Select a role', ''), ...data.roles.map(role => new Option(role, role)));

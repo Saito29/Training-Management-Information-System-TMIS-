@@ -71,6 +71,19 @@ class DashboardDataTest extends TestCase
         $this->assertSame(1, array_sum($dashboard['trainingByMunicipality']['Perez'][2025]));
     }
 
+    public function test_dashboard_training_reports_use_numeric_database_ids_for_legacy_public_ids(): void
+    {
+        $dashboard = app(DashboardData::class)->build(['tmis-trainings' => [
+            ['id' => 'TRN-dc5fb474-35bf-4b2d-bef6-844a9879e2c7', '_db_id' => 42, 'status' => 'For review'],
+            ['id' => 'TRN-26-000007', '_db_id' => 43, 'status' => 'Approved & Accepted'],
+        ]]);
+
+        $this->assertSame([
+            'TRN-dc5fb474-35bf-4b2d-bef6-844a9879e2c7' => '42',
+            'TRN-26-000007' => 'TRN-26-000007',
+        ], $dashboard['trainingDisplayIds']);
+    }
+
     public function test_association_chart_uses_upload_dates_and_excludes_inactive_records(): void
     {
         $this->travelTo(Carbon::parse('2026-11-06 12:00:00', 'Asia/Manila'));

@@ -68,7 +68,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function actionLink(user, type, icon, file) {
     const link = document.createElement('a');
     link.className = 'btn account-action btn-outline-success';
-    link.href = `../id/${file}?id=${encodeURIComponent(user.id)}`;
+    const action = { 'edit-user': 'edit', 'view-user': 'view' }[file];
+    link.href = action
+      ? `../id/${action}/${encodeURIComponent(user.id)}`
+      : `../id/${file}?id=${encodeURIComponent(user.id)}`;
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
     link.title = `${type} user (opens in a new tab)`;
