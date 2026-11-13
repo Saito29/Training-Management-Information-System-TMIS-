@@ -10,6 +10,7 @@ use App\Http\Controllers\OriginalDocumentController;
 use App\Http\Controllers\OriginalInterfaceController;
 use App\Http\Controllers\SystemSettingsController;
 use App\Http\Middleware\Authentication\EnsureEligibleUser;
+use App\Support\AttachmentTypeCatalog;
 use App\Support\ModuleAccess;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -29,6 +30,8 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::patch('/system/locations/{kind}/{id}', [LocationController::class, 'update'])->whereIn('kind', ['region', 'province', 'district', 'municipality', 'barangay'])->whereNumber('id')->name('system.locations.update');
     Route::delete('/system/locations/{kind}/{id}', [LocationController::class, 'destroy'])->whereIn('kind', ['region', 'province', 'district', 'municipality', 'barangay'])->whereNumber('id')->name('system.locations.destroy');
     Route::post('/system/locations', [LocationController::class, 'store'])->name('system.locations.store');
+    Route::get('/system/locations/template', [LocationController::class, 'template'])->name('system.locations.template');
+    Route::post('/system/locations/import', [LocationController::class, 'import'])->middleware('throttle:5,1')->name('system.locations.import');
     Route::post('/ui/training-enrollment', [OriginalInterfaceController::class, 'enrollment'])->name('ui.enrollment');
     Route::post('/ui/documents/{module}/{id}', [OriginalDocumentController::class, 'store'])->name('ui.documents.store');
     Route::get('/ui/documents/{module}/{id}/{document}', [OriginalDocumentController::class, 'show'])->whereNumber('document')->name('ui.documents.show');
@@ -62,6 +65,10 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::post('/system/training-types', [SystemSettingsController::class, 'storeTrainingType'])->name('system.training-types.store');
     Route::patch('/system/training-types/{option}', [SystemSettingsController::class, 'updateTrainingType'])->whereNumber('option')->name('system.training-types.update');
     Route::delete('/system/training-types/{option}', [SystemSettingsController::class, 'deleteTrainingType'])->whereNumber('option')->name('system.training-types.destroy');
+    Route::get('/system/attachment-types/{category}', [SystemSettingsController::class, 'attachmentTypes'])->whereIn('category', array_keys(AttachmentTypeCatalog::CATEGORIES))->name('system.attachment-types.index');
+    Route::post('/system/attachment-types/{category}', [SystemSettingsController::class, 'storeAttachmentType'])->whereIn('category', array_keys(AttachmentTypeCatalog::CATEGORIES))->name('system.attachment-types.store');
+    Route::patch('/system/attachment-types/{category}/{option}', [SystemSettingsController::class, 'updateAttachmentType'])->whereIn('category', array_keys(AttachmentTypeCatalog::CATEGORIES))->whereNumber('option')->name('system.attachment-types.update');
+    Route::delete('/system/attachment-types/{category}/{option}', [SystemSettingsController::class, 'deleteAttachmentType'])->whereIn('category', array_keys(AttachmentTypeCatalog::CATEGORIES))->whereNumber('option')->name('system.attachment-types.destroy');
     Route::patch('/system/offices/{id}', [SystemSettingsController::class, 'updateOffice'])->whereNumber('id')->name('system.offices.update');
     Route::delete('/system/offices/{id}', [SystemSettingsController::class, 'deleteOffice'])->whereNumber('id')->name('system.offices.destroy');
     Route::post('/system/offices', [SystemSettingsController::class, 'office'])->name('system.offices.store');
@@ -122,14 +129,14 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::view('/app/admin/evaluation/encode/pre-test', 'admin.evaluation.encode.pre-test')->name('admin.evaluation.encode.pre-test');
     Route::view('/app/admin/evaluation/encode/rp-evaluation', 'admin.evaluation.encode.rp-evaluation')->name('admin.evaluation.encode.rp-evaluation');
     Route::view('/app/admin/evaluation/encode/training-evaluation', 'admin.evaluation.encode.training-evaluation')->name('admin.evaluation.encode.training-evaluation');
-    Route::view('/app/admin/evaluation/id/edit-post-test', 'admin.evaluation.id.edit-post-test')->name('admin.evaluation.id.edit-post-test');
-    Route::view('/app/admin/evaluation/id/edit-pre-test', 'admin.evaluation.id.edit-pre-test')->name('admin.evaluation.id.edit-pre-test');
-    Route::view('/app/admin/evaluation/id/edit-rp-evaluation', 'admin.evaluation.id.edit-rp-evaluation')->name('admin.evaluation.id.edit-rp-evaluation');
-    Route::view('/app/admin/evaluation/id/edit-training-evaluation', 'admin.evaluation.id.edit-training-evaluation')->name('admin.evaluation.id.edit-training-evaluation');
-    Route::view('/app/admin/evaluation/id/view-post-test', 'admin.evaluation.id.view-post-test')->name('admin.evaluation.id.view-post-test');
-    Route::view('/app/admin/evaluation/id/view-pre-test', 'admin.evaluation.id.view-pre-test')->name('admin.evaluation.id.view-pre-test');
-    Route::view('/app/admin/evaluation/id/view-rp-evaluation', 'admin.evaluation.id.view-rp-evaluation')->name('admin.evaluation.id.view-rp-evaluation');
-    Route::view('/app/admin/evaluation/id/view-training-evaluation', 'admin.evaluation.id.view-training-evaluation')->name('admin.evaluation.id.view-training-evaluation');
+    Route::view('/app/admin/evaluation/id/edit-post-test/{id?}', 'admin.evaluation.id.edit-post-test')->where('id', '[A-Za-z0-9:_-]+')->name('admin.evaluation.id.edit-post-test');
+    Route::view('/app/admin/evaluation/id/edit-pre-test/{id?}', 'admin.evaluation.id.edit-pre-test')->where('id', '[A-Za-z0-9:_-]+')->name('admin.evaluation.id.edit-pre-test');
+    Route::view('/app/admin/evaluation/id/edit-rp-evaluation/{id?}', 'admin.evaluation.id.edit-rp-evaluation')->where('id', '[A-Za-z0-9:_-]+')->name('admin.evaluation.id.edit-rp-evaluation');
+    Route::view('/app/admin/evaluation/id/edit-training-evaluation/{id?}', 'admin.evaluation.id.edit-training-evaluation')->where('id', '[A-Za-z0-9:_-]+')->name('admin.evaluation.id.edit-training-evaluation');
+    Route::view('/app/admin/evaluation/id/view-post-test/{id?}', 'admin.evaluation.id.view-post-test')->where('id', '[A-Za-z0-9:_-]+')->name('admin.evaluation.id.view-post-test');
+    Route::view('/app/admin/evaluation/id/view-pre-test/{id?}', 'admin.evaluation.id.view-pre-test')->where('id', '[A-Za-z0-9:_-]+')->name('admin.evaluation.id.view-pre-test');
+    Route::view('/app/admin/evaluation/id/view-rp-evaluation/{id?}', 'admin.evaluation.id.view-rp-evaluation')->where('id', '[A-Za-z0-9:_-]+')->name('admin.evaluation.id.view-rp-evaluation');
+    Route::view('/app/admin/evaluation/id/view-training-evaluation/{id?}', 'admin.evaluation.id.view-training-evaluation')->where('id', '[A-Za-z0-9:_-]+')->name('admin.evaluation.id.view-training-evaluation');
     Route::view('/app/admin/notification/details/all-notification', 'admin.notification.details.all-notification')->name('admin.notification.details.all-notification');
     // Notification composition is a system-administrator capability, including for direct URL access.
     Route::get('/app/admin/notification/notification', function (Request $request): View {
@@ -158,6 +165,10 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::view('/app/admin/training/id/edit-rp', 'admin.training.id.edit-rp')->name('admin.training.id.edit-rp');
     Route::view('/app/admin/training/id/edit-training/{id?}', 'admin.training.id.edit-training')->name('admin.training.id.edit-training');
     Route::view('/app/admin/training/id/view-rp', 'admin.training.id.view-rp')->name('admin.training.id.view-rp');
+    Route::view('/app/admin/training/id/view-training/{title}/{id}', 'admin.training.id.view-training')
+        ->where('title', '[A-Za-z0-9._-]+')
+        ->where('id', '[A-Za-z0-9:_-]+')
+        ->name('admin.training.id.view-training.title');
     Route::view('/app/admin/training/id/view-training/{id?}', 'admin.training.id.view-training')->name('admin.training.id.view-training');
     Route::view('/app/admin/training/update/for-approval', 'admin.training.update.for-approval')->name('admin.training.update.for-approval');
     Route::view('/app/admin/training/update/for-acceptance', 'admin.training.update.for-acceptance')->name('admin.training.update.for-acceptance');

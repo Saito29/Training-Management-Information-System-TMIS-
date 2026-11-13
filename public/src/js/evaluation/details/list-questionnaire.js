@@ -47,14 +47,21 @@ document.addEventListener('DOMContentLoaded', () => {
     updateOptions(filters[2], records.map((item) => item.region), 'All regions');
     render();
   }
-  function loadTable() {
+  async function loadTable(fetchLatest = false) {
     table.setAttribute('aria-busy', 'true');
     refresh.disabled = true;
     rows.innerHTML = `<tr class="questionnaire-loading-row"><td colspan="9"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span><span role="status">Loading ${inactiveOnly ? 'inactive ' : ''}questionnaires...</span></td></tr>`;
-    window.setTimeout(() => {
-      try { read(); }
-      finally { table.setAttribute('aria-busy', 'false'); refresh.disabled = false; }
-    }, 180);
+    try {
+      if (fetchLatest && window.TMIS_PAGE) await window.TmisStore.refresh();
+      read();
+    } catch (error) {
+      const message = error.message || 'Questionnaires could not be refreshed.';
+      if (typeof window.showQuestionnaireToast === 'function') window.showQuestionnaireToast(message, 'error');
+      else window.alert(message);
+    } finally {
+      table.setAttribute('aria-busy', 'false');
+      refresh.disabled = false;
+    }
   }
   function matching() {
     const needle = search.value.trim().toLowerCase();
@@ -67,9 +74,9 @@ document.addEventListener('DOMContentLoaded', () => {
     page = Math.min(Math.max(1, page), pages);
     const start = pageSize === Infinity ? 0 : (page - 1) * pageSize;
     const shown = pageSize === Infinity ? found : found.slice(start, start + pageSize);
-    rows.innerHTML = shown.map((item) => `<tr><td><div class="questionnaire-actions">${item.sample ? `<a class="btn btn-sm btn-outline-success" href="${window.TmisStore.escape(item.view)}?id=${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="View sample in new tab" title="View in new tab"><i class="bi bi-eye"></i></a>` : `
-      <a class="btn btn-sm btn-outline-success" href="${window.TmisStore.escape(item.view)}?id=${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="View ${esc(item.title)} in new tab" title="View in new tab"><i class="bi bi-eye"></i></a>
-      <a class="btn btn-sm btn-outline-primary" href="${window.TmisStore.escape(item.edit)}?id=${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="Edit ${esc(item.title)} in new tab" title="Edit in new tab"><i class="bi bi-pencil-square"></i></a>
+    rows.innerHTML = shown.map((item) => `<tr><td><div class="questionnaire-actions">${item.sample ? `    <a class="btn btn-sm btn-outline-success" href="${window.TmisStore.escape(item.view)}/${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="View sample in new tab" title="View in new tab"><i class="bi bi-eye"></i></a>` : `
+    <a class="btn btn-sm btn-outline-success" href="${window.TmisStore.escape(item.view)}/${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="View ${esc(item.title)} in new tab" title="View in new tab"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="${window.TmisStore.escape(item.edit)}/${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="Edit ${esc(item.title)} in new tab" title="Edit in new tab"><i class="bi bi-pencil-square"></i></a>
       <button class="btn btn-sm btn-outline-danger" type="button" data-action="delete" data-id="${esc(item.id)}" data-type="${esc(item.type)}" aria-label="Delete ${esc(item.title)}" title="Delete"><i class="bi bi-trash"></i></button>`}</div></td>
       <td><span class="badge ${['draft', 'inactive'].includes(item.status.toLowerCase()) ? 'text-bg-secondary' : item.sample ? 'text-bg-info' : 'text-bg-success'}">${esc(item.status)}</span></td>
       <td class="questionnaire-id" title="${esc(item.id)}">${esc(item.id)}</td><td>${esc(item.title)}</td><td>${esc(item.type)}</td><td>${esc(item.region || '-')}</td><td>${esc(item.office || '-')}</td><td>${window.TmisStore.escape(item.count)}</td><td>${date(item.createdAt)}</td></tr>`).join('') || `<tr><td colspan="9" class="text-center py-4">No ${inactiveOnly ? 'inactive ' : ''}questionnaires found.</td></tr>`;
@@ -93,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const last = pageSize === Infinity ? 1 : Math.max(1, Math.ceil(matching().length / pageSize));
     page = { first: 1, previous: page - 1, next: page + 1, last }[button.dataset.page]; render();
   }));
-  refresh.addEventListener('click', loadTable);
+  refresh.addEventListener('click', () => loadTable(true));
   $('#exportQuestionnaires').addEventListener('click', () => {
     const data = matching().filter((item) => !item.sample).map((item) => ({ Status: item.status, 'Questionnaire ID': item.id, 'Questionnaire Title': item.title, 'Questionnaire Type': item.type, Region: item.region, 'Implementing Office': item.office, 'Number of Items': item.count, 'Date Created': date(item.createdAt) }));
     if (!data.length) return;

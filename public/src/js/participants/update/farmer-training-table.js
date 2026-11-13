@@ -1,5 +1,30 @@
 document.addEventListener('DOMContentLoaded', () => {
-  let records = (window.TMIS_PAGE ? window.TmisStore.records('tmis-trainings').filter(item=>(item.participants||[]).includes(window.TmisStore.selectedId())).map(item=>({...item,category:item.type,date:item.startDate,location:item.venue,organizer:item.office,preTest:null,postTest:null,rating:null})) : [
+  const databaseRecords = () => {
+    const farmer = window.TmisStore.selected('tmis-farmers');
+    if (!farmer) return [];
+
+    const associationIds = new Set((farmer.associationMemberships || [])
+      .flatMap(membership => [membership.id, membership.databaseId])
+      .filter(Boolean)
+      .map(String));
+
+    return window.TmisStore.records('tmis-trainings')
+      .filter(training =>
+        (training.participants || []).includes(farmer.id)
+        || (training.associationIds || []).some(id => associationIds.has(String(id)))
+      )
+      .map(item => ({
+        ...item,
+        category: item.type,
+        date: item.startDate,
+        location: item.venue,
+        organizer: item.office,
+        preTest: null,
+        postTest: null,
+        rating: null,
+      }));
+  };
+  let records = (window.TMIS_PAGE ? databaseRecords() : [
     {
       id: 'modern-rice-production',
       title: 'Modern Rice Production',
@@ -141,6 +166,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const formatScore = (value) => value===null||value===undefined?'No results':`${Number(value).toFixed(2)}%`;
   const formatRating = (value) => value===null||value===undefined?'No results':`${Number(value).toFixed(2)} / 5`;
+  const titleSegment = title => String(title || 'training')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || 'training';
+  const trainingViewUrl = training => (table.dataset.trainingViewRoute || '/app/admin/training/id/view-training/__title__/__id__')
+    .replace('__title__', titleSegment(training.title))
+    .replace('__id__', encodeURIComponent(training.id));
   const searchableValue = (record, key) => {
     if (key === 'preTest' || key === 'postTest')
       return formatScore(record[key]);
@@ -191,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const titleCell = document.createElement('td');
     const titleLink = document.createElement('a');
     titleLink.className = 'training-table-title-link';
-    titleLink.href = `../../training/id/view-training/${encodeURIComponent(record.id)}`;
+    titleLink.href = trainingViewUrl(record);
     titleLink.target = '_blank';
     titleLink.rel = 'noopener';
     titleLink.textContent = record.title;
@@ -332,23 +366,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ? Math.min(pages, state.page + 1)
             : Number(button.dataset.page);
       render();
-      if (window.TMIS_PAGE) {
-        window.addEventListener('tmis:data-updated', () => {
-          records = window.TmisStore.records('tmis-trainings')
-            .filter((item) => (item.participants || []).includes(window.TmisStore.selectedId()))
-            .map((item) => ({
-              ...item,
-              category: item.type,
-              date: item.startDate,
-              location: item.venue,
-              organizer: item.office,
-              preTest: null,
-              postTest: null,
-              rating: null,
-            }));
-          refresh();
-        });
-      }
     });
     container?.addEventListener('change', (event) => {
       if (!event.target.matches('[data-page-size]')) return;
@@ -389,6 +406,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.XLSX.utils.book_append_sheet(workbook, worksheet, 'Training Records');
     window.XLSX.writeFile(workbook, 'farmer-training-records.xlsx');
   });
+
+  if (window.TMIS_PAGE) {
+    window.addEventListener('tmis:data-updated', () => {
+      records = databaseRecords();
+      refresh();
+    });
+  }
 
   render();
 });

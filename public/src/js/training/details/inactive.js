@@ -28,7 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
     'No current schedule or enrollment period',
   ];
   const pad = (value) => String(value).padStart(2, '0');
-  const records = (window.TMIS_PAGE ? window.TmisStore.records('tmis-trainings').filter(item => item.is_active === false).map(item => ({...item, status: 'Inactive'})) : Array.from({ length: 45 }, (_, index) => {
+  const databaseRecords = () => window.TmisStore.records('tmis-trainings').filter(item => item.is_active === false).map(item => ({...item, status: 'Inactive'}));
+  let records = (window.TMIS_PAGE ? databaseRecords() : Array.from({ length: 45 }, (_, index) => {
     const n = index + 1;
     const year = 2024 + (n % 3);
     const place = LOCATIONS[n % LOCATIONS.length];
@@ -311,11 +312,25 @@ document.addEventListener('DOMContentLoaded', () => {
       refresh();
     });
   });
-  $('#refreshReviewTable').addEventListener('click', () => {
+  $('#refreshReviewTable').addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      if (window.TMIS_PAGE) {
+        await window.TmisStore.refresh();
+        records = databaseRecords();
+      }
     state.sort = null;
     state.perPage = 10;
     $('#clearReviewFilters').click();
+    fillSelect('trainingTypeFilter', 'All training types', [...new Set(records.map((record) => record.type))].sort());
+    fillSelect('yearCoveredFilter', 'All years', [...new Set(records.map((record) => String(record.yearCovered)))].sort());
     notify('Inactive Trainings Refreshed', `${records.length} inactive training records loaded.`);
+    } catch (error) {
+      notify('Refresh Failed', error.message || 'Training records could not be refreshed.', true);
+    } finally {
+      button.disabled = false;
+    }
   });
   $('#exportReviewTable').addEventListener('click', () => {
     if (!window.XLSX) return notify('Export Unavailable', 'The Excel library could not be loaded.', true);

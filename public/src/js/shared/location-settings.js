@@ -6,12 +6,48 @@ document.addEventListener('DOMContentLoaded', () => {
   let regions = JSON.parse(document.querySelector('#registeredRegions').textContent).map(row=>({...row,kind:'region'}));
   const kind=form.elements.kind, region=form.elements.region_id, parent=form.elements.parent_id;
   const button=form.querySelector('[type="submit"]'), cancel=form.querySelector('[data-location-cancel]');
+  const importForm=document.querySelector('[data-location-import-form]');
+  const importModal=document.querySelector('#locationImportModal');
+  const importButton=document.querySelector('[data-location-import-submit]');
+  const importClose=document.querySelector('[data-location-import-close]');
+  const importFeedback=document.querySelector('#locationImportFeedback');
   let editing=null, saving=false;
+  let reloadAfterImport=false;
   const idOf = row => String(row.kind==='region' ? row.region_id : row.id);
   const find = (type,id) => (type==='region'?regions:rows).find(row=>row.kind===type&&idOf(row)===String(id));
   const search=document.querySelector('#registeredLocationSearch'),filterRegion=document.querySelector('#registeredLocationRegion'),filterDistrict=document.querySelector('#registeredLocationDistrict'),filterMunicipality=document.querySelector('#registeredLocationMunicipality'),pageSize=document.querySelector('#registeredLocationPageSize');
   const previous=document.querySelector('[data-location-previous]'),next=document.querySelector('[data-location-next]');
   const deleteModalElement=document.querySelector('#settingsDeleteModal');
+  importModal.addEventListener('hidden.bs.modal',()=>{if(reloadAfterImport)window.location.reload();});
+  importForm.addEventListener('submit',async event=>{
+    event.preventDefault();
+    if(!importForm.reportValidity()||importButton.disabled)return;
+    importButton.disabled=true;
+    importButton.setAttribute('aria-busy','true');
+    importFeedback.hidden=true;
+    try {
+      const response=await fetch(importForm.action,{method:'POST',credentials:'same-origin',headers:{Accept:'application/json','X-CSRF-TOKEN':importForm.querySelector('[name="_token"]').value},body:new FormData(importForm)});
+      const result=await response.json().catch(()=>null);
+      if(response.redirected)throw new Error('Your session expired. Sign in again.');
+      if(!response.ok||!result)throw new Error(Object.values(result?.errors||{}).flat()[0]||result?.message||'Unable to import the location workbook.');
+      importFeedback.className='alert alert-success mt-3 mb-0';
+      importFeedback.textContent=result.message;
+      importFeedback.setAttribute('role','status');
+      importFeedback.hidden=false;
+      importButton.hidden=true;
+      importClose.textContent='Close and refresh';
+      reloadAfterImport=true;
+    } catch(error) {
+      importFeedback.className='alert alert-danger mt-3 mb-0';
+      importFeedback.textContent=error.message||'Unable to import the location workbook.';
+      importFeedback.setAttribute('role','alert');
+      importFeedback.hidden=false;
+      window.TmisToast?.show(importFeedback.textContent,'error');
+    } finally {
+      importButton.disabled=false;
+      importButton.removeAttribute('aria-busy');
+    }
+  });
   function confirmDelete(recordName) {
     const modal=bootstrap.Modal.getOrCreateInstance(deleteModalElement);
     deleteModalElement.querySelector('[data-settings-delete-record]').textContent='“'+recordName+'” will be permanently removed from the location directory.';

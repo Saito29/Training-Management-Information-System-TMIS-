@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     barangay: byId('trainingFilterBarangay'), office: byId('trainingFilterOffice'),
   };
   const values = (record, ...keys) => keys.map(key => record?.[key]).find(value => value !== undefined && value !== null && String(value).trim() !== '') || '';
-  const location = record => values(record, 'location') || [values(record, 'barangay'), values(record, 'municipality'), values(record, 'province')].filter(Boolean).join(', ');
+  const trainingLocation = record => values(record, 'location') || [values(record, 'barangay'), values(record, 'municipality'), values(record, 'province')].filter(Boolean).join(', ');
   const dateLabel = value => {
     if (!value) return '—';
     const date = new Date(`${value}T00:00:00`);
@@ -20,8 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedId = '';
   let page = 1;
 
-  const forReview = records => records
-    .filter(record => String(record.status || '').toLowerCase() === 'for review')
+  const approvedTrainings = records => records
+    .filter(record => record.is_active !== false && String(record.status || record.workflowStatus || '').trim().toLowerCase() === 'approved & accepted')
     .map(record => ({
       ...record,
       id: String(record.id || ''),
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
       district: String(values(record, 'district') || ''), municipality: String(values(record, 'municipality') || ''),
       barangay: String(values(record, 'barangay') || ''), venue: String(values(record, 'venue', 'venue_location') || ''),
       startDate: String(values(record, 'startDate', 'start_date') || ''), endDate: String(values(record, 'endDate', 'end_date') || ''),
-      location: String(location(record)),
+      location: String(trainingLocation(record)),
     })).filter(record => record.id);
 
   const fillOptions = (select, label, options) => {
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const row = document.createElement('tr');
       const cell = document.createElement('td');
       cell.colSpan = 7; cell.className = 'training-picker-empty';
-      cell.textContent = trainings.length ? 'No trainings for review match these filters.' : 'No trainings in For Review status are available to link.';
+      cell.textContent = trainings.length ? 'No approved trainings match these filters.' : 'No active approved and accepted trainings are available to link.';
       row.append(cell); body.append(row);
     }
     visible.forEach(record => {
@@ -106,23 +106,64 @@ document.addEventListener('DOMContentLoaded', () => {
     for (let number = 1; number <= pageCount; number += 1) if (pageCount <= 5 || number === 1 || number === pageCount || Math.abs(number - page) <= 1) button(String(number), number, false, number === page);
     button('›', page + 1, page === pageCount);
   };
-  const select = id => { selectedId = id; const record = selectedTraining(); populateForm(record); render(); };
-  const refresh = () => { trainings = forReview(window.TmisStore.records('tmis-trainings')); hydrateFilters(); render(); };
+  const select = id => {
+    selectedId = id;
+    const record = selectedTraining();
+    populateForm(record);
+    render();
+    window.dispatchEvent(new CustomEvent('tmis:training-selected', { detail: record }));
+  };
+  const refresh = () => {
+    trainings = approvedTrainings(window.TmisStore.records('tmis-trainings'));
+    hydrateFilters();
+    const record = selectedTraining();
+    if (selectedId && !record) {
+      selectedId = '';
+      populateForm(null);
+    } else if (record) {
+      populateForm(record, { useDate: false });
+    }
+    render();
+    window.dispatchEvent(new CustomEvent('tmis:training-selected', { detail: selectedTraining() }));
+  };
 
   form.insertAdjacentHTML('afterbegin', '<input type="hidden" id="trainingId" name="trainingId">');
   Object.values(filters).forEach(select => select.addEventListener('change', () => { page = 1; render(); }));
   byId('trainingPickerSearch').addEventListener('input', () => { page = 1; render(); });
   byId('trainingPickerPageSize').addEventListener('change', () => { page = 1; render(); });
-  byId('refreshTrainingPicker').addEventListener('click', refresh);
+  byId('refreshTrainingPicker').addEventListener('click', async event => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      if (window.TMIS_PAGE) await window.TmisStore.refresh();
+      refresh();
+    } catch (error) {
+      byId('trainingPickerRange').textContent = error.message || 'Trainings could not be refreshed.';
+    } finally {
+      button.disabled = false;
+    }
+  });
   window.addEventListener('tmis:data-updated', refresh);
-  trainings = forReview(window.TmisStore.records('tmis-trainings'));
+  trainings = approvedTrainings(window.TmisStore.records('tmis-trainings'));
   hydrateFilters();
-  const saved = window.TMIS_ENCODED_RECORD || null;
-  const existingTrainingId = String(saved?.trainingId || new URLSearchParams(location.search).get('trainingId') || '');
+  const params = new URLSearchParams(location.search);
+  const resultKey = location.pathname.includes('/pre-test') ? 'tmis-pre-test-encoded'
+    : location.pathname.includes('/post-test') ? 'tmis-post-test-encoded'
+      : location.pathname.includes('/training-evaluation') ? 'tmis-training-evaluation-encoded'
+        : location.pathname.includes('/rp-evaluation') ? 'tmis-rp-evaluation-encoded'
+          : '';
+  const saved = window.TMIS_ENCODED_RECORD || (resultKey
+    ? window.TmisStore.records(resultKey).find(record => record.id === (params.get('record') || params.get('draft')))
+    : null);
+  const savedTraining = saved?.trainingId
+    ? trainings.find(record => record.id === String(saved.trainingId))
+    : trainings.find(record => String(record._db_id || '') === String(saved?.trainingDatabaseId || ''));
+  const existingTrainingId = String(savedTraining?.id || params.get('trainingId') || '');
   if (existingTrainingId && trainings.some(record => record.id === existingTrainingId)) { selectedId = existingTrainingId; populateForm(selectedTraining(), { useDate: !saved?.date }); }
   else if (saved?.trainingTitle) {
     populateForm({ id: String(saved.trainingId || ''), title: saved.trainingTitle, office: saved.trainingOrganization || '', location: saved.trainingLocation || '', venue: saved.trainingVenue || '', startDate: saved.trainingStartDate || '', endDate: saved.trainingEndDate || '' }, { useDate: !saved?.date });
   }
   render();
+  window.dispatchEvent(new CustomEvent('tmis:training-selected', { detail: selectedTraining() }));
   window.TMIS_TRAINING_PICKER = { select, refresh, selectedTraining };
 });

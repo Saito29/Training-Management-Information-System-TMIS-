@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const type = document.body.dataset.questionnaireType;
   if (!['pre-test', 'post-test', 'training-evaluation', 'rp-evaluation'].includes(type)) return;
-  const id = new URLSearchParams(location.search).get('id');
+  const id = window.TmisStore.selectedId();
   if (!id) return;
   const key = `tmis-${type}-questionnaires`;
   const header = document.querySelector('.content-header');

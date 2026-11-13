@@ -135,7 +135,7 @@ class OriginalInterfaceController
             $syncResponse = $this->sync($input, $data, $operations);
             $responseData = $syncResponse->getData(true);
             $participant = OriginalInterfaceData::find($request->user(), 'participants', $record['id']);
-            abort_unless($participant, 500, 'The newly registered farmer could not be loaded.');
+            abort_unless($participant !== null, 500, 'The newly registered farmer could not be loaded.');
 
             foreach ($associations->skip(1) as $association) {
                 DB::table('participant_association_memberships')->insert([
@@ -325,6 +325,43 @@ class OriginalInterfaceController
             ->exists();
     }
 
+    private function isParticipantEligibleForTraining(int $participantId, object $training): bool
+    {
+        if (DB::table('training_participant')->where('training_id', $training->id)->where('participant_id', $participantId)->exists()) {
+            return true;
+        }
+
+        if (DB::table('training_association as link')
+            ->join('associations', 'associations.id', '=', 'link.association_id')
+            ->join('participant_association_memberships as membership', 'membership.association_id', '=', 'associations.id')
+            ->where('link.training_id', $training->id)
+            ->where('associations.region_id', $training->region_id)
+            ->where('associations.org_id', $training->org_id)
+            ->where('membership.participant_id', $participantId)
+            ->exists()) {
+            return true;
+        }
+
+        $inTrainingRegion = DB::table('participant_beneficiaries')
+            ->where('participant_id', $participantId)
+            ->where('region_id', $training->region_id)
+            ->exists();
+        if (! $inTrainingRegion) {
+            return false;
+        }
+
+        $participant = DB::table('participants')->where('id', $participantId)->first(['province', 'municipality']);
+        if (! $participant) {
+            return false;
+        }
+
+        $trainingProvince = mb_strtolower(trim((string) $training->province));
+        $trainingMunicipality = mb_strtolower(trim((string) $training->municipality));
+
+        return ($trainingProvince === '' || mb_strtolower(trim((string) $participant->province)) === $trainingProvince)
+            && ($trainingMunicipality === '' || mb_strtolower(trim((string) $participant->municipality)) === $trainingMunicipality);
+    }
+
     public function data(Request $request, OriginalInterfaceData $data): JsonResponse
     {
         return response()->json($data->bootstrap($request->user()));
@@ -341,7 +378,7 @@ class OriginalInterfaceController
                 foreach ($input['deletes'] as $id) {
                     ModuleAccess::authorize($request, $module.'.delete');
                     $record = OriginalInterfaceData::find($request->user(), $module, $id);
-                    abort_unless($record, 404);
+                    abort_unless($record !== null, 404);
                     if ($module === 'evaluations') {
                         DB::table('assessment_results')->where('id', $record->id)->update(['deleted_at' => now(), 'updated_at' => now()]);
                         AuditTrail::record($request, 'assessment_deleted_'.$record->id, $request->user(), category: 'evaluation');
@@ -612,7 +649,7 @@ class OriginalInterfaceController
         if ($module === 'associations' && array_key_exists('members', $record)) {
             ModuleAccess::authorize($request, 'associations.'.$permissionAction);
             $owner = DB::table('associations')->where('id', $databaseId)->first();
-            abort_unless($owner, 404);
+            abort_unless($owner !== null, 404);
             $members = [];
             foreach ($record['members'] as $member) {
                 $farmer = OriginalInterfaceData::find($request->user(), 'participants', (string) ($member['farmer_id'] ?? $member['id'] ?? ''));
@@ -708,7 +745,7 @@ class OriginalInterfaceController
         $data = $request->validate(['id' => ['required', 'string', 'max:100'], 'participants' => ['present', 'array', 'max:1000'], 'participants.*' => ['string', 'distinct', 'max:100'], 'version' => ['required', 'integer']]);
         DB::transaction(function () use ($request, $data): void {
             $owner = OriginalInterfaceData::find($request->user(), 'trainings', $data['id']);
-            abort_unless($owner, 404);
+            abort_unless($owner !== null, 404);
             $owner = DB::table('trainings')->where('id', $owner->id)->lockForUpdate()->first();
             abort_unless($owner->status === 'For review', 409, 'Return the training to review before editing enrollment.');
             abort_unless($owner->ui_version === $data['version'], 409, 'The training changed. Refresh before saving enrollment.');
@@ -887,7 +924,7 @@ class OriginalInterfaceController
                 if (! $found) {
                     $found = OriginalInterfaceData::query($request->user(), 'associations')->where('name', $association)->first();
                 }
-                abort_unless($found, 422, 'Select a registered association.');
+                abort_unless($found !== null, 422, 'Select a registered association.');
                 if (! $existing) {
                     abort_unless(
                         $found->is_active
@@ -929,20 +966,27 @@ class OriginalInterfaceController
             $existing = DB::table('assessment_results')->where('id', $existing->id)->lockForUpdate()->first();
             abort_unless((int) ($item['_version'] ?? 0) === $existing->ui_version, 409, 'This result changed. Refresh before saving.');
         }
+        $state = ($item['status'] ?? '') === 'draft' ? 'draft' : 'complete';
         $questionnaire = OriginalInterfaceData::find($request->user(), 'questionnaires', (string) ($item['questionnaireId'] ?? ''));
-        abort_unless($questionnaire && $questionnaire->is_active, 422, 'Select an active questionnaire from your office.');
+        $definition = OriginalInterfaceData::unpack($questionnaire?->ui_data);
+        $questionnaireStatus = strtolower(trim((string) ($definition['questionnaireState'] ?? ($questionnaire?->is_active ? 'Active' : 'Inactive'))));
+        abort_unless(
+            $questionnaire !== null && ($questionnaire->is_active || ($state === 'draft' && $questionnaireStatus === 'draft')),
+            422,
+            'Select an active questionnaire from your office before completing an assessment.',
+        );
         $slug = substr($key, 5, -8);
         abort_unless($questionnaire->kind === (OriginalInterfaceData::KINDS[$slug] ?? null), 422, 'The questionnaire type does not match this assessment.');
         $farmer = OriginalInterfaceData::find($request->user(), 'participants', (string) ($item['farmerId'] ?? ''));
-        $state = ($item['status'] ?? '') === 'draft' ? 'draft' : 'complete';
+        $hasQuestionnaireOffice = $farmer && $this->isParticipantBeneficiaryOf($farmer->id, (int) $questionnaire->region_id, (int) $questionnaire->org_id);
+        $hasTrainingContext = ! empty($item['trainingId']);
         if ($state === 'complete') {
-            abort_unless($farmer && $farmer->is_active && $this->isParticipantBeneficiaryOf($farmer->id, (int) $questionnaire->region_id, (int) $questionnaire->org_id), 422, 'Select an active participant from the questionnaire office.');
+            abort_unless($farmer && $farmer->is_active && ($hasQuestionnaireOffice || $hasTrainingContext), 422, 'Select an active participant from the questionnaire office or selected training.');
         }
-        if ($farmer) {
-            abort_unless($this->isParticipantBeneficiaryOf($farmer->id, (int) $questionnaire->region_id, (int) $questionnaire->org_id), 422, 'Participant and questionnaire offices must match.');
+        if ($farmer && ! $hasQuestionnaireOffice && ! $hasTrainingContext) {
+            abort(422, 'Participant and questionnaire offices must match.');
         }
         $date = Validator::make($item, ['date' => [$state === 'complete' ? 'required' : 'nullable', 'date_format:Y-m-d']])->validate();
-        $definition = OriginalInterfaceData::unpack($questionnaire->ui_data);
         $score = $item['score'] ?? null;
         $ratings = $item['ratings'] ?? [];
         if (in_array($questionnaire->kind, ['Pre-test', 'Post-test'], true)) {
@@ -982,8 +1026,9 @@ class OriginalInterfaceController
             $training = OriginalInterfaceData::find($request->user(), 'trainings', $item['trainingId']);
             abort_unless($training && $training->org_id === $questionnaire->org_id && $training->region_id === $questionnaire->region_id, 422, 'Select a training in the questionnaire office.');
             $training = DB::table('trainings')->where('id', $training->id)->lockForUpdate()->first();
+            abort_unless($training !== null, 422, 'The selected training is unavailable.');
             abort_if($state === 'complete' && ($training->status !== 'Approved & Accepted' || ! $training->is_active), 422, 'Complete responses require an active approved and accepted training.');
-            abort_unless($farmer && DB::table('training_participant')->where('training_id', $training->id)->where('participant_id', $farmer->id)->exists(), 422, 'The participant must be enrolled in this training.');
+            abort_unless($farmer && $this->isParticipantEligibleForTraining($farmer->id, $training), 422, 'The participant must be enrolled, belong to a linked association, or match the training location.');
             if (in_array($questionnaire->kind, ['Pre-test', 'Post-test'], true)) {
                 abort_unless(DB::table('training_questionnaire')->where('training_id', $training->id)->where('questionnaire_id', $questionnaire->id)->exists(), 422, 'The questionnaire must be assigned to this training.');
             }

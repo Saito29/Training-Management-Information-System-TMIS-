@@ -1996,7 +1996,7 @@ class="layout-fixed"
       {"pretest":[{"id":"PRE-GEN-01","name":"General Knowledge Assessment (Pre-test)","itemCount":12,"averageCorrect":8.1},{"id":"PRE-CROP-01","name":"Crop Production Pre-test","itemCount":12,"averageCorrect":8.328}],"posttest":[{"id":"POST-GEN-01","name":"General Knowledge Assessment (Post-test)","itemCount":12,"averageCorrect":10.2},{"id":"POST-CROP-01","name":"Crop Production Post-test","itemCount":12,"averageCorrect":10.5168}]}
     </script>
     <script src="{{ asset('src/js/training/id/view-training-assessments.js') }}"></script>
-    <script src="{{ asset('src/js/training/id/edit-training-participants.js?v=training-participant-controls-4') }}"></script>
+    <script src="{{ asset('src/js/training/id/edit-training-participants.js?v=farmer-number-display-1') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-highlights.js') }}"></script>
     <script src="{{ asset('src/js/training/id/edit-training-highlights.js') }}"></script>
     <script src="{{ asset('src/js/training/id/edit-training-attachments-cards.js') }}"></script>

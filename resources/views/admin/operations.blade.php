@@ -68,10 +68,10 @@
     </form></div></section>
     @endif
     @if($selected && $module === 'trainings')
-    <section class="card my-4"><div class="card-body"><h2>Attachments</h2><ul>@forelse($attachments as $attachment)<li>{{ $attachment->kind }}: <a href="{{ route('operations.trainings.download', [$selected->id, $attachment->id]) }}">{{ $attachment->original_name }}</a></li>@empty<li>No attachments uploaded.</li>@endforelse</ul>
+    <section class="card my-4"><div class="card-body"><h2>Attachments</h2><ul>@forelse($attachments as $attachment)<li>{{ $attachment->original_kind ?? $attachment->kind }}: <a href="{{ route('operations.trainings.download', [$selected->id, $attachment->id]) }}">{{ $attachment->original_name }}</a></li>@empty<li>No attachments uploaded.</li>@endforelse</ul>
     @if(\App\Support\ModuleAccess::allows(auth()->user(), 'trainings.create') && $selected->status === 'For review')
     <form method="post" action="{{ route('operations.trainings.attachments', $selected->id) }}" enctype="multipart/form-data" class="row g-3">@csrf
-    <label class="col-md-4">Attachment type<select name="kind" class="form-select" required><option value="">Select attachment type</option>@foreach(['Training design', 'Attendance', 'Report', 'Other'] as $kind)<option>{{ $kind }}</option>@endforeach</select></label>
+    <label class="col-md-4">Attachment type<select name="kind" class="form-select" required><option value="">Select attachment type</option>@foreach($trainingAttachmentTypes as $kind)<option>{{ $kind }}</option>@endforeach</select></label>
     <label class="col-md-6">Document (PDF, DOC, DOCX; 10 MB maximum)<input name="file" type="file" class="form-control" required accept=".pdf,.doc,.docx"></label><div><button class="btn btn-success">Upload</button></div></form>
     @endif
     @if(\App\Support\ModuleAccess::allows(auth()->user(), 'trainings.edit') && $selected->status === 'For review')

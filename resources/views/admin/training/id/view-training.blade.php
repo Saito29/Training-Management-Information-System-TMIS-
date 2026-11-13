@@ -1930,7 +1930,7 @@ class="layout-fixed"
     <script src="{{ asset('src/js/training/id/view-training-assessments.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="{{ asset('src/js/training/id/view-training.js?v=training-status-badge-1') }}"></script>
-    <script src="{{ asset('src/js/training/id/view-training-participants.js') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training-participants.js?v=farmer-number-display-1') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-feedback-filters.js') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-pretest.js') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-posttest.js') }}"></script>

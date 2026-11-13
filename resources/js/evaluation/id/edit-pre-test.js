@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const config = configs[document.body.dataset.questionnaireType];
   if (!config) return;
   const form = document.getElementById(config[1]);
-  const id = new URLSearchParams(location.search).get('id');
+  const id = window.TmisStore.selectedId();
   if (!form) return;
   let record = null;
   try {
@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const status = document.getElementById('preTestRegisterStatus');
   if (!form || !status) return;
   const storageKey = 'tmis-pre-test-questionnaires';
-  let editId = new URLSearchParams(location.search).get('id');
+  let editId = window.TmisStore.selectedId();
   if (editId) {
     try {
       const saved = JSON.parse(window.TmisStore.getItem(storageKey) || '[]');

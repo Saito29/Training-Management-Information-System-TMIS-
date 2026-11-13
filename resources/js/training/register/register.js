@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const barangay = document.querySelector('#barangay_id');
   const trainerList = document.querySelector('#trainer_list');
   const addTrainerButton = document.querySelector('#add_trainer');
+  const associationSelect = form?.elements.namedItem('associationIds[]');
   const submitButton = form?.querySelector('button[type="submit"]');
 
   if (!form || !steps.length || !fieldsets.length) return;
@@ -37,6 +38,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const registration = window.TMIS_PAGE?.registration;
+  const titleSegment = title => String(title || 'training')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || 'training';
+  const trainingViewUrl = (title, id) => (form.dataset.trainingViewRoute || '../id/view-training/__title__/__id__')
+    .replace('__title__', titleSegment(title))
+    .replace('__id__', encodeURIComponent(id));
   const locations = registration?.locations;
   if (Array.isArray(locations) && Array.isArray(registration.regions)) {
     const regionRows = registration.regions;
@@ -74,6 +84,30 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
     locationFields.forEach(populateLocation);
+  }
+
+  function refreshAssociationOptions() {
+    if (!(associationSelect instanceof HTMLSelectElement)) return;
+
+    const selectedIds = new Set([...associationSelect.selectedOptions].map(option => option.value));
+    const associations = window.TmisStore.records('tmis-farmer-associations')
+      .filter(record => record.status === 'Active' && record.is_active !== false)
+      .sort((left, right) => String(left.association_name || left.name || '').localeCompare(String(right.association_name || right.name || ''), 'en-PH'));
+
+    associationSelect.replaceChildren(...associations.map(record => {
+      const option = new Option(
+        [record.association_name || record.name || record.id, record.municipality, record.province].filter(Boolean).join(' — '),
+        String(record.id),
+      );
+      option.selected = selectedIds.has(option.value);
+      return option;
+    }));
+    associationSelect.disabled = associations.length === 0;
+  }
+
+  if (associationSelect instanceof HTMLSelectElement) {
+    refreshAssociationOptions();
+    window.addEventListener('tmis:data-updated', refreshAssociationOptions);
   }
 
   const trainerSelect = trainerList?.querySelector('select[name="trainer_name[]"]');
@@ -316,19 +350,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!form.reportValidity()) return;
     setSubmitLoading(true);
     try {
-      const values = Object.fromEntries(new FormData(form));
+      const formData = new FormData(form);
+      const values = Object.fromEntries(formData);
       const temporaryId = 'TRN-TEMP-' + crypto.randomUUID();
       for (const name of ['region_id','district_id','province_id','municipality_id','barangay_id']) {
         const control = form.elements.namedItem(name);
         if (control?.selectedOptions[0]?.value) values[name.replace('_id','')] = control.selectedOptions[0].textContent;
       }
-      const record = {...values, id:temporaryId, trainers:new FormData(form).getAll('trainer_rp_id[]').filter(Boolean).map(id=>({id}))};
+      const record = {
+        ...values,
+        id: temporaryId,
+        trainers: formData.getAll('trainer_rp_id[]').filter(Boolean).map(id => ({id})),
+        associationIds: formData.getAll('associationIds[]').filter(Boolean),
+      };
       const records = window.TmisStore.records('tmis-trainings');
       const result = await window.TmisStore.setItem('tmis-trainings', JSON.stringify([...records,record]));
       const id = result?.idMappings?.[temporaryId];
       if (!id) throw new Error('The training was saved, but its reference ID could not be resolved. Refresh the training list to continue.');
       window.TmisToast?.show('Record saved successfully.', 'success');
-      location.assign(`../id/view-training/${encodeURIComponent(id)}`);
+      location.assign(trainingViewUrl(record.title || record.training_title, id));
     } catch (error) {
       window.TmisToast?.show(error.message || 'The record could not be saved.', 'error');
     } finally { setSubmitLoading(false); }

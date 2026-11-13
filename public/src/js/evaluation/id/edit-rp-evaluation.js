@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const config = configs[document.body.dataset.questionnaireType];
   if (!config) return;
   const form = document.getElementById(config[1]);
-  const id = new URLSearchParams(location.search).get('id');
+  const id = window.TmisStore.selectedId();
   if (!form) return;
   let record = null;
   try {
@@ -366,7 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   byId('saveRpDraft').addEventListener('click', async () => await save('Draft'));
   form.addEventListener('submit', async (event) => { event.preventDefault(); await save('Active'); });
-  const draftId = new URLSearchParams(window.location.search).get('id');
+  const draftId = window.TmisStore.selectedId();
   if (draftId) {
     try {
       const saved = JSON.parse(window.TmisStore.getItem(storageKey) || '[]');

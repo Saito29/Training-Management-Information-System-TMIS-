@@ -13,6 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
           "'": '&#39;',
         })[c]
     );
+  const trainingTitleSegment = title => String(title || 'training')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || 'training';
 
   /* ------------------------------------------------------------------
      Reference data (mock). Province → Municipality → Barangay hierarchy
@@ -145,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return d.toISOString().slice(0, 10);
   };
 
-  const records = (window.TMIS_PAGE ? window.TmisStore.records('tmis-trainings').filter(item => item.status === 'For Acceptance') : []);
+  let records = (window.TMIS_PAGE ? window.TmisStore.records('tmis-trainings').filter(item => item.status === 'For Acceptance') : []);
   for (let n = 1; !window.TMIS_PAGE && n <= 48; n++) {
     const year = 2024 + (n % 3),
       id = `TRN-${year}-${pad(n, 3)}`,
@@ -468,7 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pendingAcceptance = r.status === 'For Acceptance';
     const mayAccept = Boolean(window.TMIS_PAGE?.administrator);
     const mayRevert = mayAccept || window.TMIS_PAGE?.permissions?.includes('trainings.accept');
-    return `<td><div class="table-row-actions">${pendingAcceptance && mayAccept ? `<button type="button" class="btn table-action-button forward-action" data-accept="${id}" title="Approve next status: Approved & Accepted" aria-label="Approve ${id} and move to Approved & Accepted"><i class="bi bi-patch-check-fill"></i></button>` : ''}<a class="btn table-action-button view-action" href="../id/view-training/${q}" target="_blank" rel="noopener" title="View training (opens in a new tab)" aria-label="View ${id}"><i class="bi bi-eye-fill"></i></a><a class="btn table-action-button edit-action" href="../id/edit-training/${q}" target="_blank" rel="noopener" title="Edit training (opens in a new tab)" aria-label="Edit ${id}"><i class="bi bi-pencil-fill"></i></a>${pendingAcceptance && mayRevert ? `<button type="button" class="btn table-action-button remarks-action" data-reject="${id}" title="Revert status to an earlier stage" aria-label="Revert ${id} to an earlier stage"><i class="bi bi-arrow-counterclockwise"></i></button>` : ''}</div></td>`;
+    return `<td><div class="table-row-actions">${pendingAcceptance && mayAccept ? `<button type="button" class="btn table-action-button forward-action" data-accept="${id}" title="Approve next status: Approved & Accepted" aria-label="Approve ${id} and move to Approved & Accepted"><i class="bi bi-patch-check-fill"></i></button>` : ''}<a class="btn table-action-button view-action" href="../id/view-training/${trainingTitleSegment(r.title || r.training_title)}/${q}" target="_blank" rel="noopener" title="View training (opens in a new tab)" aria-label="View ${id}"><i class="bi bi-eye-fill"></i></a><a class="btn table-action-button edit-action" href="../id/edit-training/${q}" target="_blank" rel="noopener" title="Edit training (opens in a new tab)" aria-label="Edit ${id}"><i class="bi bi-pencil-fill"></i></a>${pendingAcceptance && mayRevert ? `<button type="button" class="btn table-action-button remarks-action" data-reject="${id}" title="Revert status to an earlier stage" aria-label="Revert ${id} to an earlier stage"><i class="bi bi-arrow-counterclockwise"></i></button>` : ''}</div></td>`;
   };
   const render = () => {
     const all = sorted(),
@@ -783,9 +787,27 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ------------------------------------------------------------------
      Refresh / export
   ------------------------------------------------------------------ */
-  $('#refreshReviewTable').addEventListener('click', () => {
-    refresh();
-    notify('Trainings Refreshed', 'Trainings refreshed successfully.');
+  $('#refreshReviewTable').addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      if (window.TMIS_PAGE) {
+        await window.TmisStore.refresh();
+        records = window.TmisStore.records('tmis-trainings').filter(item => item.status === 'For Acceptance');
+        setOptions(
+          '#yearCoveredFilter',
+          'All years',
+          uniq(records.map(record => String(record.yearCovered))),
+          state.year
+        );
+      }
+      refresh();
+      notify('Trainings Refreshed', 'Trainings refreshed successfully.');
+    } catch (error) {
+      notify('Refresh Failed', error.message || 'Training records could not be refreshed.', true);
+    } finally {
+      button.disabled = false;
+    }
   });
   $('#exportReviewTable').addEventListener('click', () => {
     if (!window.XLSX) {

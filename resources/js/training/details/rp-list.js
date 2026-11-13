@@ -191,7 +191,18 @@ document.addEventListener('DOMContentLoaded', () => {
     columnSearch.clear(); byId('rpColumnFilters').querySelectorAll('input').forEach((input) => { input.value = ''; });
     page = 1; render();
   });
-  byId('rpRefresh').addEventListener('click', load);
+  byId('rpRefresh').addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      if (window.TMIS_PAGE) await window.TmisStore.refresh();
+      load();
+    } catch (error) {
+      window.alert(error.message || 'Resource-person records could not be refreshed.');
+    } finally {
+      button.disabled = false;
+    }
+  });
   const clearUndo = () => {
     clearInterval(undoTimer); undoTimer = null; pendingUndo = null;
     sessionStorage.removeItem(undoKey);
@@ -245,6 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
   window.addEventListener('storage', (event) => { if (event.key === storageKey) load(); });
+  window.addEventListener('tmis:data-updated', load);
   load();
   try {
     const savedUndo = JSON.parse(sessionStorage.getItem(undoKey) || 'null');

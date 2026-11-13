@@ -1329,7 +1329,7 @@ class="layout-fixed"
                     <div class="training-table-content">
                       <div class="review-pagination training-pagination" id="trainingPaginationTop" aria-label="Top training table pagination"></div>
                       <div class="table-responsive review-table-scroll training-table-scroll">
-                        <table class="table review-data-table training-data-table align-middle" id="trainingDataTable">
+                        <table class="table review-data-table training-data-table align-middle" id="trainingDataTable" data-training-view-route="{{ route('admin.training.id.view-training.title', ['title' => '__title__', 'id' => '__id__']) }}">
                           <caption class="visually-hidden">Training records for this farmer</caption>
                           <thead>
                             <tr>

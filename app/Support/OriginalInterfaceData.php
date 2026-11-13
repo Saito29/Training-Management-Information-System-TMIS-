@@ -60,6 +60,86 @@ class OriginalInterfaceData
 
     }
 
+    public static function findTrainingForRead(User $user, string $id): ?object
+    {
+        if (! ModuleAccess::allows($user, 'trainings.read')) {
+            return null;
+        }
+
+        $training = self::find($user, 'trainings', $id);
+        if ($training || ModuleAccess::isAdministrator($user) || ! $user->region_id) {
+            return $training;
+        }
+
+        return DB::table('trainings')
+            ->whereNull('deleted_at')
+            ->where('region_id', $user->region_id)
+            ->where(function (Builder $query) use ($id): void {
+                self::whereTrainingId($query, $id);
+            })
+            ->first();
+    }
+
+    private static function trainingDataQuery(User $user): Builder
+    {
+        $query = self::query($user, 'trainings');
+        $trainingId = self::trainingViewPageId();
+        if (! ModuleAccess::allows($user, 'trainings.read')
+            || $trainingId === ''
+            || ModuleAccess::isAdministrator($user)
+            || ! $user->region_id) {
+            return $query;
+        }
+
+        $regionalTraining = DB::table('trainings')
+            ->whereNull('deleted_at')
+            ->where('region_id', $user->region_id)
+            ->where(function (Builder $regionalQuery) use ($trainingId): void {
+                self::whereTrainingId($regionalQuery, $trainingId);
+            });
+
+        return DB::table('trainings')
+            ->whereNull('deleted_at')
+            ->where(function (Builder $detailQuery) use ($query, $regionalTraining): void {
+                $detailQuery
+                    ->whereIn('id', $query->select('id'))
+                    ->orWhereIn('id', $regionalTraining->select('id'));
+            });
+    }
+
+    private static function trainingViewPageId(): string
+    {
+        $page = (string) request()->header('X-TMIS-PAGE', request()->fullUrl());
+        $path = (string) parse_url($page, PHP_URL_PATH);
+        if (preg_match('~(?:^|/)app/admin/training/id/view-training/(?:[^/]+/)?([^/]+)$~', $path, $matches) === 1) {
+            return rawurldecode($matches[1]);
+        }
+
+        if (preg_match('~(?:^|/)app/admin/training/id/view-training/?$~', $path) !== 1) {
+            return '';
+        }
+
+        parse_str((string) parse_url($page, PHP_URL_QUERY), $query);
+
+        return (string) ($query['id'] ?? '');
+    }
+
+    private static function isTrainingViewPage(): bool
+    {
+        $page = (string) request()->header('X-TMIS-PAGE', request()->fullUrl());
+        $path = (string) parse_url($page, PHP_URL_PATH);
+
+        return preg_match('~(?:^|/)app/admin/training/id/view-training(?:/|$)~', $path) === 1;
+    }
+
+    private static function whereTrainingId(Builder $query, string $id): void
+    {
+        $query->where('ui_id', $id);
+        if (ctype_digit($id)) {
+            $query->orWhere(fn (Builder $numeric): Builder => $numeric->whereNull('ui_id')->where('id', (int) $id));
+        }
+    }
+
     public static function unpack(?string $payload): array
     {
 
@@ -100,8 +180,9 @@ class OriginalInterfaceData
 
         $recordStatuses = DB::table('record_statuses')->get(['id', 'name', 'is_active', 'is_builtin'])->keyBy('id');
 
-        $trainingDocuments = DB::table('training_attachments')->whereIn('training_id', self::query($user, 'trainings')->select('id'))->get()->groupBy('training_id');
+        $trainingIds = self::trainingDataQuery($user)->select('id');
 
+        $trainingDocuments = DB::table('training_attachments')->whereIn('training_id', $trainingIds)->get()->groupBy('training_id');
         $associationDocuments = DB::table('association_attachments')->whereIn('association_id', self::query($user, 'associations')->select('id'))->get()->groupBy('association_id');
 
         $participantDocuments = DB::table('participant_attachments')->whereIn('participant_id', self::query($user, 'participants')->select('id'))->get()->groupBy('participant_id');
@@ -146,14 +227,14 @@ class OriginalInterfaceData
             ])
             ->groupBy('participant_id');
 
-        $trainingMembers = DB::table('training_participant')->whereIn('training_id', self::query($user, 'trainings')->select('id'))->join('participants', 'training_participant.participant_id', '=', 'participants.id')->get(['training_id', 'participants.id', 'participants.ui_id'])->groupBy('training_id');
+        $trainingMembers = DB::table('training_participant')->whereIn('training_id', $trainingIds)->join('participants', 'training_participant.participant_id', '=', 'participants.id')->get(['training_id', 'participants.id', 'participants.ui_id'])->groupBy('training_id');
 
         $trainingAssociations = collect();
         $associationTrainings = collect();
         if (ModuleAccess::allows($user, 'associations.read') && ModuleAccess::allows($user, 'trainings.read')) {
             $trainingAssociations = DB::table('training_association')
                 ->join('associations', 'training_association.association_id', '=', 'associations.id')
-                ->whereIn('training_association.training_id', self::query($user, 'trainings')->select('id'))
+                ->whereIn('training_association.training_id', $trainingIds)
                 ->whereIn('training_association.association_id', self::query($user, 'associations')->select('id'))
                 ->get(['training_association.training_id', 'training_association.association_id', 'associations.ui_id as association_ui_id'])
                 ->groupBy('training_id');
@@ -161,7 +242,7 @@ class OriginalInterfaceData
                 ->join('trainings', 'link.training_id', '=', 'trainings.id')
                 ->join('associations', 'link.association_id', '=', 'associations.id')
                 ->leftJoin('organization as training_offices', 'training_offices.org_id', '=', 'trainings.org_id')
-                ->whereIn('link.training_id', self::query($user, 'trainings')->select('id'))
+                ->whereIn('link.training_id', $trainingIds)
                 ->whereIn('link.association_id', self::query($user, 'associations')->select('id'))
                 ->whereNull('trainings.deleted_at')
                 ->orderBy('trainings.start_date')
@@ -180,16 +261,19 @@ class OriginalInterfaceData
                 ->groupBy('association_id');
         }
 
-        $highlights = DB::table('training_highlights')->whereIn('training_id', self::query($user, 'trainings')->select('id'))->get()->groupBy('training_id');
+        $highlights = DB::table('training_highlights')->whereIn('training_id', $trainingIds)->get()->groupBy('training_id');
 
-        $trainingQuestionnaires = DB::table('training_questionnaire')->whereIn('training_id', self::query($user, 'trainings')->select('id'))->join('questionnaires', 'training_questionnaire.questionnaire_id', '=', 'questionnaires.id')->whereNull('questionnaires.deleted_at')->get(['training_id', 'questionnaires.id', 'questionnaires.ui_id', 'questionnaires.kind'])->groupBy('training_id');
-        $trainingResources = DB::table('training_resource_person')->whereIn('training_id', self::query($user, 'trainings')->select('id'))->join('resource_persons', 'training_resource_person.resource_person_id', '=', 'resource_persons.id')->whereNull('resource_persons.deleted_at')->get(['training_id', 'resource_persons.id', 'resource_persons.ui_id', 'resource_persons.name', 'resource_persons.title'])->groupBy('training_id');
+        $trainingQuestionnaires = DB::table('training_questionnaire')->whereIn('training_id', $trainingIds)->join('questionnaires', 'training_questionnaire.questionnaire_id', '=', 'questionnaires.id')->whereNull('questionnaires.deleted_at')->get(['training_id', 'questionnaires.id', 'questionnaires.ui_id', 'questionnaires.kind'])->groupBy('training_id');
+        $trainingResources = DB::table('training_resource_person')->whereIn('training_id', $trainingIds)->join('resource_persons', 'training_resource_person.resource_person_id', '=', 'resource_persons.id')->whereNull('resource_persons.deleted_at')->get(['training_id', 'resource_persons.id', 'resource_persons.ui_id', 'resource_persons.name', 'resource_persons.title'])->groupBy('training_id');
         $page = (string) request()->header('X-TMIS-PAGE', request()->fullUrl());
         parse_str((string) parse_url($page, PHP_URL_QUERY), $pageQuery);
         $pagePath = (string) parse_url($page, PHP_URL_PATH);
-        $pathId = preg_match('~/(?:participants/id/(?:view|edit)-fa|participants/id/(?:view|edit)-farmer|training/id/(?:view|edit)-training)/([^/]+)$~', $pagePath, $matches) === 1
-            ? rawurldecode($matches[1])
-            : '';
+        $pathId = self::trainingViewPageId();
+        if ($pathId === '') {
+            $pathId = preg_match('~/(?:participants/id/(?:view|edit)-fa|participants/id/(?:view|edit)-farmer|training/id/edit-training|evaluation/id/(?:view|edit)-(?:pre-test|post-test|rp-evaluation|training-evaluation))/([^/]+)$~', $pagePath, $matches) === 1
+                ? rawurldecode($matches[1])
+                : '';
+        }
         $farmerNumber = preg_match('~^app/admin/participants/id/(?:view|edit)-farmer/(\d+)$~', ltrim($pagePath, '/'), $matches) === 1 ? $matches[1] : '';
         $selectedFarmer = $farmerNumber !== '' ? self::findFarmerByNumber($user, $farmerNumber) : null;
         $currentId = $selectedFarmer
@@ -201,7 +285,14 @@ class OriginalInterfaceData
         }
         if ($currentId !== '') {
             foreach (['trainings', 'participants', 'associations', 'resource_persons'] as $logModule) {
-                if (! isset($selectedRecords[$logModule]) && ModuleAccess::allows($user, $logModule.'.read') && ($selectedRecord = self::find($user, $logModule, $currentId))) {
+                if (isset($selectedRecords[$logModule]) || ! ModuleAccess::allows($user, $logModule.'.read')) {
+                    continue;
+                }
+
+                $selectedRecord = $logModule === 'trainings' && self::isTrainingViewPage()
+                    ? self::findTrainingForRead($user, $currentId)
+                    : self::find($user, $logModule, $currentId);
+                if ($selectedRecord) {
                     $selectedRecords[$logModule] = $selectedRecord;
                 }
             }
@@ -304,7 +395,9 @@ class OriginalInterfaceData
                 ->values()
                 ->all();
         }
-        $currentTraining = $currentId !== '' ? self::find($user, 'trainings', $currentId) : null;
+        $currentTraining = $currentId !== ''
+            ? (self::isTrainingViewPage() ? self::findTrainingForRead($user, $currentId) : self::find($user, 'trainings', $currentId))
+            : null;
         $trainingHistory = $currentTraining && ModuleAccess::allows($user, 'trainings.read') ? DB::table('training_status_changes')
             ->leftJoin('users as status_actors', 'status_actors.user_id', '=', 'training_status_changes.actor_user_id')
             ->leftJoin('user_roles as status_roles', 'status_roles.role_id', '=', 'status_actors.role_id')
@@ -341,7 +434,11 @@ class OriginalInterfaceData
 
             }
 
-            foreach (self::query($user, $module)->orderBy('id')->get() as $record) {
+            $records = $module === 'trainings'
+                ? self::trainingDataQuery($user)
+                : self::query($user, $module);
+
+            foreach ($records->orderBy('id')->get() as $record) {
 
                 $item = self::unpack($record->ui_data);
 
@@ -674,6 +771,7 @@ class OriginalInterfaceData
             'dashboard' => app(DashboardData::class)->build($stores),
             'roles' => $isAdministrator ? DB::table('user_roles')->where('is_active', 1)->where('name', '<>', 'System Administrator')->pluck('name')->all() : [],
             'stores' => $stores,
+            'attachmentTypes' => AttachmentTypeCatalog::namesByCategory(),
             'farmerStatuses' => str_contains($pagePath, '/participants/') ? $recordStatuses->values() : [],
             'actor' => (new AccountDisplay)->forUser($user),
             'regions' => DB::table('region')->where('is_active', 1)->get(['region_id', 'name']),

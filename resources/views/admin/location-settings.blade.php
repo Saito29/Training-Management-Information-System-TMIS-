@@ -6,6 +6,9 @@
                 <h2>Geographic locations</h2>
                 <p>Create a location in the order Region, Province, District, Municipality / City, then Barangay.</p>
             </div>
+            <button type="button" class="btn btn-outline-success ms-auto" data-bs-toggle="modal" data-bs-target="#locationImportModal">
+                <i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i> Import Excel
+            </button>
         </header>
         <form method="post" action="{{ route('system.locations.store') }}" data-settings-form id="locationRegistration">
             @csrf
@@ -50,6 +53,48 @@
         </form>
     </article>
 
+    <div class="modal fade" id="locationImportModal" tabindex="-1" aria-labelledby="locationImportTitle" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h2 class="modal-title fs-5" id="locationImportTitle">Import locations from Excel</h2>
+                        <p class="text-body-secondary mb-0">Use the XLSX template to add locations to the directory.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info" role="note">
+                        <h3 class="h6">How to prepare the workbook</h3>
+                        <ol class="mb-2">
+                            <li>Download the template and keep its five column headings: Region, Province, District, Municipality / City, Barangay.</li>
+                            <li>Use one location path per row. Repeat parent names on each row; include each level from Region through the deepest location you are adding.</li>
+                            <li>Region and Province are required. Do not skip a hierarchy level; a Barangay row needs its District and Municipality / City.</li>
+                            <li>Existing names under the same parent are left unchanged. The import only adds missing paths; it does not rename or delete locations.</li>
+                        </ol>
+                        <p class="mb-0">Blank descendant cells are allowed when a row ends at Province, District, or Municipality / City. Upload an <code>.xlsx</code> workbook with up to 20 MB.</p>
+                    </div>
+                    <a class="btn btn-outline-success mb-3" href="{{ route('system.locations.template') }}">
+                        <i class="bi bi-download" aria-hidden="true"></i> Download XLSX template
+                    </a>
+                    <form id="locationImportForm" action="{{ route('system.locations.import') }}" method="post" enctype="multipart/form-data" data-location-import-form>
+                        @csrf
+                        <label class="form-label" for="locationImportFile">Excel workbook (.xlsx)</label>
+                        <input class="form-control" id="locationImportFile" name="file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
+                        <p class="form-text mb-0">Only the first worksheet is imported. Formulas are not accepted; enter plain location names.</p>
+                    </form>
+                    <p class="alert mt-3 mb-0" id="locationImportFeedback" role="status" aria-live="polite" hidden></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-location-import-close>Cancel</button>
+                    <button type="submit" class="btn btn-success" form="locationImportForm" data-location-import-submit>
+                        <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Upload and import
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <article class="settings-card mt-3 directory-card">
         <header class="settings-card-header directory-card-header">
             <span class="settings-section-icon"><i class="bi bi-map" aria-hidden="true"></i></span>
@@ -93,5 +138,5 @@
     </article>
     <script type="application/json" id="registeredRegions">{!! Illuminate\Support\Js::encode($directoryRegions) !!}</script>
     <script type="application/json" id="registeredLocations">{!! Illuminate\Support\Js::encode($locations) !!}</script>
-    <script src="{{ asset('src/js/shared/location-settings.js?v=directory-table-previous-design-1') }}" defer></script>
+    <script src="{{ asset('src/js/shared/location-settings.js?v=location-xlsx-import-1') }}" defer></script>
 </section>

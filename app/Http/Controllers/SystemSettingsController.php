@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Authentication\AuditTrail;
 use App\Models\User;
 use App\Support\AccountUpdateNotifier;
+use App\Support\AttachmentTypeCatalog;
 use App\Support\ModuleAccess;
 use App\Support\OriginalInterfaceData;
 use App\Support\SystemMaintenance;
@@ -372,6 +373,10 @@ class SystemSettingsController
                 ->get(),
             'recordStatusOptions' => $this->recordStatusOptions(),
             'trainingTypeOptions' => $this->trainingTypeOptions(),
+            'attachmentTypeCategories' => AttachmentTypeCatalog::CATEGORIES,
+            'attachmentTypesByCategory' => collect(array_keys(AttachmentTypeCatalog::CATEGORIES))
+                ->mapWithKeys(fn (string $category): array => [$category => $this->attachmentTypeOptions($category)])
+                ->all(),
             'grants' => $isSuperAdministrator
                 ? DB::table('role_permissions')->get()->groupBy('role_id')->map(fn ($permissions) => ModuleAccess::normalizePermissionRows($permissions))
                 : collect(),
@@ -801,6 +806,131 @@ class SystemSettingsController
         return response()->json(['message' => 'Nationality deleted.']);
     }
 
+    public function attachmentTypes(Request $request, string $category): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $this->ensureAttachmentTypeCategory($category);
+
+        return response()->json(['options' => $this->attachmentTypeOptions($category)]);
+    }
+
+    public function storeAttachmentType(Request $request, string $category): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $this->ensureAttachmentTypeCategory($category);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:80'],
+            'is_required' => ['sometimes', 'boolean'],
+        ]);
+        $name = trim($data['name']);
+        $isRequired = (bool) ($data['is_required'] ?? false);
+
+        if ($name === '') {
+            throw ValidationException::withMessages(['name' => 'Enter an attachment type name.']);
+        }
+
+        $option = DB::transaction(function () use ($request, $category, $name, $isRequired): array {
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            $this->ensureUniqueAttachmentTypeName($category, $name);
+
+            $id = DB::table('attachment_type_options')->insertGetId([
+                'category' => $category,
+                'name' => $name,
+                'is_builtin' => false,
+                'is_required' => $isRequired,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            AuditTrail::record($request, 'attachment_type_created_'.$id, $request->user(), after: ['category' => $category, 'name' => $name, 'is_required' => $isRequired], category: 'settings');
+
+            return $this->attachmentType($category, $id);
+        });
+
+        return response()->json(['option' => $option, 'message' => 'Attachment type added.'], 201);
+    }
+
+    public function updateAttachmentType(Request $request, string $category, int $option): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $this->ensureAttachmentTypeCategory($category);
+        $data = $request->validate([
+            'name' => ['sometimes', 'required', 'string', 'max:80'],
+            'is_required' => ['sometimes', 'boolean'],
+        ]);
+        if ($data === []) {
+            throw ValidationException::withMessages(['name' => 'Enter a name or change the required setting.']);
+        }
+        $name = isset($data['name']) ? trim($data['name']) : null;
+
+        if ($name === '') {
+            throw ValidationException::withMessages(['name' => 'Enter an attachment type name.']);
+        }
+
+        $updated = DB::transaction(function () use ($request, $category, $option, $name, $data): array {
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            $existing = DB::table('attachment_type_options')
+                ->where('category', $category)
+                ->where('id', $option)
+                ->lockForUpdate()
+                ->first();
+            abort_unless($existing, 404);
+
+            $values = ['updated_at' => now()];
+            $updatedName = $name ?? $existing->name;
+            if ((bool) $existing->is_builtin) {
+                abort_if($name !== null && $name !== $existing->name, 409, 'Built-in attachment types cannot be renamed.');
+            } elseif ($name !== null) {
+                $this->ensureUniqueAttachmentTypeName($category, $name, $option);
+                $this->renameAttachmentTypeReferences($category, $existing->name, $name);
+                $values['name'] = $name;
+            }
+
+            if (array_key_exists('is_required', $data)) {
+                $values['is_required'] = (bool) $data['is_required'];
+            }
+
+            DB::table('attachment_type_options')->where('id', $option)->update($values);
+            AuditTrail::record(
+                $request,
+                'attachment_type_updated_'.$option,
+                $request->user(),
+                before: ['category' => $category, 'name' => $existing->name, 'is_required' => (bool) $existing->is_required],
+                after: ['category' => $category, 'name' => $updatedName, 'is_required' => (bool) ($data['is_required'] ?? $existing->is_required)],
+                category: 'settings',
+            );
+
+            return $this->attachmentType($category, $option);
+        });
+
+        return response()->json(['option' => $updated, 'message' => 'Attachment type updated.']);
+    }
+
+    public function deleteAttachmentType(Request $request, string $category, int $option): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $this->ensureAttachmentTypeCategory($category);
+        DB::transaction(function () use ($request, $category, $option): void {
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            $existing = DB::table('attachment_type_options')
+                ->where('category', $category)
+                ->where('id', $option)
+                ->lockForUpdate()
+                ->first();
+            abort_unless($existing, 404);
+            abort_if((bool) $existing->is_builtin, 409, 'Built-in attachment types cannot be deleted.');
+            abort_if(
+                $this->attachmentTypeUsageCount($category, $existing->name) > 0,
+                409,
+                'This attachment type is used by saved documents and cannot be deleted.',
+            );
+
+            DB::table('attachment_type_options')->where('id', $option)->delete();
+            AuditTrail::record($request, 'attachment_type_deleted_'.$option, $request->user(), before: ['category' => $category, 'name' => $existing->name], category: 'settings');
+        });
+
+        return response()->json(['message' => 'Attachment type deleted.']);
+    }
+
     public function recordStatuses(Request $request): JsonResponse
     {
         abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
@@ -935,6 +1065,143 @@ class SystemSettingsController
         if ($exists) {
             throw ValidationException::withMessages(['name' => 'Enter a unique status name.']);
         }
+    }
+
+    private function ensureAttachmentTypeCategory(string $category): void
+    {
+        abort_unless(isset(AttachmentTypeCatalog::CATEGORIES[$category]), 404);
+    }
+
+    private function ensureUniqueAttachmentTypeName(string $category, string $name, ?int $exceptId = null): void
+    {
+        $exists = DB::table('attachment_type_options')
+            ->where('category', $category)
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
+            ->when($exceptId !== null, fn ($query) => $query->where('id', '!=', $exceptId))
+            ->exists();
+        if ($exists) {
+            throw ValidationException::withMessages(['name' => 'Enter a unique attachment type for this category.']);
+        }
+    }
+
+    /** @return Collection<int, object> */
+    private function attachmentTypeOptions(string $category): Collection
+    {
+        $attachmentCount = match ($category) {
+            'farmer_profile' => DB::table('participant_attachments')
+                ->selectRaw('COUNT(*)')
+                ->whereRaw('LOWER(participant_attachments.kind) = LOWER(attachment_type_options.name)'),
+            'farmer_association' => DB::table('association_attachments')
+                ->selectRaw('COUNT(*)')
+                ->whereRaw('LOWER(association_attachments.kind) = LOWER(attachment_type_options.name)'),
+            'training' => DB::table('training_attachments')
+                ->selectRaw('COUNT(*)')
+                ->where(function ($query): void {
+                    $query->whereRaw('LOWER(training_attachments.kind) = LOWER(attachment_type_options.name)')
+                        ->orWhereRaw('LOWER(training_attachments.original_kind) = LOWER(attachment_type_options.name)');
+                }),
+            default => abort(404),
+        };
+
+        return DB::table('attachment_type_options')
+            ->where('category', $category)
+            ->select('attachment_type_options.*')
+            ->addSelect(['attachment_count' => $attachmentCount])
+            ->orderBy('name')
+            ->get()
+            ->map(function (object $option): object {
+                $option->is_builtin = (bool) $option->is_builtin;
+                $option->is_required = (bool) $option->is_required;
+                $option->attachment_count = (int) $option->attachment_count;
+
+                return $option;
+            });
+    }
+
+    /** @return array<string, mixed> */
+    private function attachmentType(string $category, int $optionId): array
+    {
+        $option = $this->attachmentTypeOptions($category)->firstWhere('id', $optionId);
+        abort_unless($option, 404);
+
+        return (array) $option;
+    }
+
+    private function attachmentTypeUsageCount(string $category, string $name): int
+    {
+        $query = match ($category) {
+            'farmer_profile' => DB::table('participant_attachments')->whereRaw('LOWER(kind) = ?', [mb_strtolower($name)]),
+            'farmer_association' => DB::table('association_attachments')->whereRaw('LOWER(kind) = ?', [mb_strtolower($name)]),
+            'training' => DB::table('training_attachments')
+                ->where(function ($attachments) use ($name): void {
+                    $normalizedName = mb_strtolower($name);
+                    $attachments->whereRaw('LOWER(kind) = ?', [$normalizedName])
+                        ->orWhereRaw('LOWER(original_kind) = ?', [$normalizedName]);
+                }),
+            default => abort(404),
+        };
+
+        return $query->count();
+    }
+
+    private function renameAttachmentTypeReferences(string $category, string $oldName, string $newName): void
+    {
+        if ($oldName === $newName) {
+            return;
+        }
+
+        if ($category === 'training') {
+            $normalizedOldName = mb_strtolower($oldName);
+            $documents = DB::table('training_attachments')
+                ->where(function ($attachments) use ($normalizedOldName): void {
+                    $attachments->whereRaw('LOWER(original_kind) = ?', [$normalizedOldName])
+                        ->orWhere(function ($legacy) use ($normalizedOldName): void {
+                            $legacy->whereNull('original_kind')
+                                ->whereRaw('LOWER(kind) = ?', [$normalizedOldName]);
+                        });
+                })
+                ->lockForUpdate()
+                ->get(['id', 'training_id', 'kind']);
+            if ($documents->isEmpty()) {
+                return;
+            }
+
+            DB::table('training_attachments')->whereIn('id', $documents->pluck('id'))->update([
+                'original_kind' => $newName,
+                'updated_at' => now(),
+            ]);
+            foreach ($documents->groupBy(fn (object $document): string => $document->kind === 'Training design' ? 'Training design' : 'Other') as $kind => $items) {
+                DB::table('training_attachments')->whereIn('id', $items->pluck('id'))->update([
+                    'kind' => $kind,
+                    'updated_at' => now(),
+                ]);
+            }
+            DB::table('trainings')->whereIn('id', $documents->pluck('training_id')->unique())->update([
+                'version' => DB::raw('version + 1'),
+                'ui_version' => DB::raw('ui_version + 1'),
+                'updated_at' => now(),
+            ]);
+
+            return;
+        }
+
+        [$table, $ownerTable, $foreignKey] = $category === 'farmer_profile'
+            ? ['participant_attachments', 'participants', 'participant_id']
+            : ['association_attachments', 'associations', 'association_id'];
+        $normalizedOldName = mb_strtolower($oldName);
+        $documents = DB::table($table)
+            ->whereRaw('LOWER(kind) = ?', [$normalizedOldName])
+            ->lockForUpdate()
+            ->get([$foreignKey]);
+        if ($documents->isEmpty()) {
+            return;
+        }
+
+        DB::table($table)->whereRaw('LOWER(kind) = ?', [$normalizedOldName])->update(['kind' => $newName, 'updated_at' => now()]);
+        DB::table($ownerTable)->whereIn('id', $documents->pluck($foreignKey)->unique())->update([
+            'ui_version' => DB::raw('ui_version + 1'),
+            'updated_at' => now(),
+        ]);
     }
 
     public function trainingTypes(Request $request): JsonResponse

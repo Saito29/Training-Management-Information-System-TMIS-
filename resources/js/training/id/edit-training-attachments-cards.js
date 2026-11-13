@@ -15,7 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let deleteTimer = null;
   let deleteDeadline = 0;
   const queue = [];
-  const types = ['Training Design', 'Training Program', 'Attendance Sheet', 'Training Materials', 'Photos', 'Other Files'];
+  const configuredTypes = window.TMIS_PAGE?.attachmentTypes?.training;
+  const types = Array.isArray(configuredTypes) && configuredTypes.length
+    ? configuredTypes
+    : ['Training design', 'Attendance', 'Report', 'Other', 'Training Program', 'Attendance Sheet', 'Training Materials', 'Photos', 'Other Files'];
   const fire = (action, item) => document.dispatchEvent(new CustomEvent('training:attachment', {detail:{action, file:item.name}}));
   const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const fileType = item => item.pdf ? 'PDF' : /\.png$/i.test(item.name) ? 'PNG' : 'JPG';
@@ -83,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const editModal = bootstrap.Modal.getOrCreateInstance(editElement);
   const editForm = editElement.querySelector('#editAttachmentForm');
   const editType = editElement.querySelector('#editAttachmentType');
+  editType.replaceChildren(new Option('Select type', ''), ...types.map(type => new Option(type, type)));
   const editYear = editElement.querySelector('#editAttachmentYear');
   const editRemarks = editElement.querySelector('#editAttachmentRemarks');
   const editSave = editElement.querySelector('#saveAttachmentChanges');
@@ -127,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function renderQueue() {
-    queueBody.innerHTML = queue.length ? queue.map((item, index) => `<tr><td><span class="training-queue-preview"><i class="bi ${item.file.type === 'application/pdf' ? 'bi-file-earmark-pdf' : 'bi-file-earmark-image'}"></i><span title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</span></span></td><td>${item.file.type === 'application/pdf' ? 'PDF' : item.file.type === 'image/png' ? 'PNG' : 'JPG'}</td><td><select class="form-select" data-field="type" data-index="${index}" aria-label="Document type for ${escapeHtml(item.file.name)}"><option value="">Select type</option>${types.map(type => `<option value="${type}" ${item.type === type ? 'selected' : ''}>${type}</option>`).join('')}</select></td><td><select class="form-select" data-field="year" data-index="${index}" aria-label="Year for ${escapeHtml(item.file.name)}">${years.map(year => `<option value="${year}" ${item.year === year ? 'selected' : ''}>${year}</option>`).join('')}</select></td><td><input class="form-control" data-field="remarks" data-index="${index}" maxlength="500" value="${escapeHtml(item.remarks)}" aria-label="Remarks for ${escapeHtml(item.file.name)}" placeholder="Optional remarks"></td><td><span class="training-queue-status ${item.type ? 'ready' : ''}">${item.type ? 'Ready' : 'Select type'}</span></td><td><button class="training-queue-remove" type="button" data-remove="${index}" aria-label="Remove ${escapeHtml(item.file.name)} from queue"><i class="bi bi-x-lg"></i></button></td></tr>`).join('') : '<tr class="training-queue-empty"><td colspan="7">No files are waiting to be uploaded.</td></tr>';
+    queueBody.innerHTML = queue.length ? queue.map((item, index) => `<tr><td><span class="training-queue-preview"><i class="bi ${item.file.type === 'application/pdf' ? 'bi-file-earmark-pdf' : 'bi-file-earmark-image'}"></i><span title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</span></span></td><td>${item.file.type === 'application/pdf' ? 'PDF' : item.file.type === 'image/png' ? 'PNG' : 'JPG'}</td><td><select class="form-select" data-field="type" data-index="${index}" aria-label="Document type for ${escapeHtml(item.file.name)}"><option value="">Select type</option>${types.map(type => `<option value="${escapeHtml(type)}" ${item.type === type ? 'selected' : ''}>${escapeHtml(type)}</option>`).join('')}</select></td><td><select class="form-select" data-field="year" data-index="${index}" aria-label="Year for ${escapeHtml(item.file.name)}">${years.map(year => `<option value="${year}" ${item.year === year ? 'selected' : ''}>${year}</option>`).join('')}</select></td><td><input class="form-control" data-field="remarks" data-index="${index}" maxlength="500" value="${escapeHtml(item.remarks)}" aria-label="Remarks for ${escapeHtml(item.file.name)}" placeholder="Optional remarks"></td><td><span class="training-queue-status ${item.type ? 'ready' : ''}">${item.type ? 'Ready' : 'Select type'}</span></td><td><button class="training-queue-remove" type="button" data-remove="${index}" aria-label="Remove ${escapeHtml(item.file.name)} from queue"><i class="bi bi-x-lg"></i></button></td></tr>`).join('') : '<tr class="training-queue-empty"><td colspan="7">No files are waiting to be uploaded.</td></tr>';
     const ready = queue.filter(item => item.type && item.year).length;
     panel.querySelector('#trainingQueueSummary').textContent = `${queue.length} file${queue.length === 1 ? '' : 's'} staged · ${ready} ready to save`;
     queueSave.disabled = ready === 0;
@@ -192,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (edit) {
       editing = Number(edit.dataset.edit);
       const item = attachments[editing];
+      if (item.type && !types.includes(item.type)) editType.add(new Option(item.type, item.type));
       if (!years.includes(item.year)) editYear.add(new Option(item.year, item.year));
       editType.value = item.type;
       editYear.value = item.year;

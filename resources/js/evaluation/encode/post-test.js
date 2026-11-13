@@ -2,6 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('postTestEncodeForm');
   if (!form) return;
   const $ = id => document.getElementById(id);
+  const locationHeader = $('farmerTableBody')?.closest('table')?.querySelector('thead th:nth-child(2)');
+  if (locationHeader) locationHeader.textContent = 'Region / Province / Municipality';
   const notify = (message, type = 'success') => { $('encodeStatus').textContent = message; window.showQuestionnaireToast(message, type); };
   const read = key => { try { const data = JSON.parse(window.TmisStore.getItem(key) || '[]'); return Array.isArray(data) ? data : []; } catch { return []; } };
   const params = new URLSearchParams(location.search);
@@ -17,9 +19,29 @@ document.addEventListener('DOMContentLoaded', () => {
     ['FMR-2025-007', 'Elena Torres Garcia', 'Alabat, Quezon', 'Alabat Farmers Association', '1986-07-16', 'Female'],
     ['FMR-2024-008', 'Rico Flores Navarro', 'Jomalig, Quezon', 'Jomalig Farmers Association', '1987-08-17', 'Male'],
   ].map(([id, name, location, association, birthday, sex]) => ({ id, name, location, association, birthday, sex }));
-  const loadFarmers = () => { const stored = read('tmis-farmers').map(r => ({ id: String(r.id || ''), name: [r.firstName, r.middleName, r.lastName, r.suffix].filter(Boolean).join(' ') || String(r.fullName || ''), location: [r.barangay, r.municipality, r.province].filter(Boolean).join(', '), association: String(r.organization || r.association || r.associate_name || ''), birthday: String(r.birthDate || r.birthday || ''), sex: String(r.sex || '') })).filter(r => r.id && r.name); return window.TMIS_PAGE ? stored : stored.length ? stored : sampleFarmers; };
+  const loadFarmers = () => {
+    const stored = read('tmis-farmers').map(r => {
+      const offices = Array.isArray(r.beneficiaryOffices) ? r.beneficiaryOffices : [];
+      const region = String(r.region || offices.find(office => office.isPrimary)?.region || offices[0]?.region || '');
+      const province = String(r.province || '');
+      const municipality = String(r.municipality || '');
+      return {
+        ...r,
+        id: String(r.id || ''),
+        name: [r.firstName, r.middleName, r.lastName, r.suffix].filter(Boolean).join(' ') || String(r.fullName || ''),
+        region,
+        province,
+        municipality,
+        location: [region, province, municipality, r.barangay].filter(Boolean).join(', ') || String(r.location || ''),
+        association: String(r.organization || r.association || r.associate_name || ''),
+        birthday: String(r.birthDate || r.birthday || ''),
+        sex: String(r.sex || ''),
+      };
+    }).filter(r => r.id && r.name);
+    return window.TMIS_PAGE ? stored : stored.length ? stored : sampleFarmers;
+  };
   let farmers = loadFarmers();
-  const questionnaires = read('tmis-post-test-questionnaires').filter(r => r.id && r.trainingQuestionnaire);
+  const questionnaires = read('tmis-post-test-questionnaires').filter(r => r.id && r.trainingQuestionnaire && ['active', 'draft'].includes(String(r.status || 'Active').toLowerCase()));
   if (existingRecord) {
     const index = questionnaires.findIndex(r => r.id === existingRecord.questionnaireId);
     const snapshot = { ...(questionnaires[index] || {}), id: existingRecord.questionnaireId, trainingQuestionnaire: existingRecord.questionnaireName, implementingOffice: existingRecord.implementingOffice, totalItems: existingRecord.totalItems };
@@ -32,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const dateLabel = value => { if (!value) return '—'; const d = new Date(`${value}T00:00:00`); return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); };
   const age = birthday => { const d = new Date(`${birthday}T00:00:00`); if (Number.isNaN(d.getTime())) return '—'; const now = new Date(); return String(now.getFullYear() - d.getFullYear() - (now.getMonth() < d.getMonth() || (now.getMonth() === d.getMonth() && now.getDate() < d.getDate()) ? 1 : 0)); };
   const selectedQuestionnaire = () => questionnaires.find(r => r.id === $('questionnaireSelect').value);
+  const questionnaireMaximum = questionnaire => questionnaire?.questions?.length || Number(questionnaire?.totalItems) || 0;
   function renderFarmers() {
     const organization = $('organizationFilter').value, query = $('farmerSearch').value.trim().toLocaleLowerCase();
     const matches = farmers.filter(r => (!organization || r.association === organization) && (!query || `${r.name} ${r.location} ${r.association}`.toLocaleLowerCase().includes(query)));
@@ -57,11 +80,40 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function selectFarmer(r) { selectedFarmer = r; $('farmerId').value = r.id; $('farmerName').value = r.name; $('farmerAssociation').value = r.association; $('farmerLocation').value = r.location; $('farmerBirthday').value = dateLabel(r.birthday); if (questionnaires.length) $('encodeStatus').textContent = 'Fields marked * are required.'; renderFarmers(); updateSummary(); }
   function updateOrganizations() { const control = $('organizationFilter'), chosen = control.value; control.replaceChildren(new Option('All organizations', '')); [...new Set(farmers.map(r => r.association).filter(Boolean))].sort().forEach(name => control.add(new Option(name, name))); control.value = [...control.options].some(option => option.value === chosen) ? chosen : ''; }
+  function refreshFarmersForTraining() {
+    const training = window.TMIS_TRAINING_PICKER?.selectedTraining() || null;
+    if (typeof window.TmisTrainingData?.participantsForEncoding !== 'function') {
+      notify('Training participant filtering is unavailable. Refresh the page and try again.', 'error');
+      return;
+    }
+    const eligible = window.TmisTrainingData.participantsForEncoding(training, 'post-test', existingRecord?.id || '');
+    const eligibleIds = new Set(eligible.map(record => String(record.id)));
+    farmers = loadFarmers().filter(farmer => eligibleIds.has(farmer.id));
+    if (selectedFarmer && !farmers.some(farmer => farmer.id === selectedFarmer.id)) {
+      selectedFarmer = null;
+      ['farmerId', 'farmerName', 'farmerAssociation', 'farmerLocation', 'farmerBirthday'].forEach(id => { $(id).value = ''; });
+    }
+    updateOrganizations();
+    currentPage = 1;
+    renderFarmers();
+    updateSummary();
+  }
+  function updateQuestionnaireChoices() {
+    const select = $('questionnaireSelect');
+    const selectedId = select.value || resumedDraft?.questionnaireId || '';
+    const training = window.TMIS_TRAINING_PICKER?.selectedTraining();
+    const assignedIds = training ? new Set((training.posttest || []).map(String)) : null;
+    const choices = assignedIds ? questionnaires.filter(questionnaire => assignedIds.has(String(questionnaire.id))) : questionnaires;
+    select.replaceChildren(new Option('Select a questionnaire', ''), ...choices.map(questionnaire => new Option(`${questionnaire.trainingQuestionnaire}${String(questionnaire.status).toLowerCase() === 'draft' ? ' (Draft)' : ''}`, questionnaire.id)));
+    select.value = choices.some(questionnaire => questionnaire.id === selectedId) ? selectedId : '';
+    updateQuestionnaire();
+    refreshFarmersForTraining();
+  }
   updateOrganizations();
-  questionnaires.forEach(r => $('questionnaireSelect').add(new Option(r.trainingQuestionnaire, r.id)));
+  questionnaires.forEach(r => $('questionnaireSelect').add(new Option(`${r.trainingQuestionnaire}${String(r.status).toLowerCase() === 'draft' ? ' (Draft)' : ''}`, r.id)));
   if (!questionnaires.length) $('encodeStatus').textContent = 'No post-test questionnaires found. Register a questionnaire before encoding a result.';
-  function updateQuestionnaire() { const r = selectedQuestionnaire(); $('implementingOffice').value = r?.implementingOffice || ''; $('totalItems').value = r?.totalItems ?? ''; $('questionnaireDescription').value = r?.description || ''; $('score').max = r ? String(r.totalItems) : ''; $('scoreHint').textContent = r ? `Score must be between 0 and ${r.totalItems}.` : 'Select a questionnaire to see the maximum score.'; updateSummary(); }
-  function updateSummary() { const r = selectedQuestionnaire(); $('summaryQuestionnaire').textContent = r?.trainingQuestionnaire || 'Not selected'; $('summaryFarmer').textContent = selectedFarmer?.name || 'Not selected'; $('summaryCommodity').textContent = $('commodity').value.trim() || 'Not entered'; $('summaryDate').textContent = $('testDate').value ? dateLabel($('testDate').value) : 'Not selected'; $('summaryScore').textContent = $('score').value === '' ? 'Not entered' : `${$('score').value}${r ? ` / ${r.totalItems}` : ''}`; }
+  function updateQuestionnaire() { const r = selectedQuestionnaire(), maximum = questionnaireMaximum(r); $('implementingOffice').value = r?.implementingOffice || ''; $('totalItems').value = r ? maximum : ''; $('questionnaireDescription').value = r?.description || ''; $('score').max = r ? String(maximum) : ''; $('scoreHint').textContent = r ? `Maximum score: ${maximum}. Enter a whole number from 0 to ${maximum}.` : 'Select a questionnaire to see the maximum score.'; updateSummary(); }
+  function updateSummary() { const r = selectedQuestionnaire(); $('summaryQuestionnaire').textContent = r?.trainingQuestionnaire || 'Not selected'; $('summaryFarmer').textContent = selectedFarmer?.name || 'Not selected'; $('summaryCommodity').textContent = $('commodity').value.trim() || 'Not entered'; $('summaryDate').textContent = $('testDate').value ? dateLabel($('testDate').value) : 'Not selected'; $('summaryScore').textContent = $('score').value === '' ? 'Not entered' : `${$('score').value}${r ? ` / ${questionnaireMaximum(r)}` : ''}`; }
   function clearEntry(resetFilters = false) {
     form.reset();
     selectedFarmer = null;
@@ -76,11 +128,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (recordMode && !existingRecord) return;
     if (recordMode === 'edit') draft = false;
     const q = selectedQuestionnaire();
+    if (!draft && String(q?.status).toLowerCase() === 'draft') { notify('Activate this questionnaire before completing an assessment.', 'error'); return; }
     if (!draft && (!selectedFarmer || !q)) { notify('Select a farmer and a questionnaire before saving.', 'error'); return; }
     if (!draft && !form.reportValidity()) { $('encodeStatus').textContent = 'Enter the date and a valid score.'; return; }
     const score = $('score').value === '' ? null : Number($('score').value);
-    if (score !== null && (!Number.isInteger(score) || score < 0 || (q && score > Number(q.totalItems)))) { notify('Score must be a whole number within the questionnaire total.', 'error'); return; }
-    const record = { id: activeDraftId || crypto.randomUUID(), questionnaireId: q?.id || '', questionnaireName: q?.trainingQuestionnaire || '', implementingOffice: q?.implementingOffice || '', totalItems: q?.totalItems || null, farmerId: selectedFarmer?.id || '', farmerName: selectedFarmer?.name || '', farmerAssociation: selectedFarmer?.association || '', farmerLocation: selectedFarmer?.location || '', farmerBirthday: selectedFarmer?.birthday || '', farmerSex: selectedFarmer?.sex || '', date: $('testDate').value, commodity: $('commodity').value.trim(), score, status: draft ? 'draft' : 'complete', savedAt: existingRecord?.savedAt || new Date().toISOString(), updatedAt: recordMode === 'edit' ? new Date().toISOString() : undefined };
+    if (score !== null && (!Number.isInteger(score) || score < 0 || (q && score > questionnaireMaximum(q)))) { notify('Score must be a whole number within the questionnaire total.', 'error'); return; }
+    const training = window.TMIS_TRAINING_PICKER?.selectedTraining();
+    const record = { id: activeDraftId || crypto.randomUUID(), trainingId: training?.id || resumedDraft?.trainingId || '', questionnaireId: q?.id || '', questionnaireName: q?.trainingQuestionnaire || '', implementingOffice: q?.implementingOffice || '', totalItems: q ? questionnaireMaximum(q) : null, farmerId: selectedFarmer?.id || '', farmerName: selectedFarmer?.name || '', farmerAssociation: selectedFarmer?.association || '', farmerLocation: selectedFarmer?.location || '', farmerBirthday: selectedFarmer?.birthday || '', farmerSex: selectedFarmer?.sex || '', date: $('testDate').value, commodity: $('commodity').value.trim(), score, status: draft ? 'draft' : 'complete', savedAt: existingRecord?.savedAt || new Date().toISOString(), updatedAt: recordMode === 'edit' ? new Date().toISOString() : undefined };
     try {
       const records = read('tmis-post-test-encoded');
       const index = records.findIndex(item => item.id === record.id);
@@ -93,8 +147,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   $('organizationFilter').addEventListener('change', () => { currentPage = 1; renderFarmers(); }); $('farmerSearch').addEventListener('input', () => { currentPage = 1; renderFarmers(); });
   ['farmerRowsPerPageTop', 'farmerRowsPerPage'].forEach(id => $(id).addEventListener('change', () => { const value = $(id).value; $('farmerRowsPerPageTop').value = value; $('farmerRowsPerPage').value = value; currentPage = 1; renderFarmers(); }));
-  $('refreshFarmers').addEventListener('click', () => { farmers = loadFarmers(); updateOrganizations(); renderFarmers(); $('farmerTableStatus').textContent += ' · Refreshed'; });
-  $('questionnaireSelect').addEventListener('change', updateQuestionnaire); form.addEventListener('input', updateSummary); form.addEventListener('change', updateSummary);
+  $('refreshFarmers').addEventListener('click', async event => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      if (window.TMIS_PAGE) await window.TmisStore.refresh();
+      refreshFarmersForTraining();
+      $('farmerTableStatus').textContent += ' · Refreshed';
+    } catch (error) {
+      notify(error.message || 'The farmer list could not be refreshed.', 'error');
+    } finally {
+      button.disabled = false;
+    }
+  });
+  $('questionnaireSelect').addEventListener('change', () => { updateQuestionnaire(); refreshFarmersForTraining(); }); form.addEventListener('input', updateSummary); form.addEventListener('change', updateSummary);
+  window.addEventListener('tmis:training-selected', updateQuestionnaireChoices);
+  window.addEventListener('tmis:data-updated', refreshFarmersForTraining);
   form.addEventListener('invalid', () => { notify('Enter the required fields and a valid score before saving.', 'error'); }, true);
   form.addEventListener('submit', async e => { e.preventDefault(); await save(false); }); $('saveDraft').addEventListener('click', async () => await save(true));
   $('resetEncode').addEventListener('click', () => { clearEntry(true); $('encodeStatus').textContent = ''; });
@@ -110,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $('summaryStatus').textContent = 'Draft loaded';
     $('encodeStatus').textContent = 'Encoding draft loaded. Complete the remaining fields and save.';
   }
-  renderFarmers(); updateSummary();
+  updateQuestionnaireChoices();
   if (recordMode) {
     const heading = document.querySelector('.encode-heading h1');
     if (heading) heading.textContent = `${recordMode === 'view' ? 'View' : 'Edit'} post-test result`;

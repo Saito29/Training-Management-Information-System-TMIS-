@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'rp-evaluation': { key: 'tmis-rp-evaluation-questionnaires', label: 'Resource Person Evaluation', rows: 'rpQuestionRows', preview: 'rpRatingPreview', guide: 'rpRatingGuide', form: 'rpEvaluationForm' },
   };
   const config = configs[document.body.dataset.questionnaireType];
-  const id = new URLSearchParams(location.search).get('id');
+  const id = window.TmisStore.selectedId();
   const form = document.getElementById(config?.form);
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
   if (!form) return;

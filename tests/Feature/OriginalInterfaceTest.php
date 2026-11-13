@@ -353,6 +353,99 @@ class OriginalInterfaceTest extends TestCase
         $this->assertDatabaseCount('training_association', 0);
     }
 
+    public function test_training_registration_returns_associations_from_the_account_office(): void
+    {
+        $this->signIn();
+        $this->save('tmis-farmer-associations', [
+            'id' => 'FA-REGISTRATION-OFFICE',
+            'association_name' => 'Office two association',
+            'region_id' => '4',
+            'org_id' => '2',
+            'status' => 'Active',
+        ])->assertOk();
+        $this->save('tmis-farmer-associations', [
+            'id' => 'FA-REGISTRATION-INACTIVE',
+            'association_name' => 'Inactive office association',
+            'region_id' => '4',
+            'org_id' => '2',
+            'status' => 'Inactive',
+        ])->assertOk();
+        $this->save('tmis-farmer-associations', [
+            'id' => 'FA-REGISTRATION-OTHER-OFFICE',
+            'association_name' => 'Other office association',
+            'region_id' => '4',
+            'org_id' => '1',
+            'status' => 'Active',
+        ])->assertOk();
+
+        $this->signIn(2, 2);
+        DB::table('role_permissions')->insert([
+            ['role_id' => 2, 'permission' => 'trainings.read'],
+            ['role_id' => 2, 'permission' => 'trainings.create'],
+            ['role_id' => 2, 'permission' => 'associations.read'],
+        ]);
+        $associations = $this->getJson('/ui/data', [
+            'X-TMIS-PAGE' => '/app/admin/training/create/register',
+        ])->assertOk()->json('stores.tmis-farmer-associations');
+
+        $associationIds = array_column($associations, 'id');
+        sort($associationIds);
+        $this->assertSame(['FA-REGISTRATION-INACTIVE', 'FA-REGISTRATION-OFFICE'], $associationIds);
+        $this->get(route('admin.training.create.register'))->assertOk()->assertSee('training_associations');
+    }
+
+    public function test_training_view_links_allow_same_region_read_without_widening_writes_or_cross_region_access(): void
+    {
+        Storage::fake('local');
+        $this->signIn();
+        $this->save('tmis-trainings', [
+            'id' => 'TRN-REGIONAL-READ',
+            'training_title' => 'Regional view training',
+            'region_id' => '4',
+            'org_id' => '1',
+            'start_date' => '2026-12-01',
+            'end_date' => '2026-12-02',
+            'venue' => 'Regional training hall',
+        ])->assertOk();
+        $upload = $this->post('/ui/documents/trainings/TRN-REGIONAL-READ', [
+            'kind' => 'Other',
+            'file' => UploadedFile::fake()->createWithContent('regional-report.pdf', "%PDF-1.4\nReport"),
+        ], ['Accept' => 'application/json'])->assertOk();
+        $attachmentUrl = $upload->json('stores.tmis-trainings.0.attachments.0.url');
+
+        $regionalUser = $this->signIn(3, 2);
+        DB::table('role_permissions')->insert([
+            ['role_id' => 3, 'permission' => 'trainings.read'],
+            ['role_id' => 3, 'permission' => 'trainings.create'],
+            ['role_id' => 3, 'permission' => 'trainings.edit'],
+        ]);
+        $viewPath = '/app/admin/training/id/view-training/regional-view-training/TRN-REGIONAL-READ';
+        $this->getJson('/ui/data', ['X-TMIS-PAGE' => $viewPath])
+            ->assertOk()
+            ->assertJsonPath('stores.tmis-trainings.0.id', 'TRN-REGIONAL-READ')
+            ->assertJsonPath('stores.tmis-trainings.0.attachments.0.name', 'regional-report.pdf');
+        $this->get(route('admin.training.id.view-training.title', [
+            'title' => 'regional-view-training',
+            'id' => 'TRN-REGIONAL-READ',
+        ]))->assertOk()->assertViewIs('admin.training.id.view-training');
+        $this->getJson('/ui/data', ['X-TMIS-PAGE' => '/app/admin/training/details/all-status'])
+            ->assertOk()
+            ->assertJsonCount(0, 'stores.tmis-trainings');
+        $this->postJson('/ui/training-enrollment', [
+            'id' => 'TRN-REGIONAL-READ',
+            'participants' => [],
+            'version' => 1,
+        ])->assertNotFound();
+        $this->get($attachmentUrl)->assertOk();
+
+        DB::table('users')->where('user_id', $regionalUser->user_id)->update(['region_id' => 1]);
+        $regionalUser->refresh();
+        $this->getJson('/ui/data', ['X-TMIS-PAGE' => $viewPath])
+            ->assertOk()
+            ->assertJsonCount(0, 'stores.tmis-trainings');
+        $this->get($attachmentUrl)->assertNotFound();
+    }
+
     public function test_staff_registration_choices_are_limited_to_their_account_region_and_office(): void
     {
         $this->signIn(2, 2);
@@ -1048,6 +1141,45 @@ class OriginalInterfaceTest extends TestCase
         Mail::assertNothingSent();
     }
 
+    public function test_training_submission_requires_every_configured_required_attachment_type(): void
+    {
+        Storage::fake('local');
+        $this->signIn();
+        DB::table('attachment_type_options')->insert([
+            ['category' => 'training', 'name' => 'Completion Checklist', 'is_builtin' => false, 'is_required' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['category' => 'training', 'name' => 'Optional Notes', 'is_builtin' => false, 'is_required' => false, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        $created = $this->save('tmis-trainings', [
+            'id' => 'TRN-REQUIRED-ATTACHMENTS',
+            'training_title' => 'Required attachment workflow',
+            'start_date' => '2026-12-01',
+            'end_date' => '2026-12-02',
+            'venue' => 'Training hall',
+        ])->assertOk()->json('stores.tmis-trainings.0');
+
+        $created = $this->post('/ui/documents/trainings/TRN-REQUIRED-ATTACHMENTS', [
+            'kind' => 'Training design',
+            'file' => UploadedFile::fake()->createWithContent('design.pdf', "%PDF-1.4\nDesign"),
+        ], ['Accept' => 'application/json'])->assertOk()->json('stores.tmis-trainings.0');
+
+        $created['status'] = 'For Approval';
+        $this->save('tmis-trainings', $created)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('required_attachments')
+            ->assertJsonPath('errors.required_attachments.0', 'Upload the required training attachment type(s): Completion Checklist.');
+        $this->assertDatabaseHas('trainings', ['ui_id' => 'TRN-REQUIRED-ATTACHMENTS', 'status' => 'For review']);
+        $this->assertDatabaseCount('training_notifications', 0);
+
+        $uploaded = $this->post('/ui/documents/trainings/TRN-REQUIRED-ATTACHMENTS', [
+            'kind' => 'Completion Checklist',
+            'file' => UploadedFile::fake()->createWithContent('checklist.pdf', "%PDF-1.4\nChecklist"),
+        ], ['Accept' => 'application/json'])->assertOk()->json('stores.tmis-trainings.0');
+
+        $uploaded['status'] = 'For Approval';
+        $this->save('tmis-trainings', $uploaded)->assertOk();
+        $this->assertDatabaseHas('trainings', ['ui_id' => 'TRN-REQUIRED-ATTACHMENTS', 'status' => 'For approval']);
+    }
+
     public function test_training_registration_accepts_an_active_resource_person_from_another_office(): void
     {
         $this->signIn(1, 2);
@@ -1283,6 +1415,95 @@ class OriginalInterfaceTest extends TestCase
         $this->assertDatabaseHas('assessment_results', ['ui_id' => 'RESULT-1', 'score' => 8, 'state' => 'complete']);
     }
 
+    public function test_draft_encodings_allow_draft_questionnaires_but_not_inactive_questionnaires(): void
+    {
+        $this->signIn();
+        $this->save('tmis-farmers', ['id' => 'FMR-DRAFT', 'fname' => 'Ana', 'lname' => 'Santos'])->assertOk();
+        $this->save('tmis-pre-test-questionnaires', [
+            'id' => 'PRE-DRAFT',
+            'trainingQuestionnaire' => 'Draft questionnaire',
+            'totalItems' => 10,
+            'status' => 'Draft',
+        ])->assertOk();
+
+        $this->save('tmis-pre-test-encoded', [
+            'id' => 'RESULT-DRAFT',
+            'questionnaireId' => 'PRE-DRAFT',
+            'farmerId' => 'FMR-DRAFT',
+            'status' => 'draft',
+        ])->assertOk()->assertJsonPath('stores.tmis-pre-test-encoded.0.status', 'draft');
+
+        $this->save('tmis-pre-test-encoded', [
+            'id' => 'RESULT-DRAFT-COMPLETE',
+            'questionnaireId' => 'PRE-DRAFT',
+            'farmerId' => 'FMR-DRAFT',
+            'date' => '2026-11-01',
+            'score' => 1,
+            'status' => 'complete',
+        ])->assertUnprocessable();
+
+        $this->save('tmis-pre-test-questionnaires', [
+            'id' => 'PRE-INACTIVE',
+            'trainingQuestionnaire' => 'Inactive questionnaire',
+            'totalItems' => 10,
+            'status' => 'Inactive',
+        ])->assertOk();
+        $this->save('tmis-pre-test-encoded', [
+            'id' => 'RESULT-INACTIVE-DRAFT',
+            'questionnaireId' => 'PRE-INACTIVE',
+            'farmerId' => 'FMR-DRAFT',
+            'status' => 'draft',
+        ])->assertUnprocessable();
+    }
+
+    public function test_pre_and_post_test_scores_accept_twenty_and_reject_twenty_one_for_twenty_questions(): void
+    {
+        $this->signIn();
+        $this->save('tmis-farmers', ['id' => 'FMR-TWENTY', 'fname' => 'Ana', 'lname' => 'Santos'])->assertOk();
+        $questions = array_fill(0, 20, ['text' => 'Question']);
+
+        foreach (['pre-test', 'post-test'] as $type) {
+            $questionnaireId = strtoupper($type).'-TWENTY';
+            $this->save('tmis-'.$type.'-questionnaires', [
+                'id' => $questionnaireId,
+                'trainingQuestionnaire' => 'Twenty question test',
+                'questions' => $questions,
+                'status' => 'Active',
+            ])->assertOk();
+
+            $this->save('tmis-'.$type.'-encoded', [
+                'id' => strtoupper($type).'-RESULT-20',
+                'questionnaireId' => $questionnaireId,
+                'farmerId' => 'FMR-TWENTY',
+                'date' => '2026-11-01',
+                'score' => 20,
+                'status' => 'complete',
+            ])->assertOk();
+
+            $this->save('tmis-'.$type.'-encoded', [
+                'id' => strtoupper($type).'-RESULT-21',
+                'questionnaireId' => $questionnaireId,
+                'farmerId' => 'FMR-TWENTY',
+                'date' => '2026-11-01',
+                'score' => 21,
+                'status' => 'complete',
+            ])->assertUnprocessable();
+        }
+    }
+
+    public function test_questionnaire_view_and_edit_routes_accept_path_ids_and_legacy_query_ids(): void
+    {
+        $this->signIn();
+
+        foreach (['view', 'edit'] as $action) {
+            foreach (['pre-test', 'post-test', 'rp-evaluation', 'training-evaluation'] as $type) {
+                $this->get("/app/admin/evaluation/id/{$action}-{$type}/260001")->assertOk();
+            }
+        }
+
+        $this->get('/app/admin/evaluation/id/view-pre-test?id=260001')->assertOk();
+    }
+
     public function test_questionnaire_registration_pages_load_account_scoped_location_choices(): void
     {
         $user = $this->signIn(1, 1);
@@ -1464,20 +1685,127 @@ class OriginalInterfaceTest extends TestCase
     public function test_original_enrollment_and_assessment_relationships_are_validated_and_projected(): void
     {
         $this->signIn();
+        $this->get(route('admin.training.create.register'))->assertOk();
         $this->save('tmis-farmers', ['id' => 'FMR-LINK', 'fname' => 'Ana', 'lname' => 'Santos'])->assertOk();
+        $this->save('tmis-farmers', ['id' => 'FMR-ASSOCIATION', 'fname' => 'Association', 'lname' => 'Member'])->assertOk();
+        $this->save('tmis-farmers', [
+            'id' => 'FMR-LOCATION',
+            'fname' => 'Location',
+            'lname' => 'Match',
+            'region_id' => '4',
+            'org_id' => '2',
+            'province' => 'Quezon',
+            'municipality' => 'Alabat',
+        ])->assertOk();
+        $this->save('tmis-farmers', [
+            'id' => 'FMR-UNRELATED',
+            'fname' => 'Unrelated',
+            'lname' => 'Farmer',
+            'region_id' => '4',
+            'org_id' => '2',
+            'province' => 'Rizal',
+            'municipality' => 'Antipolo',
+        ])->assertOk();
         $this->save('tmis-pre-test-questionnaires', ['id' => 'PRE-LINK', 'trainingQuestionnaire' => 'Linked pretest', 'totalItems' => 5, 'status' => 'Active'])->assertOk();
-        $created = $this->save('tmis-trainings', ['id' => 'TRN-LINK', 'training_title' => 'Linked training', 'start_date' => '2026-12-01', 'end_date' => '2026-12-02', 'venue' => 'Hall', 'budget' => 100, 'pretest' => ['PRE-LINK']])->assertOk();
+        $this->save('tmis-post-test-questionnaires', [
+            'id' => 'POST-LINK',
+            'trainingQuestionnaire' => 'Linked post-test',
+            'questions' => [['text' => 'Post-test question']],
+            'status' => 'Active',
+        ])->assertOk();
+        $this->save('tmis-training-evaluation-questionnaires', [
+            'id' => 'EVAL-LINK',
+            'trainingQuestionnaire' => 'Linked training evaluation',
+            'questions' => [['text' => 'Training feedback']],
+            'status' => 'Active',
+        ])->assertOk();
+        $created = $this->save('tmis-trainings', [
+            'id' => 'TRN-LINK',
+            'training_title' => 'Linked training',
+            'start_date' => '2026-12-01',
+            'end_date' => '2026-12-02',
+            'venue' => 'Hall',
+            'budget' => 100,
+            'region_id' => '4',
+            'org_id' => '1',
+            'province' => 'Quezon',
+            'municipality' => 'Alabat',
+            'pretest' => ['PRE-LINK'],
+            'posttest' => ['POST-LINK'],
+        ])->assertOk();
         $assessment = ['id' => 'RESULT-LINK', 'questionnaireId' => 'PRE-LINK', 'trainingId' => 'TRN-LINK', 'farmerId' => 'FMR-LINK', 'date' => '2026-12-01', 'score' => 4, 'status' => 'complete'];
         $this->save('tmis-pre-test-encoded', $assessment)->assertUnprocessable();
+        $this->save('tmis-farmer-associations', [
+            'id' => 'FA-ENCODING-LINK',
+            'association_name' => 'Assessment association',
+            'region_id' => '4',
+            'org_id' => '1',
+            'members' => [['farmer_id' => 'FMR-ASSOCIATION', 'position' => 'Member']],
+        ])->assertOk();
+        $training = $created->json('stores.tmis-trainings.0');
+        $training['associationIds'] = ['FA-ENCODING-LINK'];
+        $created = $this->save('tmis-trainings', $training)->assertOk();
         $this->postJson('/ui/training-enrollment', ['id' => 'TRN-LINK', 'participants' => ['FMR-LINK'], 'version' => $created->json('stores.tmis-trainings.0._version')])->assertOk()->assertJsonPath('stores.tmis-trainings.0.participants', ['FMR-LINK']);
         DB::table('trainings')->where('ui_id', 'TRN-LINK')->update(['status' => 'Approved & Accepted']);
         $this->save('tmis-pre-test-encoded', $assessment)->assertOk();
+        $this->save('tmis-pre-test-encoded', [
+            'id' => 'RESULT-ASSOCIATION',
+            'questionnaireId' => 'PRE-LINK',
+            'trainingId' => 'TRN-LINK',
+            'farmerId' => 'FMR-ASSOCIATION',
+            'date' => '2026-12-01',
+            'score' => 3,
+            'status' => 'complete',
+        ])->assertOk();
+        $this->save('tmis-pre-test-encoded', [
+            'id' => 'RESULT-LOCATION',
+            'questionnaireId' => 'PRE-LINK',
+            'trainingId' => 'TRN-LINK',
+            'farmerId' => 'FMR-LOCATION',
+            'date' => '2026-12-01',
+            'score' => 2,
+            'status' => 'complete',
+        ])->assertOk();
+        $this->save('tmis-pre-test-encoded', [
+            'id' => 'RESULT-UNRELATED',
+            'questionnaireId' => 'PRE-LINK',
+            'trainingId' => 'TRN-LINK',
+            'farmerId' => 'FMR-UNRELATED',
+            'date' => '2026-12-01',
+            'score' => 2,
+            'status' => 'complete',
+        ])->assertUnprocessable();
+        $this->save('tmis-post-test-encoded', [
+            'id' => 'RESULT-POST-LINK',
+            'questionnaireId' => 'POST-LINK',
+            'trainingId' => 'TRN-LINK',
+            'farmerId' => 'FMR-LINK',
+            'date' => '2026-12-01',
+            'score' => 1,
+            'status' => 'complete',
+        ])->assertOk();
+        $this->save('tmis-training-evaluation-encoded', [
+            'id' => 'RESULT-EVAL-LINK',
+            'questionnaireId' => 'EVAL-LINK',
+            'trainingId' => 'TRN-LINK',
+            'farmerId' => 'FMR-LINK',
+            'date' => '2026-12-01',
+            'ratings' => [['question' => 'Training feedback', 'rating' => 5]],
+            'status' => 'complete',
+        ])->assertOk();
         $duplicate = $assessment;
         $duplicate['id'] = 'RESULT-DUPLICATE';
         unset($duplicate['trainingId']);
         $this->save('tmis-pre-test-encoded', $duplicate)->assertConflict();
         $this->assertDatabaseHas('assessment_results', ['training_id' => DB::table('trainings')->value('id'), 'participant_id' => DB::table('participants')->value('id'), 'state' => 'complete']);
-        $this->getJson('/ui/data')->assertOk()->assertJsonPath('stores.tmis-trainings.0.pretest', ['PRE-LINK']);
+        $trainingId = (int) DB::table('trainings')->where('ui_id', 'TRN-LINK')->value('id');
+        $this->getJson('/ui/data')
+            ->assertOk()
+            ->assertJsonPath('stores.tmis-trainings.0.pretest', ['PRE-LINK'])
+            ->assertJsonPath('stores.tmis-pre-test-encoded.0.trainingDatabaseId', $trainingId)
+            ->assertJsonPath('stores.tmis-post-test-encoded.0.trainingDatabaseId', $trainingId)
+            ->assertJsonPath('stores.tmis-training-evaluation-encoded.0.trainingDatabaseId', $trainingId)
+            ->assertJsonPath('stores.tmis-training-evaluation-encoded.0.ratings.0.rating', 5);
         foreach (['view-training', 'edit-training'] as $page) {
             $rendered = $this->get('/app/admin/training/id/'.$page.'?id=TRN-LINK')->assertOk()->assertViewIs('admin.training.id.'.$page)->assertSee('TMIS_PAGE');
             if ($page === 'view-training') {
@@ -1502,8 +1830,15 @@ class OriginalInterfaceTest extends TestCase
         Storage::fake('local');
         $this->signIn();
         $this->save('tmis-farmers', ['id' => 'FMR-PRIVATE', 'fname' => 'Ana', 'lname' => 'Santos'])->assertOk();
+        $this->postJson('/system/attachment-types/farmer_association', ['name' => 'Association-only document'])->assertCreated();
+        $this->post('/ui/documents/participants/FMR-PRIVATE', ['kind' => 'Association-only document', 'file' => UploadedFile::fake()->createWithContent('wrong-category.pdf', "%PDF-1.4\n%%EOF")], ['Accept' => 'application/json'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('kind');
         $this->post('/ui/documents/participants/FMR-PRIVATE', ['kind' => 'Other', 'file' => UploadedFile::fake()->createWithContent('payload.php', '<?php echo "unsafe";')], ['Accept' => 'application/json'])->assertUnprocessable();
         $saved = $this->post('/ui/documents/participants/FMR-PRIVATE', ['kind' => 'Other', 'file' => UploadedFile::fake()->createWithContent('record.pdf', "%PDF-1.4\n%%EOF")], ['Accept' => 'application/json'])->assertOk();
+        $this->postJson('/system/attachment-types/farmer_profile', ['name' => 'Field Form'])->assertCreated();
+        $this->post('/ui/documents/participants/FMR-PRIVATE', ['kind' => 'Field Form', 'file' => UploadedFile::fake()->createWithContent('field-form.pdf', "%PDF-1.4\n%%EOF")], ['Accept' => 'application/json'])->assertOk();
+        $this->assertDatabaseHas('participant_attachments', ['kind' => 'Field Form']);
         $url = $saved->json('stores.tmis-farmers.0.attachments.0.url');
         $this->signIn(3, 2);
         DB::table('role_permissions')->insert(['role_id' => 3, 'permission' => 'participants.read']);

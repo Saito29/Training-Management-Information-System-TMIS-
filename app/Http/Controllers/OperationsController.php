@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Authentication\AccountDisplay;
 use App\Http\Authentication\AuditTrail;
 use App\Models\User;
+use App\Support\AttachmentTypeCatalog;
 use App\Support\ModuleAccess;
 use App\Support\OperationalFields;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -99,7 +100,8 @@ class OperationsController
             'enrolledParticipants' => $selected && $module === 'trainings' ? DB::table('training_participant')->join('participants', 'training_participant.participant_id', '=', 'participants.id')->where('training_id', $selected->id)->get(['participants.id', 'participants.name']) : collect(),
             'enrolledResources' => $selected && $module === 'trainings' ? DB::table('training_resource_person')->join('resource_persons', 'training_resource_person.resource_person_id', '=', 'resource_persons.id')->where('training_id', $selected->id)->get(['resource_persons.id', 'resource_persons.name']) : collect(),
             'regions' => $regions->orderBy('name')->get(), 'offices' => $offices->orderBy('name')->get(),
-            'attachments' => $selected && $module === 'trainings' ? DB::table('training_attachments')->where('training_id', $selected->id)->get(['id', 'kind', 'original_name']) : collect(),
+            'attachments' => $selected && $module === 'trainings' ? DB::table('training_attachments')->where('training_id', $selected->id)->get(['id', 'kind', 'original_kind', 'original_name']) : collect(),
+            'trainingAttachmentTypes' => $module === 'trainings' ? AttachmentTypeCatalog::names('training') : collect(),
             'history' => $selected && $module === 'trainings' ? DB::table('training_status_changes')->where('training_id', $selected->id)->orderByDesc('id')->get() : collect(),
         ]);
     }
@@ -367,9 +369,31 @@ class OperationsController
             abort_unless(ModuleAccess::isAdministrator($request->user()), 403, 'Only System Administrators can finalize training acceptance.');
         }
         if ($training->status === 'For review' && $data['status'] === 'For approval') {
-            $hasDesign = DB::table('training_attachments')->where('training_id', $id)->where('kind', 'Training design')->get(['path'])->contains(fn ($design): bool => Storage::disk('local')->exists($design->path));
-            if (! $hasDesign) {
-                throw ValidationException::withMessages(['training_design' => 'Upload a training design attachment before submitting for approval.']);
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            $requiredTypes = DB::table('attachment_type_options')
+                ->where('category', 'training')
+                ->where('is_required', true)
+                ->lockForUpdate()
+                ->pluck('name');
+            $uploadedTypes = DB::table('training_attachments')
+                ->where('training_id', $id)
+                ->get(['original_kind', 'kind', 'path'])
+                ->filter(fn ($attachment): bool => Storage::disk('local')->exists($attachment->path))
+                ->map(fn ($attachment): string => mb_strtolower(trim((string) ($attachment->original_kind ?: $attachment->kind))))
+                ->unique()
+                ->all();
+            $missingTypes = $requiredTypes
+                ->reject(fn (string $name): bool => in_array(mb_strtolower(trim($name)), $uploadedTypes, true))
+                ->values();
+
+            if ($missingTypes->isNotEmpty()) {
+                $message = 'Upload the required training attachment type(s): '.$missingTypes->implode(', ').'.';
+                $errors = ['required_attachments' => $message];
+                if ($missingTypes->contains(fn (string $name): bool => mb_strtolower(trim($name)) === 'training design')) {
+                    $errors['training_design'] = 'Upload a training design attachment before submitting for approval.';
+                }
+
+                throw ValidationException::withMessages($errors);
             }
         }
         DB::table('trainings')->where('id', $id)->update(['status' => $data['status'], 'version' => $training->version + 1, 'updated_at' => now()]);
@@ -388,15 +412,17 @@ class OperationsController
     public function attachment(Request $request, int $id): JsonResponse|RedirectResponse
     {
         ModuleAccess::authorize($request, 'trainings.create');
-        $data = $request->validate(['kind' => ['required', Rule::in(['Training design', 'Attendance', 'Report', 'Other'])], 'file' => ['required', 'file', 'mimes:pdf,doc,docx', 'extensions:pdf,doc,docx', 'max:10240']]);
+        $data = $request->validate(['kind' => ['required', 'string', 'max:80'], 'file' => ['required', 'file', 'mimes:pdf,doc,docx', 'extensions:pdf,doc,docx', 'max:10240']]);
+        $data['kind'] = AttachmentTypeCatalog::resolve('training', $data['kind']);
         abort_unless($this->query($request, 'trainings')->where('id', $id)->exists(), 404);
         $file = $request->file('file');
         $path = $file->store('training-attachments', 'local');
         try {
             DB::transaction(function () use ($request, $id, $data, $file, $path): void {
+                AttachmentTypeCatalog::lock('training', $data['kind']);
                 $training = $this->query($request, 'trainings')->where('id', $id)->lockForUpdate()->first();
                 abort_unless($training && $training->status === 'For review', 409, 'Attachments can only be added during review.');
-                DB::table('training_attachments')->insert(['training_id' => $id, 'kind' => $data['kind'], 'path' => $path, 'original_name' => mb_substr(basename($file->getClientOriginalName()), 0, 255), 'mime_type' => $file->getMimeType(), 'size' => $file->getSize(), 'uploaded_by' => $request->user()->user_id, 'created_at' => now(), 'updated_at' => now()]);
+                DB::table('training_attachments')->insert(['training_id' => $id, 'kind' => $data['kind'] === 'Training design' ? 'Training design' : 'Other', 'original_kind' => $data['kind'], 'path' => $path, 'original_name' => mb_substr(basename($file->getClientOriginalName()), 0, 255), 'mime_type' => $file->getMimeType(), 'size' => $file->getSize(), 'uploaded_by' => $request->user()->user_id, 'created_at' => now(), 'updated_at' => now()]);
                 DB::table('trainings')->where('id', $id)->increment('version');
                 $this->audit($request, 'trainings', $id, 'attachment_added');
             });

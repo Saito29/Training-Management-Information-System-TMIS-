@@ -911,6 +911,7 @@ class="layout-fixed"
                     action="#"
                     class="row"
                     autocomplete="on"
+                    data-training-view-route="{{ route('admin.training.id.view-training.title', ['title' => '__title__', 'id' => '__id__']) }}"
                   >
                     <!-- Step 1 Training Information -->
                     <fieldset class="wizard-step" data-step="0">
@@ -1388,7 +1389,20 @@ class="layout-fixed"
                             required
                           />
                         </div>
-                        
+                        @if(\App\Support\ModuleAccess::allows(auth()->user(), 'associations.read'))
+                          <div class="col-12 mb-3">
+                            <label for="training_associations" class="form-label">Farmer associations</label>
+                            <select
+                              id="training_associations"
+                              name="associationIds[]"
+                              class="form-select"
+                              multiple
+                              size="6"
+                              aria-describedby="trainingAssociationsHelp"
+                            ></select>
+                            <small class="form-text" id="trainingAssociationsHelp">Select the associations participating in this training. Use Ctrl or Command to select multiple associations. This field is optional.</small>
+                          </div>
+                        @endif
                       </div>
                     </fieldset>
 

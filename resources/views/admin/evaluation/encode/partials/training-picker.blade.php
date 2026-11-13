@@ -2,8 +2,8 @@
   <div class="table-card-heading">
     <div>
       <span class="section-kicker">TRAINING DIRECTORY</span>
-      <h2 id="trainingPickerTitle">Select one training for review</h2>
-      <p>Choose a training in For Review status. Its title, location, venue, and dates will fill in the form.</p>
+      <h2 id="trainingPickerTitle">Select one training for encoding</h2>
+      <p>Choose an active approved and accepted training. Its title, location, venue, and dates will fill in the form.</p>
     </div>
     <div class="training-picker-search">
       <label for="trainingPickerSearch">Search trainings</label>
@@ -25,7 +25,7 @@
   <div class="training-picker-table-scroll">
     <table class="training-picker-table">
       <thead><tr><th scope="col">Select</th><th scope="col">Training ID</th><th scope="col">Training</th><th scope="col">Organization</th><th scope="col">Location</th><th scope="col">Venue</th><th scope="col">Dates</th></tr></thead>
-      <tbody id="trainingPickerBody"><tr><td colspan="7" class="training-picker-empty">Loading trainings for review…</td></tr></tbody>
+      <tbody id="trainingPickerBody"><tr><td colspan="7" class="training-picker-empty">Loading approved trainings…</td></tr></tbody>
     </table>
   </div>
   <div class="training-picker-footer"><span id="selectedTrainingLabel">No training selected</span><nav id="trainingPickerPagination" class="training-picker-pagination" aria-label="Training pages"></nav></div>

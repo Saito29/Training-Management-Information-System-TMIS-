@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sizes.forEach((size) => { size.value = pageSize === Infinity ? 'all' : String(pageSize); });
     exportButton.disabled = found.length === 0;
   }
-  function load() {
+  async function load(fetchLatest = false) {
     if (loadTimer) window.clearTimeout(loadTimer);
     refresh.disabled = true;
     refresh.classList.add('is-loading');
@@ -105,14 +105,20 @@ document.addEventListener('DOMContentLoaded', () => {
       + Array.from({ length: 4 }, () => '<tr class="encoded-loading-row" aria-hidden="true">' + Array.from({ length: 8 }, () => '<td><span class="encoded-loading-bar"></span></td>').join('') + '</tr>').join('');
     const delay = firstLoad ? 850 : 300;
     firstLoad = false;
-    loadTimer = window.setTimeout(() => {
+    loadTimer = window.setTimeout(async () => {
       loadTimer = null;
       readError = false;
       try {
+        if (fetchLatest && window.TMIS_PAGE) await window.TmisStore.refresh();
         const saved = JSON.parse(window.TmisStore.getItem(type.key) || '[]');
         if (!Array.isArray(saved)) throw new Error('Invalid saved results');
         records = saved.filter((record) => record?.id && record.status === 'complete').sort((a, b) => String(b.savedAt || '').localeCompare(String(a.savedAt || '')));
-      } catch { readError = true; records = []; }
+      } catch (error) {
+        readError = true;
+        loadingStatus.textContent = error.message || 'Encoded results could not be refreshed.';
+        if (typeof window.showQuestionnaireToast === 'function') window.showQuestionnaireToast(loadingStatus.textContent, 'error');
+        else window.alert(loadingStatus.textContent);
+      }
       refreshOptions();
       render();
       table.setAttribute('aria-busy', 'false');
@@ -154,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
   columnFilters.forEach((input) => input.addEventListener('input', () => { page = 1; render(); }));
   [organization, office, resourcePerson].filter(Boolean).forEach((select) => select.addEventListener('change', () => { page = 1; render(); }));
   $('clearEncodedFilters').addEventListener('click', () => { organization.value = ''; office.value = ''; if (resourcePerson) resourcePerson.value = ''; search.value = ''; columnFilters.forEach((input) => { input.value = ''; }); page = 1; render(); });
-  refresh.addEventListener('click', load);
+  refresh.addEventListener('click', () => load(true));
   exportButton.addEventListener('click', () => {
     const found = matching();
     if (!found.length) return;

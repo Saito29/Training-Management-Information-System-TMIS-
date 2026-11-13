@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const viewerModalElement = $('#attachmentViewerModal');
   const attachmentToastElement = $('#attachmentToast');
   const deleteNotice = $('#attachmentDeleteNotice');
-  const types = ['Profile Form', 'Profile Picture', 'ID', 'Other Files'];
+  const types = window.TMIS_PAGE?.attachmentTypes?.farmer_profile || ['Profile Form', 'Profile Picture', 'ID', 'Other Files', 'Other', 'Status supporting document'];
   const years = ['2023', '2024', '2025', '2026', '2027', '2028'];
   const attachments = (window.TMIS_PAGE ? window.TmisStore.selected('tmis-farmers')?.attachments || [] : []);
   const stagedFiles = [];
@@ -87,9 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const setTypeOptions = (select, selected = '') => {
+    const options = selected && !types.includes(selected) ? [...types, selected] : types;
     select.innerHTML = [
       '<option value="">Select a type</option>',
-      ...types.map(
+      ...options.map(
         (type) =>
           `<option value="${escapeHtml(type)}" ${type === selected ? 'selected' : ''}>${escapeHtml(type)}</option>`
       ),

@@ -577,6 +577,12 @@ class OperationsTest extends TestCase
         $this->postJson('/operations/trainings/'.$id.'/attachments', ['kind' => 'Training design', 'file' => UploadedFile::fake()->createWithContent('bad.php', '<?php echo 1;')])->assertUnprocessable();
         $this->assertDatabaseCount('training_attachments', 0);
         $this->postJson('/operations/trainings/'.$id.'/attachments', ['kind' => 'Training design', 'file' => UploadedFile::fake()->createWithContent('design.pdf', "%PDF-1.4\nDesign")])->assertOk();
+        $this->postJson('/system/attachment-types/training', ['name' => 'Attendance Register'])->assertCreated();
+        $this->postJson('/operations/trainings/'.$id.'/attachments', [
+            'kind' => 'Attendance Register',
+            'file' => UploadedFile::fake()->createWithContent('attendance.pdf', "%PDF-1.4\nAttendance"),
+        ])->assertOk();
+        $this->assertDatabaseHas('training_attachments', ['kind' => 'Other', 'original_kind' => 'Attendance Register']);
         $attachment = DB::table('training_attachments')->first();
         Storage::disk('local')->assertExists($attachment->path);
         $this->get('/operations/trainings/'.$id.'/attachments/'.$attachment->id)->assertDownload('design.pdf');

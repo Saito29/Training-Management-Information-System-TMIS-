@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Authentication\AuditTrail;
 use App\Support\AccountUpdateNotifier;
+use App\Support\AttachmentTypeCatalog;
 use App\Support\ModuleAccess;
 use App\Support\OriginalInterfaceData;
 use Illuminate\Http\JsonResponse;
@@ -67,7 +68,9 @@ class OriginalDocumentController
     {
         abort_unless(in_array($module, ['trainings', 'associations', 'participants'], true), 404);
         ModuleAccess::authorize($request, $module.'.'.$action);
-        $record = OriginalInterfaceData::find($request->user(), $module, $id);
+        $record = $module === 'trainings' && $action === 'read'
+            ? OriginalInterfaceData::findTrainingForRead($request->user(), $id)
+            : OriginalInterfaceData::find($request->user(), $module, $id);
         abort_unless($record, 404);
         if (in_array($action, ['create', 'edit', 'delete'], true) && $module === 'trainings') {
             abort_unless($record->status === 'For review', 409, 'Return the training to review before changing documents.');
@@ -88,6 +91,7 @@ class OriginalDocumentController
         $action = $module === 'participants' && $request->input('kind') === 'Status supporting document' ? 'edit' : 'create';
         $owner = $this->owner($request, $module, $id, $action);
         $data = $request->validate(['kind' => ['required', 'string', 'max:80'], 'year' => ['nullable', 'integer', 'min:2000', 'max:2200'], 'remarks' => ['nullable', 'string', 'max:500'], 'file' => ['required', 'file', 'mimes:pdf,doc,docx,png,jpg,jpeg,webp', 'extensions:pdf,doc,docx,png,jpg,jpeg,webp', 'max:10240']]);
+        $data['kind'] = AttachmentTypeCatalog::resolve(AttachmentTypeCatalog::categoryForModule($module), $data['kind']);
         if ($module === 'participants' && $data['kind'] === 'Status supporting document') {
             $request->validate(['file' => ['required', 'file', 'mimes:pdf,png,jpg,jpeg,webp,gif', 'extensions:pdf,png,jpg,jpeg,webp,gif', 'max:10240']]);
         }
@@ -99,6 +103,7 @@ class OriginalDocumentController
         $path = $file->store('record-documents', 'local');
         try {
             DB::transaction(function () use ($request, $module, $owner, $data, $design, $file, $path): void {
+                AttachmentTypeCatalog::lock(AttachmentTypeCatalog::categoryForModule($module), $data['kind']);
                 $locked = DB::table($module)->where('id', $owner->id)->lockForUpdate()->first();
                 abort_unless($locked && ! $locked->deleted_at, 404);
                 if ($module === 'trainings') {
@@ -136,8 +141,10 @@ class OriginalDocumentController
     {
         $owner = $this->owner($request, $module, $id, 'edit');
         $data = $request->validate(['kind' => ['required', 'string', 'max:80'], 'year' => ['nullable', 'integer', 'min:2000', 'max:2200'], 'remarks' => ['nullable', 'string', 'max:500']]);
+        $data['kind'] = AttachmentTypeCatalog::resolve(AttachmentTypeCatalog::categoryForModule($module), $data['kind']);
         [$table, $foreign] = $this->table($module);
         DB::transaction(function () use ($request, $module, $owner, $document, $data, $table, $foreign): void {
+            AttachmentTypeCatalog::lock(AttachmentTypeCatalog::categoryForModule($module), $data['kind']);
             $locked = DB::table($module)->where('id', $owner->id)->lockForUpdate()->first();
             abort_unless($locked && ! $locked->deleted_at, 404);
             if ($module === 'trainings') {

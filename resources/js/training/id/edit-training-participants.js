@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function match(record, search) {
     const term = normalized(search);
-    return !term || [record.id, record.name, record.barangay]
+    return !term || [record.farmerNumber, record.id, record.name, record.barangay]
       .some(value => normalized(value).includes(term));
   }
   function currentFiltered() {
@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
       match(record, $('#editAvailableSearch').value));
   }
   function rowCells(record) {
-    return `<td>${escapeHtml(record.id)}</td><td><strong>${escapeHtml(record.name)}</strong></td><td>${escapeHtml(record.region || '—')}</td><td>${escapeHtml(record.province || '—')}</td><td>${escapeHtml(record.municipality || '—')}</td><td>${escapeHtml(record.barangay || '—')}</td>`;
+    return `<td>${escapeHtml(record.farmerNumber || record.id)}</td><td><strong>${escapeHtml(record.name)}</strong></td><td>${escapeHtml(record.region || '—')}</td><td>${escapeHtml(record.province || '—')}</td><td>${escapeHtml(record.municipality || '—')}</td><td>${escapeHtml(record.barangay || '—')}</td>`;
   }
   function render() {
     const current = currentFiltered();
@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!button) return;
     const record = directory.find(item => item.id === button.dataset.removeParticipant);
     if (!record || !currentIds.has(record.id)) return;
-    if (!window.confirm(`Remove ${record.name} (${record.id}) from this training?`)) return;
+    if (!window.confirm(`Remove ${record.name} (${record.farmerNumber || record.id}) from this training?`)) return;
     currentIds.delete(record.id);
     try {
       await window.TmisStore.setItem(storageKey, JSON.stringify([...currentIds]));
@@ -285,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const headers = ['Farmer ID', 'Full Name', 'Region', 'Province', 'Municipality / City', 'Barangay'];
       const rows = records.map(record => [
-        record.id,
+        record.farmerNumber || record.id,
         record.name,
         record.region || '',
         record.province || '',

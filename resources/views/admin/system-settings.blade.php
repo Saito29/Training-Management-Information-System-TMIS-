@@ -1593,13 +1593,15 @@ class="layout-fixed"
 <button class="nav-link" id="nationalities-tab" data-bs-toggle="pill" data-bs-target="#nationalities" type="button" role="tab" aria-controls="nationalities" aria-selected="false"><i class="bi bi-flag" aria-hidden="true"></i><span>Nationalities<small>Participant registration choices</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
 <button class="nav-link" id="record-statuses-tab" data-bs-toggle="pill" data-bs-target="#record-statuses" type="button" role="tab" aria-controls="record-statuses" aria-selected="false"><i class="bi bi-tags" aria-hidden="true"></i><span>Farmer statuses<small>{{ $recordStatusOptions->count() }} farmer statuses</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
 <button class="nav-link" id="offices-tab" data-bs-toggle="pill" data-bs-target="#offices" type="button" role="tab" aria-controls="offices" aria-selected="false"><i class="bi bi-buildings" aria-hidden="true"></i><span>Offices<small>Register offices per region</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
-</nav><div class="settings-admin-note"><i class="bi bi-shield-check" aria-hidden="true"></i>@if($isSuperAdministrator)<strong>Super Admin workspace</strong><p>Your System Administrator account also has Super Admin authorization for maintenance, role access, Super Admin assignments, and database backup tools.</p>@else<strong>System Administrator workspace</strong><p>Your role includes account, branding, visibility, location, training type, and office settings. Super Admin access is separately required for maintenance, role access, Super Admin assignments, and database backup tools.</p>@endif</div></aside>
+<button class="nav-link" id="attachment-types-tab" data-bs-toggle="pill" data-bs-target="#attachment-types" type="button" role="tab" aria-controls="attachment-types" aria-selected="false"><i class="bi bi-paperclip" aria-hidden="true"></i><span>Attachment types<small>Farmer, association &amp; training files</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+</nav><div class="settings-admin-note"><i class="bi bi-shield-check" aria-hidden="true"></i>@if($isSuperAdministrator)<strong>Super Admin workspace</strong><p>Your System Administrator account also has Super Admin authorization for maintenance, role access, Super Admin assignments, and database backup tools.</p>@else<strong>System Administrator workspace</strong><p>Your role includes account, branding, visibility, location, training type, attachment type, and office settings. Super Admin access is separately required for maintenance, role access, Super Admin assignments, and database backup tools.</p>@endif</div></aside>
 <div class="tab-content settings-content">
 @include('admin.location-settings')
 @include('admin.training-type-settings')
 @include('admin.office-settings')
 @include('admin.nationality-settings')
 @include('admin.record-status-settings')
+@include('admin.attachment-type-settings')
 <div class="modal fade" id="settingsDeleteModal" tabindex="-1" aria-labelledby="settingsDeleteTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content settings-delete-modal">

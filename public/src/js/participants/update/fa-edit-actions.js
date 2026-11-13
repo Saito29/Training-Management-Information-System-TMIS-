@@ -39,6 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const queueSummary = document.getElementById('attachmentQueueSummary');
   const queueFeedback = document.getElementById('attachmentFeedback');
   const saveButton = document.getElementById('saveStagedAttachments');
+  const configuredTypes = window.TMIS_PAGE?.attachmentTypes?.farmer_association;
+  const types = Array.isArray(configuredTypes) && configuredTypes.length
+    ? configuredTypes
+    : ['Association Document', 'Registration Certificate', 'Membership List', 'Other File', 'Other'];
   const staged = [];
   const acceptedTypes = new Set(['application/pdf', 'image/jpeg', 'image/png']);
   const readFile = file => new Promise((resolve, reject) => {
@@ -65,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const typeCell = document.createElement('td');
       const type = document.createElement('select');
       type.className = 'form-select form-select-sm';
-      ['Association Document', 'Registration Certificate', 'Membership List', 'Other File'].forEach(value => type.add(new Option(value, value)));
+      types.forEach(value => type.add(new Option(value, value)));
       type.value = item.type;
       type.addEventListener('change', () => { item.type = type.value; });
       typeCell.append(type);
@@ -110,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const items = await Promise.all(files.map(async file => ({
         name: file.name,
         file,
-        type: 'Association Document',
+        type: types[0],
         year: String(new Date().getFullYear()),
         remarks: '',
         dataUrl: await readFile(file),

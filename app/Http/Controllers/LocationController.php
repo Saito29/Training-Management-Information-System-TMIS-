@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Authentication\AuditTrail;
+use App\Support\LocationWorkbook;
 use App\Support\ModuleAccess;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
@@ -11,9 +12,157 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class LocationController
 {
+    public function template(Request $request, LocationWorkbook $workbook): BinaryFileResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $path = $workbook->createTemplate();
+
+        return response()->download($path, 'location-template.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'no-store, private',
+        ])->deleteFileAfterSend(true);
+    }
+
+    public function import(Request $request, LocationWorkbook $workbook): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $data = $request->validate([
+            'file' => ['required', 'file', 'extensions:xlsx', 'max:20480'],
+        ]);
+        $paths = $workbook->read($data['file']);
+
+        $counts = DB::transaction(function () use ($request, $paths): array {
+            $counts = [
+                'createdRegions' => 0,
+                'createdLocations' => 0,
+                'existingRegions' => 0,
+                'existingLocations' => 0,
+            ];
+            DB::table('region')->orderBy('region_id')->lockForUpdate()->get(['region_id']);
+
+            $regionIndex = [];
+            foreach (DB::table('region')->get(['region_id', 'name']) as $region) {
+                $regionIndex[mb_strtolower(trim($region->name))] = (int) $region->region_id;
+            }
+            $regionNames = [];
+            foreach ($paths as $path) {
+                $key = mb_strtolower($path['region']);
+                $regionNames[$key] = $path['region'];
+            }
+            $newRegions = [];
+            foreach ($regionNames as $key => $name) {
+                if (! isset($regionIndex[$key])) {
+                    $newRegions[] = [
+                        'name' => $name,
+                        'is_active' => true,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+            }
+            foreach (array_chunk($newRegions, 500) as $regionBatch) {
+                DB::table('region')->insert($regionBatch);
+            }
+            if ($newRegions !== []) {
+                $regionIndex = [];
+                foreach (DB::table('region')->get(['region_id', 'name']) as $region) {
+                    $regionIndex[mb_strtolower(trim($region->name))] = (int) $region->region_id;
+                }
+            }
+            $counts['createdRegions'] = count($newRegions);
+            $counts['existingRegions'] = count($regionNames) - count($newRegions);
+
+            $locationIndex = [];
+            foreach (DB::table('geographic_locations')->get(['id', 'region_id', 'parent_id', 'kind', 'name']) as $location) {
+                $key = $this->locationIndexKey($location->kind, (int) $location->region_id, $location->parent_id === null ? null : (int) $location->parent_id, $location->name);
+                $locationIndex[$key] = (int) $location->id;
+            }
+            $pathParentIds = [];
+            foreach ($paths as $index => $path) {
+                $pathParentIds[$index] = null;
+            }
+
+            foreach ([
+                'province' => 'province',
+                'district' => 'district',
+                'municipality' => 'municipality',
+                'barangay' => 'barangay',
+            ] as $kind => $field) {
+                $newLocations = [];
+                $existingKeys = [];
+                $pathKeys = [];
+                foreach ($paths as $pathIndex => $path) {
+                    $name = $path[$field];
+                    if ($name === '') {
+                        continue;
+                    }
+
+                    $regionId = $regionIndex[mb_strtolower($path['region'])];
+                    $parentId = $pathParentIds[$pathIndex];
+                    $key = $this->locationIndexKey($kind, $regionId, $parentId, $name);
+                    $pathKeys[$pathIndex] = $key;
+                    if (isset($locationIndex[$key])) {
+                        $existingKeys[$key] = true;
+                    } else {
+                        $newLocations[$key] = [
+                            'name' => $name,
+                            'kind' => $kind,
+                            'region_id' => $regionId,
+                            'parent_id' => $parentId,
+                            'is_active' => true,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    }
+                }
+
+                foreach (array_chunk(array_values($newLocations), 500) as $locationBatch) {
+                    DB::table('geographic_locations')->insert($locationBatch);
+                }
+                $counts['createdLocations'] += count($newLocations);
+                $counts['existingLocations'] += count($existingKeys);
+
+                if ($newLocations !== []) {
+                    foreach (DB::table('geographic_locations')->where('kind', $kind)->get(['id', 'region_id', 'parent_id', 'name']) as $location) {
+                        $key = $this->locationIndexKey($kind, (int) $location->region_id, $location->parent_id === null ? null : (int) $location->parent_id, $location->name);
+                        $locationIndex[$key] = (int) $location->id;
+                    }
+                }
+
+                foreach ($pathKeys as $pathIndex => $key) {
+                    $pathParentIds[$pathIndex] = $locationIndex[$key];
+                }
+            }
+
+            AuditTrail::record(
+                $request,
+                'location_excel_imported',
+                $request->user(),
+                after: $counts + ['rows_imported' => count($paths)],
+                category: 'settings',
+            );
+
+            return $counts;
+        });
+
+        $message = 'Location import complete: '.$counts['createdRegions'].' region(s) and '
+            .$counts['createdLocations'].' location(s) added. Existing paths were left unchanged.';
+
+        return response()->json($counts + [
+            'rowsImported' => count($paths),
+            'message' => $message,
+        ], 201);
+    }
+
+    private function locationIndexKey(string $kind, int $regionId, ?int $parentId, string $name): string
+    {
+        return implode("\x1f", [$kind, (string) $regionId, (string) ($parentId ?? 0), mb_strtolower(trim($name))]);
+    }
+
     /** Create a location and return timestamps needed to refresh the hierarchy directory immediately. */
     public function store(Request $request): JsonResponse|RedirectResponse
     {

@@ -61,14 +61,21 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       render();
     }
-    function load() {
+    async function load(fetchLatest = false) {
       table.setAttribute('aria-busy', 'true');
       refresh.disabled = true;
       rows.innerHTML = `<tr class="draft-loading-row"><td colspan="${columns.length}"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Loading drafts...</td></tr>`;
-      window.setTimeout(() => {
-        try { read(); }
-        finally { table.setAttribute('aria-busy', 'false'); refresh.disabled = false; }
-      }, 180);
+      try {
+        if (fetchLatest && window.TMIS_PAGE) await window.TmisStore.refresh();
+        read();
+      } catch (error) {
+        const message = error.message || 'Drafts could not be refreshed.';
+        if (typeof window.showQuestionnaireToast === 'function') window.showQuestionnaireToast(message, 'error');
+        else window.alert(message);
+      } finally {
+        table.setAttribute('aria-busy', 'false');
+        refresh.disabled = false;
+      }
     }
     [type, search, association].filter(Boolean).forEach((input) => input.addEventListener('input', () => { page = 1; render(); }));
     document.getElementById(`${prefix}Clear`).addEventListener('click', () => { type.value = ''; search.value = ''; if (association) association.value = ''; page = 1; render(); });
@@ -78,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const last = pageSize === Infinity ? 1 : Math.max(1, Math.ceil(matching().length / pageSize));
       page = { first: 1, previous: page - 1, next: page + 1, last }[button.dataset.page]; render();
     }));
-    refresh.addEventListener('click', load);
+    refresh.addEventListener('click', () => load(true));
     {
       const suffix = kind === 'questionnaire' ? 'Questionnaire' : 'Encoding';
       const detail = (name, value) => { document.getElementById(`deleteDraft${suffix}${name}`).textContent = value || '—'; };
@@ -175,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const title = record.trainingQuestionnaire || record.questionnaireName || 'Untitled questionnaire';
     const count = Array.isArray(record.questions) ? record.questions.length : Number(record.totalItems) || 0;
     const office = record.implementingOffice || record.office || '';
-    return { id: record.id, key: source.key, type: source.type, title, region: record.region || '', office, count, savedAt: record.updatedAt || record.createdAt || '', href: `${source.path}?id=${encodeURIComponent(record.id)}`,
+    return { id: record.id, key: source.key, type: source.type, title, region: record.region || '', office, count, savedAt: record.updatedAt || record.createdAt || '', href: `${source.path}/${encodeURIComponent(record.id)}`,
       search: `${title} ${record.id} ${source.type} ${record.region || ''} ${office}`,
       cells: ['Draft', record.id, title, source.type, record.region || '—', office || '—', count, date(record.updatedAt || record.createdAt)] };
   }, ['Action', 'Status', 'Questionnaire ID', 'Questionnaire Title', 'Type', 'Region', 'Office', 'Items', 'Last Saved']);

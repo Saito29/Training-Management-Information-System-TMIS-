@@ -19,7 +19,13 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
   const barangays = ['San Antonio', 'Darasa', 'Balele', 'Trapiche', 'Mabini', 'Poblacion'];
   const associations = ['Tanauan Farmers Association', 'San Antonio Farmers Cooperative', 'Batangas Growers Association'];
-  const records = (window.TMIS_PAGE ? window.TmisStore.records('tmis-farmers').filter(item=>(window.TmisStore.selected('tmis-trainings')?.participants||[]).includes(item.id)).map(item=>({...item,farmerId:item.id,mobile:item.phone,association:item.organization})) : names.map(([lastName, firstName, middleName, sex], index) => ({
+  const databaseRecords = () => {
+    const participantIds = window.TmisStore.selected('tmis-trainings')?.participants || [];
+    return window.TmisStore.records('tmis-farmers')
+      .filter(item => participantIds.includes(item.id))
+      .map(item => ({ ...item, farmerId: item.farmerNumber || item.id, mobile: item.phone, association: item.organization }));
+  };
+  let records = (window.TMIS_PAGE ? databaseRecords() : names.map(([lastName, firstName, middleName, sex], index) => ({
     farmerId: `FMR-2025-${String(index + 1).padStart(3, '0')}`,
     lastName, firstName, middleName, sex,
     birthDate: `19${70 + index % 25}-${String(index % 12 + 1).padStart(2, '0')}-${String(index % 27 + 1).padStart(2, '0')}`,
@@ -178,7 +184,27 @@ document.addEventListener('DOMContentLoaded', () => {
     render();
     feedback('Filters cleared.');
   });
-  $('#participantRefresh').addEventListener('click', () => { resetTable(); feedback('Participant table refreshed.'); });
+  $('#participantRefresh').addEventListener('click', async event => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      if (window.TMIS_PAGE) {
+        await window.TmisStore.refresh();
+        records = databaseRecords();
+      }
+      resetTable();
+      feedback('Participant table refreshed.');
+    } catch (error) {
+      feedback(error.message || 'Participant data could not be refreshed.');
+    } finally {
+      button.disabled = false;
+    }
+  });
+  window.addEventListener('tmis:data-updated', () => {
+    if (!window.TMIS_PAGE) return;
+    records = databaseRecords();
+    render();
+  });
   $('#participantExport').addEventListener('click', () => {
     if (!window.XLSX) { feedback('Excel export is unavailable. Check your connection and try again.'); return; }
     const exportColumns = columns.filter(([key]) => key !== 'actions');

@@ -225,9 +225,23 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch { feedback('The registration could not be read. Deletion was not scheduled.', 'error'); }
   });
   $('undoUserDelete').addEventListener('click', () => { if (!pendingDelete) return; cancelDeletion(); feedback('Deletion undone. The registration has been kept.'); });
-  $('refreshApprovals').addEventListener('click', () => {
-    try { records = read(); render(); feedback('User registrations refreshed.'); }
-    catch { feedback('User registrations could not be refreshed. Showing the previous results.', 'error'); }
+  $('refreshApprovals').addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    if (refreshing) return;
+    refreshing = true;
+    button.disabled = true;
+    try {
+      if (window.TMIS_PAGE) await window.TmisStore.refresh();
+      records = read();
+      render();
+      feedback('User registrations refreshed.');
+    } catch {
+      feedback('User registrations could not be refreshed. Showing the previous results.', 'error');
+    } finally {
+      refreshing = false;
+      button.disabled = false;
+      render();
+    }
   });
   $('clearApprovalFilters').addEventListener('click', () => { $('approvalSearch').value = $('userOfficeFilter').value = $('userRegionFilter').value = ''; document.querySelectorAll('[data-field]').forEach((input) => { input.value = ''; }); page = 1; render(); });
   [$('approvalSearch'), ...document.querySelectorAll('[data-field]')].forEach((input) => input.addEventListener('input', () => { page = 1; render(); }));
@@ -239,5 +253,6 @@ document.addEventListener('DOMContentLoaded', () => {
     $(`approvalNext${suffix}`).addEventListener('click', () => { page++; render(); });
   }
   window.addEventListener('storage', (event) => { if (!event.key || event.key === key) refresh(); });
+  window.addEventListener('tmis:data-updated', refresh);
   refresh();
 });

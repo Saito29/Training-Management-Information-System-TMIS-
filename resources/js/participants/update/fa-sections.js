@@ -6,6 +6,19 @@ document.addEventListener('DOMContentLoaded', () => {
       return Array.isArray(records) ? records.find(record => record.id === associationId) : null;
     } catch { return null; }
   };
+  const configuredAttachmentTypes = window.TMIS_PAGE?.attachmentTypes?.farmer_association;
+  const attachmentTypes = Array.isArray(configuredAttachmentTypes) && configuredAttachmentTypes.length
+    ? configuredAttachmentTypes
+    : ['Association Document', 'Registration Certificate', 'Membership List', 'Other File', 'Other'];
+  const editAttachmentType = document.getElementById('editAttachmentType');
+  if (editAttachmentType) {
+    const selectedType = editAttachmentType.value;
+    editAttachmentType.replaceChildren(
+      new Option('Select a type', ''),
+      ...attachmentTypes.map(type => new Option(type, type)),
+    );
+    if (selectedType && attachmentTypes.includes(selectedType)) editAttachmentType.value = selectedType;
+  }
   const clean = value => value === undefined || value === null ? '' : String(value);
   const make = (tag, className, value) => {
     const element = document.createElement(tag);
