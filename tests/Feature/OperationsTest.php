@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Js;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Mailer\Exception\TransportException;
 use Tests\TestCase;
@@ -150,6 +151,30 @@ class OperationsTest extends TestCase
         $this->get('/app/admin/training/details/all-status')->assertOk();
         $this->get('/app/admin/training/create/register')->assertNotFound();
         $this->get('/app/admin/participants/details/all-with-status')->assertNotFound();
+    }
+
+    public function test_profile_navigation_marks_user_administration_for_super_administrators_only(): void
+    {
+        $regularUser = $this->signIn(3);
+        $regularAccess = ModuleAccess::navigationAccess($regularUser);
+        $this->get(route('admin.dashboard.dashboard'))->assertOk()
+            ->assertSee('window.TMIS_NAV_ACCESS = '.Js::from($regularAccess)->toHtml().';', false);
+        $this->assertFalse($regularAccess['administrator']);
+        $this->assertFalse($regularAccess['super_administrator']);
+
+        $administrator = $this->signIn(1);
+        DB::table('system_super_admins')->where('user_id', $administrator->user_id)->delete();
+        $administratorAccess = ModuleAccess::navigationAccess($administrator);
+        $this->get(route('admin.dashboard.dashboard'))->assertOk()
+            ->assertSee('window.TMIS_NAV_ACCESS = '.Js::from($administratorAccess)->toHtml().';', false);
+        $this->assertTrue($administratorAccess['administrator']);
+        $this->assertFalse($administratorAccess['super_administrator']);
+
+        $superAdministrator = $this->signIn(1);
+        $superAdministratorAccess = ModuleAccess::navigationAccess($superAdministrator);
+        $this->get(route('admin.dashboard.dashboard'))->assertOk()
+            ->assertSee('window.TMIS_NAV_ACCESS = '.Js::from($superAdministratorAccess)->toHtml().';', false);
+        $this->assertTrue($superAdministratorAccess['super_administrator']);
     }
 
     public function test_page_view_permissions_override_module_read_for_navigation_pages_and_direct_urls(): void

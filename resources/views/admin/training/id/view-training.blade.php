@@ -56,7 +56,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/training/id/view-training.css?v=training-status-badge-1') }}"
+      href="{{ asset('src/css/training/id/view-training.css?v=budget-overview-2') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-participants.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-pretest.css') }}" />
@@ -846,6 +846,7 @@ class="layout-fixed"
                 <div><span class="training-overview-stat-icon"><i class="bi bi-calendar-event"></i></span><span><small>Schedule</small><strong data-training-field="schedule">Not recorded</strong></span></div>
                 <div><span class="training-overview-stat-icon"><i class="bi bi-people"></i></span><span><small>Participants</small><strong data-training-field="participantCount">0 enrolled</strong></span></div>
                 <div><span class="training-overview-stat-icon"><i class="bi bi-building"></i></span><span><small>Implementing office</small><strong data-training-field="office">Not recorded</strong></span></div>
+                <div><span class="training-overview-stat-icon"><i class="bi bi-currency-exchange"></i></span><span><small>Budget / Procurement (₱)</small><strong data-training-field="budgetStat">Not recorded</strong></span></div>
               </div>
               <div class="training-overview-details">
                 <section class="training-overview-detail-card" aria-labelledby="trainingDetailsHeading">
@@ -858,7 +859,7 @@ class="layout-fixed"
                     <div><dt>Location</dt><dd data-training-field="location">Not recorded</dd></div>
                     <div><dt>Partner organization</dt><dd data-training-field="partner">Not recorded</dd></div>
                     <div><dt>Target participants</dt><dd data-training-field="target">Not recorded</dd></div>
-                    <div><dt>Training budget</dt><dd data-training-field="budget">Not recorded</dd></div>
+                    <div><dt>Training Budget / Procurement Amount (₱)</dt><dd data-training-field="budget">Not recorded</dd></div>
                     <div class="training-detail-wide"><dt>Resource persons</dt><dd data-training-field="resources">No resource persons recorded</dd></div>
                   </dl>
                 </section>
@@ -1922,21 +1923,21 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- nav -->
-    <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script id="trainingQuestionnaireData" type="application/json">
       {"pretest":[{"id":"PRE-GEN-01","name":"General Knowledge Assessment (Pre-test)","itemCount":12,"averageCorrect":8.1},{"id":"PRE-CROP-01","name":"Crop Production Pre-test","itemCount":12,"averageCorrect":8.328}],"posttest":[{"id":"POST-GEN-01","name":"General Knowledge Assessment (Post-test)","itemCount":12,"averageCorrect":10.2},{"id":"POST-CROP-01","name":"Crop Production Post-test","itemCount":12,"averageCorrect":10.5168}]}
     </script>
     <script src="{{ asset('src/js/training/id/view-training-assessments.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script src="{{ asset('src/js/training/id/view-training.js?v=training-status-badge-1') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training.js?v=budget-overview-2') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-participants.js?v=farmer-number-display-1') }}"></script>
-    <script src="{{ asset('src/js/training/id/view-training-feedback-filters.js') }}"></script>
-    <script src="{{ asset('src/js/training/id/view-training-pretest.js') }}"></script>
-    <script src="{{ asset('src/js/training/id/view-training-posttest.js') }}"></script>
-    <script src="{{ asset('src/js/training/id/view-training-resource.js') }}"></script>
-    <script src="{{ asset('src/js/training/id/view-training-evaluation.js') }}"></script>
-    <script src="{{ asset('src/js/training/id/view-training-highlights.js') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training-feedback-filters.js?v=association-option-details-1') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training-pretest.js?v=average-number-only-1') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training-posttest.js?v=average-number-only-1') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training-resource.js?v=average-rating-format-2') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training-evaluation.js?v=average-rating-format-2') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training-highlights.js?v=4k-export-preset-2') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-attachments-cards.js') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-logs.js?v=live-logs-20261109-3') }}"></script>
 @endsection

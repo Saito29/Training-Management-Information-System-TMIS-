@@ -1996,7 +1996,7 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- nav -->
-    <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/training/details/status-actions.js?v=training-status-actions-1') }}"></script>
     <script src="{{ asset('src/js/training/details/inactive.js?v=profile-specific-table-actions-1') }}"></script>

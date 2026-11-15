@@ -60,7 +60,7 @@ class="layout-fixed"
     />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
-    <title>Document</title>
+    <title>DA-TMIS - Register Participants</title>
     <!-- Backend integration disabled for now. Uncomment when ready.
 
 -->
@@ -851,9 +851,9 @@ class="layout-fixed"
                       <span class="wizard-context">Contact details</span>
                     </li>
                     <li data-step="3">
-                      <h6 class="wizard-header">Association Information</h6>
+                      <h6 class="wizard-header">Association Role</h6>
                       <span class="wizard-context"
-                        >Farmer association details</span
+                        >Position or role (optional)</span
                       >
                     </li>
                     <li data-step="4">
@@ -1148,31 +1148,13 @@ class="layout-fixed"
                     <fieldset class="wizard-step" data-step="3">
                       <div class="form-header d-flex align-items-center gap-2">
                         <i class="bi bi-people-fill"></i>
-                        <h6 class="card-header-title">Association Information</h6>
+                        <h6 class="card-header-title">Association Role</h6>
                       </div>
                       <div class="row">
-                        <div class="col-12 col-lg-4 mb-3">
-                          <span class="form-label">Belongs to association?</span>
-                          <div class="association-options">
-                            <div class="form-check form-check-inline">
-                              <input type="radio" name="association_status" id="associate_yes" class="form-check-input" value="Yes" required>
-                              <label for="associate_yes" class="form-check-label">Yes</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                              <input type="radio" name="association_status" id="associate_no" class="form-check-input" value="No">
-                              <label for="associate_no" class="form-check-label">No</label>
-                            </div>
-                          </div>
-                        </div>
-                        <div class="col-12 col-lg-4 mb-3">
-                          <label for="associate_name" class="form-label">Association Names</label>
-                          <select name="associate_names[]" id="associate_name" class="form-select form-control" multiple disabled aria-describedby="associate_name_help"><option value="">Loading database options...</option></select>
-                          <div class="form-text" id="associate_name_help">Select one or more active associations in the selected region and office. Use Ctrl or Command to select multiple.</div>
-                          <button type="button" id="openCreateAssociation" class="btn btn-outline-success btn-sm mt-2" hidden><i class="bi bi-plus-circle" aria-hidden="true"></i> Create farmer association</button>
-                        </div>
-                        <div class="col-12 col-lg-4 mb-3">
-                          <label for="associate_role" class="form-label">Position/ Role in association</label>
-                          <input type="text" name="associate_role" id="associate_role" class="form-control" placeholder="Enter association position" disabled>
+                        <div class="col-12 mb-3">
+                          <label for="associate_role" class="form-label">Position/ Role in association <span class="text-secondary">(optional)</span></label>
+                          <input type="text" name="associate_role" id="associate_role" class="form-control" placeholder="Enter association position" maxlength="255" aria-describedby="associate_role_help">
+                          <div class="form-text" id="associate_role_help">Leave blank if unknown. Add the farmer to an association from its Farmer Members tab; memberships will appear in the farmer's profile.</div>
                         </div>
                       </div>
                     </fieldset>
@@ -1895,8 +1877,8 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.8.4/dist/js/adminlte.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-    <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <!-- Connect registration fieldsets with the wizard progress card. -->
-    <script src="{{ asset('src/js/participants/register/register.js?v=farmer-duplicate-card-1') }}"></script>
+    <script src="{{ asset('src/js/participants/register/register.js?v=association-membership-managed-1') }}"></script>
 @endsection

@@ -599,10 +599,15 @@ class OriginalInterfaceData
                     $workflowStatus = match ($record->status) {
                         'For review' => 'For Review', 'For approval' => 'For Approval', 'For acceptance' => 'For Acceptance', 'Approved', 'Approved & Accepted' => 'Approved & Accepted', default => $record->status
                     };
-                    $item = array_replace($item, ['title' => $record->name, 'training_title' => $record->name, 'type' => $record->training_type, 'training_type' => $record->training_type, 'delivery_mode' => $record->delivery_mode, 'startDate' => $record->start_date, 'endDate' => $record->end_date, 'start_date' => $record->start_date, 'end_date' => $record->end_date, 'venue' => $record->venue, 'venue_location' => $record->venue, 'budget' => $record->budget, 'training_budget' => $record->budget, 'yearCovered' => $record->year_covered, 'dateEncoded' => substr((string) $record->created_at, 0, 10), 'province' => $record->province, 'district' => $record->district, 'municipality' => $record->municipality, 'barangay' => $record->barangay, 'is_active' => (bool) $record->is_active, 'statusRemarks' => $record->status_remarks, 'workflowStatus' => $workflowStatus, 'status' => ! $record->is_active ? 'Inactive' : $workflowStatus, 'version' => $record->version]);
+                    $item = array_replace($item, ['title' => $record->name, 'training_title' => $record->name, 'type' => $record->training_type, 'training_type' => $record->training_type, 'delivery_mode' => $record->delivery_mode, 'startDate' => $record->start_date, 'endDate' => $record->end_date, 'start_date' => $record->start_date, 'end_date' => $record->end_date, 'venue' => $record->venue, 'venue_location' => $record->venue, 'budget' => $record->budget, 'training_budget' => $record->budget, 'target_participants' => $record->target_participants, 'yearCovered' => $record->year_covered, 'dateEncoded' => substr((string) $record->created_at, 0, 10), 'province' => $record->province, 'district' => $record->district, 'municipality' => $record->municipality, 'barangay' => $record->barangay, 'is_active' => (bool) $record->is_active, 'statusRemarks' => $record->status_remarks, 'workflowStatus' => $workflowStatus, 'status' => ! $record->is_active ? 'Inactive' : $workflowStatus, 'version' => $record->version]);
 
                     $item['trainers'] = collect($trainingResources[$record->id] ?? [])->map(fn ($resource): array => ['id' => $resource->ui_id ?? (string) $resource->id, 'name' => $resource->name, 'role' => $resource->title ?? 'Resource person'])->all();
-                    foreach (['pretest' => 'Pre-test', 'posttest' => 'Post-test'] as $key => $kind) {
+                    foreach ([
+                        'pretest' => 'Pre-test',
+                        'posttest' => 'Post-test',
+                        'trainingEvaluation' => 'Training evaluation',
+                        'rpEvaluation' => 'Resource person evaluation',
+                    ] as $key => $kind) {
                         $item[$key] = collect($trainingQuestionnaires[$record->id] ?? [])->where('kind', $kind)->map(fn ($questionnaire): string => $questionnaire->ui_id ?? (string) $questionnaire->id)->values()->all();
                     }
                     $item['activityLogs'] = $currentTraining?->id === $record->id ? array_merge($trainingHistory, $activityByModule['trainings'] ?? []) : [];

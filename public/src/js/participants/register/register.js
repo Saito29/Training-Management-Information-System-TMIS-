@@ -12,9 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const province = document.querySelector('#province_id');
   const municipality = document.querySelector('#municipality_id');
   const barangay = document.querySelector('#barangay_id');
-  const associationStatus = [...document.querySelectorAll('input[name="association_status"]')];
-  const associationName = document.querySelector('#associate_name');
-  const associationRole = document.querySelector('#associate_role');
   const submitButton = form?.querySelector('button[type="submit"]');
   const duplicateDialog = document.querySelector('#participantDuplicateDialog');
   const duplicateList = document.querySelector('#participantDuplicateList');
@@ -250,9 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setSubmitLoading(true);
     try {
       const formData = new FormData(form);
-      const values = Object.fromEntries([...formData].filter(([name]) => name !== 'associate_names[]'));
-      const associationNames = formData.getAll('associate_names[]').filter(Boolean);
-      if (associationNames.length) values.associate_names = associationNames;
+      const values = Object.fromEntries(formData.entries());
       const result = await window.TmisStore.request(form.action, values);
       window.TmisStore.publish(result);
       window.TmisToast?.show('Record saved successfully.', 'success');
@@ -260,7 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
       currentStep = Number(fieldsets[0].dataset.step);
       syncTribeName();
       syncAllergies();
-      syncAssociationFields();
       region.value = regions.length === 1 ? String(regions[0].region_id) : '';
       region.dispatchEvent(new Event('change', {bubbles:true}));
       updateWizard();
@@ -325,32 +319,6 @@ document.addEventListener('DOMContentLoaded', () => {
   dietaryRestriction?.addEventListener('change', syncAllergies);
   syncAllergies();
 
-  const syncAssociationFields = () => {
-    const belongsToAssociation = associationStatus.some(
-      (radio) => radio.checked && radio.value === 'Yes'
-    );
-
-    [associationName, associationRole].forEach((field) => {
-      if (!field) return;
-
-      field.disabled = !belongsToAssociation;
-      field.required = belongsToAssociation;
-
-      if (!belongsToAssociation) {
-          if (field instanceof HTMLSelectElement && field.multiple) {
-            [...field.options].forEach(option => { option.selected = false; });
-          } else {
-            field.value = '';
-          }
-        }
-      });
-  };
-
-  associationStatus.forEach((radio) => {
-    radio.addEventListener('change', syncAssociationFields);
-  });
-  syncAssociationFields();
-
   // Each child list is resolved from its stored parent ID; no demo locations are injected.
   const data = window.TMIS_PAGE;
   const locations = data.registration.locations;
@@ -362,7 +330,13 @@ document.addEventListener('DOMContentLoaded', () => {
       : new Set();
     select.replaceChildren(
       ...(select.multiple ? [] : [new Option(rows.length ? placeholder : 'No records available', '')]),
-      ...rows.map(row => new Option(row.label || row.name, String(row.value ?? row.id ?? row.region_id ?? row.org_id)))
+      ...rows.map(row => {
+        const option = new Option(row.label || row.name, String(row.value ?? row.id ?? row.region_id ?? row.org_id));
+        if (row.title) option.dataset.title = String(row.title);
+        if (row.details) option.dataset.details = String(row.details);
+        if (row.office) option.dataset.office = String(row.office);
+        return option;
+      })
     );
     // Keep empty lists required: an incomplete hierarchy must never silently bypass registration.
     select.disabled = false;
@@ -387,19 +361,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   for (let index = 0; index < chain.length - 1; index++) chain[index].addEventListener('change', () => children(index + 1));
   const isInScope = (ids, id) => ids == null || ids.some(value => String(value) === String(id));
-  function associations() {
-    fill(associationName, window.TmisStore.records('tmis-farmer-associations')
-      .filter(row => row.status === 'Active' && String(row.region_id) === region.value && String(row.org_id) === office.value)
-      .map(row => ({id:row.id,name:`${row.association_name} · ${row.office} · ${row.region}`})), 'Select an association', true);
-    syncAssociationFields();
-  }
   region.addEventListener('change', () => {
     const rows = data.registration.offices.filter(row => String(row.region_id) === region.value && isInScope(data.registration.officeIds, row.org_id));
     fill(office, rows.map(row => ({id:row.org_id,name:row.name})), 'Select an office');
     if (rows.length === 1) office.value = String(rows[0].org_id);
-    associations();
   });
-  office.addEventListener('change', associations);
   const regions = data.registration.regions.filter(row => isInScope(data.registration.regionIds, row.region_id));
   fill(region, regions.map(row => ({id:row.region_id,name:row.name})), 'Select a region');
   if (regions.length === 1) {region.value=String(regions[0].region_id);region.dispatchEvent(new Event('change',{bubbles:true}));}

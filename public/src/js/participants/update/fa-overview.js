@@ -78,8 +78,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const previousPage = document.getElementById('faMemberPrevious');
   const nextPage = document.getElementById('faMemberNext');
   const pageStatus = document.getElementById('faMemberPageStatus');
-  const columns = ['Status', 'Farmer ID', 'Last Name', 'First Name', 'Middle Name', 'Extension', 'Date of Birth', 'Gender', 'Age', 'Farmer Role', 'Date Registered', 'Member Since', 'Province', 'District', 'Municipality', 'Barangay', 'Sitio/Purok'];
-  const visibleColumns = new Set(columns.map((_, index) => index).filter(index => index < 12));
+  const canRemoveMembers = Boolean(window.TMIS_PAGE?.administrator && document.getElementById('faCurrentMembersTab'));
+  const actionOffset = canRemoveMembers ? 1 : 0;
+  const columns = [
+    ...(canRemoveMembers ? ['Action'] : []),
+    'Status', 'Farmer ID', 'Year', 'Member', 'Location', 'Office',
+    'Farmer Role', 'Date Registered', 'Member Since', 'Last Name', 'First Name',
+    'Middle Name', 'Extension', 'Date of Birth', 'Gender', 'Age', 'Province',
+    'District', 'Municipality', 'Barangay', 'Sitio/Purok',
+  ];
+  const visibleColumns = new Set(columns.map((_, index) => index).filter(index => index < actionOffset + 7));
+  const actionIndex = canRemoveMembers ? 0 : -1;
   const labelRow = document.createElement('tr');
   const filterRow = document.createElement('tr');
   filterRow.className = 'fa-member-filters';
@@ -92,15 +101,20 @@ document.addEventListener('DOMContentLoaded', () => {
     labelRow.append(heading);
     const filterCell = document.createElement('th');
     filterCell.dataset.memberColumn = String(index);
-    const filter = document.createElement('input');
-    filter.type = 'search';
-    filter.className = 'form-control form-control-sm';
-    filter.placeholder = 'Filter';
-    filter.setAttribute('aria-label', `Filter ${name}`);
-    filter.dataset.memberFilter = String(index);
-    filterCell.append(filter);
+    if (index === actionIndex) {
+      columnFilters[index] = null;
+    } else {
+      const filter = document.createElement('input');
+      filter.type = 'search';
+      filter.className = 'form-control form-control-sm';
+      filter.placeholder = 'Filter';
+      filter.setAttribute('aria-label', `Filter ${name}`);
+      filter.dataset.memberFilter = String(index);
+      filterCell.append(filter);
+      columnFilters[index] = filter;
+    }
     filterRow.append(filterCell);
-    columnFilters.push(filter);
+    if (index === actionIndex) return;
     const option = document.createElement('label');
     option.className = 'fa-column-option';
     const toggle = document.createElement('input');
@@ -113,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
   tableHead.append(labelRow, filterRow);
   let members = [];
   let page = 1;
-  const first = (member, ...keys) => keys.map(key => member[key]).find(value => value !== undefined && value !== null && String(value).trim() !== '') || '';
+  const first = (member, ...keys) => member ? keys.map(key => member[key]).find(value => value !== undefined && value !== null && String(value).trim() !== '') || '' : '';
   const formatDate = value => {
     if (!value) return '';
     const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(String(value)) ? `${value}T00:00:00` : value);
@@ -128,19 +142,80 @@ document.addEventListener('DOMContentLoaded', () => {
     if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--;
     return age;
   };
+  let farmerProfiles = new Map();
+  function memberProfile(member) {
+    const farmerId = String(first(member, 'farmer_id', 'id')).trim();
+    const farmer = farmerProfiles.get(farmerId)
+      || farmerProfiles.get(String(first(member, 'farmerNumber', 'farmer_number')));
+    const membership = farmer?.associationMemberships?.find(item =>
+      String(item.id) === String(id)
+      || String(item.databaseId) === String(association?._db_id),
+    );
+    const office = farmer?.beneficiaryOffices?.find(item => item.isPrimary)?.office
+      || farmer?.beneficiaryOffices?.[0]?.office
+      || '';
+
+    return {
+      ...farmer,
+      ...member,
+      id: farmerId,
+      farmer_id: farmerId,
+      farmerNumber: first(member, 'farmerNumber', 'farmer_number') || farmer?.farmerNumber || farmerId,
+      fname: first(member, 'first_name', 'fname', 'firstName') || first(farmer, 'firstName', 'fname'),
+      mname: first(member, 'middle_name', 'mname', 'middleName') || first(farmer, 'middleName', 'mname'),
+      lname: first(member, 'last_name', 'lname', 'lastName') || first(farmer, 'lastName', 'lname'),
+      suffix: first(member, 'extension', 'suffix', 'sfname') || first(farmer, 'suffix', 'extension'),
+      gender: first(member, 'gender', 'sex') || first(farmer, 'gender', 'sex'),
+      birthDate: first(member, 'dob', 'birthDate', 'date_of_birth', 'birth_date') || farmer?.birthDate || '',
+      yearCovered: first(member, 'yearCovered', 'year_covered') || membership?.yearCovered || farmer?.yearCovered || '',
+      position: first(member, 'position', 'associate_role', 'farmer_role', 'role') || membership?.role || farmer?.role || '',
+      dateRegistered: first(member, 'date_registered', 'registration_date', 'dateRegistered')
+        || membership?.registrationDate
+        || farmer?.registrationDate
+        || '',
+      memberSince: first(member, 'member_since', 'memberSince') || membership?.memberSince || '',
+      province: first(member, 'province') || farmer?.province || '',
+      district: first(member, 'district') || farmer?.district || '',
+      municipality: first(member, 'municipality') || farmer?.municipality || '',
+      barangay: first(member, 'barangay') || farmer?.barangay || '',
+      sitio: first(member, 'sitio', 'purok', 'sitio_purok') || farmer?.street_purok_sitio_name || '',
+      region: first(member, 'region') || farmer?.region || association?.region || '',
+      office: first(member, 'office') || farmer?.office || office || association?.office || '',
+      status: first(member, 'status') || farmer?.status || 'Active',
+    };
+  }
   const rowValues = member => {
-    const birth = first(member, 'dob', 'date_of_birth', 'birth_date');
+    const profile = memberProfile(member);
+    const birth = first(profile, 'birthDate', 'dob', 'date_of_birth', 'birth_date');
+    const age = first(profile, 'age') || ageFromBirth(birth);
+    const name = [profile.fname, profile.mname, profile.lname, profile.suffix].filter(Boolean).join(' ');
+    const gender = first(profile, 'gender', 'sex');
+    const year = first(profile, 'yearCovered', 'year_covered');
+    const region = first(profile, 'region');
+    const location = [region, profile.province, profile.district, profile.municipality, profile.barangay, profile.sitio].filter(Boolean).join(' ');
     return [
-      first(member, 'status'), first(member, 'farmerNumber', 'farmer_number', 'farmer_id', 'id'),
-      first(member, 'last_name', 'lname'), first(member, 'first_name', 'fname'),
-      first(member, 'middle_name', 'mname'), first(member, 'extension', 'suffix', 'sfname'),
-      formatDate(birth), first(member, 'gender', 'sex'),
-      first(member, 'age') || ageFromBirth(birth),
-      first(member, 'farmer_role', 'associate_role', 'role', 'position'),
-      formatDate(first(member, 'date_registered', 'registration_date', 'savedAt')),
-      formatDate(first(member, 'member_since', 'memberSince')),
-      first(member, 'province'), first(member, 'district'), first(member, 'municipality'),
-      first(member, 'barangay'), first(member, 'sitio', 'purok', 'sitio_purok'),
+      ...(canRemoveMembers ? [''] : []),
+      profile.status,
+      profile.farmerNumber,
+      year,
+      `${name} ${gender} ${birth} ${age}`.trim(),
+      location,
+      profile.office,
+      profile.position,
+      formatDate(profile.dateRegistered),
+      formatDate(profile.memberSince),
+      profile.lname,
+      profile.fname,
+      profile.mname,
+      profile.suffix,
+      formatDate(birth),
+      gender,
+      age,
+      profile.province,
+      profile.district,
+      profile.municipality,
+      profile.barangay,
+      profile.sitio,
     ];
   };
   function readMembers() {
@@ -152,6 +227,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const stored = JSON.parse(window.TmisStore.getItem('tmis-fa-members') || '[]');
       if (Array.isArray(stored)) storedMembers = stored;
     } catch { /* Invalid browser data leaves the table empty. */ }
+    farmerProfiles = new Map();
+    window.TmisStore.records('tmis-farmers').forEach(farmer => {
+      if (farmer.id) farmerProfiles.set(String(farmer.id), farmer);
+      if (farmer.farmerNumber) farmerProfiles.set(String(farmer.farmerNumber), farmer);
+    });
     if (currentAssociation) {
       const membersByFarmer = new Map();
       const rosterMembers = Array.isArray(currentAssociation.members) ? currentAssociation.members : [];
@@ -198,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return members.filter(member => {
       const values = rowValues(member).map(value => String(value).toLocaleLowerCase());
       return (!query || values.some((value, index) => visibleColumns.has(index) && value.includes(query))) &&
-        columnFilters.every(filter => !filter.value.trim() || values[Number(filter.dataset.memberFilter)].includes(filter.value.trim().toLocaleLowerCase()));
+        columnFilters.every((filter, index) => !filter || !filter.value.trim() || values[index].includes(filter.value.trim().toLocaleLowerCase()));
     });
   }
   function renderMembers() {
@@ -220,11 +300,100 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     visible.forEach(member => {
       const row = document.createElement('tr');
-      rowValues(member).forEach((value, index) => {
+      const profile = memberProfile(member);
+      const name = [profile.fname, profile.mname, profile.lname, profile.suffix].filter(Boolean).join(' ');
+      const birthDate = String(profile.birthDate || '').slice(0, 10);
+      const age = first(profile, 'age') || ageFromBirth(birthDate);
+      const gender = String(profile.gender || '').toLowerCase();
+      const genderLabel = gender.startsWith('f') ? 'F' : gender.startsWith('m') ? 'M' : '—';
+      const region = String(profile.region || '').trim();
+      const regionLabel = region.replace(/^region\s*/i, '').replace(/[\s-]+/g, '') || '—';
+      const values = rowValues(member);
+      values.forEach((value, index) => {
         const cell = document.createElement('td');
-        cell.textContent = value === '' ? '—' : String(value);
-        if (index === 0) cell.className = `fa-member-status ${String(value).toLowerCase() === 'inactive' ? 'is-inactive' : 'is-active'}`;
-        if (index === 1) cell.classList.add('fa-member-id');
+        const dataIndex = index - actionOffset;
+        if (index === actionIndex) {
+          cell.className = 'fa-member-action';
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'btn btn-sm btn-outline-danger fa-member-remove';
+          button.dataset.removeMember = profile.farmer_id;
+          button.title = 'Remove farmer from association';
+          button.setAttribute('aria-label', `Remove ${name || profile.farmerNumber} from this association`);
+          const icon = document.createElement('i');
+          icon.className = 'bi bi-person-dash';
+          icon.setAttribute('aria-hidden', 'true');
+          button.append(icon);
+          cell.append(button);
+        } else if (dataIndex === 0) {
+          cell.textContent = value === '' ? '—' : String(value);
+          cell.className = `fa-member-status ${String(value).toLowerCase() === 'inactive' ? 'is-inactive' : 'is-active'}`;
+        } else if (dataIndex === 1) {
+          const farmerNumber = String(profile.farmerNumber || value);
+          const profileUrl = /^\d{8,}$/.test(farmerNumber)
+            ? document.getElementById('faMembersBody').dataset.farmerProfileUrlTemplate.replace('__FARMER_ID__', encodeURIComponent(farmerNumber))
+            : null;
+          cell.className = 'fa-member-id';
+          if (profileUrl) {
+            const link = document.createElement('a');
+            link.className = 'fa-member-profile-link';
+            link.href = profileUrl;
+            link.textContent = farmerNumber;
+            link.setAttribute('aria-label', `View farmer profile for ${farmerNumber}`);
+            cell.append(link);
+          } else {
+            cell.textContent = farmerNumber || '—';
+          }
+        } else if (dataIndex === 2) {
+          const badge = document.createElement('span');
+          badge.className = 'fa-member-year-badge';
+          badge.textContent = value || '—';
+          cell.append(badge);
+        } else if (dataIndex === 3) {
+          const details = document.createElement('div');
+          details.className = 'fa-roster-member';
+          const fullName = document.createElement('strong');
+          fullName.textContent = name || 'Name not recorded';
+          details.append(fullName);
+          const demographics = document.createElement('span');
+          demographics.className = 'fa-roster-demographics';
+          const genderBadge = document.createElement('span');
+          genderBadge.className = `fa-roster-gender ${genderLabel === 'F' ? 'is-female' : genderLabel === 'M' ? 'is-male' : 'is-unknown'}`;
+          genderBadge.textContent = genderLabel;
+          const birthDateLabel = document.createElement('span');
+          birthDateLabel.textContent = birthDate
+            ? `${birthDate}${age === '' ? '' : ` · ${age} yrs`}`
+            : 'Birth date not recorded';
+          demographics.append(genderBadge, birthDateLabel);
+          details.append(demographics);
+          cell.append(details);
+        } else if (dataIndex === 4) {
+          const details = document.createElement('div');
+          details.className = 'fa-roster-location';
+          const primary = document.createElement('span');
+          primary.className = 'fa-roster-location-primary';
+          const regionBadge = document.createElement('span');
+          regionBadge.className = 'fa-roster-region';
+          regionBadge.title = region || 'Region not recorded';
+          regionBadge.textContent = regionLabel;
+          const municipalityProvince = [profile.municipality, profile.province].filter(Boolean).join(', ') || 'Location not recorded';
+          const place = document.createElement('span');
+          place.textContent = municipalityProvince;
+          primary.append(regionBadge, place);
+          details.append(primary);
+          const barangay = document.createElement('span');
+          barangay.className = 'fa-roster-location-secondary';
+          barangay.textContent = profile.barangay ? `Brgy. ${profile.barangay}` : 'Barangay not recorded';
+          details.append(barangay);
+          cell.append(details);
+        } else if (dataIndex === 5) {
+          const badge = document.createElement('span');
+          badge.className = 'fa-roster-office';
+          badge.textContent = value || 'Office not recorded';
+          cell.append(badge);
+        } else {
+          cell.textContent = value === '' ? '—' : String(value);
+        }
         cell.hidden = !visibleColumns.has(index);
         row.append(cell);
       });
@@ -257,7 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   syncVisibleColumns();
   search.addEventListener('input', resetPageAndRender);
-  columnFilters.forEach(filter => filter.addEventListener('input', resetPageAndRender));
+  columnFilters.forEach(filter => filter?.addEventListener('input', resetPageAndRender));
   pageSize.addEventListener('change', resetPageAndRender);
   previousPage.addEventListener('click', () => { if (page > 1) { page--; renderMembers(); } });
   nextPage.addEventListener('click', () => { page++; renderMembers(); });
@@ -267,13 +436,110 @@ document.addEventListener('DOMContentLoaded', () => {
       resultCount.textContent = 'Excel export is unavailable. Check your connection and try again.';
       return;
     }
-    const exportColumns = columns.filter((_, index) => visibleColumns.has(index));
-    const rows = filteredMembers().map(member => Object.fromEntries(columns.flatMap((column, index) => visibleColumns.has(index) ? [[column, rowValues(member)[index]]] : [])));
+    const exportIndexes = columns.map((_, index) => index).filter(index => index !== actionIndex && visibleColumns.has(index));
+    const exportColumns = exportIndexes.map(index => columns[index]);
+    const rows = filteredMembers().map(member => {
+      const values = rowValues(member);
+      return Object.fromEntries(exportIndexes.map(index => [columns[index], values[index]]));
+    });
     const sheet = window.XLSX.utils.json_to_sheet(rows, { header: exportColumns });
     const book = window.XLSX.utils.book_new();
     window.XLSX.utils.book_append_sheet(book, sheet, 'Farmer Members');
     window.XLSX.writeFile(book, `farmer_members_${id || 'association'}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   });
+  if (canRemoveMembers) {
+    const removeMemberModalElement = document.getElementById('faRemoveMemberModal');
+    const removeMemberModal = bootstrap.Modal.getOrCreateInstance(removeMemberModalElement);
+    const removeMemberButton = document.getElementById('faRemoveMemberConfirm');
+    const removeMemberError = document.getElementById('faRemoveMemberError');
+    let pendingRemoval = null;
+    const setRemovalDetail = (name, value) => {
+      const isEmpty = value === undefined || value === null || String(value).trim() === '';
+      document.getElementById(name).textContent = isEmpty ? '—' : String(value);
+    };
+
+    membersBody.addEventListener('click', event => {
+      const button = event.target.closest('[data-remove-member]');
+      if (!button || button.disabled) return;
+
+      const farmerId = button.dataset.removeMember;
+      const member = members.find(item => String(item.farmer_id || item.id) === farmerId);
+      if (!member) {
+        readMembers();
+        window.TmisToast?.show('This farmer is no longer a member of the association.', 'warning');
+        return;
+      }
+
+      const profile = memberProfile(member);
+      const name = [profile.fname, profile.mname, profile.lname, profile.suffix].filter(Boolean).join(' ') || profile.farmerNumber || farmerId;
+      const birthDate = String(profile.birthDate || '').slice(0, 10);
+      const location = [profile.region, profile.province, profile.district, profile.municipality, profile.barangay, profile.sitio].filter(Boolean).join(', ');
+      pendingRemoval = { farmerId, name };
+      setRemovalDetail('faRemoveMemberAssociation', association?.association_name || association?.short_name || id);
+      setRemovalDetail('faRemoveMemberName', name);
+      setRemovalDetail('faRemoveMemberId', profile.farmerNumber || farmerId);
+      setRemovalDetail('faRemoveMemberStatus', profile.status);
+      setRemovalDetail('faRemoveMemberYear', profile.yearCovered);
+      setRemovalDetail('faRemoveMemberRole', profile.position);
+      setRemovalDetail('faRemoveMemberSince', formatDate(profile.memberSince));
+      setRemovalDetail('faRemoveMemberBirthDate', formatDate(birthDate));
+      setRemovalDetail('faRemoveMemberAge', first(profile, 'age') || ageFromBirth(birthDate));
+      setRemovalDetail('faRemoveMemberGender', profile.gender);
+      setRemovalDetail('faRemoveMemberLocation', location);
+      setRemovalDetail('faRemoveMemberOffice', profile.office);
+      removeMemberError.hidden = true;
+      removeMemberError.textContent = '';
+      removeMemberButton.disabled = false;
+      removeMemberModal.show();
+    });
+
+    removeMemberButton.addEventListener('click', async () => {
+      if (!pendingRemoval || removeMemberButton.disabled) return;
+
+      const { farmerId, name } = pendingRemoval;
+      removeMemberButton.disabled = true;
+      removeMemberButton.setAttribute('aria-busy', 'true');
+      removeMemberError.hidden = true;
+      try {
+        await window.TmisStore.refresh();
+        const records = JSON.parse(window.TmisStore.getItem('tmis-farmer-associations') || '[]');
+        if (!Array.isArray(records)) throw new Error('Association records could not be read.');
+        const index = records.findIndex(record => record.id === id);
+        if (index < 0) throw new Error('This association is no longer available.');
+        const currentMembers = Array.isArray(records[index].members) ? records[index].members : [];
+        const remainingMembers = currentMembers.filter(item => String(item.farmer_id || item.id) !== farmerId);
+        if (remainingMembers.length === currentMembers.length) {
+          readMembers();
+          pendingRemoval = null;
+          removeMemberModal.hide();
+          window.TmisToast?.show('This farmer is no longer a member of the association.', 'warning');
+          return;
+        }
+
+        records[index] = { ...records[index], members: remainingMembers };
+        await window.TmisStore.setItem('tmis-farmer-associations', JSON.stringify(records));
+        window.dispatchEvent(new StorageEvent('storage', { key: 'tmis-farmer-associations' }));
+        readMembers();
+        pendingRemoval = null;
+        removeMemberModal.hide();
+        window.TmisToast?.show(`${name} was removed from the association.`, 'success');
+      } catch (error) {
+        removeMemberError.textContent = error.message || 'The farmer could not be removed from the association.';
+        removeMemberError.hidden = false;
+        window.TmisToast?.show(removeMemberError.textContent, 'error');
+      } finally {
+        removeMemberButton.disabled = false;
+        removeMemberButton.removeAttribute('aria-busy');
+      }
+    });
+
+    removeMemberModalElement.addEventListener('hidden.bs.modal', () => {
+      pendingRemoval = null;
+      removeMemberError.hidden = true;
+      removeMemberError.textContent = '';
+      removeMemberButton.disabled = false;
+    });
+  }
   window.addEventListener('storage', event => {
     if (event.key === 'tmis-farmer-associations' || event.key === 'tmis-fa-members') readMembers();
   });

@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const addTrainerButton = document.querySelector('#add_trainer');
   const associationSelect = form?.elements.namedItem('associationIds[]');
   const submitButton = form?.querySelector('button[type="submit"]');
+  const trainingLocationList = document.querySelector('#training_location_list');
+  const addTrainingLocationButton = document.querySelector('#add_training_location');
 
   if (!form || !steps.length || !fieldsets.length) return;
 
@@ -38,6 +40,61 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const registration = window.TMIS_PAGE?.registration;
+  let trainingLocationCounter = 0;
+  function addTrainingLocation(location = {}) {
+    if (!trainingLocationList) return;
+    trainingLocationCounter += 1;
+    const row = document.createElement('div');
+    row.className = 'training-location-card';
+    row.innerHTML = `<div class="training-location-card-heading"><strong>Additional location ${trainingLocationCounter}</strong><button class="btn btn-sm btn-outline-danger" type="button" data-remove-training-location aria-label="Remove additional location ${trainingLocationCounter}"><i class="bi bi-trash3 me-1"></i>Remove</button></div><div class="training-location-fields"><label>Venue <input class="form-control" data-location-venue maxlength="255" required placeholder="Training venue"></label><label>Region <select class="form-select" data-location-region required></select></label><label>Province <select class="form-select" data-location-province required disabled></select></label><label>District <select class="form-select" data-location-district required disabled></select></label><label>Municipality / City <select class="form-select" data-location-municipality required disabled></select></label><label>Barangay <select class="form-select" data-location-barangay required disabled></select></label></div>`;
+    row.querySelector('[data-location-venue]').value = location.venue || '';
+    const regionSelect = row.querySelector('[data-location-region]');
+    const selectFields = ['province', 'district', 'municipality', 'barangay'].map(kind => ({
+      kind,
+      select: row.querySelector(`[data-location-${kind}]`),
+    }));
+    const regionRows = registration?.regions || [];
+    regionSelect.replaceChildren(new Option('Choose a region', ''), ...regionRows.map(item => new Option(item.name, String(item.region_id))));
+    function populateExtraLocation(field, parentId) {
+      const options = parentId
+        ? (locations || []).filter(item => item.kind === field.kind
+          && String(item.region_id) === regionSelect.value
+          && (field.kind === 'province' || String(item.parent_id) === String(parentId)))
+        : [];
+      const label = field.kind === 'municipality' ? 'municipality / city' : field.kind;
+      field.select.replaceChildren(new Option(parentId ? `Choose ${label}` : 'Choose the parent location first', ''), ...options.map(item => new Option(item.name, String(item.id))));
+      field.select.disabled = !parentId;
+      return options;
+    }
+    regionSelect.addEventListener('change', () => {
+      let parentId = regionSelect.value;
+      selectFields.forEach(field => { populateExtraLocation(field, parentId); parentId = ''; });
+    });
+    selectFields.forEach((field, index) => field.select.addEventListener('change', () => {
+      let parentId = field.select.value;
+      selectFields.slice(index + 1).forEach(next => { populateExtraLocation(next, parentId); parentId = ''; });
+    }));
+    if (location.region_id || location.region) {
+      const regionMatch = regionRows.find(item => String(item.region_id) === String(location.region_id)
+        || item.name === location.region);
+      if (regionMatch) {
+        regionSelect.value = String(regionMatch.region_id);
+        let parentId = regionSelect.value;
+        selectFields.forEach(field => {
+          const options = populateExtraLocation(field, parentId);
+          const savedId = location[`${field.kind}_id`];
+          const savedName = location[field.kind];
+          const match = options.find(item => String(item.id) === String(savedId)
+            || String(item.name).toLowerCase() === String(savedName || '').toLowerCase());
+          parentId = match ? String(match.id) : '';
+          if (match) field.select.value = parentId;
+        });
+      }
+    }
+    row.querySelector('[data-remove-training-location]').addEventListener('click', () => row.remove());
+    trainingLocationList.append(row);
+  }
+  addTrainingLocationButton?.addEventListener('click', () => addTrainingLocation());
   const titleSegment = title => String(title || 'training')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -95,10 +152,24 @@ document.addEventListener('DOMContentLoaded', () => {
       .sort((left, right) => String(left.association_name || left.name || '').localeCompare(String(right.association_name || right.name || ''), 'en-PH'));
 
     associationSelect.replaceChildren(...associations.map(record => {
+      const name = String(record.association_name || record.name || 'Unnamed association');
+      const id = String(record.id);
+      const location = [
+        record.barangay,
+        record.municipality,
+        record.district,
+        record.province,
+        record.region,
+      ].filter(Boolean).join(', ');
+      const office = String(record.office || '').trim();
+      const details = [id, location].filter(Boolean).join(' · ');
       const option = new Option(
-        [record.association_name || record.name || record.id, record.municipality, record.province].filter(Boolean).join(' — '),
-        String(record.id),
+        [name, details, office].filter(Boolean).join(' · '),
+        id,
       );
+      option.dataset.title = name;
+      option.dataset.details = details;
+      if (office) option.dataset.office = office;
       option.selected = selectedIds.has(option.value);
       return option;
     }));
@@ -360,6 +431,28 @@ document.addEventListener('DOMContentLoaded', () => {
       const record = {
         ...values,
         id: temporaryId,
+        trainingLocations: [
+          {
+            venue: values.venue_location,
+            region_id: region.value,
+            region: region.selectedOptions[0]?.textContent || '',
+            province_id: province.value,
+            province: province.selectedOptions[0]?.textContent || '',
+            district_id: district.value,
+            district: district.selectedOptions[0]?.textContent || '',
+            municipality_id: municipality.value,
+            municipality: municipality.selectedOptions[0]?.textContent || '',
+            barangay_id: barangay.value,
+            barangay: barangay.selectedOptions[0]?.textContent || '',
+          },
+          ...[...(trainingLocationList?.children || [])].map(row => ({
+            venue: row.querySelector('[data-location-venue]').value.trim(),
+            ...Object.fromEntries(['region', 'province', 'district', 'municipality', 'barangay'].flatMap(kind => {
+              const select = row.querySelector(`[data-location-${kind}]`);
+              return [[`${kind}_id`, select.value], [kind, select.selectedOptions[0]?.textContent || '']];
+            })),
+          })),
+        ],
         trainers: formData.getAll('trainer_rp_id[]').filter(Boolean).map(id => ({id})),
         associationIds: formData.getAll('associationIds[]').filter(Boolean),
       };

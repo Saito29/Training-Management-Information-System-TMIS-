@@ -57,7 +57,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/training/register/register.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/evaluation/encode/training-evaluation.css') }}" />
-    <link rel="stylesheet" href="{{ asset('src/css/evaluation/encode/training-picker.css?v=encode-training-picker-1') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/evaluation/encode/training-picker.css?v=encode-training-picker-5') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/evaluation/encode/compact-type.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/evaluation/encode/encoded-answer-actions.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/evaluation/create/questionnaire-toast.css') }}" />
@@ -1454,10 +1454,10 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.8.4/dist/js/adminlte.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-    <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/evaluation/create/questionnaire-toast.js') }}"></script>
-    <script src="{{ asset('src/js/evaluation/encode/training-evaluation.js') }}"></script>
-    <script src="{{ asset('src/js/evaluation/encode/training-picker.js?v=encode-training-picker-1') }}"></script>
+    <script src="{{ asset('src/js/evaluation/encode/training-evaluation.js?v=enrolled-farmer-restriction-1') }}"></script>
+    <script src="{{ asset('src/js/evaluation/encode/training-picker.js?v=encode-training-picker-10') }}"></script>
     <script src="{{ asset('src/js/evaluation/encode/encoded-answer-actions.js') }}"></script>
 @endsection

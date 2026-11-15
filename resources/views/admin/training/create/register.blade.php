@@ -54,7 +54,7 @@ class="layout-fixed"
       href="https://cdn.jsdelivr.net/npm/admin-lte@4.8.4/dist/css/adminlte.min.css"
     />
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
-    <link rel="stylesheet" href="{{ asset('src/css/training/register/register.css') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/training/register/register.css?v=training-location-selectors-1') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
     <title>Register Training</title>
@@ -1275,6 +1275,13 @@ class="layout-fixed"
                             <option value="" selected>Choose a municipality first</option>
                           </select>
                         </div>
+                        <div class="col-12 mb-3">
+                          <div class="training-location-heading">
+                            <div><strong>Additional training locations</strong><small>All locations share the primary start and end dates above.</small></div>
+                            <button type="button" class="btn btn-outline-success btn-sm" id="add_training_location"><i class="bi bi-plus-lg me-1"></i>Add location</button>
+                          </div>
+                          <div id="training_location_list" class="training-location-list" aria-live="polite"></div>
+                        </div>
 
                         <!-- Delivery mode cards -->
                         <div class="col-12 mb-1">
@@ -1398,9 +1405,10 @@ class="layout-fixed"
                               class="form-select"
                               multiple
                               size="6"
+                              placeholder="Search by organization, ID, location, or office"
                               aria-describedby="trainingAssociationsHelp"
                             ></select>
-                            <small class="form-text" id="trainingAssociationsHelp">Select the associations participating in this training. Use Ctrl or Command to select multiple associations. This field is optional.</small>
+                            <small class="form-text" id="trainingAssociationsHelp">Search by organization name, ID, location, or office, then select the participating associations. Only their IDs are linked to this training. This field is optional.</small>
                           </div>
                         @endif
                       </div>
@@ -2107,8 +2115,8 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.8.4/dist/js/adminlte.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-    <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <!-- Connect registration fieldsets with the wizard progress card. -->
-    <script src="{{ asset('src/js/training/register/register.js?v=training-database-locations-2') }}"></script>
+    <script src="{{ asset('src/js/training/register/register.js?v=training-location-selectors-1') }}"></script>
 @endsection

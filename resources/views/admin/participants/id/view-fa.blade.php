@@ -58,7 +58,7 @@ class="layout-fixed"
       rel="stylesheet"
       href="{{ asset('src/css/participants/update/view-farmer.css') }}"
     />
-    <link rel="stylesheet" href="{{ asset('src/css/participants/update/fa-overview.css') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/participants/update/fa-overview.css?v=member-details-remove-1') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
     <title>DA-TMIS - View Farmer Association</title>
@@ -894,7 +894,7 @@ class="layout-fixed"
                       <table class="table table-hover align-middle mb-0 fa-member-table">
                         <caption class="visually-hidden">Farmer members of this association</caption>
                         <thead id="faMemberTableHead"></thead>
-                        <tbody id="faMembersBody"></tbody>
+                        <tbody id="faMembersBody" data-farmer-profile-url-template="{{ route('admin.participants.id.view-farmer', ['id' => '__FARMER_ID__']) }}"></tbody>
                       </table>
                     </div>
                     <div class="fa-member-pagination">
@@ -2145,8 +2145,8 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- nav -->
-    <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/participants/update/fa-overview.js') }}"></script>
+    <script src="{{ asset('src/js/participants/update/fa-overview.js?v=member-details-remove-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-sections.js') }}"></script>
 @endsection

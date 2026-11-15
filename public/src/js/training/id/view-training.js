@@ -86,9 +86,11 @@ document.addEventListener('DOMContentLoaded', () => {
   text('location', location);
   text('partner', training.partner_organization);
   text('target', target ? `${target} participants` : '');
-  text('budget', Number.isFinite(budget)
+  const formattedBudget = Number.isFinite(budget)
     ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(budget)
-    : '');
+    : '';
+  text('budget', formattedBudget);
+  text('budgetStat', formattedBudget, 'Not recorded');
   text('resources', resources.map(resource => resource.name).filter(Boolean).join(', '), 'No resource persons recorded');
   text('description', training.training_description || training.description, 'No training description has been recorded.');
   text('genderSummary', `${maleCount} male · ${femaleCount} female`, 'No participant demographics recorded');

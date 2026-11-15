@@ -19,6 +19,9 @@
   ];
   const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const trainingTitle = (window.TMIS_PAGE ? window.TmisStore.selected('tmis-trainings')?.title||'Training' : document.querySelector('#overview-panel .training-title-row h2')?.textContent.trim() || 'Training');
+  const trainingRecord = window.TMIS_PAGE ? window.TmisStore.selected('tmis-trainings') : null;
+  const configuredTarget = Number(trainingRecord?.target_participants ?? trainingRecord?.targetParticipants);
+  const participantTarget = configuredTarget > 0 ? configuredTarget : window.TMIS_PAGE ? window.TmisTrainingData.participantCount() : null;
   // Example participant scores. The questionnaire metadata has no individual scores yet.
   const scoreRows = (window.TMIS_PAGE ? items.map(item=>window.TmisTrainingData.scores('post-test',item.id)) : items.map(item => {
     if (!item.itemCount || item.averageCorrect === null) return [];
@@ -61,9 +64,9 @@
     $('#posttestSelectedTitle').textContent = item.name;
     $('#posttestSelectedMeta').textContent = `${item.id} · ${trainingTitle}${answerDate ? ` · ${new Date(`${answerDate}T00:00:00`).toLocaleDateString('en-PH', {year:'numeric', month:'short', day:'numeric'})}` : ''}${association ? ` · ${association}` : ''}`;
     const totalForScope = new Set(scoreRows.flat().filter(row => (!answerDate || row.answeredAt === answerDate) && (!association || row.association === association)).map(row => row.id)).size;
-    $('#posttestParticipantCount').textContent = totalForScope;
+    $('#posttestParticipantCount').textContent = participantTarget ? `${totalForScope}/${participantTarget}` : String(totalForScope);
     $('#posttestItemCount').textContent = item.itemCount ?? '—';
-    $('#posttestAverageScore').innerHTML = average === null ? 'No scores yet' : `${average.toFixed(2)} <small>/ ${window.TmisStore.escape(item.itemCount)} (${(average / item.itemCount * 100).toFixed(1)}%)</small>`;
+    $('#posttestAverageScore').textContent = average === null ? 'No scores yet' : average.toFixed(2);
     $('#posttestResultsBody').innerHTML = shown.length ? shown.map((row, index) => `<tr><th scope="row"><span class="posttest-row-number">${String(index + 1).padStart(2,'0')}</span><span><strong>${escape(row.name)}</strong><small>${escape(row.id)}</small></span></th><td>${escape(trainingTitle)}</td><td>${escape(row.association)}</td><td>${new Date(`${row.answeredAt}T00:00:00`).toLocaleDateString('en-PH', {year:'numeric', month:'short', day:'numeric'})}</td><td><span class="posttest-score">${row.score} <small>/ ${window.TmisStore.escape(item.itemCount)}</small></span></td><td>${(row.score / item.itemCount * 100).toFixed(1)}%</td></tr>`).join('') : `<tr><td colspan="6" class="posttest-empty">${scopedRows.length ? 'No participants match your search.' : 'No participant scores are available for these filters.'}</td></tr>`;
     $('#posttestResultsCount').textContent = `Showing ${shown.length} of ${scopedRows.length} scored participants${answerDate || association ? ' for the selected filters' : ''}`;
   }

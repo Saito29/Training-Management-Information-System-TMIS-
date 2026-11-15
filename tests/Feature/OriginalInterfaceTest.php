@@ -404,6 +404,9 @@ class OriginalInterfaceTest extends TestCase
             'association_name' => 'Office two association',
             'region_id' => '4',
             'org_id' => '2',
+            'province' => 'Quezon',
+            'municipality' => 'Alabat',
+            'barangay' => 'Barangay East',
             'status' => 'Active',
         ])->assertOk();
         $this->save('tmis-farmer-associations', [
@@ -434,6 +437,11 @@ class OriginalInterfaceTest extends TestCase
         $associationIds = array_column($associations, 'id');
         sort($associationIds);
         $this->assertSame(['FA-REGISTRATION-INACTIVE', 'FA-REGISTRATION-OFFICE'], $associationIds);
+        $association = collect($associations)->firstWhere('id', 'FA-REGISTRATION-OFFICE');
+        $this->assertSame('Quezon', $association['province']);
+        $this->assertSame('Alabat', $association['municipality']);
+        $this->assertSame('Barangay East', $association['barangay']);
+        $this->assertNotEmpty($association['office']);
         $this->get(route('admin.training.create.register'))->assertOk()->assertSee('training_associations');
     }
 
@@ -699,13 +707,16 @@ class OriginalInterfaceTest extends TestCase
             ->assertSee('FA-PATH-001')
             ->assertSee('Path-based Association')
             ->assertSee('data-fa-field="region"', false);
+        $profileUrlTemplate = route('admin.participants.id.view-farmer', ['id' => '__FARMER_ID__']);
         $this->get(route('admin.participants.id.edit-fa', ['id' => 'FA-PATH-001']))
             ->assertOk()
             ->assertViewIs('admin.participants.id.edit-fa')
             ->assertSee('FA-PATH-001')
             ->assertSee('Path-based Association')
             ->assertSee('id="faEditRegion" name="region_id" required disabled', false)
-            ->assertSee('id="faEditOffice" name="org_id" required disabled', false);
+            ->assertSee('id="faEditOffice" name="org_id" required disabled', false)
+            ->assertSee('Select all')
+            ->assertSee('data-farmer-profile-url-template="'.e($profileUrlTemplate).'"', false);
         $this->get('/app/admin/participants/id/view-fa.html?faId=FA-PATH-001')
             ->assertRedirect(route('admin.participants.id.view-fa', ['id' => 'FA-PATH-001']), 301);
     }
@@ -952,6 +963,46 @@ class OriginalInterfaceTest extends TestCase
             ->where('participant_id', DB::table('participants')->where('ui_id', 'FMR-ROSTER-001')->value('id'))
             ->where('association_id', DB::table('associations')->where('ui_id', 'FA-ROSTER-001')->value('id'))
             ->count());
+    }
+
+    public function test_removing_farmer_from_association_clears_the_database_membership(): void
+    {
+        $this->signIn();
+        $this->save('tmis-farmer-associations', [
+            'id' => 'FA-REMOVE-MEMBER',
+            'association_name' => 'Removal Association',
+            'region_id' => '4',
+            'org_id' => '1',
+            'status' => 'Active',
+        ])->assertOk();
+        $this->save('tmis-farmers', [
+            'id' => 'FMR-REMOVE-MEMBER',
+            'fname' => 'Ana',
+            'lname' => 'Santos',
+            'status' => 'Active',
+            'association_id' => 'FA-REMOVE-MEMBER',
+        ])->assertOk();
+
+        $association = collect($this->getJson('/ui/data')->assertOk()->json('stores.tmis-farmer-associations'))
+            ->firstWhere('id', 'FA-REMOVE-MEMBER');
+        $participantId = DB::table('participants')->where('ui_id', 'FMR-REMOVE-MEMBER')->value('id');
+        $associationId = DB::table('associations')->where('ui_id', 'FA-REMOVE-MEMBER')->value('id');
+        $this->assertDatabaseHas('participant_association_memberships', [
+            'participant_id' => $participantId,
+            'association_id' => $associationId,
+        ]);
+
+        $association['members'] = [];
+        $this->save('tmis-farmer-associations', $association)->assertOk();
+
+        $this->assertDatabaseMissing('participant_association_memberships', [
+            'participant_id' => $participantId,
+            'association_id' => $associationId,
+        ]);
+        $this->assertDatabaseHas('participants', [
+            'ui_id' => 'FMR-REMOVE-MEMBER',
+            'association_id' => null,
+        ]);
     }
 
     public function test_farmer_can_keep_multiple_association_memberships_with_distinct_roles(): void

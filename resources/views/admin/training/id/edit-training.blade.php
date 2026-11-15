@@ -63,8 +63,8 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training-highlights.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training-attachments-cards.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-logs.css') }}" />
-    <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training.css?v=training-status-badge-1') }}" />
-    <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training-participants.css?v=training-participant-controls-5') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training.css?v=multi-training-locations-2') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training-participants.css?v=participant-roster-compact-9') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/activity-logs.css?v=design-20261109-1') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
@@ -831,20 +831,24 @@ class="layout-fixed"
                   <label>Implementing office / division / unit <select class="form-select" name="implementing_office" required disabled aria-describedby="implementingOfficeHelp"><option value="">Loading current office</option><option>DA-SAAD</option><option>DA-AMIA</option><option>DA-Livestock</option><option>DA-HVCDP</option><option value="DA-Rice">DA-Rice Program</option><option value="DA-Corn">DA-Corn Program</option><option>DA-ATI</option><option value="Agricultural Training Division (ATD)" selected>Agricultural Training Division (ATD)</option></select><small class="form-text" id="implementingOfficeHelp">The implementing office is fixed for this training and cannot be changed here.</small></label>
                   <label>Training type <select class="form-select" name="training_type" required><option value="">Choose type</option><option>Crop Production</option><option>Organic Agriculture</option><option>Agribusiness</option><option>Livestock and Poultry</option><option>Fisheries</option><option>Post-harvest and Processing</option><option>Farm Mechanization</option><option selected>In-Plant Training</option></select></label>
                   <label>Partner organization <input class="form-control" name="partner_organization" maxlength="150" placeholder="Optional partner or program"></label>
+                  <label>Training Budget / Procurement Amount (₱)<span class="input-group mt-1"><span class="input-group-text">₱</span><input class="form-control" type="number" name="training_budget" min="0" step="0.01" inputmode="decimal" value="0" required aria-label="Training budget or procurement amount in Philippine pesos"></span></label>
                   <label class="training-edit-wide">Brief description / objective <textarea class="form-control" name="training_description" rows="3" required>This training aims to enhance the knowledge and skills of farmers on Good Agricultural Practices (GAP) to promote safe, sustainable, and productive farming.</textarea></label>
                 </div></section>
                 <section class="training-edit-section" aria-labelledby="editTrainerTitle"><div class="training-edit-section-heading"><span>02</span><div><h3 id="editTrainerTitle">Trainer / facilitator</h3><p>Select a registered resource person; their profile details are displayed below.</p></div></div><div id="editTrainerList" class="training-edit-repeat"></div><button class="btn training-edit-add" type="button" id="editAddTrainer"><i class="bi bi-plus-lg"></i> Add trainer</button></section>
-                <section class="training-edit-section" aria-labelledby="editScheduleTitle"><div class="training-edit-section-heading"><span>03</span><div><h3 id="editScheduleTitle">Schedule &amp; venue</h3><p>Dates, address, and delivery format</p></div></div><div class="training-edit-grid">
+                <section class="training-edit-section" aria-labelledby="editScheduleTitle"><div class="training-edit-section-heading"><span>03</span><div><h3 id="editScheduleTitle">Schedule &amp; venue</h3><p>Set one date range for the training and add all venues where it will be held.</p></div></div><div class="training-edit-grid">
                   <label>Start date <input class="form-control" type="date" name="start_date" value="2025-05-22" required></label><label>End date <input class="form-control" type="date" name="end_date" value="2025-05-23" required></label>
                   <label class="training-edit-wide">Venue / location <input class="form-control" name="venue_location" value="Brgy. San Antonio, Tanauan City" required></label>
                   <label>Region <select class="form-select" name="region_id" required><option value="">Choose region</option><option value="region_4a" selected>Region IV-A (CALABARZON)</option><option value="region_1">Region I (Ilocos Region)</option></select></label>
                   <label>Province <select class="form-select" name="province_id" required></select></label><label>District <select class="form-select" name="district_id" required></select></label><label>Municipality / City <select class="form-select" name="municipality_id" required></select></label><label>Barangay <select class="form-select" name="barangay_id" required></select></label>
+                  <div class="training-edit-wide"><div class="training-edit-location-heading"><div><strong>Additional training locations</strong><small>All locations share the primary start and end dates above.</small></div><button class="btn training-edit-add" type="button" id="editAddTrainingLocation"><i class="bi bi-plus-lg"></i> Add location</button></div><div id="editTrainingLocationList" class="training-edit-repeat" aria-live="polite"></div></div>
                   <fieldset class="training-edit-wide training-edit-mode"><legend>Delivery mode</legend><label><input type="radio" name="delivery_mode" value="In-person" checked><i class="bi bi-people"></i><span>In-person</span></label><label><input type="radio" name="delivery_mode" value="Online"><i class="bi bi-display"></i><span>Online</span></label><label><input type="radio" name="delivery_mode" value="Blended"><i class="bi bi-person-workspace"></i><span>Blended</span></label></fieldset>
                 </div></section>
                 <section class="training-edit-section" aria-labelledby="editParticipantsTitle"><div class="training-edit-section-heading"><span>04</span><div><h3 id="editParticipantsTitle">Participants &amp; questionnaires</h3><p>Target attendance and selected assessments</p></div></div><div class="training-edit-grid">
                   <label>Target number of participants <input class="form-control" type="number" name="target_participants" min="1" step="1" value="24" required></label><span></span>
                   <div class="training-edit-wide"><span class="training-edit-label">Pre-test questionnaires</span><div id="editPretestList" class="training-edit-repeat"></div><button class="btn training-edit-add" type="button" data-add-questionnaire="pretest"><i class="bi bi-plus-lg"></i> Add pre-test</button></div>
                   <div class="training-edit-wide"><span class="training-edit-label">Post-test questionnaires</span><div id="editPosttestList" class="training-edit-repeat"></div><button class="btn training-edit-add" type="button" data-add-questionnaire="posttest"><i class="bi bi-plus-lg"></i> Add post-test</button></div>
+                  <div class="training-edit-wide"><span class="training-edit-label">Training evaluation questionnaires</span><div id="editTrainingEvaluationList" class="training-edit-repeat"></div><button class="btn training-edit-add" type="button" data-add-questionnaire="trainingEvaluation"><i class="bi bi-plus-lg"></i> Add training evaluation</button></div>
+                  <div class="training-edit-wide"><span class="training-edit-label">Resource person evaluation questionnaires</span><div id="editRpEvaluationList" class="training-edit-repeat"></div><button class="btn training-edit-add" type="button" data-add-questionnaire="rpEvaluation"><i class="bi bi-plus-lg"></i> Add resource person evaluation</button></div>
                   @if(\App\Support\ModuleAccess::allows(auth()->user(), 'associations.read'))
                     <label class="training-edit-wide">Affiliated farmer associations <select class="form-select" name="associationIds[]" multiple size="6" aria-describedby="trainingAssociationsHelp"></select><small class="form-text" id="trainingAssociationsHelp">Select the associations participating in this training. Use Ctrl or Command to select multiple associations.</small></label>
                   @endif
@@ -930,7 +934,7 @@ class="layout-fixed"
                   <table class="table edit-participants-table">
                     <caption class="visually-hidden">Current participants for this training</caption>
                     <thead>
-                      <tr><th scope="col">Farmer ID</th><th scope="col">Full name</th><th scope="col">Region</th><th scope="col">Province</th><th scope="col">Municipality / City</th><th scope="col">Barangay</th></tr>
+                      <tr><th scope="col">Remove</th><th scope="col">Farmer ID</th><th scope="col">Year</th><th scope="col">Member</th><th scope="col">Location</th><th scope="col">Office</th></tr>
                     </thead>
                     <tbody id="editCurrentRows"></tbody>
                   </table>
@@ -952,15 +956,12 @@ class="layout-fixed"
                   <button class="btn edit-participants-icon" type="button" data-refresh-participants="available" aria-label="Refresh available farmers">
                     <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Refresh
                   </button>
-                  <button class="btn edit-participants-export" type="button" data-export-participants="available">
-                    <i class="bi bi-file-earmark-excel" aria-hidden="true"></i> Export XLSX
-                  </button>
                 </div>
                 <div class="edit-participants-table-wrap">
                   <table class="table edit-participants-table">
                     <caption class="visually-hidden">Farmers available to add to this training</caption>
                     <thead>
-                      <tr><th scope="col"><input id="editSelectAll" type="checkbox" aria-label="Select all matching eligible farmers across all pages"></th><th scope="col">Farmer ID</th><th scope="col">Full name</th><th scope="col">Region</th><th scope="col">Province</th><th scope="col">Municipality / City</th><th scope="col">Barangay</th></tr>
+                      <tr><th scope="col"><input id="editSelectAll" type="checkbox" aria-label="Select all matching eligible farmers across all pages"></th><th scope="col">Farmer ID</th><th scope="col">Year</th><th scope="col">Member</th><th scope="col">Location</th><th scope="col">Office</th></tr>
                     </thead>
                     <tbody id="editAvailableRows"></tbody>
                   </table>
@@ -975,6 +976,16 @@ class="layout-fixed"
           <section id="logs-panel" class="training-panel" role="tabpanel" aria-labelledby="logs-tab" hidden></section>
         </div>
       </main>
+
+      <div class="modal fade" id="removeTrainingParticipantModal" tabindex="-1" aria-labelledby="removeTrainingParticipantTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content participant-remove-modal">
+            <div class="modal-header"><div><span class="edit-participants-eyebrow">TRAINING ROSTER</span><h2 class="modal-title fs-5" id="removeTrainingParticipantTitle">Remove participant?</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body"><p class="text-secondary">This removes the participant from this training roster only. Their farmer profile and beneficiary office links will stay unchanged.</p><dl class="participant-remove-details"><div><dt>Farmer ID</dt><dd id="removeTrainingParticipantId"></dd></div><div><dt>Participant</dt><dd id="removeTrainingParticipantName"></dd></div><div><dt>Training</dt><dd id="removeTrainingParticipantCourse"></dd></div></dl><div id="removeTrainingParticipantError" class="alert alert-danger py-2" role="alert" hidden></div></div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Keep participant</button><button type="button" class="btn btn-danger" id="confirmRemoveTrainingParticipant"><i class="bi bi-person-dash" aria-hidden="true"></i> Remove from training</button></div>
+          </div>
+        </div>
+      </div>
 
     </div>
 
@@ -1866,7 +1877,7 @@ class="layout-fixed"
                 <div>
                   <span class="review-modal-eyebrow">Training documents</span>
                   <h5 class="modal-title" id="addDocumentModalLabel">Upload attachments</h5>
-                  <p>Choose image or PDF files. Set each file's type and year in the queue before saving.</p>
+                  <p>Choose image or PDF files up to 50 MB each. Set every file's type and year before saving the staged files.</p>
                 </div>
               </div>
               <button type="button" class="btn review-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
@@ -1874,7 +1885,7 @@ class="layout-fixed"
             <div class="modal-body review-modal-body">
               <label class="form-label" for="attachmentFiles">Choose files</label>
               <input class="form-control" id="attachmentFiles" name="attachmentFiles" type="file" accept=".pdf,.jpg,.jpeg,.png,image/jpeg,image/png,application/pdf" multiple />
-              <div class="form-text">Accepted formats: PDF, JPG, and PNG. Files are staged for review before being added to the library.</div>
+              <div class="form-text">Accepted formats: PDF, JPG, and PNG. Maximum size is 50 MB per file. Every staged file must be ready before any are uploaded.</div>
               <div class="form-text text-danger" id="uploadAttachmentFeedback" role="alert"></div>
             </div>
             <div class="modal-footer review-modal-footer">
@@ -1990,16 +2001,16 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- nav -->
-    <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script id="trainingQuestionnaireData" type="application/json">
       {"pretest":[{"id":"PRE-GEN-01","name":"General Knowledge Assessment (Pre-test)","itemCount":12,"averageCorrect":8.1},{"id":"PRE-CROP-01","name":"Crop Production Pre-test","itemCount":12,"averageCorrect":8.328}],"posttest":[{"id":"POST-GEN-01","name":"General Knowledge Assessment (Post-test)","itemCount":12,"averageCorrect":10.2},{"id":"POST-CROP-01","name":"Crop Production Post-test","itemCount":12,"averageCorrect":10.5168}]}
     </script>
     <script src="{{ asset('src/js/training/id/view-training-assessments.js') }}"></script>
-    <script src="{{ asset('src/js/training/id/edit-training-participants.js?v=farmer-number-display-1') }}"></script>
-    <script src="{{ asset('src/js/training/id/view-training-highlights.js') }}"></script>
-    <script src="{{ asset('src/js/training/id/edit-training-highlights.js') }}"></script>
-    <script src="{{ asset('src/js/training/id/edit-training-attachments-cards.js') }}"></script>
+    <script src="{{ asset('src/js/training/id/edit-training-participants.js?v=participant-roster-compact-9') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training-highlights.js?v=4k-export-preset-2') }}"></script>
+    <script src="{{ asset('src/js/training/id/edit-training-highlights.js?v=highlight-upload-10mb-2') }}"></script>
+    <script src="{{ asset('src/js/training/id/edit-training-attachments-cards.js?v=attachment-size-50mb-1') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-logs.js?v=live-logs-20261109-3') }}"></script>
-    <script src="{{ asset('src/js/training/id/edit-training.js?v=training-status-badge-1') }}"></script>
+    <script src="{{ asset('src/js/training/id/edit-training.js?v=multi-training-locations-2') }}"></script>
 @endsection

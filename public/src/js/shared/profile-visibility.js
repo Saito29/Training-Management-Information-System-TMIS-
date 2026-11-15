@@ -27,6 +27,25 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       menu.querySelector('.dropdown-divider')?.closest('li')?.before(listItem);
     }
+
+    const userAdministrationItem = [...menu.querySelectorAll('a[href]')]
+      .find(anchor => {
+        try {
+          const url = new URL(anchor.getAttribute('href'), window.location.href);
+          return url.origin === window.location.origin && url.pathname === '/system/accounts';
+        } catch {
+          return false;
+        }
+      })
+      ?.closest('li');
+    if (userAdministrationItem) {
+      const separator = userAdministrationItem.previousElementSibling;
+      if (separator?.querySelector('.dropdown-divider')) {
+        listItem.after(separator, userAdministrationItem);
+      } else {
+        listItem.after(userAdministrationItem);
+      }
+    }
   });
 
   const regionsContainer = document.querySelector('#profileVisibilityRegions');

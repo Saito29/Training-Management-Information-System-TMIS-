@@ -255,8 +255,8 @@
   const farmers=()=>store.records('tmis-farmers');
   const results=kind=>store.records('tmis-'+kind+'-encoded').filter(item=>item.status==='complete' && training() && Number(item.trainingDatabaseId)===Number(training()._db_id));
   const normalize=value=>String(value??'').trim().toLocaleLowerCase();
-  function participantsForEncoding(selectedTraining,kind,includeResultId='') {
-    if(!selectedTraining)return farmers();
+  function participantsForEncoding(selectedTraining,kind,includeResultId='',resourcePersonId='') {
+    if(!selectedTraining)return [];
     const associationIds=new Set((selectedTraining.associationIds||[]).map(String));
     const enrolledIds=new Set((selectedTraining.participants||[]).map(String));
     const linkedResults=store.records('tmis-'+kind+'-encoded');
@@ -288,8 +288,8 @@
         farmer.association_db_id,
         ...(farmer.associationMemberships||[]).flatMap(membership=>[membership.id,membership.databaseId]),
       ].filter(value=>value!==undefined&&value!==null).map(String));
-      const isEligible=Boolean(farmer.is_active)&&(enrolledIds.has(farmerId)
-        ||[...associationIds].some(id=>memberIds.has(id))
+      const isActive=farmer.is_active===true||(farmer.is_active==null&&String(farmer.status||farmer.profileStatus||'').toLowerCase()==='active');
+      const isEligible=isActive&&enrolledIds.has(farmerId)&&([...associationIds].some(id=>memberIds.has(id))
         ||locationMatches(farmer));
       if(!isEligible)return false;
 
@@ -298,6 +298,7 @@
         && String(result.id)!==String(includeResultId)
         && String(result.farmerId||'')===farmerId
         && belongsToTraining(result)
+        && (kind!=='rp-evaluation'||(resourcePersonId&&String(result.resourcePersonId||'')===String(resourcePersonId)))
       );
     });
   }
@@ -313,7 +314,7 @@
     });
   }
   function assessment(kind){return (training()?.[kind.replace('-','')]||[]).map(id=>{const definition=questionnaires(kind).find(item=>item.id===id),items=results(kind).filter(item=>item.questionnaireId===id);return {id,name:definition?.trainingQuestionnaire||id,itemCount:Number(definition?.totalItems)||null,averageCorrect:items.length?items.reduce((sum,item)=>sum+Number(item.score),0)/items.length:null};});}
-  function scores(kind,id){return results(kind).filter(item=>item.questionnaireId===id).map(item=>({id:item.farmerId,name:farmer(item)?.name||item.farmerName||'Participant',association:farmer(item)?.association||'',answeredAt:item.date,score:Number(item.score)}));}
+  function scores(kind,id){return results(kind).filter(item=>item.questionnaireId===id).map(item=>{const participant=farmer(item);return {id:participant?.farmerNumber||item.farmerId,name:participant?.name||item.farmerName||'Participant',association:participant?.association||'',answeredAt:item.date,score:Number(item.score)};});}
   function resources(){return (training()?.trainers||[]).map(resource=>{const items=results('rp-evaluation').filter(item=>item.resourcePersonId===resource.id);return {...resource,initials:resource.name.split(' ').map(part=>part[0]).slice(0,2).join(''),questions:questions('rp-evaluation',items),comments:comments(items)};});}
   window.TmisTrainingData={results,questions,comments:()=>comments(results('training-evaluation')),resources,assessment,scores,participantCount:()=>training()?.participants?.length||0,participantsForEncoding};
 })();
@@ -533,7 +534,7 @@
           trainingTrack.hidden=false;
           for(const training of attendedTrainings){
             const card=template.cloneNode(true);card.hidden=false;card.dataset.trainingId=training.id;
-            const titleLink=card.querySelector('.training-title-link');if(titleLink){titleLink.textContent=training.title||training.name||'Training';const target=new URL(titleLink.href,location.href);target.search='';target.searchParams.set('trainingId',training.id);titleLink.href=target.href;}
+            const titleLink=card.querySelector('.training-title-link');if(titleLink){const trainingTitle=training.title||training.name||'Training';titleLink.textContent=trainingTitle;const slug=String(trainingTitle).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'training';const routeTemplate=document.querySelector('#trainingDataTable')?.dataset.trainingViewRoute||'/app/admin/training/id/view-training/__title__/__id__';titleLink.href=new URL(routeTemplate.replace('__title__',slug).replace('__id__',encodeURIComponent(training.id)),location.href).href;}
             const type=card.querySelector('.training-type');if(type)type.textContent=training.type||training.training_type||'Training';
             const dates=card.querySelectorAll('.training-preview-main small');
             if(dates[0])dates[0].textContent=[formatTrainingDate(training.startDate||training.start_date),formatTrainingDate(training.endDate||training.end_date)].filter(Boolean).join(' – ')||'Dates not recorded';

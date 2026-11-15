@@ -62,6 +62,43 @@
       return false;
     }
   });
+  const userAdministrationPath = '/system/accounts';
+  document.querySelectorAll('.user-menu').forEach((menu) => {
+    const userAdministrationLinks = [...menu.querySelectorAll('a[href]')].filter((anchor) => {
+      try {
+        const url = new URL(anchor.getAttribute('href'), window.location.href);
+        return url.origin === window.location.origin && url.pathname === userAdministrationPath;
+      } catch {
+        return false;
+      }
+    });
+
+    if (!access.super_administrator) {
+      userAdministrationLinks.forEach((link) => (link.closest('li') || link).remove());
+
+      return;
+    }
+
+    if (userAdministrationLinks.length > 0) {
+      return;
+    }
+
+    const divider = document.createElement('li');
+    divider.innerHTML = '<hr class="dropdown-divider">';
+    const item = document.createElement('li');
+    const link = document.createElement('a');
+    link.href = userAdministrationPath;
+    link.className = 'dropdown-item';
+    const icon = document.createElement('i');
+    icon.className = 'bi bi-person-gear';
+    icon.setAttribute('aria-hidden', 'true');
+    const label = document.createElement('span');
+    label.textContent = 'User administration';
+    link.append(icon, label);
+    item.append(link);
+    menu.append(divider, item);
+  });
+
   const createDeletedAccountsLink = (className) => {
     const link = document.createElement('a');
     link.href = deletedAccountsPath;

@@ -465,7 +465,7 @@ class="layout-fixed"
 
     <!-- nav -->
 
-    <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/administration/details/deleted-accounts.js') }}"></script>
 
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>

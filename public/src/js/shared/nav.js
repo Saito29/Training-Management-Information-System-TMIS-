@@ -223,7 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const hideCollapse = (element) => {
-    if (!element?.classList.contains('show') || typeof bootstrap === 'undefined') return;
+    if (!element || typeof bootstrap === 'undefined') return;
+    if (!element.classList.contains('show')) return;
     bootstrap.Collapse.getOrCreateInstance(element, { toggle: false }).hide();
   };
   const bindCollapseGroup = (groups) => {
@@ -239,6 +240,10 @@ document.addEventListener('DOMContentLoaded', () => {
           hideCollapse(document.getElementById(otherId));
           otherNestedIds.forEach((id) => hideCollapse(document.getElementById(id)));
         });
+      });
+      main?.addEventListener('hide.bs.collapse', (event) => {
+        if (event.target !== main) return;
+        nestedIds.forEach((id) => hideCollapse(document.getElementById(id)));
       });
       main?.addEventListener('shown.bs.collapse', (event) => {
         if (event.target === main && activeMainId !== mainId) hideCollapse(main);
@@ -347,7 +352,9 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
     offcanvas.addEventListener('hidden.bs.offcanvas', () => {
-      Object.values(mobileMainCollapses).flat().forEach((id) => hideCollapse(document.getElementById(id)));
+      Object.entries(mobileMainCollapses).forEach(([mainId, nestedIds]) => {
+        [mainId, ...nestedIds].forEach((id) => hideCollapse(document.getElementById(id)));
+      });
     });
   });
 

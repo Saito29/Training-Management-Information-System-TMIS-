@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let deleteTimer = null;
   let deleteDeadline = 0;
   const queue = [];
+  let queueSaving = false;
   const configuredTypes = window.TMIS_PAGE?.attachmentTypes?.training;
   const types = Array.isArray(configuredTypes) && configuredTypes.length
     ? configuredTypes
@@ -22,6 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const fire = (action, item) => document.dispatchEvent(new CustomEvent('training:attachment', {detail:{action, file:item.name}}));
   const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const fileType = item => item.pdf ? 'PDF' : /\.png$/i.test(item.name) ? 'PNG' : 'JPG';
+  const maxFileSize = 50 * 1024 * 1024;
+  const maxFileSizeLabel = '50 MB';
+  const formatFileSize = bytes => bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.ceil(bytes / 1024))} KB`;
   const visibleCount = () => window.innerWidth < 576 ? 1 : window.innerWidth < 768 ? 2 : window.innerWidth < 992 ? 3 : 4;
 
   panel.innerHTML = `<section class="training-documents-card training-card"><header class="training-documents-header"><div class="training-documents-heading"><span class="training-documents-icon"><i class="bi bi-file-earmark-text"></i></span><div><h2>Attachment Documents</h2><p>View and manage supporting documents for this training.</p></div></div><button class="training-documents-add" type="button" id="trainingAddAttachment"><i class="bi bi-plus-circle"></i> Add Attachments</button></header><div class="training-documents-body"><div id="trainingAttachmentCards" class="training-attachment-carousel" aria-live="polite"></div></div></section><section class="training-attachment-queue training-card"><header><h2>Attachment upload queue</h2><p>Choose a document type and year for each file before saving it.</p></header><div class="training-attachment-queue-body"><div class="table-responsive"><table class="table training-queue-table align-middle"><thead><tr><th scope="col">Preview</th><th scope="col">File type</th><th scope="col">Document type</th><th scope="col">Year</th><th scope="col">Remarks</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead><tbody id="trainingQueueBody"></tbody></table></div><div class="training-queue-footer"><span id="trainingQueueSummary"></span><span id="trainingQueueFeedback" role="status" aria-live="polite"></span><button id="trainingSaveAttachments" type="button" disabled><i class="bi bi-cloud-arrow-up"></i> Save attachments</button></div></div></section>`;
@@ -121,8 +125,10 @@ document.addEventListener('DOMContentLoaded', () => {
     event.preventDefault();
     const files = [...uploadFiles.files];
     if (!files.length) { uploadFeedback.textContent = 'Choose at least one file.'; return; }
+    const oversized = files.find(file => file.size > maxFileSize);
+    if (oversized) { uploadFeedback.textContent = `${oversized.name} exceeds the ${maxFileSizeLabel} maximum per file. No files were staged.`; return; }
     const allowed = files.filter(file => ['application/pdf', 'image/jpeg', 'image/png'].includes(file.type));
-    if (allowed.length !== files.length) { uploadFeedback.textContent = 'Only PDF, JPG, and PNG files are supported.'; return; }
+    if (allowed.length !== files.length) { uploadFeedback.textContent = 'Only PDF, JPG, and PNG files are supported. No files were staged.'; return; }
     allowed.forEach(file => queue.push({file, type:'', year:String(new Date().getFullYear()), remarks:''}));
     uploadFiles.value = '';
     uploadFeedback.textContent = '';
@@ -131,10 +137,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function renderQueue() {
-    queueBody.innerHTML = queue.length ? queue.map((item, index) => `<tr><td><span class="training-queue-preview"><i class="bi ${item.file.type === 'application/pdf' ? 'bi-file-earmark-pdf' : 'bi-file-earmark-image'}"></i><span title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</span></span></td><td>${item.file.type === 'application/pdf' ? 'PDF' : item.file.type === 'image/png' ? 'PNG' : 'JPG'}</td><td><select class="form-select" data-field="type" data-index="${index}" aria-label="Document type for ${escapeHtml(item.file.name)}"><option value="">Select type</option>${types.map(type => `<option value="${escapeHtml(type)}" ${item.type === type ? 'selected' : ''}>${escapeHtml(type)}</option>`).join('')}</select></td><td><select class="form-select" data-field="year" data-index="${index}" aria-label="Year for ${escapeHtml(item.file.name)}">${years.map(year => `<option value="${year}" ${item.year === year ? 'selected' : ''}>${year}</option>`).join('')}</select></td><td><input class="form-control" data-field="remarks" data-index="${index}" maxlength="500" value="${escapeHtml(item.remarks)}" aria-label="Remarks for ${escapeHtml(item.file.name)}" placeholder="Optional remarks"></td><td><span class="training-queue-status ${item.type ? 'ready' : ''}">${item.type ? 'Ready' : 'Select type'}</span></td><td><button class="training-queue-remove" type="button" data-remove="${index}" aria-label="Remove ${escapeHtml(item.file.name)} from queue"><i class="bi bi-x-lg"></i></button></td></tr>`).join('') : '<tr class="training-queue-empty"><td colspan="7">No files are waiting to be uploaded.</td></tr>';
+    queueBody.innerHTML = queue.length ? queue.map((item, index) => `<tr><td><span class="training-queue-preview"><i class="bi ${item.file.type === 'application/pdf' ? 'bi-file-earmark-pdf' : 'bi-file-earmark-image'}"></i><span title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}<small>${formatFileSize(item.file.size)} · maximum ${maxFileSizeLabel}</small></span></span></td><td>${item.file.type === 'application/pdf' ? 'PDF' : item.file.type === 'image/png' ? 'PNG' : 'JPG'}</td><td><select class="form-select" data-field="type" data-index="${index}" aria-label="Document type for ${escapeHtml(item.file.name)}"><option value="">Select type</option>${types.map(type => `<option value="${escapeHtml(type)}" ${item.type === type ? 'selected' : ''}>${escapeHtml(type)}</option>`).join('')}</select></td><td><select class="form-select" data-field="year" data-index="${index}" aria-label="Year for ${escapeHtml(item.file.name)}">${years.map(year => `<option value="${year}" ${item.year === year ? 'selected' : ''}>${year}</option>`).join('')}</select></td><td><input class="form-control" data-field="remarks" data-index="${index}" maxlength="500" value="${escapeHtml(item.remarks)}" aria-label="Remarks for ${escapeHtml(item.file.name)}" placeholder="Optional remarks"></td><td><span class="training-queue-status ${item.type ? 'ready' : ''}">${item.type ? 'Ready' : 'Select type'}</span></td><td><button class="training-queue-remove" type="button" data-remove="${index}" aria-label="Remove ${escapeHtml(item.file.name)} from queue"><i class="bi bi-x-lg"></i></button></td></tr>`).join('') : '<tr class="training-queue-empty"><td colspan="7">No files are waiting to be uploaded.</td></tr>';
     const ready = queue.filter(item => item.type && item.year).length;
-    panel.querySelector('#trainingQueueSummary').textContent = `${queue.length} file${queue.length === 1 ? '' : 's'} staged · ${ready} ready to save`;
-    queueSave.disabled = ready === 0;
+    const stagedSize = queue.reduce((total, item) => total + item.file.size, 0);
+    panel.querySelector('#trainingQueueSummary').textContent = `${queue.length} file${queue.length === 1 ? '' : 's'} staged · ${formatFileSize(stagedSize)} total · ${ready} ready to save`;
+    queueSave.disabled = queueSaving || queue.length === 0 || ready !== queue.length || queue.some(item => item.file.size > maxFileSize);
     queueSave.innerHTML = `<i class="bi bi-cloud-arrow-up"></i> Save ${ready} attachment${ready === 1 ? '' : 's'}`;
   }
   queueBody.addEventListener('change', event => {
@@ -150,16 +157,27 @@ document.addEventListener('DOMContentLoaded', () => {
     if (button) { queue.splice(Number(button.dataset.remove), 1); renderQueue(); }
   });
   queueSave.addEventListener('click', async () => {
-    const ready = queue.filter(item => item.type && item.year);
+    if (queueSaving || !queue.length) return;
+    const oversized = queue.find(item => item.file.size > maxFileSize);
+    if (oversized) { panel.querySelector('#trainingQueueFeedback').textContent = `${oversized.file.name} exceeds the ${maxFileSizeLabel} maximum per file.`; renderQueue(); return; }
+    const incomplete = queue.find(item => !item.type || !item.year);
+    if (incomplete) { panel.querySelector('#trainingQueueFeedback').textContent = `Choose a document type and year for ${incomplete.file.name} before saving the staged files.`; return; }
+    const ready = [...queue];
+    queueSaving = true;
+    renderQueue();
     try {
       const training=window.TmisStore.selected('tmis-trainings');
       if(!training) throw new Error('Open a saved training first.');
       for(const item of ready) {
         const attachment=await window.TmisStore.upload('trainings',training.id,item.file,item.type,item.year,item.remarks);
-        attachments.push(attachment); fire('added',attachment);
+        attachments.push(attachment);
+        const queueIndex = queue.indexOf(item);
+        if (queueIndex >= 0) queue.splice(queueIndex, 1);
+        fire('added',attachment);
+        renderQueue();
       }
     } catch(error) {panel.querySelector('#trainingQueueFeedback').textContent=error.message;return;}
-    for (let index = queue.length - 1; index >= 0; index--) if (queue[index].type && queue[index].year) queue.splice(index, 1);
+    finally { queueSaving = false; renderQueue(); }
     panel.querySelector('#trainingQueueFeedback').textContent = `${ready.length} attachment${ready.length === 1 ? '' : 's'} added.`;
     first = Math.max(0, attachments.length - visibleCount());
     renderQueue();

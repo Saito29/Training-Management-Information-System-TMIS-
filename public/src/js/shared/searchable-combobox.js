@@ -18,7 +18,69 @@
     function sync(){wrapper.hidden=select.hidden;input.disabled=arrow.disabled=select.disabled;input.setAttribute('aria-required',String(select.required));input.placeholder=select.getAttribute('placeholder')||[...select.options].find(option=>option.value==='')?.textContent.trim()||'Select an option';if(!state.open)input.value=selectedText();if(select.validity.valid){input.removeAttribute('aria-invalid');error.hidden=true;}if(select.disabled||select.hidden)close();if(state.open)render(input.value);}
     function setActive(index){if(!state.options.length)return;state.active=(index+state.options.length)%state.options.length;for(const[index,row]of [...popup.querySelectorAll('[role="option"]')].entries())row.classList.toggle('is-active',index===state.active);const row=popup.querySelectorAll('[role="option"]')[state.active];input.setAttribute('aria-activedescendant',row.id);row.scrollIntoView({block:'nearest'});}
     function choose(option){if(select.multiple)option.selected=!option.selected;else select.value=option.value;select.dispatchEvent(new Event('input',{bubbles:true}));select.dispatchEvent(new Event('change',{bubbles:true}));if(select.multiple){input.value='';render('');}else close();}
-    function render(query){const text=query.trim().toLowerCase();state.options=[...select.options].filter(option=>!option.disabled&&!option.hidden&&!option.parentElement.disabled&&option.textContent.toLowerCase().includes(text));popup.replaceChildren();state.active=-1;input.removeAttribute('aria-activedescendant');let group=null;for(const[index,option]of state.options.entries()){if(option.parentElement.tagName==='OPTGROUP'&&group!==option.parentElement.label){group=option.parentElement.label;const heading=document.createElement('div');heading.className='tmis-combobox-group';heading.textContent=group;popup.append(heading);}const row=document.createElement('div');row.className='tmis-combobox-option';row.id=id+'-option-'+index;row.setAttribute('role','option');row.setAttribute('aria-selected',String(option.selected));const label=document.createElement('span');label.textContent=option.textContent;const check=document.createElement('i');check.className='bi bi-check2';check.setAttribute('aria-hidden','true');row.append(label,check);row.addEventListener('mousedown',event=>event.preventDefault());row.addEventListener('click',()=>choose(option));popup.append(row);}if(!state.options.length){const empty=document.createElement('div');empty.className='tmis-combobox-empty';empty.setAttribute('role','status');empty.textContent='No matching options';popup.append(empty);}position();}
+    function render(query){
+      const text=query.trim().toLowerCase();
+      state.options=[...select.options].filter(option=>!option.disabled&&!option.hidden&&!option.parentElement.disabled&&option.textContent.toLowerCase().includes(text));
+      popup.replaceChildren();
+      state.active=-1;
+      input.removeAttribute('aria-activedescendant');
+      let group=null;
+      for(const[index,option]of state.options.entries()){
+        if(option.parentElement.tagName==='OPTGROUP'&&group!==option.parentElement.label){
+          group=option.parentElement.label;
+          const heading=document.createElement('div');
+          heading.className='tmis-combobox-group';
+          heading.textContent=group;
+          popup.append(heading);
+        }
+        const row=document.createElement('div');
+        row.className='tmis-combobox-option';
+        row.id=id+'-option-'+index;
+        row.setAttribute('role','option');
+        row.setAttribute('aria-selected',String(option.selected));
+        if(option.dataset.title||option.dataset.details||option.dataset.office){
+          row.classList.add('tmis-combobox-option--detailed');
+          const copy=document.createElement('span');
+          copy.className='tmis-combobox-option-copy';
+          const title=document.createElement('span');
+          title.className='tmis-combobox-option-title';
+          title.textContent=option.dataset.title||option.textContent.trim();
+          copy.append(title);
+          if(option.dataset.details){
+            const details=document.createElement('span');
+            details.className='tmis-combobox-option-details';
+            details.textContent=option.dataset.details;
+            copy.append(details);
+          }
+          row.append(copy);
+          if(option.dataset.office){
+            const office=document.createElement('span');
+            office.className='tmis-combobox-option-office';
+            office.textContent=option.dataset.office;
+            row.append(office);
+          }
+        }else{
+          const label=document.createElement('span');
+          label.textContent=option.textContent;
+          row.append(label);
+        }
+        const check=document.createElement('i');
+        check.className='bi bi-check2';
+        check.setAttribute('aria-hidden','true');
+        row.append(check);
+        row.addEventListener('mousedown',event=>event.preventDefault());
+        row.addEventListener('click',()=>choose(option));
+        popup.append(row);
+      }
+      if(!state.options.length){
+        const empty=document.createElement('div');
+        empty.className='tmis-combobox-empty';
+        empty.setAttribute('role','status');
+        empty.textContent='No matching options';
+        popup.append(empty);
+      }
+      position();
+    }
     function open(){if(select.disabled||select.hidden)return;if(openState&&openState!==state)openState.close();state.open=true;openState=state;popup.hidden=false;input.setAttribute('aria-expanded','true');wrapper.classList.add('is-open');input.value='';render('');}
     function close(){state.open=false;if(openState===state)openState=null;popup.hidden=true;wrapper.classList.remove('is-open');input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');input.value=selectedText();}
     state.close=close;state.sync=sync;state.position=position;

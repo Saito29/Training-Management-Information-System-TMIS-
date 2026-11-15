@@ -106,7 +106,7 @@ class OriginalInterfaceController
         }
         DB::table('participants')->where('id', $participantId)->update([
             'association_id' => null,
-            'association_role' => null,
+            'association_role' => $previousAssociationId === null ? $role : null,
         ]);
     }
 
@@ -114,57 +114,15 @@ class OriginalInterfaceController
     {
         ModuleAccess::authorize($request, 'participants.create');
         $record = $references->registration($request);
-        $associationNames = $record['associate_names'] ?? [];
-        $associations = collect($associationNames)->map(function (string $associationName) use ($request, $record): object {
-            $association = OriginalInterfaceData::find($request->user(), 'associations', $associationName);
-            abort_unless(
-                $association
-                    && $association->is_active
-                    && (int) $association->region_id === (int) $record['region_id']
-                    && (int) $association->org_id === (int) $record['org_id'],
-                422,
-                'Select active associations in the farmer\'s registering region and office.',
-            );
-
-            return $association;
-        });
-        unset($record['associate_names']);
         $matches = $this->matchingParticipants($record);
         if ($matches !== []) {
             return response()->json(['message' => 'A farmer with the same name is already registered for this region and office.', 'matches' => $matches], 409);
         }
         $record['id'] = 'FMR-'.Str::uuid();
         $input = $this->payload($request, ['key' => 'tmis-farmers', 'upserts' => [$record], 'deletes' => []]);
-        $response = DB::transaction(function () use ($request, $input, $data, $operations, $associations, $record): JsonResponse {
+        $response = DB::transaction(function () use ($input, $data, $operations, $record): JsonResponse {
             $syncResponse = $this->sync($input, $data, $operations);
             $responseData = $syncResponse->getData(true);
-            $participant = OriginalInterfaceData::find($request->user(), 'participants', $record['id']);
-            abort_unless($participant !== null, 500, 'The newly registered farmer could not be loaded.');
-
-            foreach ($associations->skip(1) as $association) {
-                DB::table('participant_association_memberships')->insert([
-                    'participant_id' => $participant->id,
-                    'association_id' => $association->id,
-                    'role' => $record['associate_role'] ?? null,
-                    'is_primary' => false,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-                AuditTrail::record(
-                    $request,
-                    'participant_association_membership_added_'.$participant->id.'_'.$association->id,
-                    $request->user(),
-                    after: ['association_id' => $association->id, 'role' => $record['associate_role'] ?? null],
-                    category: 'participants',
-                );
-            }
-
-            if ($associations->count() > 1) {
-                $responseData = $data->bootstrap($request->user()) + [
-                    'message' => $responseData['message'] ?? 'Changes saved to the database.',
-                    'idMappings' => $responseData['idMappings'] ?? [],
-                ];
-            }
 
             return response()->json($responseData + ['participant_id' => $record['id']], 201);
         });
@@ -331,8 +289,8 @@ class OriginalInterfaceController
 
     private function isParticipantEligibleForTraining(int $participantId, object $training): bool
     {
-        if (DB::table('training_participant')->where('training_id', $training->id)->where('participant_id', $participantId)->exists()) {
-            return true;
+        if (! DB::table('training_participant')->where('training_id', $training->id)->where('participant_id', $participantId)->exists()) {
+            return false;
         }
 
         if (DB::table('training_association as link')
@@ -481,20 +439,28 @@ class OriginalInterfaceController
         if ($module === 'questionnaires' && ! $existing && preg_match('/^Q-TEMP-[A-Za-z0-9-]{1,80}$/i', $id) === 1) {
             $temporaryId = $id;
             DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
-            $year = now()->format('y');
+            $questionnaireSlug = substr($key, 5, -15);
+            $prefix = match ($questionnaireSlug) {
+                'pre-test' => 'PRE',
+                'post-test' => 'POST',
+                'training-evaluation' => 'TE',
+                'rp-evaluation' => 'RP',
+                default => null,
+            };
+            abort_unless($prefix !== null, 422, 'Select a supported questionnaire type.');
             $sequence = 0;
-            foreach (DB::table('questionnaires')->where('ui_id', 'like', $year.'%')->pluck('ui_id') as $publicId) {
-                if (is_string($publicId) && preg_match('/^'.preg_quote($year, '/').'([0-9]{4})$/D', $publicId, $matches) === 1) {
+            foreach (DB::table('questionnaires')->where('ui_id', 'like', $prefix.'-%')->pluck('ui_id') as $publicId) {
+                if (is_string($publicId) && preg_match('/^'.preg_quote($prefix, '/').'-([0-9]{4})$/D', $publicId, $matches) === 1) {
                     $sequence = max($sequence, (int) $matches[1]);
                 }
             }
-            abort_if($sequence >= 9999, 409, 'The questionnaire ID sequence limit has been reached for this year.');
+            abort_if($sequence >= 9999, 409, 'The questionnaire ID sequence limit has been reached for this type.');
             $sequence++;
-            $id = $year.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+            $id = $prefix.'-'.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
             while (DB::table('questionnaires')->where('ui_id', $id)->exists()) {
-                abort_if($sequence >= 9999, 409, 'The questionnaire ID sequence limit has been reached for this year.');
+                abort_if($sequence >= 9999, 409, 'The questionnaire ID sequence limit has been reached for this type.');
                 $sequence++;
-                $id = $year.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+                $id = $prefix.'-'.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
             }
             $record['id'] = $id;
         }
@@ -599,7 +565,13 @@ class OriginalInterfaceController
         }
         $oldMetadata = $existing ? OriginalInterfaceData::unpack($existing->ui_data) : [];
         $assignmentChanged = false;
-        foreach (['pretest', 'posttest', 'trainers', 'associationIds'] as $field) {
+        $questionnaireAssignments = [
+            'pretest' => 'Pre-test',
+            'posttest' => 'Post-test',
+            'trainingEvaluation' => 'Training evaluation',
+            'rpEvaluation' => 'Resource person evaluation',
+        ];
+        foreach (array_merge(array_keys($questionnaireAssignments), ['trainers', 'associationIds']) as $field) {
             if (isset($record[$field]) && $record[$field] !== ($oldMetadata[$field] ?? [])) {
                 $assignmentChanged = true;
             }
@@ -608,9 +580,9 @@ class OriginalInterfaceController
             ModuleAccess::authorize($request, 'trainings.'.$permissionAction);
             $training = DB::table('trainings')->where('id', $databaseId)->first();
             abort_unless($training->status === 'For review', 409, 'Return the training to review before changing assignments.');
-            if (isset($record['pretest']) || isset($record['posttest'])) {
+            if (array_intersect(array_keys($record), array_keys($questionnaireAssignments)) !== []) {
                 $questionnaireIds = [];
-                foreach (['pretest' => 'Pre-test', 'posttest' => 'Post-test'] as $type => $kind) {
+                foreach ($questionnaireAssignments as $type => $kind) {
                     foreach ($record[$type] ?? [] as $id) {
                         $questionnaire = OriginalInterfaceData::find($request->user(), 'questionnaires', (string) $id);
                         abort_unless($questionnaire && $questionnaire->kind === $kind && $questionnaire->org_id === $training->org_id && $questionnaire->region_id === $training->region_id, 422, 'Select questionnaires registered in the training office.');
@@ -792,7 +764,7 @@ class OriginalInterfaceController
     private function validatedRecord(array $raw, string $module): array
     {
         $scalar = ['id', 'name', 'title', 'description', 'status', 'statusRemarks', 'remarks', 'training_title', 'training_type', 'type', 'delivery_mode', 'target_participants', 'partner_organization', 'training_description', 'training_budget', 'budget', 'venue', 'venue_location', 'start_date', 'end_date', 'startDate', 'endDate', 'region', 'region_id', 'office', 'org_id', 'implementing_office', 'implementingOffice', 'province', 'province_id', 'district', 'district_id', 'municipality', 'municipality_id', 'barangay', 'barangay_id', 'yearCovered', 'year_covered', 'firstName', 'middleName', 'lastName', 'first_name', 'middle_name', 'last_name', 'fname', 'mname', 'lname', 'sfname', 'suffix', 'sex', 'gender', 'date_of_birth', 'dateOfBirth', 'birthDate', 'birthday', 'dob', 'email', 'email_account', 'phone', 'mobile_no', 'nationality', 'place_of_birth', 'pob', 'house_building_number', 'street_purok_sitio_name', 'postal_code', 'tel_number', 'associate_name', 'association_id', 'associate_role', 'role', 'tupad', 'soloParent', 'solo_parent', 'fourPs', 'four_ps', '4ps', 'pwd', 'indigenousGroup', 'idp', 'tribeName', 'tbname', 'dietaryRestriction', 'dtrestriction', 'allergies_on', 'seniorCitizen', 'sncitizen', 'association_name', 'short_name', 'organization_type', 'registration_date', 'qualification', 'expertise', 'organization_name', 'questionnaireName', 'trainingQuestionnaire', 'totalItems', 'questionnaireId', 'trainingId', 'trainingTitle', 'trainingLocation', 'trainingVenue', 'trainingOrganization', 'trainingStartDate', 'trainingEndDate', 'farmerId', 'resourcePersonId', 'date', 'commodity', 'score', 'comments', 'csv', 'civil_status', 'extension', 'senior_citizen', 'indigenous_group', 'tribe_name', 'dietary_restriction', 'street_purok_sitio', 'tel_number', 'dashboardSlide', '_version'];
-        $allowed = array_merge($scalar, ['questions', 'ratingScale', 'members', 'ratings', 'pretest', 'posttest', 'trainers', 'interventions', 'bullets', 'associationIds']);
+        $allowed = array_merge($scalar, ['questions', 'ratingScale', 'members', 'ratings', 'pretest', 'posttest', 'trainingEvaluation', 'rpEvaluation', 'trainers', 'interventions', 'bullets', 'associationIds', 'trainingLocations']);
         $input = Arr::only($raw, $allowed);
         if ($module === 'participants' && array_key_exists('farmerStatusId', $raw)) {
             $input += Arr::only($raw, ['farmerStatusId']);
@@ -812,10 +784,10 @@ class OriginalInterfaceController
         if (array_key_exists('farmerStatusId', $input)) {
             $rules['farmerStatusId'] = ['nullable', 'integer'];
         }
-        foreach (['questions', 'ratingScale', 'members', 'ratings', 'pretest', 'posttest', 'trainers', 'interventions', 'bullets', 'associationIds'] as $field) {
+        foreach (['questions', 'ratingScale', 'members', 'ratings', 'pretest', 'posttest', 'trainingEvaluation', 'rpEvaluation', 'trainers', 'interventions', 'bullets', 'associationIds', 'trainingLocations'] as $field) {
             $rules[$field] = ['sometimes', 'array', 'max:500'];
         }
-        $rules += ['pretest.*' => ['string', 'max:100'], 'posttest.*' => ['string', 'max:100'], 'associationIds.*' => ['string', 'distinct', 'max:100'], 'trainers.*' => ['array'], 'trainers.*.id' => ['sometimes', 'string', 'max:100'], 'trainers.*.name' => ['sometimes', 'string', 'max:255'], 'questions.*.text' => ['sometimes', 'string', 'max:1000'], 'questions.*.maxRating' => ['sometimes', 'integer', 'min:1', 'max:10'], 'ratingScale.*.score' => ['required', 'integer', 'min:1', 'max:10'], 'ratingScale.*.label' => ['nullable', 'string', 'max:100'], 'ratingScale.*.description' => ['nullable', 'string', 'max:1000'], 'members.*.farmer_id' => ['sometimes', 'string', 'max:100'], 'members.*.position' => ['sometimes', 'nullable', 'string', 'max:255'], 'members.*.associate_role' => ['sometimes', 'nullable', 'string', 'max:255'], 'members.*.role' => ['sometimes', 'nullable', 'string', 'max:255'], 'ratings.*.rating' => ['nullable', 'numeric', 'min:0', 'max:10'], 'interventions.*.qty' => ['nullable', 'numeric', 'min:0'], 'interventions.*.title' => ['nullable', 'string', 'max:255'], 'interventions.*.remarks' => ['nullable', 'string', 'max:1000'], 'bullets.*' => ['array', 'max:100'], 'bullets.*.*' => ['string', 'max:1000']];
+        $rules += ['pretest.*' => ['string', 'max:100'], 'posttest.*' => ['string', 'max:100'], 'trainingEvaluation.*' => ['string', 'max:100'], 'rpEvaluation.*' => ['string', 'max:100'], 'associationIds.*' => ['string', 'distinct', 'max:100'], 'trainingLocations.*' => ['array'], 'trainingLocations.*.venue' => ['required', 'string', 'max:255'], 'trainingLocations.*.region_id' => ['required', 'string', 'max:100'], 'trainingLocations.*.region' => ['required', 'string', 'max:255'], 'trainingLocations.*.province_id' => ['required', 'string', 'max:100'], 'trainingLocations.*.province' => ['required', 'string', 'max:255'], 'trainingLocations.*.district_id' => ['required', 'string', 'max:100'], 'trainingLocations.*.district' => ['required', 'string', 'max:255'], 'trainingLocations.*.municipality_id' => ['required', 'string', 'max:100'], 'trainingLocations.*.municipality' => ['required', 'string', 'max:255'], 'trainingLocations.*.barangay_id' => ['required', 'string', 'max:100'], 'trainingLocations.*.barangay' => ['required', 'string', 'max:255'], 'trainers.*' => ['array'], 'trainers.*.id' => ['sometimes', 'string', 'max:100'], 'trainers.*.name' => ['sometimes', 'string', 'max:255'], 'questions.*.text' => ['sometimes', 'string', 'max:1000'], 'questions.*.maxRating' => ['sometimes', 'integer', 'min:1', 'max:10'], 'ratingScale.*.score' => ['required', 'integer', 'min:1', 'max:10'], 'ratingScale.*.label' => ['nullable', 'string', 'max:100'], 'ratingScale.*.description' => ['nullable', 'string', 'max:1000'], 'members.*.farmer_id' => ['sometimes', 'string', 'max:100'], 'members.*.position' => ['sometimes', 'nullable', 'string', 'max:255'], 'members.*.associate_role' => ['sometimes', 'nullable', 'string', 'max:255'], 'members.*.role' => ['sometimes', 'nullable', 'string', 'max:255'], 'ratings.*.rating' => ['nullable', 'numeric', 'min:0', 'max:10'], 'interventions.*.qty' => ['nullable', 'numeric', 'min:0'], 'interventions.*.title' => ['nullable', 'string', 'max:255'], 'interventions.*.remarks' => ['nullable', 'string', 'max:1000'], 'bullets.*' => ['array', 'max:100'], 'bullets.*.*' => ['string', 'max:1000']];
 
         return Validator::make($input, $rules)->validate();
     }
@@ -988,13 +960,17 @@ class OriginalInterfaceController
         $questionnaire = OriginalInterfaceData::find($request->user(), 'questionnaires', (string) ($item['questionnaireId'] ?? ''));
         $definition = OriginalInterfaceData::unpack($questionnaire?->ui_data);
         $questionnaireStatus = strtolower(trim((string) ($definition['questionnaireState'] ?? ($questionnaire?->is_active ? 'Active' : 'Inactive'))));
+        $slug = substr($key, 5, -8);
+        abort_unless($questionnaire && $questionnaire->kind === (OriginalInterfaceData::KINDS[$slug] ?? null), 422, 'The questionnaire type does not match this assessment.');
+        $isPreOrPostTest = in_array($questionnaire->kind, ['Pre-test', 'Post-test'], true);
         abort_unless(
-            $questionnaire !== null && ($questionnaire->is_active || ($state === 'draft' && $questionnaireStatus === 'draft')),
+            $questionnaire !== null
+                && ($isPreOrPostTest
+                    ? $questionnaire->is_active && $questionnaireStatus === 'active'
+                    : $questionnaire->is_active || ($state === 'draft' && $questionnaireStatus === 'draft')),
             422,
             'Select an active questionnaire from your office before completing an assessment.',
         );
-        $slug = substr($key, 5, -8);
-        abort_unless($questionnaire->kind === (OriginalInterfaceData::KINDS[$slug] ?? null), 422, 'The questionnaire type does not match this assessment.');
         $farmer = OriginalInterfaceData::find($request->user(), 'participants', (string) ($item['farmerId'] ?? ''));
         $hasQuestionnaireOffice = $farmer && $this->isParticipantBeneficiaryOf($farmer->id, (int) $questionnaire->region_id, (int) $questionnaire->org_id);
         $hasTrainingContext = ! empty($item['trainingId']);
@@ -1027,10 +1003,8 @@ class OriginalInterfaceController
         abort_if($state === 'complete' && $questionnaire->kind === 'Resource person evaluation' && ! $resource, 422, 'Select a resource person.');
         $training = null;
         if (empty($item['trainingId']) && $farmer && ! empty($date['date'])) {
-            $candidates = OriginalInterfaceData::query($request->user(), 'trainings')->where('status', 'Approved & Accepted')->where('is_active', true)->where('org_id', $questionnaire->org_id)->where('region_id', $questionnaire->region_id)->whereDate('start_date', '<=', $date['date'])->whereDate('end_date', '>=', $date['date'])->whereIn('id', DB::table('training_participant')->where('participant_id', $farmer->id)->select('training_id'));
-            if (in_array($questionnaire->kind, ['Pre-test', 'Post-test'], true)) {
-                $candidates->whereIn('id', DB::table('training_questionnaire')->where('questionnaire_id', $questionnaire->id)->select('training_id'));
-            }
+            $candidates = OriginalInterfaceData::query($request->user(), 'trainings')->where('is_active', true)->where('status', '!=', 'Inactive')->where('org_id', $questionnaire->org_id)->where('region_id', $questionnaire->region_id)->whereDate('start_date', '<=', $date['date'])->whereDate('end_date', '>=', $date['date'])->whereIn('id', DB::table('training_participant')->where('participant_id', $farmer->id)->select('training_id'));
+            $candidates->whereIn('id', DB::table('training_questionnaire')->where('questionnaire_id', $questionnaire->id)->select('training_id'));
             if ($resource) {
                 $candidates->whereIn('id', DB::table('training_resource_person')->where('resource_person_id', $resource->id)->select('training_id'));
             }
@@ -1045,15 +1019,19 @@ class OriginalInterfaceController
             abort_unless($training && $training->org_id === $questionnaire->org_id && $training->region_id === $questionnaire->region_id, 422, 'Select a training in the questionnaire office.');
             $training = DB::table('trainings')->where('id', $training->id)->lockForUpdate()->first();
             abort_unless($training !== null, 422, 'The selected training is unavailable.');
-            abort_if($state === 'complete' && ($training->status !== 'Approved & Accepted' || ! $training->is_active), 422, 'Complete responses require an active approved and accepted training.');
-            abort_unless($farmer && $this->isParticipantEligibleForTraining($farmer->id, $training), 422, 'The participant must be enrolled, belong to a linked association, or match the training location.');
-            if (in_array($questionnaire->kind, ['Pre-test', 'Post-test'], true)) {
-                abort_unless(DB::table('training_questionnaire')->where('training_id', $training->id)->where('questionnaire_id', $questionnaire->id)->exists(), 422, 'The questionnaire must be assigned to this training.');
+            abort_unless($training->is_active && $training->status !== 'Inactive', 422, 'Evaluation responses require an active training.');
+            if ($farmer) {
+                abort_unless($this->isParticipantEligibleForTraining($farmer->id, $training), 422, 'The participant must be enrolled, belong to a linked association, or match the training location.');
+            } else {
+                abort_if($state === 'complete', 422, 'Select an eligible participant before completing this evaluation.');
             }
+            abort_unless(DB::table('training_questionnaire')->where('training_id', $training->id)->where('questionnaire_id', $questionnaire->id)->exists(), 422, 'The questionnaire must be assigned to this training.');
             if ($resource) {
                 abort_unless(DB::table('training_resource_person')->where('training_id', $training->id)->where('resource_person_id', $resource->id)->exists(), 422, 'The resource person must be assigned to this training.');
             }
         }
+        $requiresTrainingContext = $state === 'complete' || in_array($questionnaire->kind, ['Training evaluation', 'Resource person evaluation'], true);
+        abort_if($requiresTrainingContext && ! $training, 422, 'Select an active training with this questionnaire assigned before saving the response.');
         if ($training && $state === 'complete') {
             $duplicate = DB::table('assessment_results')->where('training_id', $training->id)->where('questionnaire_id', $questionnaire->id)->where('participant_id', $farmer->id)->where('resource_person_id', $resource?->id)->where('state', 'complete')->whereNull('deleted_at');
             if ($existing) {

@@ -3,7 +3,7 @@
     <div>
       <span class="section-kicker">TRAINING DIRECTORY</span>
       <h2 id="trainingPickerTitle">Select one training for encoding</h2>
-      <p>Choose an active approved and accepted training. Its title, location, venue, and dates will fill in the form.</p>
+      <p>Choose an active training available to your region and office. Inactive trainings are excluded.</p>
     </div>
     <div class="training-picker-search">
       <label for="trainingPickerSearch">Search trainings</label>
@@ -11,6 +11,7 @@
     </div>
   </div>
   <div class="training-picker-filters" aria-label="Filter trainings">
+    <div><label for="trainingFilterYear">Year covered</label><select id="trainingFilterYear" class="form-select"><option value="">All years</option></select></div>
     <div><label for="trainingFilterRegion">Region</label><select id="trainingFilterRegion" class="form-select"><option value="">All regions</option></select></div>
     <div><label for="trainingFilterProvince">Province</label><select id="trainingFilterProvince" class="form-select"><option value="">All provinces</option></select></div>
     <div><label for="trainingFilterDistrict">District</label><select id="trainingFilterDistrict" class="form-select"><option value="">All districts</option></select></div>
@@ -24,8 +25,8 @@
   </div>
   <div class="training-picker-table-scroll">
     <table class="training-picker-table">
-      <thead><tr><th scope="col">Select</th><th scope="col">Training ID</th><th scope="col">Training</th><th scope="col">Organization</th><th scope="col">Location</th><th scope="col">Venue</th><th scope="col">Dates</th></tr></thead>
-      <tbody id="trainingPickerBody"><tr><td colspan="7" class="training-picker-empty">Loading approved trainings…</td></tr></tbody>
+      <thead><tr><th scope="col">Action</th><th scope="col" class="training-picker-sortable" data-sort="id" tabindex="0">Training ID <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th><th scope="col" class="training-picker-sortable" data-sort="year" tabindex="0">Year covered <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th><th scope="col" class="training-picker-sortable" data-sort="title" tabindex="0">Training <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th><th scope="col" class="training-picker-sortable" data-sort="office" tabindex="0">Office <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th><th scope="col" class="training-picker-sortable" data-sort="location" tabindex="0">Location <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th><th scope="col" class="training-picker-sortable" data-sort="venue" tabindex="0">Venue <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th><th scope="col" class="training-picker-sortable" data-sort="startDate" tabindex="0">Dates <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th></tr></thead>
+      <tbody id="trainingPickerBody"><tr><td colspan="8" class="training-picker-empty">Loading approved trainings…</td></tr></tbody>
     </table>
   </div>
   <div class="training-picker-footer"><span id="selectedTrainingLabel">No training selected</span><nav id="trainingPickerPagination" class="training-picker-pagination" aria-label="Training pages"></nav></div>

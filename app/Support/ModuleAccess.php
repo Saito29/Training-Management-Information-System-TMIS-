@@ -76,13 +76,14 @@ class ModuleAccess
     public static function isSuperAdministrator(?User $user): bool
     {
         return self::isAdministrator($user)
-            && DB::table('system_super_admins')->where('user_id', $user->user_id)->exists();
+            && self::hasSuperAdministratorEntry($user);
     }
 
-    /** @return array{administrator: bool, permissions: list<string>, page_permissions: array<string, array{module: string, permission: string}>} */
+    /** @return array{administrator: bool, super_administrator: bool, permissions: list<string>, page_permissions: array<string, array{module: string, permission: string}>} */
     public static function navigationAccess(?User $user): array
     {
         $isAdministrator = self::isAdministrator($user);
+        $isSuperAdministrator = $isAdministrator && self::hasSuperAdministratorEntry($user);
         $permissions = [];
         if ($user) {
             $permissions = $isAdministrator
@@ -95,9 +96,16 @@ class ModuleAccess
 
         return [
             'administrator' => $isAdministrator,
+            'super_administrator' => $isSuperAdministrator,
             'permissions' => $permissions,
             'page_permissions' => self::navigationPageAccessMap(),
         ];
+    }
+
+    private static function hasSuperAdministratorEntry(?User $user): bool
+    {
+        return $user !== null
+            && DB::table('system_super_admins')->where('user_id', $user->user_id)->exists();
     }
 
     /** @return list<string> */

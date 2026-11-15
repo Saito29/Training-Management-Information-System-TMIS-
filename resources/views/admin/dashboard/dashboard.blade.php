@@ -2293,7 +2293,7 @@ class="layout-fixed"
     <script src="https://cdn.datatables.net/buttons/3.2.5/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/3.2.5/js/buttons.print.min.js"></script>
 
-    <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/dashboard/scriptv2.js?v=dashboard-card-reports-2') }}"></script>
     <script src="{{ asset('src/js/dashboard/training-highlight-carousel.js') }}"></script>

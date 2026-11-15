@@ -90,7 +90,13 @@ class OriginalDocumentController
     {
         $action = $module === 'participants' && $request->input('kind') === 'Status supporting document' ? 'edit' : 'create';
         $owner = $this->owner($request, $module, $id, $action);
-        $data = $request->validate(['kind' => ['required', 'string', 'max:80'], 'year' => ['nullable', 'integer', 'min:2000', 'max:2200'], 'remarks' => ['nullable', 'string', 'max:500'], 'file' => ['required', 'file', 'mimes:pdf,doc,docx,png,jpg,jpeg,webp', 'extensions:pdf,doc,docx,png,jpg,jpeg,webp', 'max:10240']]);
+        $maximumFileSizeKilobytes = $module === 'trainings' ? 51200 : 10240;
+        $data = $request->validate([
+            'kind' => ['required', 'string', 'max:80'],
+            'year' => ['nullable', 'integer', 'min:2000', 'max:2200'],
+            'remarks' => ['nullable', 'string', 'max:500'],
+            'file' => ['required', 'file', 'mimes:pdf,doc,docx,png,jpg,jpeg,webp', 'extensions:pdf,doc,docx,png,jpg,jpeg,webp', 'max:'.$maximumFileSizeKilobytes],
+        ]);
         $data['kind'] = AttachmentTypeCatalog::resolve(AttachmentTypeCatalog::categoryForModule($module), $data['kind']);
         if ($module === 'participants' && $data['kind'] === 'Status supporting document') {
             $request->validate(['file' => ['required', 'file', 'mimes:pdf,png,jpg,jpeg,webp,gif', 'extensions:pdf,png,jpg,jpeg,webp,gif', 'max:10240']]);
@@ -195,7 +201,7 @@ class OriginalDocumentController
     public function highlight(Request $request, string $id, OriginalInterfaceData $interface): JsonResponse
     {
         $owner = $this->owner($request, 'trainings', $id, 'edit');
-        $data = $request->validate(['slide' => ['required', 'integer', 'min:0', 'max:1'], 'content' => ['required', 'json'], 'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'], 'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048']]);
+        $data = $request->validate(['slide' => ['required', 'integer', 'min:0', 'max:1'], 'content' => ['required', 'json'], 'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'], 'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240']]);
         $raw = json_decode($data['content'], true, 512, JSON_THROW_ON_ERROR);
         $rules = [];
         foreach (['heading' => 100, 'description' => 300, 'quote' => 300, 'trainingTitle' => 120, 'officeName' => 100] as $field => $max) {

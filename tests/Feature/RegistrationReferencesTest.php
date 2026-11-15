@@ -43,7 +43,7 @@ class RegistrationReferencesTest extends TestCase
     {
         $address = $this->address();
 
-        return $address + ['fname' => 'Ana', 'lname' => 'Santos', 'dob' => '1990-01-01', 'gender' => 'Female', 'csv' => 'Single', 'nationality' => 'Filipino', 'pob' => $address['municipality_id'], 'region_id' => 4, 'org_id' => 1, 'postal_code' => '4300', 'association_status' => 'No', 'tupad' => 'Yes', 'solo_parent' => 'Yes'];
+        return $address + ['fname' => 'Ana', 'lname' => 'Santos', 'dob' => '1990-01-01', 'gender' => 'Female', 'csv' => 'Single', 'nationality' => 'Filipino', 'pob' => $address['municipality_id'], 'region_id' => 4, 'org_id' => 1, 'postal_code' => '4300', 'tupad' => 'Yes', 'solo_parent' => 'Yes'];
     }
 
     public function test_administrator_creates_each_location_level_and_records_profile_activity(): void
@@ -328,68 +328,42 @@ class RegistrationReferencesTest extends TestCase
         $this->assertDatabaseCount('participants', 0);
     }
 
-    public function test_inactive_option_and_foreign_office_association_cannot_be_selected(): void
+    public function test_inactive_participant_options_cannot_be_selected(): void
     {
         $this->signIn();
         $data = $this->registration();
         DB::table('participant_options')->where('field', 'nationality')->where('value', 'Filipino')->update(['is_active' => false]);
         $this->postJson('/ui/participants', $data)->assertUnprocessable()->assertJsonValidationErrors('nationality');
-        DB::table('participant_options')->where('field', 'nationality')->where('value', 'Filipino')->update(['is_active' => true]);
-        $id = DB::table('associations')->insertGetId(['region_id' => 4, 'org_id' => 2, 'created_by' => auth()->id(), 'name' => 'Other office', 'is_active' => true]);
-        $data['association_status'] = 'Yes';
-        $data['associate_name'] = (string) $id;
-        $data['associate_role'] = 'Member';
-        $this->postJson('/ui/participants', $data)->assertUnprocessable();
         $this->assertDatabaseCount('participants', 0);
     }
 
-    public function test_farmer_registration_saves_multiple_association_memberships(): void
+    public function test_farmer_registration_accepts_an_empty_role_and_defers_association_membership(): void
     {
-        $user = $this->signIn();
-        $firstAssociation = DB::table('associations')->insertGetId([
-            'region_id' => 4,
-            'org_id' => 1,
-            'created_by' => $user->user_id,
-            'name' => 'First farmer association',
-            'is_active' => true,
-        ]);
-        $secondAssociation = DB::table('associations')->insertGetId([
-            'region_id' => 4,
-            'org_id' => 1,
-            'created_by' => $user->user_id,
-            'name' => 'Second farmer association',
-            'is_active' => true,
-        ]);
+        $this->signIn();
         $data = $this->registration();
-        $data['association_status'] = 'Yes';
-        $data['associate_names'] = [(string) $firstAssociation, (string) $secondAssociation];
-        $data['associate_role'] = 'Member';
+        $data['associate_role'] = '';
 
         $response = $this->postJson('/ui/participants', $data)
-            ->assertCreated()
-            ->assertJsonPath('message', 'Changes saved to the database.');
+            ->assertCreated();
 
         $participantId = DB::table('participants')->where('ui_id', $response->json('participant_id'))->value('id');
-        $this->assertDatabaseHas('participant_association_memberships', [
-            'participant_id' => $participantId,
-            'association_id' => $firstAssociation,
-            'role' => 'Member',
-            'is_primary' => true,
+        $this->assertDatabaseHas('participants', [
+            'id' => $participantId,
+            'association_id' => null,
+            'association_role' => null,
         ]);
-        $this->assertDatabaseHas('participant_association_memberships', [
-            'participant_id' => $participantId,
-            'association_id' => $secondAssociation,
-            'role' => 'Member',
-            'is_primary' => false,
-        ]);
-        $this->assertSame(2, DB::table('participant_association_memberships')->where('participant_id', $participantId)->count());
+        $this->assertDatabaseCount('participant_association_memberships', 0);
+
         $this->get(route('admin.participants.create.register'))
             ->assertOk()
-            ->assertSee('name="associate_names[]"', false)
-            ->assertSee('multiple disabled', false);
+            ->assertDontSee('name="association_status"', false)
+            ->assertDontSee('name="associate_names[]"', false)
+            ->assertSee('name="associate_role"', false)
+            ->assertSee('(optional)')
+            ->assertSee('Add the farmer to an association from its Farmer Members tab');
     }
 
-    public function test_farmer_registration_rejects_multiple_associations_outside_the_selected_office(): void
+    public function test_farmer_registration_ignores_legacy_association_selector_payload(): void
     {
         $user = $this->signIn();
         $validAssociation = DB::table('associations')->insertGetId([
@@ -411,11 +385,13 @@ class RegistrationReferencesTest extends TestCase
         $data['associate_names'] = [(string) $validAssociation, (string) $foreignAssociation];
         $data['associate_role'] = 'Member';
 
-        $this->postJson('/ui/participants', $data)
-            ->assertUnprocessable()
-            ->assertJsonPath('message', 'Select active associations in the farmer\'s registering region and office.');
+        $response = $this->postJson('/ui/participants', $data)->assertCreated();
 
-        $this->assertDatabaseCount('participants', 0);
+        $this->assertDatabaseHas('participants', [
+            'ui_id' => $response->json('participant_id'),
+            'association_id' => null,
+            'association_role' => 'Member',
+        ]);
         $this->assertDatabaseCount('participant_association_memberships', 0);
     }
 

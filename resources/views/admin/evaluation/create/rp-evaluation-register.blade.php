@@ -1491,7 +1491,7 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.8.4/dist/js/adminlte.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-    <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/evaluation/create/questionnaire-toast.js') }}"></script>
     <script src="{{ asset('src/js/evaluation/create/office-region.js') }}"></script>

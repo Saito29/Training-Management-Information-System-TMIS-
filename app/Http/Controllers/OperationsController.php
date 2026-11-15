@@ -617,7 +617,7 @@ class OperationsController
     public function attachment(Request $request, int $id): JsonResponse|RedirectResponse
     {
         ModuleAccess::authorize($request, 'trainings.create');
-        $data = $request->validate(['kind' => ['required', 'string', 'max:80'], 'file' => ['required', 'file', 'mimes:pdf,doc,docx', 'extensions:pdf,doc,docx', 'max:10240']]);
+        $data = $request->validate(['kind' => ['required', 'string', 'max:80'], 'file' => ['required', 'file', 'mimes:pdf,doc,docx', 'extensions:pdf,doc,docx', 'max:51200']]);
         $data['kind'] = AttachmentTypeCatalog::resolve('training', $data['kind']);
         abort_unless($this->query($request, 'trainings')->where('id', $id)->exists(), 404);
         $file = $request->file('file');

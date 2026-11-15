@@ -130,6 +130,52 @@
 .fa-available-table-wrap table { min-width: 690px; color: var(--color-text-primary); }
 .fa-available-table-wrap th { white-space: nowrap; color: var(--color-text-secondary); font-size: 12px; }
 .fa-available-table-wrap td { color: var(--color-text-primary); font-size: 12px; }
+#faAddMembersPanel .edit-participants-table { min-width:880px; }
+#faAddMembersPanel .edit-participants-table th:nth-child(1),
+#faAddMembersPanel .edit-participants-table td:nth-child(1) { width:44px; min-width:44px; max-width:44px; padding-right:2px; padding-left:2px; text-align:center; }
+#faAddMembersPanel .edit-participants-table th:nth-child(2),
+#faAddMembersPanel .edit-participants-table td:nth-child(2) { width:110px; }
+#faAddMembersPanel .edit-participants-table th:nth-child(3),
+#faAddMembersPanel .edit-participants-table td:nth-child(3) { width:70px; }
+#faAddMembersPanel .edit-participants-table th:nth-child(4),
+#faAddMembersPanel .edit-participants-table td:nth-child(4) { width:250px; }
+#faAddMembersPanel .edit-participants-table th:nth-child(5),
+#faAddMembersPanel .edit-participants-table td:nth-child(5) { width:250px; }
+#faAddMembersPanel .edit-participants-table th:nth-child(6),
+#faAddMembersPanel .edit-participants-table td:nth-child(6) { width:156px; }
+#faAddMembersPanel .fa-available-select-all {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 3px;
+  width: 40px;
+  white-space: normal;
+  cursor: pointer;
+  text-align: center;
+}
+#faAddMembersPanel #faAvailableSelectAllLabel { max-width: 40px; font-size: 9px; line-height: 1.05; }
+#faAddMembersPanel .fa-available-table-wrap tbody tr[data-selectable-farmer] { cursor:pointer; }
+#faAddMembersPanel .fa-available-table-wrap tbody tr.is-selected td { background:var(--color-primary-surface); }
+#faAddMembersPanel .fa-farmer-member,
+#faAddMembersPanel .fa-farmer-location { display:grid; min-width:0; gap:4px; white-space:normal; }
+#faAddMembersPanel .fa-farmer-member > strong { overflow:hidden; font-size:11px; text-overflow:ellipsis; text-transform:uppercase; }
+#faAddMembersPanel .fa-farmer-demographics,
+#faAddMembersPanel .fa-location-primary { display:flex; align-items:center; gap:6px; min-width:0; }
+#faAddMembersPanel .fa-farmer-demographics { color:var(--color-text-secondary); font-size:10px; }
+#faAddMembersPanel .fa-gender-badge { display:inline-grid; place-items:center; width:16px; height:16px; flex:0 0 16px; border-radius:50%; font-size:9px; font-weight:750; }
+#faAddMembersPanel .fa-gender-badge.is-female { color:#b63878; background:#ffe5f1; }
+#faAddMembersPanel .fa-gender-badge.is-male { color:#2868bd; background:#e3efff; }
+#faAddMembersPanel .fa-gender-badge.is-unknown { color:var(--color-text-secondary); background:var(--color-bg); }
+#faAddMembersPanel .fa-location-primary > span:last-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#faAddMembersPanel .fa-region-badge,
+#faAddMembersPanel .fa-year-badge,
+#faAddMembersPanel .fa-office-badge { display:inline-flex; align-items:center; justify-content:center; border-radius:6px; font-size:10px; font-weight:700; white-space:nowrap; }
+#faAddMembersPanel .fa-region-badge { padding:3px 6px; border:1px solid var(--color-border); color:var(--color-text-secondary); background:var(--color-bg); }
+#faAddMembersPanel .fa-year-badge { padding:4px 7px; color:#5952c8; background:#f0efff; }
+#faAddMembersPanel .fa-office-badge { max-width:100%; overflow:hidden; padding:4px 7px; color:#087d52; background:#e4faef; text-overflow:ellipsis; }
+#faAddMembersPanel .fa-location-secondary { color:var(--color-text-secondary); font-size:10px; }
+.fa-farmer-profile-link { color: var(--color-primary-dark); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+.fa-farmer-profile-link:hover { color: var(--color-primary); }
 .fa-roster-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 15px; color: var(--color-text-secondary); font-size: 12px; }
 .fa-roster-footer label { display: flex; align-items: center; gap: 7px; }
 .fa-roster-footer .form-select { width: auto; }
@@ -158,6 +204,10 @@
 [data-theme='dark'] .app-main .app-main-body #fa-members .fa-roster-footer,
 [data-theme='dark'] .app-main .app-main-body #fa-members .fa-available-table-wrap th {
   color: var(--color-text-secondary);
+}
+
+[data-theme='dark'] .app-main .app-main-body #fa-members .fa-farmer-profile-link {
+  color: var(--color-primary);
 }
 
 [data-theme='dark'] .app-main .app-main-body #fa-members .fa-roster-tabs button.is-active {

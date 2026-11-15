@@ -58,9 +58,9 @@ class="layout-fixed"
       rel="stylesheet"
       href="{{ asset('src/css/participants/update/view-farmer.css') }}"
     />
-    <link rel="stylesheet" href="{{ asset('src/css/participants/update/fa-overview.css') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/participants/update/fa-overview.css?v=member-removal-modal-1') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training-participants.css') }}" />
-    <link rel="stylesheet" href="{{ asset('src/css/participants/update/fa-edit.css?v=association-member-roles-1') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/participants/update/fa-edit.css?v=association-farmer-table-2') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
     <title>DA-TMIS - Edit Farmer Association</title>
@@ -889,7 +889,7 @@ class="layout-fixed"
                   </div>
                   <div id="faCurrentMembersPanel" role="tabpanel" aria-labelledby="faCurrentMembersTab"></div>
                   <div id="faAddMembersPanel" class="edit-participants-content" role="tabpanel" aria-labelledby="faAddMembersTab" hidden>
-                    <div class="edit-participants-intro"><div><h3>Find farmers to add</h3><p>Only active farmers without an association membership in this association’s region and municipality are available. Select farmers individually or select all matching results across pages.</p></div><span id="faAvailableCount">0 available</span></div>
+                    <div class="edit-participants-intro"><div><h3>Find farmers to add</h3><p>Only active farmers without an association membership in this association’s region and municipality are available. Click a farmer row or its checkbox to select or deselect it.</p></div><span id="faAvailableCount">0 available</span></div>
                     <div class="edit-participants-toolbar fa-available-toolbar">
                       <label class="edit-participants-search"><i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden">Search available farmers</span><input class="form-control" id="faAvailableSearch" type="search" placeholder="Search ID, name, or location" /></label>
                       <select class="form-select" id="faAvailableProvince" aria-label="Filter farmers by province"><option value="">All provinces</option></select>
@@ -898,7 +898,7 @@ class="layout-fixed"
                       <select class="form-select" id="faAvailableBarangay" aria-label="Filter farmers by barangay"><option value="">All barangays</option></select>
                       <button class="btn edit-participants-clear" id="faAvailableClear" type="button">Clear filters</button>
                     </div>
-                    <div class="edit-participants-table-wrap fa-available-table-wrap"><table class="table edit-participants-table"><caption class="visually-hidden">Farmers available to tag to this association</caption><thead><tr><th scope="col"><input id="faAvailableSelectAll" type="checkbox" aria-label="Select all farmers matching current filters across all pages" /></th><th scope="col">Farmer ID</th><th scope="col">Full name</th><th scope="col">Barangay</th><th scope="col">Municipality / City</th><th scope="col">Province</th></tr><tr class="edit-participants-column-filters"><th></th><th><input class="form-control form-control-sm" data-fa-column="farmer_id" type="search" placeholder="Filter ID" aria-label="Filter by farmer ID" /></th><th><input class="form-control form-control-sm" data-fa-column="name" type="search" placeholder="Filter name" aria-label="Filter by full name" /></th><th><input class="form-control form-control-sm" data-fa-column="barangay" type="search" placeholder="Filter barangay" aria-label="Filter by barangay" /></th><th><input class="form-control form-control-sm" data-fa-column="municipality" type="search" placeholder="Filter municipality" aria-label="Filter by municipality" /></th><th><input class="form-control form-control-sm" data-fa-column="province" type="search" placeholder="Filter province" aria-label="Filter by province" /></th></tr></thead><tbody id="faAvailableRows"></tbody></table></div>
+                    <div class="edit-participants-table-wrap fa-available-table-wrap"><table class="table edit-participants-table"><caption class="visually-hidden">Farmers available to tag to this association</caption><thead><tr><th scope="col" class="fa-available-select-column"><label class="fa-available-select-all" for="faAvailableSelectAll"><span id="faAvailableSelectAllLabel">Select all</span><input id="faAvailableSelectAll" type="checkbox" aria-label="Select all farmers matching current filters across all pages" /></label></th><th scope="col">ID</th><th scope="col">Year</th><th scope="col">Member</th><th scope="col">Location</th><th scope="col">Office</th></tr><tr class="edit-participants-column-filters"><th></th><th><input class="form-control form-control-sm" data-fa-column="farmer_id" type="search" placeholder="Filter ID" aria-label="Filter by farmer ID" /></th><th><input class="form-control form-control-sm" data-fa-column="yearCovered" type="search" placeholder="Filter year" aria-label="Filter by year covered" /></th><th><input class="form-control form-control-sm" data-fa-column="name" type="search" placeholder="Filter member" aria-label="Filter by member name" /></th><th><input class="form-control form-control-sm" data-fa-column="location" type="search" placeholder="Filter location" aria-label="Filter by farmer location" /></th><th><input class="form-control form-control-sm" data-fa-column="office" type="search" placeholder="Filter office" aria-label="Filter by office" /></th></tr></thead><tbody id="faAvailableRows" data-farmer-profile-url-template="{{ route('admin.participants.id.view-farmer', ['id' => '__FARMER_ID__']) }}"></tbody></table></div>
                     <p id="faAvailableEmpty" class="edit-participants-empty" hidden>No available farmers match your filters.</p>
                     <div class="edit-participants-pagination fa-available-pagination"><span id="faAvailableRange">Showing 0 of 0</span><div class="edit-participants-page-actions"><label>Rows per page <select id="faAvailablePageSize" class="form-select form-select-sm"><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="200">200</option><option value="500">500</option><option value="1000">1,000</option><option value="all">All</option></select></label><button id="faAvailablePrevious" type="button" aria-label="Previous page"><i class="bi bi-chevron-left" aria-hidden="true"></i></button><span id="faAvailablePageStatus">Page 1 of 1</span><button id="faAvailableNext" type="button" aria-label="Next page"><i class="bi bi-chevron-right" aria-hidden="true"></i></button></div></div>
                     <div class="edit-participants-selection"><span id="faSelectedCount">0 selected</span><label for="faMemberRole">Membership role<input class="form-control form-control-sm" id="faMemberRole" type="text" maxlength="255" value="Member" /></label><button class="btn edit-participants-add" id="faAddSelected" type="button" disabled><i class="bi bi-person-plus" aria-hidden="true"></i>Add selected farmers</button></div>
@@ -930,7 +930,7 @@ class="layout-fixed"
                       <table class="table table-hover align-middle mb-0 fa-member-table">
                         <caption class="visually-hidden">Farmer members of this association</caption>
                         <thead id="faMemberTableHead"></thead>
-                        <tbody id="faMembersBody"></tbody>
+                        <tbody id="faMembersBody" data-farmer-profile-url-template="{{ route('admin.participants.id.view-farmer', ['id' => '__FARMER_ID__']) }}"></tbody>
                       </table>
                     </div>
                     <div class="fa-member-pagination">
@@ -2165,6 +2165,46 @@ class="layout-fixed"
       <button type="button" class="btn btn-sm btn-light" id="cancelAttachmentDelete">Undo</button>
     </div>
 
+    <!-- Remove farmer membership dialog -->
+    <div class="modal fade fa-member-remove-modal" id="faRemoveMemberModal" tabindex="-1" aria-labelledby="faRemoveMemberTitle" aria-describedby="faRemoveMemberDescription" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <div class="fa-member-remove-heading">
+              <span class="fa-member-remove-icon" aria-hidden="true"><i class="bi bi-person-dash"></i></span>
+              <div>
+                <span class="fa-member-remove-eyebrow">Association membership</span>
+                <h5 class="modal-title" id="faRemoveMemberTitle">Remove farmer from association?</h5>
+              </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="fa-member-remove-description" id="faRemoveMemberDescription">This only removes the farmer's membership in this association. Their farmer profile and records will not be deleted.</p>
+            <dl class="fa-member-remove-details">
+              <div><dt>Association</dt><dd id="faRemoveMemberAssociation">—</dd></div>
+              <div><dt>Farmer</dt><dd id="faRemoveMemberName">—</dd></div>
+              <div><dt>Farmer ID</dt><dd id="faRemoveMemberId">—</dd></div>
+              <div><dt>Status</dt><dd id="faRemoveMemberStatus">—</dd></div>
+              <div><dt>Year covered</dt><dd id="faRemoveMemberYear">—</dd></div>
+              <div><dt>Role in association</dt><dd id="faRemoveMemberRole">—</dd></div>
+              <div><dt>Member since</dt><dd id="faRemoveMemberSince">—</dd></div>
+              <div><dt>Date of birth</dt><dd id="faRemoveMemberBirthDate">—</dd></div>
+              <div><dt>Age</dt><dd id="faRemoveMemberAge">—</dd></div>
+              <div><dt>Gender</dt><dd id="faRemoveMemberGender">—</dd></div>
+              <div><dt>Location</dt><dd id="faRemoveMemberLocation">—</dd></div>
+              <div><dt>Office</dt><dd id="faRemoveMemberOffice">—</dd></div>
+            </dl>
+            <p class="fa-member-remove-error" id="faRemoveMemberError" role="alert" hidden></p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-danger" id="faRemoveMemberConfirm"><i class="bi bi-person-dash me-1" aria-hidden="true"></i>Remove farmer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Scripts -->
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
@@ -2180,11 +2220,11 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- nav -->
-    <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/participants/update/fa-overview.js?v=farmer-roster-dedup-1') }}"></script>
+    <script src="{{ asset('src/js/participants/update/fa-overview.js?v=member-removal-modal-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-sections.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-edit.js?v=association-reload-toast-1') }}"></script>
-    <script src="{{ asset('src/js/participants/update/fa-edit-members.js?v=association-member-eligibility-1') }}"></script>
+    <script src="{{ asset('src/js/participants/update/fa-edit-members.js?v=association-farmer-table-2') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-edit-actions.js') }}"></script>
 @endsection

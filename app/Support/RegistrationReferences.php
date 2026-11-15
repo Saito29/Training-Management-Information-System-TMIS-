@@ -32,11 +32,7 @@ class RegistrationReferences
             'postal_code' => ['required', 'string', 'max:20'],
             'mobile_no' => ['nullable', 'regex:/^9[0-9]{9}$/'],
             'email_account' => ['nullable', 'email', 'max:255'],
-            'association_status' => ['required', Rule::in(['Yes', 'No'])],
-            'associate_name' => ['nullable', 'string', 'max:100'],
-            'associate_names' => ['nullable', 'array', 'min:1', 'max:20'],
-            'associate_names.*' => ['required', 'string', 'max:100', 'distinct'],
-            'associate_role' => ['required_if:association_status,Yes', 'nullable', 'string', 'max:255'],
+            'associate_role' => ['nullable', 'string', 'max:255'],
             'house_building_number' => ['nullable', 'string', 'max:255'],
             'street_purok_sitio_name' => ['nullable', 'string', 'max:255'],
             'tel_number' => ['nullable', 'string', 'max:255'],
@@ -51,16 +47,6 @@ class RegistrationReferences
         }
         $data = $request->validate($rules);
         $data['yearCovered'] = isset($data['yearCovered']) ? (int) $data['yearCovered'] : (int) now()->format('Y');
-        $associationNames = $data['associate_names'] ?? (
-            filled($data['associate_name'] ?? null) ? [$data['associate_name']] : []
-        );
-        if ($data['association_status'] === 'Yes' && $associationNames === []) {
-            throw ValidationException::withMessages([
-                'associate_names' => 'Select at least one active farmer association.',
-            ]);
-        }
-        $data['associate_names'] = $associationNames;
-        $data['associate_name'] = $associationNames[0] ?? null;
         ModuleAccess::authorizeRegistrationScope(
             $request->user(),
             (int) $data['region_id'],
@@ -77,9 +63,6 @@ class RegistrationReferences
             $parent = $location->id;
         }
         $data['pob'] = DB::table('geographic_locations')->where('id', $data['pob'])->value('name');
-        if ($data['association_status'] === 'No') {
-            unset($data['associate_name'], $data['associate_names'], $data['associate_role']);
-        }
         if (($data['idp'] ?? null) !== 'Yes') {
             unset($data['tbname']);
         }

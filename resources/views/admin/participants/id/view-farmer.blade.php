@@ -56,7 +56,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/participants/update/view-farmer.css?v=farmer-association-memberships-1') }}"
+      href="{{ asset('src/css/participants/update/view-farmer.css?v=farmer-training-detail-table-5') }}"
     />
     @if(isset($deletedFarmerReview))
       <link rel="stylesheet" href="{{ asset('src/css/participants/details/deleted-farmers.css?v=deleted-farmer-profile-1') }}" />
@@ -1865,15 +1865,21 @@ class="layout-fixed"
                     <header class="training-table-header">
                       <h6 id="allTrainingTitle">All Trainings Participated</h6>
                       <div class="training-table-actions">
-                        <label class="visually-hidden" for="trainingGlobalSearch">Search all training fields</label>
-                        <div class="input-group training-search">
-                          <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
-                          <input class="form-control" id="trainingGlobalSearch" type="search" placeholder="Search trainings" />
-                        </div>
-                        <button class="btn training-clear-button" id="clearTrainingFilters" type="button"><i class="bi bi-filter-circle me-1" aria-hidden="true"></i>Clear</button>
                         <button class="btn training-export-button" id="exportTrainingTable" type="button"><i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i>Export XLSX</button>
                       </div>
                     </header>
+                    <div class="training-filter-banner">
+                      <div class="training-filter-summary"><span class="training-filter-icon"><i class="bi bi-funnel-fill" aria-hidden="true"></i></span><span><strong>Filters</strong><small>Applies to all training records, not just this page.</small></span></div>
+                      <div class="training-filter-actions"><button class="btn" id="showTrainingFilters" type="button" aria-expanded="false"><i class="bi bi-sliders" aria-hidden="true"></i> Show</button><button class="btn" id="clearTrainingFilters" type="button"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset</button><button class="btn" id="applyTrainingFilters" type="button"><i class="bi bi-search" aria-hidden="true"></i> Apply</button></div>
+                    </div>
+                    <div class="training-filter-search-row" id="trainingFilterSearchRow" hidden><div class="training-filter-grid">
+                      <label class="training-filter-search-field">Search<input class="form-control" id="trainingGlobalSearch" type="search" placeholder="Search all training fields" /></label>
+                      <label>Year covered<select class="form-select" id="trainingFilterYear"><option value="">All years</option></select></label>
+                      <label>Category<select class="form-select" id="trainingFilterCategory"><option value="">All categories</option></select></label>
+                      <label>Date<input class="form-control" id="trainingFilterDate" type="date" aria-label="Filter by training start date" /></label>
+                      <label>Region<select class="form-select" id="trainingFilterRegion"><option value="">All regions</option></select></label>
+                      <label>Office<select class="form-select" id="trainingFilterOffice"><option value="">All offices</option></select></label>
+                    </div></div>
                     <div class="training-table-content">
                       <div class="review-pagination training-pagination" id="trainingPaginationTop" aria-label="Top training table pagination"></div>
                       <div class="table-responsive review-table-scroll training-table-scroll">
@@ -1881,24 +1887,17 @@ class="layout-fixed"
                           <caption class="visually-hidden">Training records for this farmer</caption>
                           <thead>
                             <tr>
+                              <th scope="col" class="training-action-heading">Action</th>
                               <th scope="col" class="training-sortable" data-sort="title" tabindex="0">Training Name <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                               <th scope="col" class="training-sortable" data-sort="category" tabindex="0">Category <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                              <th scope="col" class="training-sortable" data-sort="year" tabindex="0">Year <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                               <th scope="col" class="training-sortable" data-sort="date" tabindex="0">Dates <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                              <th scope="col" class="training-sortable" data-sort="region" tabindex="0">Region <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                               <th scope="col" class="training-sortable" data-sort="location" tabindex="0">Location <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
-                              <th scope="col" class="training-sortable" data-sort="organizer" tabindex="0">Organizer <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                              <th scope="col" class="training-sortable" data-sort="office" tabindex="0">Office <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                               <th scope="col" class="training-sortable" data-sort="preTest" tabindex="0">Pre-Test <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                               <th scope="col" class="training-sortable" data-sort="postTest" tabindex="0">Post-Test <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                               <th scope="col" class="training-sortable" data-sort="rating" tabindex="0">Rating <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
-                            </tr>
-                            <tr class="training-filter-row">
-                              <th><label class="visually-hidden" for="trainingFilterTitle">Filter by training name</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterTitle" data-column="title" type="search" placeholder="Filter name" /></th>
-                              <th><label class="visually-hidden" for="trainingFilterCategory">Filter by category</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterCategory" data-column="category" type="search" placeholder="Filter category" /></th>
-                              <th><label class="visually-hidden" for="trainingFilterDate">Filter by date</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterDate" data-column="date" type="search" placeholder="Filter dates" /></th>
-                              <th><label class="visually-hidden" for="trainingFilterLocation">Filter by location</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterLocation" data-column="location" type="search" placeholder="Filter location" /></th>
-                              <th><label class="visually-hidden" for="trainingFilterOrganizer">Filter by organizer</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterOrganizer" data-column="organizer" type="search" placeholder="Filter organizer" /></th>
-                              <th><label class="visually-hidden" for="trainingFilterPreTest">Filter by pre-test score</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterPreTest" data-column="preTest" type="search" placeholder="Filter score" /></th>
-                              <th><label class="visually-hidden" for="trainingFilterPostTest">Filter by post-test score</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterPostTest" data-column="postTest" type="search" placeholder="Filter score" /></th>
-                              <th><label class="visually-hidden" for="trainingFilterRating">Filter by rating</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterRating" data-column="rating" type="search" placeholder="Filter rating" /></th>
                             </tr>
                           </thead>
                           <tbody id="trainings-table-body"></tbody>
@@ -3117,10 +3116,10 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- nav -->
-    <script src="{{ asset('src/js/shared/nav.js?v=admin-account-visibility-inline-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-profile-tabs.js?v=participated-training-history-2') }}"></script>
-    <script src="{{ asset('src/js/participants/update/farmer-training-table.js?v=attended-training-empty-4') }}"></script>
+    <script src="{{ asset('src/js/participants/update/farmer-training-table.js?v=filters-region-office-10') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-intervention-table.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-activity-logs.js?v=actor-role-omission-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/attachment-manager.js') }}"></script>

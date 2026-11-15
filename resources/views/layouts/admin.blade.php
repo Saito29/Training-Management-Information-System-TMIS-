@@ -17,20 +17,20 @@
     @if(isset($originalInterfaceData))
         <script>window.TMIS_PAGE = {{ Illuminate\Support\Js::from($originalInterfaceData) }};</script>
         <script src="{{ asset('src/js/shared/date-time.js') }}"></script>
-        <script src="{{ asset('src/js/shared/original-interface.js?v=notification-draft-collection-1') }}"></script>
+        <script src="{{ asset('src/js/shared/original-interface.js?v=enrolled-farmer-restriction-1') }}"></script>
     @endif
     @yield('head')
     <link rel="stylesheet" href="{{ asset('src/css/shared/account-avatar.css') }}">
     <script>window.TMIS_NAV_ACCESS = {{ Illuminate\Support\Js::from($navigationAccess) }};</script>
-    <script src="{{ asset('src/js/shared/navigation-access.js?v=deleted-farmer-navigation-3') }}" defer></script>
+    <script src="{{ asset('src/js/shared/navigation-access.js?v=admin-profile-navigation-5') }}" defer></script>
     @if($navigationAccess['administrator'] ?? false)
         <link rel="stylesheet" href="{{ asset('src/css/shared/profile-visibility.css?v=visibility-save-contrast-1') }}">
-        <script src="{{ asset('src/js/shared/profile-visibility.js?v=dropdown-entry-1') }}" defer></script>
+        <script src="{{ asset('src/js/shared/profile-visibility.js?v=dropdown-entry-2') }}" defer></script>
     @endif
     <script src="{{ asset('src/js/shared/account-avatar.js') }}" defer></script>
     <script src="{{ asset('src/js/shared/system-branding.js') }}" defer></script>
-    <link rel="stylesheet" href="{{ asset('src/css/shared/searchable-combobox.css') }}">
-    <script src="{{ asset('src/js/shared/searchable-combobox.js') }}" defer></script>
+    <link rel="stylesheet" href="{{ asset('src/css/shared/searchable-combobox.css?v=detailed-association-options-1') }}">
+    <script src="{{ asset('src/js/shared/searchable-combobox.js?v=detailed-association-options-1') }}" defer></script>
 </head>
 <body @yield('body-attributes')>
     <form id="logout-form" method="POST" action="{{ route('logout') }}" hidden>

@@ -40,7 +40,22 @@ document.addEventListener('DOMContentLoaded', () => {
       answeredAt:index < 12 ? '2025-05-22' : '2025-05-23',
       rating:index < 10 + (questionIndex + resource.offset) % 3 - resource.offset ? 5 : index < 16 + questionIndex % 2 ? 4 : 3,
     })),
-  })) })));
+  })) }))).map(resource => {
+    if (!window.TMIS_PAGE) {
+      return {
+        ...resource,
+        office: resource.office || 'DA-SAAD',
+        details: [resource.id, resource.role].filter(Boolean).join(' · '),
+      };
+    }
+    const profile = window.TmisStore.records('tmis-resource-persons').find(person => String(person.id) === String(resource.id));
+    const location = [profile?.municipality, profile?.province, profile?.region].filter(Boolean).join(', ');
+    return {
+      ...resource,
+      office: profile?.office || profile?.organization_name || resource.office || '',
+      details: [resource.id, profile?.title || resource.role, profile?.qualification, profile?.expertise, location].filter(Boolean).join(' · '),
+    };
+  });
   const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   let selectedDate = '';
   let selectedAssociation = '';
@@ -51,8 +66,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedResource = resources[0]?.id;
   let selectedQuestion = 1;
   let selectedRating = null;
+  const trainingRecord = window.TMIS_PAGE ? window.TmisStore.selected('tmis-trainings') : null;
+  const configuredTarget = Number(trainingRecord?.target_participants ?? trainingRecord?.targetParticipants);
+  const participantTarget = configuredTarget > 0 ? configuredTarget : window.TMIS_PAGE ? window.TmisTrainingData.participantCount() : null;
   const $ = selector => panel.querySelector(selector);
-  panel.innerHTML = `<section class="resource-evaluation-card training-card" aria-labelledby="resourceEvaluationTitle"><header class="training-evaluation-header"><div class="training-evaluation-heading"><span class="training-evaluation-icon"><i class="bi bi-person-check" aria-hidden="true"></i></span><div><span class="training-evaluation-eyebrow">Farmer feedback</span><h2 id="resourceEvaluationTitle">Resource Person Evaluation</h2><p>Review questionnaire ratings for each resource person.</p></div></div><div class="resource-select-wrap"><label for="resourcePersonSelect">Resource person</label><select id="resourcePersonSelect" class="form-select">${resources.map(resource => `<option value="${window.TmisStore.escape(resource.id)}">${escape(resource.name)}</option>`).join('')}</select></div></header><div class="resource-person-summary"><span class="resource-person-avatar" id="resourcePersonAvatar"></span><div><strong id="resourcePersonName"></strong><small id="resourcePersonRole"></small></div><span class="training-evaluation-sample">Saved farmer responses</span></div><div class="training-evaluation-summary"><div><span>Evaluation questions</span><strong id="resourceQuestionCount"></strong></div><div><span>Farmers who evaluated</span><strong id="resourceFarmerCount"></strong></div><div><span>Overall average</span><strong id="resourceOverallAverage"></strong></div></div><div class="training-evaluation-table-wrap table-responsive"><table class="table training-evaluation-table"><thead><tr><th scope="col">Questionnaire</th><th scope="col">5 <i class="bi bi-star-fill"></i></th><th scope="col">4 <i class="bi bi-star-fill"></i></th><th scope="col">3 <i class="bi bi-star-fill"></i></th><th scope="col">2 <i class="bi bi-star-fill"></i></th><th scope="col">1 <i class="bi bi-star-fill"></i></th><th scope="col">Total score</th><th scope="col">Average</th></tr></thead><tbody id="resourceEvaluationRows"></tbody></table></div><p class="training-evaluation-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> Select a rating count to see which farmers gave that rating.</p></section><section class="resource-evaluation-detail training-card" aria-labelledby="resourceDetailTitle"><header class="training-evaluation-detail-header"><div><span class="training-evaluation-eyebrow">Farmer breakdown</span><h2 id="resourceDetailTitle"></h2><p id="resourceDetailPrompt"></p></div><span class="training-evaluation-detail-count" id="resourceDetailCount"></span></header><div class="training-evaluation-detail-body"><div id="resourceRatingTabs" class="training-evaluation-rating-tabs" role="group" aria-label="Filter farmers by rating"></div><div class="table-responsive"><table class="table training-evaluation-participants"><thead><tr><th scope="col">Farmer</th><th scope="col">Rating</th></tr></thead><tbody id="resourceEvaluationFarmers"></tbody></table></div></div></section><section class="resource-comments-card training-card" aria-labelledby="resourceCommentsTitle"><header class="training-evaluation-detail-header"><div><span class="training-evaluation-eyebrow">Written feedback</span><h2 id="resourceCommentsTitle">Farmer comments</h2><p>Comments about the selected resource person.</p></div><span class="training-evaluation-detail-count" id="resourceCommentCount"></span></header><div class="resource-comment-list" id="resourceCommentList"></div></section>`;
+  panel.innerHTML = `<section class="resource-evaluation-card training-card" aria-labelledby="resourceEvaluationTitle"><header class="training-evaluation-header"><div class="training-evaluation-heading"><span class="training-evaluation-icon"><i class="bi bi-person-check" aria-hidden="true"></i></span><div><span class="training-evaluation-eyebrow">Farmer feedback</span><h2 id="resourceEvaluationTitle">Resource Person Evaluation</h2><p>Review questionnaire ratings for each resource person.</p></div></div><div class="resource-select-wrap"><label for="resourcePersonSelect">Resource person</label><select id="resourcePersonSelect" class="form-select">${resources.map(resource => `<option value="${escape(resource.id)}" data-title="${escape(resource.name)}" data-details="${escape(resource.details)}" data-office="${escape(resource.office)}">${escape(resource.name)}</option>`).join('')}</select></div></header><div class="resource-person-summary"><span class="resource-person-avatar" id="resourcePersonAvatar"></span><div><strong id="resourcePersonName"></strong><small id="resourcePersonRole"></small></div><span class="training-evaluation-sample">Saved farmer responses</span></div><div class="training-evaluation-summary"><div><span>Evaluation questions</span><strong id="resourceQuestionCount"></strong></div><div><span>Farmers who evaluated</span><strong id="resourceFarmerCount"></strong></div><div><span>Overall average</span><strong id="resourceOverallAverage"></strong></div></div><div class="training-evaluation-table-wrap table-responsive"><table class="table training-evaluation-table"><thead><tr><th scope="col">Questionnaire</th><th scope="col">5 <i class="bi bi-star-fill"></i></th><th scope="col">4 <i class="bi bi-star-fill"></i></th><th scope="col">3 <i class="bi bi-star-fill"></i></th><th scope="col">2 <i class="bi bi-star-fill"></i></th><th scope="col">1 <i class="bi bi-star-fill"></i></th><th scope="col">Total score</th><th scope="col">Average</th></tr></thead><tbody id="resourceEvaluationRows"></tbody></table></div><p class="training-evaluation-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> Select a rating count to see which farmers gave that rating.</p></section><section class="resource-evaluation-detail training-card" aria-labelledby="resourceDetailTitle"><header class="training-evaluation-detail-header"><div><span class="training-evaluation-eyebrow">Farmer breakdown</span><h2 id="resourceDetailTitle"></h2><p id="resourceDetailPrompt"></p></div><span class="training-evaluation-detail-count" id="resourceDetailCount"></span></header><div class="training-evaluation-detail-body"><div id="resourceRatingTabs" class="training-evaluation-rating-tabs" role="group" aria-label="Filter farmers by rating"></div><div class="table-responsive"><table class="table training-evaluation-participants"><thead><tr><th scope="col">Farmer</th><th scope="col">Rating</th></tr></thead><tbody id="resourceEvaluationFarmers"></tbody></table></div></div></section><section class="resource-comments-card training-card" aria-labelledby="resourceCommentsTitle"><header class="training-evaluation-detail-header"><div><span class="training-evaluation-eyebrow">Written feedback</span><h2 id="resourceCommentsTitle">Farmer comments</h2><p>Comments about the selected resource person.</p></div><span class="training-evaluation-detail-count" id="resourceCommentCount"></span></header><div class="resource-comment-list" id="resourceCommentList"></div></section>`;
   panel.querySelector('.training-evaluation-header').insertAdjacentHTML('afterend', `<div class="evaluation-scope-filters"><label>Answer date<select id="resourceEvaluationDate" class="form-select"><option value="">All dates</option><option value="2025-05-22">May 22, 2025</option><option value="2025-05-23">May 23, 2025</option></select></label><label>Farmer association<select id="resourceEvaluationAssociation" class="form-select"><option value="">All associations</option><option>San Antonio Farmers Cooperative</option><option>Batangas Growers Association</option></select></label></div>`);
 
   function render() {
@@ -66,13 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
     $('#resourcePersonName').textContent = resource.name;
     $('#resourcePersonRole').textContent = resource.role;
     $('#resourceQuestionCount').textContent = resource.questions.length;
-    const attendees = (window.TMIS_PAGE ? window.TmisTrainingData.participantCount() : [
-      {date:'2025-05-22', association:'San Antonio Farmers Cooperative', count:14},
-      {date:'2025-05-23', association:'Batangas Growers Association', count:10},
-    ].filter(group => (!selectedDate || group.date === selectedDate) &&
-      (!selectedAssociation || group.association === selectedAssociation)).reduce((sum, group) => sum + group.count, 0));
-    $('#resourceFarmerCount').innerHTML = `${filtered(resource.questions[0]).length} <small>/ ${attendees} participants</small>`;
-    $('#resourceOverallAverage').textContent = count ? `${(total / count).toFixed(2)} / 5` : '—';
+    const progress = participantTarget ? `${filtered(resource.questions[0]).length}/${participantTarget} participants` : `${filtered(resource.questions[0]).length} participants`;
+    $('#resourceFarmerCount').textContent = progress;
+    $('#resourceOverallAverage').textContent = count ? (total / count).toFixed(2) : '—';
     $('#resourceEvaluationRows').innerHTML = resource.questions.map(item => {
       const result = stats(item);
       return `<tr class="${selectedQuestion === item.id ? 'is-selected' : ''}"><th scope="row"><span class="training-evaluation-row-number">${String(item.id).padStart(2,'0')}</span><span>${escape(item.prompt)}</span></th>${[5,4,3,2,1].map(rating => { const amount = filtered(item).filter(response => response.rating === rating).length; return `<td><button type="button" class="training-evaluation-count ${selectedQuestion === item.id && selectedRating === rating ? 'is-active' : ''}" data-question="${window.TmisStore.escape(item.id)}" data-rating="${rating}" aria-label="${amount} farmers rated ${rating} stars for question ${window.TmisStore.escape(item.id)}" aria-pressed="${selectedQuestion === item.id && selectedRating === rating}">${amount}</button></td>`; }).join('')}<td class="training-evaluation-total">${result.score}</td><td><span class="training-evaluation-average">${result.count ? (result.score / result.count).toFixed(2) : '—'}</span></td></tr>`;
@@ -90,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return response && matches(response);
     });
     $('#resourceCommentCount').textContent = `${visibleComments.length} comments`;
-    $('#resourceCommentList').innerHTML = visibleComments.length ? visibleComments.map(comment => `<article class="resource-comment"><span class="training-evaluation-avatar" aria-hidden="true">${escape(comment.farmer.split(' ').map(part => part[0]).slice(0,2).join(''))}</span><div><div class="resource-comment-heading"><strong>${escape(comment.farmer)}</strong><span>${comment.rating} <i class="bi bi-star-fill" aria-hidden="true"></i></span></div><p>${escape(comment.text)}</p></div></article>`).join('') : '<p class="evaluation-filter-empty">No farmer comments for these filters.</p>';
+    $('#resourceCommentList').innerHTML = visibleComments.length ? visibleComments.map(comment => `<article class="resource-comment"><span class="training-evaluation-avatar" aria-hidden="true">${escape(comment.farmer.split(' ').map(part => part[0]).slice(0,2).join(''))}</span><div><div class="resource-comment-heading"><strong>${escape(comment.farmer)}</strong><span>${Number(comment.rating).toFixed(2)} <i class="bi bi-star-fill" aria-hidden="true"></i></span></div><p>${escape(comment.text)}</p></div></article>`).join('') : '<p class="evaluation-filter-empty">No farmer comments for these filters.</p>';
   }
   $('#resourcePersonSelect').addEventListener('change', event => { selectedResource = event.target.value; selectedQuestion = 1; selectedRating = null; render(); });
   window.trainingFeedbackFilters.register($('#resourceEvaluationDate'), $('#resourceEvaluationAssociation'), scope => {
@@ -109,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const responses = resource.questions.reduce((sum, question) => sum + stats(question).count, 0);
     const average = row.querySelector('strong');
     if (average && responses > 0) {
-      average.textContent = `${(score / responses).toFixed(2)} / 5`;
+      average.textContent = (score / responses).toFixed(2);
     }
   });
 });

@@ -3419,6 +3419,25 @@
   font-weight: 650;
 }
 
+.training-filter-banner { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px; border-bottom:1px solid #e0e0e0; background:#fff; }
+.training-filter-summary { display:flex; align-items:center; gap:10px; color:#344054; }
+.training-filter-summary > span:last-child { display:grid; gap:2px; }
+.training-filter-summary strong { font-size:12px; }
+.training-filter-summary small { color:#718096; font-size:10px; }
+.training-filter-icon { display:grid; width:34px; height:34px; place-items:center; border-radius:9px; color:#40536f; background:#f1f4f8; }
+.training-filter-actions { display:flex; align-items:center; gap:7px; }
+.training-filter-actions .btn { display:inline-flex; min-height:34px; align-items:center; gap:6px; padding:6px 11px; border:1px solid #dce2e9; border-radius:8px; color:#344054; background:#fff; font-size:10px; font-weight:650; }
+.training-filter-actions .btn:hover,.training-filter-actions .btn:focus-visible { border-color:#98a8bb; background:#f7f9fc; }
+.training-filter-actions #applyTrainingFilters { border-color:#087a56; color:#fff; background:#087a56; }
+.training-filter-search-row { padding:10px 12px; border-bottom:1px solid #e0e0e0; background:#f8fafc; }
+.training-filter-search-row[hidden] { display:none!important; }
+.training-filter-grid { display:grid; grid-template-columns:minmax(190px,2fr) repeat(5,minmax(110px,1fr)); gap:10px; }
+.training-filter-grid label { display:grid; gap:5px; color:#536174; font-size:10px; font-weight:650; }
+.training-filter-grid .form-control,.training-filter-grid .form-select { min-height:34px; border-color:#dce2e9; color:#263238; background-color:#fff; font-size:10px; }
+@media (max-width:1000px) { .training-filter-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .training-filter-search-field { grid-column:1/-1; } }
+@media (max-width:650px) { .training-filter-banner { align-items:flex-start; flex-direction:column; } .training-filter-actions { width:100%; } .training-filter-actions .btn { flex:1; justify-content:center; } .training-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .training-filter-search-field { grid-column:1/-1; } }
+.training-table-scroll .training-data-table .training-filter-row[hidden] { display:none!important; }
+
 .training-table-actions {
   display: flex;
   flex-wrap: wrap;
@@ -3571,13 +3590,15 @@
 .training-table-scroll .training-data-table {
   display: table !important;
   width: 100% !important;
-  min-width: 1020px !important;
+  min-width: 1240px !important;
   margin: 0;
   table-layout: auto !important;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 10px;
 }
+
+.training-year-value { display:inline-block; padding:4px 9px; border-radius:999px; color:#2d4eb7; background:#eef1ff; font-weight:700; }
 
 .training-table-scroll .training-data-table thead {
   display: table-header-group !important;
@@ -3621,6 +3642,13 @@
   letter-spacing: 0;
 }
 
+.training-table-scroll .training-data-table .training-action-heading { width:60px!important; text-align:center; }
+.training-row-action { display:inline-grid; width:30px; height:30px; place-items:center; border:1px solid #cdd9ff; border-radius:8px; color:#2454d7; background:#eef3ff; }
+.training-row-action:hover,.training-row-action:focus-visible { border-color:#2454d7; color:#fff; background:#2454d7; }
+.training-office-value { display:inline-block; max-width:100%; overflow:hidden; padding:4px 9px; border-radius:999px; color:#087a56; background:#def8e8; font-size:10px; font-weight:700; text-overflow:ellipsis; vertical-align:middle; }
+.training-table-scroll .training-data-table tbody tr:nth-child(even) td { background:#fbfcfd; }
+.training-table-scroll .training-data-table tbody tr:hover td { background:#eef7ff; }
+
 .training-sortable {
   cursor: pointer;
 }
@@ -3654,10 +3682,6 @@
 .training-search .form-control:focus {
   border-color: #43a047;
   box-shadow: 0 0 0 2px rgba(67, 160, 71, 0.15);
-}
-
-.training-table-scroll .training-data-table tbody tr:hover td {
-  background: #e8f5e9;
 }
 
 .training-table-scroll .training-data-table[hidden] {

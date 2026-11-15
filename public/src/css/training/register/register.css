@@ -778,3 +778,15 @@
 
 .card-form form .form-header .card-header-title { font-size: 15px; }
 .card-form form .form-header i { font-size: 16px; }
+
+.training-location-heading,.training-location-card-heading,.training-edit-location-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.training-location-heading { padding:12px 14px; border:1px solid var(--color-border); border-radius:10px; background:var(--color-surface-subtle, #f7faf8); }
+.training-location-heading strong,.training-edit-location-heading strong { display:block; color:var(--color-text-primary); font-size:13px; }
+.training-location-heading small,.training-edit-location-heading small { display:block; margin-top:3px; color:var(--color-text-secondary); font-size:12px; }
+.training-location-list { display:grid; gap:10px; margin-top:10px; }
+.training-location-card { padding:14px; border:1px solid var(--color-border); border-radius:10px; background:var(--color-surface); }
+.training-location-card-heading { margin-bottom:12px; color:var(--color-text-primary); font-size:13px; }
+.training-location-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.training-location-fields label { margin:0; color:var(--color-text-secondary); font-size:12px; font-weight:600; }
+.training-location-fields input { margin-top:5px; }
+@media(max-width:575.98px) { .training-location-heading,.training-edit-location-heading { align-items:flex-start; flex-direction:column; } .training-location-fields { grid-template-columns:1fr; } }

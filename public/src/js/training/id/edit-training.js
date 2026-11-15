@@ -147,9 +147,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const state = document.getElementById('editTrainingState');
   const saveButton = form.querySelector('.training-edit-save');
   const trainerList = document.getElementById('editTrainerList');
+  const trainingLocationList = document.getElementById('editTrainingLocationList');
+  const addTrainingLocationButton = document.getElementById('editAddTrainingLocation');
   const questionnaireLists = {
     pretest: document.getElementById('editPretestList'),
     posttest: document.getElementById('editPosttestList'),
+    trainingEvaluation: document.getElementById('editTrainingEvaluationList'),
+    rpEvaluation: document.getElementById('editRpEvaluationList'),
   };
   const associationSelect = form.elements.namedItem('associationIds[]');
   if (associationSelect instanceof HTMLSelectElement) {
@@ -237,15 +241,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const normalizedAliases = new Set(aliases.map(normalizeLocation).filter(Boolean));
     return rows.find(location => normalizedAliases.has(normalizeLocation(location.name)));
   }
-  const questionOptions = (window.TMIS_PAGE ? {pretest:window.TmisStore.records('tmis-pre-test-questionnaires').map(item=>[item.id,item.trainingQuestionnaire]),posttest:window.TmisStore.records('tmis-post-test-questionnaires').map(item=>[item.id,item.trainingQuestionnaire])} : {
-    pretest: [['PRE-GEN-01', 'General Knowledge Assessment (Pre-test)'], ['PRE-CROP-01', 'Crop Production Pre-test'], ['PRE-ORG-01', 'Organic Agriculture Pre-test'], ['PRE-BIZ-01', 'Agribusiness Pre-test']],
-    posttest: [['POST-GEN-01', 'General Knowledge Assessment (Post-test)'], ['POST-CROP-01', 'Crop Production Post-test'], ['POST-ORG-01', 'Organic Agriculture Post-test'], ['POST-BIZ-01', 'Agribusiness Post-test']],
-  });
-  for (const type of ['pretest', 'posttest']) {
-    (window.trainingAssessments?.list(type) || []).forEach(item => {
-      if (!questionOptions[type].some(([id]) => id === item.id)) questionOptions[type].push([item.id, item.name]);
-    });
-  }
+  const questionnaireDefinitions = {
+    pretest: { key:'tmis-pre-test-questionnaires', name:'trainingQuestionnaire', label:'pre-test', samples:[['PRE-GEN-01', 'General Knowledge Assessment (Pre-test)'], ['PRE-CROP-01', 'Crop Production Pre-test'], ['PRE-ORG-01', 'Organic Agriculture Pre-test'], ['PRE-BIZ-01', 'Agribusiness Pre-test']] },
+    posttest: { key:'tmis-post-test-questionnaires', name:'trainingQuestionnaire', label:'post-test', samples:[['POST-GEN-01', 'General Knowledge Assessment (Post-test)'], ['POST-CROP-01', 'Crop Production Post-test'], ['POST-ORG-01', 'Organic Agriculture Post-test'], ['POST-BIZ-01', 'Agribusiness Post-test']] },
+    trainingEvaluation: { key:'tmis-training-evaluation-questionnaires', name:'questionnaireName', label:'training evaluation', samples:[['TE-0001', 'Training Evaluation Questionnaire']] },
+    rpEvaluation: { key:'tmis-rp-evaluation-questionnaires', name:'questionnaireName', label:'resource person evaluation', samples:[['RP-0001', 'Resource Person Evaluation Questionnaire']] },
+  };
+  const questionnaireOptions = Object.fromEntries(Object.entries(questionnaireDefinitions).map(([type, definition]) => {
+    const assignedIds = new Set((selectedTraining?.[type] || []).map(String));
+    const records = window.TMIS_PAGE
+      ? window.TmisStore.records(definition.key)
+      : definition.samples.map(([id, name]) => ({ id, [definition.name]: name, status:'Active' }));
+    const options = records.filter(record => {
+      const id = String(record.id || '');
+      const status = String(record.status || 'Active').toLowerCase();
+      const isAssigned = assignedIds.has(id);
+      const isAvailable = status === 'active' || status === 'approved & accepted' || isAssigned;
+      const regionMatches = !selectedTraining?.region_id || !record.region_id || String(record.region_id) === String(selectedTraining.region_id);
+      const officeMatches = !selectedTraining?.org_id || !record.org_id || String(record.org_id) === String(selectedTraining.org_id);
+      return id && isAvailable && regionMatches && officeMatches;
+    }).map(record => [String(record.id), String(record[definition.name] || record.trainingQuestionnaire || record.id)]);
+    if (type === 'pretest' || type === 'posttest') {
+      (window.trainingAssessments?.list(type) || []).forEach(item => {
+        if (assignedIds.has(String(item.id)) && !options.some(([id]) => id === String(item.id))) options.push([String(item.id), item.name]);
+      });
+    }
+    return [type, options];
+  }));
+  const questionnaireLabels = Object.fromEntries(Object.entries(questionnaireDefinitions).map(([type, definition]) => [type, definition.label]));
 
   function addTrainer(data = {}) {
     const row = document.createElement('div');
@@ -284,12 +307,57 @@ document.addEventListener('DOMContentLoaded', () => {
     row.innerHTML = '<label class="training-edit-row-wide">Questionnaire<select class="form-select" required></select></label><button class="training-edit-remove" type="button" aria-label="Remove questionnaire" title="Remove questionnaire"><i class="bi bi-trash3"></i></button>';
     const select = row.querySelector('select');
     select.name = `${type}_questionnaire[]`;
-    select.add(new Option(`Select ${type === 'pretest' ? 'pre-test' : 'post-test'} questionnaire`, ''));
-    questionOptions[type].forEach(([id, label]) => select.add(new Option(label, id)));
+    select.add(new Option(`Select ${questionnaireLabels[type]} questionnaire`, ''));
+    questionnaireOptions[type].forEach(([id, label]) => select.add(new Option(label, id)));
     if (value && ![...select.options].some(option => option.value === value)) select.add(new Option(value, value));
     select.value = value;
     questionnaireLists[type].append(row);
     updateRemoveButtons();
+    return row;
+  }
+
+  function addTrainingLocation(location = {}) {
+    if (!trainingLocationList) return;
+    const row = document.createElement('div');
+    row.className = 'training-edit-row training-edit-location-row';
+    row.innerHTML = '<label>Venue <input class="form-control" data-location-venue maxlength="255" required placeholder="Training venue"></label><label>Region <select class="form-select" data-location-region required></select></label><label>Province <select class="form-select" data-location-province required disabled></select></label><label>District <select class="form-select" data-location-district required disabled></select></label><label>Municipality / City <select class="form-select" data-location-municipality required disabled></select></label><label>Barangay <select class="form-select" data-location-barangay required disabled></select></label><button class="training-edit-remove" type="button" data-remove-training-location aria-label="Remove training location" title="Remove training location"><i class="bi bi-trash3"></i></button>';
+    row.querySelector('[data-location-venue]').value = location.venue || '';
+    const rowRegion = row.querySelector('[data-location-region]');
+    rowRegion.replaceChildren(new Option(regions.length ? 'Choose region' : 'No regions available', ''), ...regions.map(item => new Option(item.name, String(item.region_id))));
+    const rowAddressFields = ['province', 'district', 'municipality', 'barangay'].map(kind => ({
+      kind,
+      select: row.querySelector(`[data-location-${kind}]`),
+    }));
+    function populateRowAddress(field, parentId) {
+      const options = parentId ? locationsFor(field.kind, parentId, rowRegion.value) : [];
+      const label = field.kind === 'municipality' ? 'municipality / city' : field.kind;
+      field.select.replaceChildren(new Option(parentId ? `Choose ${label}` : 'Choose the parent location first', ''), ...options.map(item => new Option(item.name, String(item.id))));
+      field.select.disabled = !parentId;
+      return options;
+    }
+    rowRegion.addEventListener('change', () => {
+      let parentId = rowRegion.value;
+      rowAddressFields.forEach(field => { populateRowAddress(field, parentId); parentId = ''; });
+    });
+    rowAddressFields.forEach((field, index) => field.select.addEventListener('change', () => {
+      let parentId = field.select.value;
+      rowAddressFields.slice(index + 1).forEach(next => { populateRowAddress(next, parentId); parentId = ''; });
+    }));
+    if (location.region_id || location.region) {
+      const regionMatch = regions.find(item => String(item.region_id) === String(location.region_id)
+        || normalizeLocation(item.name) === normalizeLocation(location.region));
+      if (regionMatch) {
+        rowRegion.value = String(regionMatch.region_id);
+        let parentId = rowRegion.value;
+        rowAddressFields.forEach(field => {
+          const options = populateRowAddress(field, parentId);
+          const match = locationMatch(options, field.kind, location[`${field.kind}_id`], location[field.kind], location.province);
+          parentId = match ? String(match.id) : '';
+          if (match) field.select.value = parentId;
+        });
+      }
+    }
+    trainingLocationList.append(row);
     return row;
   }
 
@@ -353,7 +421,29 @@ document.addEventListener('DOMContentLoaded', () => {
       contact: row.querySelector('[data-trainer-contact]').value,
       email: row.querySelector('[data-trainer-email]').value,
     }));
-    for (const type of ['pretest', 'posttest']) values[type] = [...questionnaireLists[type].querySelectorAll('select')].map(select => select.value);
+    values.trainingLocations = [
+      {
+        venue: field('venue_location').value.trim(),
+        region_id: field('region_id').value,
+        region: field('region_id').selectedOptions[0]?.textContent || '',
+        province_id: field('province_id').value,
+        province: field('province_id').selectedOptions[0]?.textContent || '',
+        district_id: field('district_id').value,
+        district: field('district_id').selectedOptions[0]?.textContent || '',
+        municipality_id: field('municipality_id').value,
+        municipality: field('municipality_id').selectedOptions[0]?.textContent || '',
+        barangay_id: field('barangay_id').value,
+        barangay: field('barangay_id').selectedOptions[0]?.textContent || '',
+      },
+      ...[...(trainingLocationList?.children || [])].map(row => ({
+        venue: row.querySelector('[data-location-venue]').value.trim(),
+        ...Object.fromEntries(['region', 'province', 'district', 'municipality', 'barangay'].flatMap(kind => {
+          const select = row.querySelector(`[data-location-${kind}]`);
+          return [[`${kind}_id`, select.value], [kind, select.selectedOptions[0]?.textContent || '']];
+        })),
+      })),
+    ];
+    for (const type of Object.keys(questionnaireLists)) values[type] = [...questionnaireLists[type].querySelectorAll('select')].map(select => select.value).filter(Boolean);
     if (associationSelect instanceof HTMLSelectElement) {
       values.associationIds = [...associationSelect.selectedOptions].map(option => option.value);
     }
@@ -373,6 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
     implementing_office: officeSelect.value,
     training_type: selectedTraining.training_type || selectedTraining.type || '',
     partner_organization: selectedTraining.partner_organization || '',
+    training_budget: String(selectedTraining.budget ?? selectedTraining.training_budget ?? 0),
     training_description: selectedTraining.description || '',
     start_date: selectedTraining.start_date || selectedTraining.startDate || '',
     end_date: selectedTraining.end_date || selectedTraining.endDate || '',
@@ -387,13 +478,19 @@ document.addEventListener('DOMContentLoaded', () => {
     trainers: selectedTraining.trainers || [],
     pretest: selectedTraining.pretest || [],
     posttest: selectedTraining.posttest || [],
+    trainingEvaluation: selectedTraining.trainingEvaluation || [],
+    rpEvaluation: selectedTraining.rpEvaluation || [],
     associationIds: selectedTraining.associationIds || [],
+    trainingLocations: selectedTraining.trainingLocations || [],
   } : null;
   let saved;
-  try { saved = JSON.parse(window.TmisStore.getItem(storageKey) || 'null') || initialValues; } catch { saved = initialValues; }
+  try {
+    const previous = JSON.parse(window.TmisStore.getItem(storageKey) || 'null');
+    saved = initialValues ? {...initialValues, ...(previous && typeof previous === 'object' ? previous : {})} : previous;
+  } catch { saved = initialValues; }
   if (saved && typeof saved === 'object') {
     Object.entries(saved).forEach(([name, value]) => {
-      if (name === 'trainers' || name === 'pretest' || name === 'posttest' || name === 'associationIds' || addressNames.includes(name) || name === 'delivery_mode' || name === 'implementing_office') return;
+      if (name === 'trainers' || Object.hasOwn(questionnaireLists, name) || name === 'associationIds' || addressNames.includes(name) || name === 'delivery_mode' || name === 'implementing_office') return;
       const control = field(name);
       if (control && typeof value === 'string') control.value = value;
     });
@@ -405,9 +502,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   (saved?.trainers?.length ? saved.trainers : [{}]).forEach(addTrainer);
-  for (const type of ['pretest', 'posttest']) {
-    const defaults = window.trainingAssessments?.list(type).map(item => item.id) || [];
-    const selections = saved?.[type]?.length ? saved[type] : defaults.length ? defaults : [];
+  const extraTrainingLocations = saved?.trainingLocations?.length > 1
+    ? saved.trainingLocations.slice(1)
+    : [];
+  extraTrainingLocations.forEach(addTrainingLocation);
+  for (const type of Object.keys(questionnaireLists)) {
+    const defaults = type === 'pretest' || type === 'posttest' ? (window.trainingAssessments?.list(type).map(item => item.id) || []) : [];
+    const selections = saved?.[type] ?? defaults;
     selections.forEach(value => addQuestion(type, value));
   }
 
@@ -453,6 +554,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const remove = event.target.closest('.training-edit-remove');
     if (remove && !remove.disabled) { remove.closest('.training-edit-row').remove(); updateRemoveButtons(); refresh(); }
     if (event.target.closest('#editAddTrainer')) { addTrainer(); refresh(); }
+    if (event.target.closest('#editAddTrainingLocation')) { addTrainingLocation(); refresh(); }
+    if (event.target.closest('[data-remove-training-location]')) { event.target.closest('.training-edit-location-row')?.remove(); refresh(); }
     const add = event.target.closest('[data-add-questionnaire]');
     if (add) { addQuestion(add.dataset.addQuestionnaire); refresh(); }
   });
