@@ -8,6 +8,10 @@ use DateTimeZone;
 /** Aggregates only records already filtered by module permission, region and office. */
 class DashboardData
 {
+    private const UPCOMING_EXCLUDED_STATUSES = [
+        'for approval', 'for acceptance', 'approved', 'approved & accepted', 'approved and accepted',
+    ];
+
     public function build(array $stores): array
     {
         $today = now('Asia/Manila')->startOfDay();
@@ -15,9 +19,9 @@ class DashboardData
         $years = [$year, $year - 1];
         $activeTrainings = array_values(array_filter(
             $stores['tmis-trainings'] ?? [],
-            fn (array $item): bool => strtolower(trim((string) ($item['status'] ?? ''))) !== 'inactive',
+            fn (array $item): bool => filter_var($item['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN)
+                && strtolower(trim((string) ($item['status'] ?? ''))) !== 'inactive',
         ));
-        $trainings = array_values(array_filter($activeTrainings, fn (array $item): bool => $item['status'] === 'Approved & Accepted'));
         $farmers = array_values(array_filter($stores['tmis-farmers'] ?? [], fn (array $item): bool => $item['status'] === 'Active'));
         $associations = array_values(array_filter($stores['tmis-farmer-associations'] ?? [], fn (array $item): bool => $item['status'] === 'Active'));
         $towns = array_values(array_unique(array_map(fn (array $item): string => ($item['municipality'] ?? '') ?: 'Not recorded', array_merge($activeTrainings, $farmers, $associations))));
@@ -41,7 +45,7 @@ class DashboardData
         };
         $funds = array_fill_keys($years, 0.0);
         $geography = ['district' => [], 'province' => [], 'municipality' => []];
-        foreach ($trainings as $item) {
+        foreach ($activeTrainings as $item) {
             $date = $this->date($item['startDate'] ?? null);
             $coveredYear = (int) (($item['yearCovered'] ?? '') ?: $date?->format('Y'));
             if (! in_array($coveredYear, $years, true)) {
@@ -82,17 +86,7 @@ class DashboardData
                 }
             }
         }
-        $upcomingThrough = $today->copy()->addDays(3)->format('Y-m-d');
-        $upcoming = array_values(array_filter($trainings, function (array $item) use ($today, $upcomingThrough): bool {
-            $startDate = $this->date($item['startDate'] ?? null);
-            $endDate = $this->date($item['endDate'] ?? $item['startDate'] ?? null);
-
-            return $startDate !== null
-                && $endDate !== null
-                && $startDate->format('Y-m-d') <= $upcomingThrough
-                && $endDate->format('Y-m-d') >= $today->format('Y-m-d');
-        }));
-        usort($upcoming, fn (array $a, array $b): int => [$a['startDate'], $a['id']] <=> [$b['startDate'], $b['id']]);
+        $upcoming = $this->upcomingTrainings($activeTrainings, $this->date($today->format('Y-m-d')));
         $trainingDisplayIds = [];
         foreach ($activeTrainings as $training) {
             $id = (string) ($training['id'] ?? '');
@@ -136,5 +130,47 @@ class DashboardData
         $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value, new DateTimeZone('Asia/Manila'));
 
         return $date && $date->format('Y-m-d') === $value ? $date : null;
+    }
+
+    /** @param list<array<string, mixed>> $trainings
+     * @return list<array<string, mixed>>
+     */
+    private function upcomingTrainings(array $trainings, ?DateTimeImmutable $today): array
+    {
+        if ($today === null) {
+            return [];
+        }
+
+        $upcoming = [];
+        foreach ($trainings as $training) {
+            $status = strtolower(trim((string) ($training['status'] ?? '')));
+            if (in_array($status, self::UPCOMING_EXCLUDED_STATUSES, true)) {
+                continue;
+            }
+
+            $startDate = $this->date(isset($training['startDate']) ? (string) $training['startDate'] : null);
+            $endDate = $this->date(isset($training['endDate']) ? (string) $training['endDate'] : ($training['startDate'] ?? null));
+            if ($startDate === null || $endDate === null || $endDate < $today) {
+                continue;
+            }
+
+            $daysUntilStart = (int) $today->diff($startDate)->format('%r%a');
+            $upcoming[] = array_merge($training, ['daysUntilStart' => $daysUntilStart]);
+        }
+
+        usort($upcoming, static function (array $first, array $second): int {
+            $firstOngoing = $first['daysUntilStart'] < 0;
+            $secondOngoing = $second['daysUntilStart'] < 0;
+            if ($firstOngoing !== $secondOngoing) {
+                return $firstOngoing <=> $secondOngoing;
+            }
+
+            $firstScheduleDate = $firstOngoing ? ($first['endDate'] ?? $first['startDate']) : $first['startDate'];
+            $secondScheduleDate = $secondOngoing ? ($second['endDate'] ?? $second['startDate']) : $second['startDate'];
+
+            return [$firstScheduleDate, $first['id']] <=> [$secondScheduleDate, $second['id']];
+        });
+
+        return $upcoming;
     }
 }

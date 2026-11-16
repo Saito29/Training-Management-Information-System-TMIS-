@@ -93,6 +93,8 @@
 @media(max-width:575.98px) { .inbox-summary article { flex-direction: column; align-items: flex-start; } .inbox-card > header,.inbox-toolbar { padding: 1rem; } .inbox-list { padding-inline: 1rem; } .inbox-item { flex-wrap: wrap; } .inbox-item-icon { flex-basis: 2.1rem; height: 2.1rem; font-size: 1rem; } .inbox-item-body { min-width: 10rem; } .inbox-item-actions { width: 100%; flex-direction: row; justify-content: flex-end; } .inbox-tabs { width: 100%; justify-content: space-between; } .inbox-dialog dl { grid-template-columns: 1fr; } }
 
 .inbox-important { color: #8b5a00; background: #fff4dd; border-radius: 1rem; font-size: .6rem; padding: .1rem .45rem; }
+.inbox-important.critical { color: #9e2631; background: #fde8e9; }
 #inboxDetailsMessage { white-space: pre-wrap; }
 [data-theme='dark'] .inbox-important { color: #f2c568; background: #43351c; }
+[data-theme='dark'] .inbox-important.critical { color: #ffb4b8; background: #4a2429; }
 .inbox-item p :is(ul,ol), #inboxDetailsMessage :is(ul,ol) { margin: .4rem 0; padding-left: 1.4rem; white-space: normal; }

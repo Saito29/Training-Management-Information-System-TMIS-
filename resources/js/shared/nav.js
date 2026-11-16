@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     window.addEventListener('tmis:notification-preview', ({ detail }) => {
       notificationFullContent = String(detail.message || '');
-      notificationMetadata = [detail.priority === 'high' ? 'Important' : '', detail.reference ? `Reference: ${detail.reference}` : ''].filter(Boolean).join(' · ');
+      notificationMetadata = [detail.priority === 'critical' ? 'Critical' : detail.priority === 'high' ? 'Important' : '', detail.reference ? `Reference: ${detail.reference}` : ''].filter(Boolean).join(' · ');
       for (const [suffix, value] of Object.entries({ Type: detail.type || 'Notification', Time: detail.time || '', ModalLabel: detail.title || 'Notification', Description: detail.summary || notificationFullContent.slice(0,240), Action: 'View full details' })) {
         document.getElementById('notificationDetail' + suffix).textContent = value;
       }

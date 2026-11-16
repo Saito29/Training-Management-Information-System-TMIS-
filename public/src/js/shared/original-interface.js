@@ -10,7 +10,7 @@
 
   const stable = value => JSON.stringify(value, (key, item) => item && !Array.isArray(item) && typeof item === 'object' ? Object.fromEntries(Object.entries(item).sort(([a],[b]) => a.localeCompare(b))) : item);
 
-  const requestedId = () => { const query = new URLSearchParams(location.search); return query.get('id') || query.get('faId') || query.get('farmerId') || ''; };
+      const requestedId = () => { const query = new URLSearchParams(location.search); return query.get('id') || query.get('faId') || query.get('farmerId') || ''; };
 
   const farmerNumberFromPath = () => location.pathname.match(/\/participants\/id\/(?:view|edit)-farmer\/(\d+)\/?$/)?.[1] || '';
 
@@ -342,7 +342,7 @@
     copy.activities.rows=trainings.map(item=>[trainingDisplayId(item),item.title,item.type||'',item.district||'',item.province||'',item.municipality||'',[item.startDate,item.endDate].filter(Boolean).join(' - '),item.participants?.length||0,money(Number(item.budget)||0),item.status]);
     copy.upcoming.title='Upcoming Capacity-Building Activities';
     copy.upcoming.exportName='Upcoming-Capacity-Building-Activities';
-    copy.upcoming.description='Capacity-building activities scheduled today through the next three days.';
+    copy.upcoming.description='All eligible trainings with an end date today or later, sorted by the next start date. Trainings submitted for approval are excluded.';
     copy.upcoming.headers=['Training ID','Training','Type','District','Province','Municipality','Start Date','End Date','Venue','Participants','Status'];
     const formatDate=value=>{if(!value)return '';const date=new Date(String(value).slice(0,10)+'T00:00:00+08:00');return Number.isNaN(date.getTime())?String(value):date.toLocaleDateString('en-PH',{year:'numeric',month:'short',day:'numeric',timeZone:'Asia/Manila'});};
     copy.upcoming.rows=dashboard.upcoming.map(item=>[trainingDisplayId(item),item.title,item.type||'',item.district||'',item.province||'',item.municipality||'',formatDate(item.startDate),formatDate(item.endDate||item.startDate),item.venue||'',item.target_participants??item.participants?.length??0,item.status||'']);
@@ -356,11 +356,11 @@
     copy.fca.description='Active association records with location, membership and status details.';
     copy.fca.headers=['Association ID','Association','Organization Type','Region','Office','District','Province','Municipality','Members','Status'];
     copy.fca.rows=associations.map(item=>[item.id,item.association_name,item.organization_type||item.organizationType||'',item.region||'',item.office||'',item.district||'',item.province||'',item.municipality||'',item.members?.length||0,item.status]);
-    copy.budget.headers=['District','Province',String(dashboard.currentYear)+' allocated',String(dashboard.previousYear)+' allocated','Approved trainings'];
+    copy.budget.headers=['District','Province',String(dashboard.currentYear)+' allocated',String(dashboard.previousYear)+' allocated','Non-inactive trainings'];
     copy.budget.rows=aggregate('district').map(item=>[item.district,item.province,money(item.current),money(item.previous),item.activities]);
-    copy.provinceBudget.headers=['Province',String(dashboard.currentYear)+' allocated',String(dashboard.previousYear)+' allocated','Approved trainings'];
+    copy.provinceBudget.headers=['Province',String(dashboard.currentYear)+' allocated',String(dashboard.previousYear)+' allocated','Non-inactive trainings'];
     copy.provinceBudget.rows=aggregate('province').map(item=>[item.province,money(item.current),money(item.previous),item.activities]);
-    copy.municipalityBudget.headers=['Municipality','Province',String(dashboard.currentYear)+' allocated',String(dashboard.previousYear)+' allocated','Approved trainings'];
+    copy.municipalityBudget.headers=['Municipality','Province',String(dashboard.currentYear)+' allocated',String(dashboard.previousYear)+' allocated','Non-inactive trainings'];
     copy.municipalityBudget.rows=aggregate('municipality').map(item=>[item.municipality,item.province,money(item.current),money(item.previous),item.activities]);
     copy.ageSex.rows=ageSex[0].data.map((value,index)=>[dashboard.ageLabels[index],value,ageSex[1].data[index],value+ageSex[1].data[index],farmers.length?((value+ageSex[1].data[index])*100/farmers.length).toFixed(1)+'%':'0%']);
     copy.sex.headers=['Sex','Active farmers','Share of active farmers'];
@@ -570,7 +570,41 @@
       for(const[key,count]of [['activities',dashboard.trainingCount],['participants',farmers.length],['fca',associations.length]]){const button=document.querySelector('[data-report-key="'+key+'"]');const card=button?.closest('.card-header-wrapper');const value=card?.querySelector('.card-header-context');if(value)value.textContent=count;}
       const upcoming=dashboard.upcoming;
       const wrapper=document.querySelector('.card-upcoming-training .card-body .row'),template=wrapper?.querySelector('.card-wrapper')?.cloneNode(true);
-      if(wrapper&&template){wrapper.replaceChildren(...(upcoming.length?upcoming:[null]).map(item=>{const card=template.cloneNode(true),date=item?new Date(item.startDate+'T00:00:00'):null;card.querySelector('.card-month').textContent=date?date.toLocaleDateString('en-PH',{month:'short'}):'';card.querySelector('.card-date-text').textContent=date?String(date.getDate()).padStart(2,'0'):'';const title=card.querySelector('.card-text-title');title.textContent=item?.title||'No upcoming trainings';title.href=item?'/app/admin/training/id/view-training/'+encodeURIComponent(item.id):'#';card.querySelector('.card-range-date').textContent=item?[item.startDate,item.endDate].map(value=>new Date(value+'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})).join(' - '):'No upcoming date';card.querySelector('.card-location-text').textContent=item?.venue||'';card.querySelector('.slot-number').textContent=item?.target_participants||'0';return card;}));}
+      const formatTrainingDate=value=>{if(!value)return '';const date=new Date(String(value).slice(0,10)+'T00:00:00+08:00');return Number.isNaN(date.getTime())?'':date.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric',timeZone:'Asia/Manila'});};
+      const trainingLocation=item=>{
+        const locations=(Array.isArray(item.trainingLocations)?item.trainingLocations:[]).map(location=>{
+          const address=[location.barangay,location.municipality,location.province,location.region].filter(Boolean).join(', ');
+          return [location.venue,address].filter(Boolean).join(' — ');
+        }).filter(Boolean);
+        if(locations.length)return [...new Set(locations)].join(' · ');
+        return [item.venue||item.venue_location,[item.barangay,item.municipality,item.province,item.region].filter(Boolean).join(', ')].filter(Boolean).join(' — ');
+      };
+      if(wrapper&&template){
+        wrapper.replaceChildren(...(upcoming.length?upcoming:[null]).map(item=>{
+          const card=template.cloneNode(true);
+          const startDate=formatTrainingDate(item?.startDate);
+          const endDate=formatTrainingDate(item?.endDate||item?.startDate);
+          const dateParts=startDate?new Date(String(item.startDate).slice(0,10)+'T00:00:00+08:00'):null;
+          card.querySelector('.card-month').textContent=dateParts?dateParts.toLocaleDateString('en-PH',{month:'short',timeZone:'Asia/Manila'}):'';
+          card.querySelector('.card-date-text').textContent=dateParts?dateParts.toLocaleDateString('en-PH',{day:'2-digit',timeZone:'Asia/Manila'}):'';
+          const dateBlock=card.querySelector('.card-date');
+          if(dateBlock)dateBlock.setAttribute('aria-label',startDate?'Starts '+startDate:'');
+          const title=card.querySelector('.card-text-title');
+          title.textContent=item?.title||'No upcoming or in-progress trainings';
+          title.href=item?'/app/admin/training/id/view-training/'+encodeURIComponent(item.id):'#';
+          const range=card.querySelector('.card-range-date');
+          if(range)range.textContent=item?[startDate,endDate].filter(Boolean).join(' - '):'Training dates that have ended are hidden';
+          const location=card.querySelector('.card-location-text');
+          if(location)location.textContent=item?trainingLocation(item):'';
+          const status=card.querySelector('.upcoming-training-status');
+          if(status)status.textContent=item?.status||'';
+          const countdown=card.querySelector('.upcoming-training-countdown');
+          if(countdown){countdown.textContent=!item?'':item.daysUntilStart>0?'Starts in '+item.daysUntilStart+' '+(item.daysUntilStart===1?'day':'days'):item.daysUntilStart===0?'Starts today':'In progress · ends '+endDate;}
+          const slot=card.querySelector('.card-slot');
+          if(slot){slot.hidden=!item;const number=slot.querySelector('.slot-number');if(number)number.textContent=String(item?.target_participants??item?.participants?.length??0);}
+          return card;
+        }));
+      }
       const date=document.querySelector('.app-left-content-date');if(date)date.textContent=dashboard.humanDate;const day=document.querySelector('.app-left-content-day');if(day)day.textContent=dashboard.weekday;const title=document.querySelector('.app-left-main-content-title');if(title)title.textContent=upcoming[0]?.title||'No upcoming training';
     }
   }

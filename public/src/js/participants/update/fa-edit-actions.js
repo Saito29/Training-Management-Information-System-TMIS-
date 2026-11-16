@@ -19,6 +19,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const index = findRecord(records);
     if (index < 0) { interventionError.textContent = 'Association record not found.'; return; }
     const entry = Object.fromEntries(new FormData(interventionForm));
+    const officeOption = interventionForm.elements.office.selectedOptions[0];
+    entry.office = officeOption?.dataset.officeName
+      ? `${officeOption.dataset.officeName} — ${officeOption.dataset.regionName}`
+      : '';
     Object.keys(entry).forEach(key => { entry[key] = entry[key].trim(); });
     records[index].interventions = [...(Array.isArray(records[index].interventions) ? records[index].interventions : []), entry];
     try {

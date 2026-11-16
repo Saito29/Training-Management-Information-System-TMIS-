@@ -28,8 +28,13 @@ class AuditTrail
                     'record_name', 'document_name', 'document_kind', 'document_year', 'document_remarks', 'document_changes', 'office_name', 'region_name',
                     'notification_title', 'notification_type', 'recipient_count',
                     'record_name', 'document_name', 'document_kind', 'document_year', 'document_remarks', 'document_changes',
+                    'questionnaire_names', 'questionnaire_types', 'participant_count', 'highlight_name', 'highlight_action', 'highlight_slide',
                 ], true)) {
-                    $result[$key] = $value;
+                    if (in_array($key, ['questionnaire_names', 'questionnaire_types'], true) && is_array($value)) {
+                        $result[$key] = array_values(array_filter($value, static fn (mixed $item): bool => is_string($item) && mb_strlen($item) <= 255));
+                    } else {
+                        $result[$key] = $value;
+                    }
                 } elseif ($key === 'changed_fields' && is_array($value)) {
                     // Store field identifiers only, never the user-supplied values associated with them.
                     $result[$key] = array_values(array_filter($value, static fn (mixed $field): bool => is_string($field) && preg_match('/^[a-z_]{1,80}$/', $field) === 1));

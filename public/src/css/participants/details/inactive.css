@@ -327,6 +327,9 @@
 
 .review-data-table tbody tr { transition: background-color 0.18s ease; }
 .review-data-table tbody td { vertical-align: middle; }
+.review-data-table thead th { background: color-mix(in srgb, var(--color-primary-surface) 54%, var(--color-surface)); }
+.review-data-table tbody tr:nth-child(even) td { background-color: color-mix(in srgb, var(--color-primary-surface) 24%, var(--color-surface)); }
+.review-data-table tbody tr:hover td { background-color: color-mix(in srgb, var(--color-primary-surface) 68%, var(--color-surface)); }
 
 .review-data-table tfoot th {
   position: static;

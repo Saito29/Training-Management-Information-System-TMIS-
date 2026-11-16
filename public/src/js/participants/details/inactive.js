@@ -485,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ['Year Covered', 'yearCovered'],
       ['Registration Date', 'registered'],
     ];
-    const rows = records.map((r) => Object.fromEntries(exportColumns.map(([label, key]) => [label, r[key]])));
+    const rows = records.map((r) => Object.fromEntries(exportColumns.map(([label, key]) => [label, key === 'id' ? (r.farmerNumber || r.id) : r[key]])));
     const sheet = XLSX.utils.json_to_sheet(rows, { header: exportColumns.map(([label]) => label) });
     sheet['!cols'] = exportColumns.map(([label]) => ({ wch: Math.max(14, label.length + 4) }));
     const book = XLSX.utils.book_new();

@@ -2,7 +2,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const panel = document.getElementById('attachments-panel');
   if (!panel) return;
   const base = '../../../../assets/training/sample-attachments/';
-  const attachments = (window.TMIS_PAGE ? window.TmisStore.selected('tmis-trainings')?.attachments || [] : [
+  const selectedTraining = window.TMIS_PAGE ? window.TmisStore.selected('tmis-trainings') : null;
+  const uploaderOffice = window.TMIS_PAGE?.actor?.office || 'Office not recorded';
+  const attachments = (window.TMIS_PAGE ? selectedTraining?.attachments || [] : [
     {name:'file.pdf', type:'Training Materials', year:'2025', url:base + 'file.pdf', pdf:true},
     {name:'training-highlight-1.png', type:'Photos', year:'2025', url:base + 'training-highlight-1.png'},
     {name:'training-highlight-2.png', type:'Photos', year:'2025', url:base + 'training-highlight-2.png'},
@@ -28,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const formatFileSize = bytes => bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.ceil(bytes / 1024))} KB`;
   const visibleCount = () => window.innerWidth < 576 ? 1 : window.innerWidth < 768 ? 2 : window.innerWidth < 992 ? 3 : 4;
 
-  panel.innerHTML = `<section class="training-documents-card training-card"><header class="training-documents-header"><div class="training-documents-heading"><span class="training-documents-icon"><i class="bi bi-file-earmark-text"></i></span><div><h2>Attachment Documents</h2><p>View and manage supporting documents for this training.</p></div></div><button class="training-documents-add" type="button" id="trainingAddAttachment"><i class="bi bi-plus-circle"></i> Add Attachments</button></header><div class="training-documents-body"><div id="trainingAttachmentCards" class="training-attachment-carousel" aria-live="polite"></div></div></section><section class="training-attachment-queue training-card"><header><h2>Attachment upload queue</h2><p>Choose a document type and year for each file before saving it.</p></header><div class="training-attachment-queue-body"><div class="table-responsive"><table class="table training-queue-table align-middle"><thead><tr><th scope="col">Preview</th><th scope="col">File type</th><th scope="col">Document type</th><th scope="col">Year</th><th scope="col">Remarks</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead><tbody id="trainingQueueBody"></tbody></table></div><div class="training-queue-footer"><span id="trainingQueueSummary"></span><span id="trainingQueueFeedback" role="status" aria-live="polite"></span><button id="trainingSaveAttachments" type="button" disabled><i class="bi bi-cloud-arrow-up"></i> Save attachments</button></div></div></section>`;
+  panel.innerHTML = `<section class="training-documents-card training-card"><header class="training-documents-header"><div class="training-documents-heading"><span class="training-documents-icon"><i class="bi bi-file-earmark-text"></i></span><div><h2>Attachment Documents</h2><p>View and manage supporting documents for this training.</p></div></div><button class="training-documents-add" type="button" id="trainingAddAttachment"><i class="bi bi-plus-circle"></i> Add Attachments</button></header><div class="training-documents-body"><div id="trainingAttachmentCards" class="training-attachment-carousel" aria-live="polite"></div></div></section><section class="training-attachment-queue training-card"><header><h2>Attachment upload queue</h2><p>Choose a document type and year for each file before saving it.</p></header><div class="training-attachment-queue-body"><div class="table-responsive"><table class="table training-queue-table align-middle"><thead><tr><th scope="col">Preview</th><th scope="col">File type</th><th scope="col">Document type</th><th scope="col">Source office</th><th scope="col">Year</th><th scope="col">Remarks</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead><tbody id="trainingQueueBody"></tbody></table></div><div class="training-queue-footer"><span id="trainingQueueSummary"></span><span id="trainingQueueFeedback" role="status" aria-live="polite"></span><button id="trainingSaveAttachments" type="button" disabled><i class="bi bi-cloud-arrow-up"></i> Save attachments</button></div></div></section>`;
   const cards = panel.querySelector('#trainingAttachmentCards');
   const queueBody = panel.querySelector('#trainingQueueBody');
   const queueSave = panel.querySelector('#trainingSaveAttachments');
@@ -137,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function renderQueue() {
-    queueBody.innerHTML = queue.length ? queue.map((item, index) => `<tr><td><span class="training-queue-preview"><i class="bi ${item.file.type === 'application/pdf' ? 'bi-file-earmark-pdf' : 'bi-file-earmark-image'}"></i><span title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}<small>${formatFileSize(item.file.size)} · maximum ${maxFileSizeLabel}</small></span></span></td><td>${item.file.type === 'application/pdf' ? 'PDF' : item.file.type === 'image/png' ? 'PNG' : 'JPG'}</td><td><select class="form-select" data-field="type" data-index="${index}" aria-label="Document type for ${escapeHtml(item.file.name)}"><option value="">Select type</option>${types.map(type => `<option value="${escapeHtml(type)}" ${item.type === type ? 'selected' : ''}>${escapeHtml(type)}</option>`).join('')}</select></td><td><select class="form-select" data-field="year" data-index="${index}" aria-label="Year for ${escapeHtml(item.file.name)}">${years.map(year => `<option value="${year}" ${item.year === year ? 'selected' : ''}>${year}</option>`).join('')}</select></td><td><input class="form-control" data-field="remarks" data-index="${index}" maxlength="500" value="${escapeHtml(item.remarks)}" aria-label="Remarks for ${escapeHtml(item.file.name)}" placeholder="Optional remarks"></td><td><span class="training-queue-status ${item.type ? 'ready' : ''}">${item.type ? 'Ready' : 'Select type'}</span></td><td><button class="training-queue-remove" type="button" data-remove="${index}" aria-label="Remove ${escapeHtml(item.file.name)} from queue"><i class="bi bi-x-lg"></i></button></td></tr>`).join('') : '<tr class="training-queue-empty"><td colspan="7">No files are waiting to be uploaded.</td></tr>';
+    queueBody.innerHTML = queue.length ? queue.map((item, index) => `<tr><td><span class="training-queue-preview"><i class="bi ${item.file.type === 'application/pdf' ? 'bi-file-earmark-pdf' : 'bi-file-earmark-image'}"></i><span title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}<small>${formatFileSize(item.file.size)} · maximum ${maxFileSizeLabel}</small></span></span></td><td>${item.file.type === 'application/pdf' ? 'PDF' : item.file.type === 'image/png' ? 'PNG' : 'JPG'}</td><td><select class="form-select" data-field="type" data-index="${index}" aria-label="Document type for ${escapeHtml(item.file.name)}"><option value="">Select type</option>${types.map(type => `<option value="${escapeHtml(type)}" ${item.type === type ? 'selected' : ''}>${escapeHtml(type)}</option>`).join('')}</select></td><td class="training-queue-office">${escapeHtml(uploaderOffice)}</td><td><select class="form-select" data-field="year" data-index="${index}" aria-label="Year for ${escapeHtml(item.file.name)}">${years.map(year => `<option value="${year}" ${item.year === year ? 'selected' : ''}>${year}</option>`).join('')}</select></td><td><input class="form-control" data-field="remarks" data-index="${index}" maxlength="500" value="${escapeHtml(item.remarks)}" aria-label="Remarks for ${escapeHtml(item.file.name)}" placeholder="Optional remarks"></td><td><span class="training-queue-status ${item.type ? 'ready' : ''}">${item.type ? 'Ready' : 'Select type'}</span></td><td><button class="training-queue-remove" type="button" data-remove="${index}" aria-label="Remove ${escapeHtml(item.file.name)} from queue"><i class="bi bi-x-lg"></i></button></td></tr>`).join('') : '<tr class="training-queue-empty"><td colspan="8">No files are waiting to be uploaded.</td></tr>';
     const ready = queue.filter(item => item.type && item.year).length;
     const stagedSize = queue.reduce((total, item) => total + item.file.size, 0);
     panel.querySelector('#trainingQueueSummary').textContent = `${queue.length} file${queue.length === 1 ? '' : 's'} staged · ${formatFileSize(stagedSize)} total · ${ready} ready to save`;
@@ -159,26 +161,50 @@ document.addEventListener('DOMContentLoaded', () => {
   queueSave.addEventListener('click', async () => {
     if (queueSaving || !queue.length) return;
     const oversized = queue.find(item => item.file.size > maxFileSize);
-    if (oversized) { panel.querySelector('#trainingQueueFeedback').textContent = `${oversized.file.name} exceeds the ${maxFileSizeLabel} maximum per file.`; renderQueue(); return; }
+    if (oversized) {
+      const message = `${oversized.file.name} exceeds the ${maxFileSizeLabel} maximum per file.`;
+      panel.querySelector('#trainingQueueFeedback').textContent = message;
+      renderQueue();
+      return;
+    }
     const incomplete = queue.find(item => !item.type || !item.year);
-    if (incomplete) { panel.querySelector('#trainingQueueFeedback').textContent = `Choose a document type and year for ${incomplete.file.name} before saving the staged files.`; return; }
+    if (incomplete) {
+      const message = `Choose a document type and year for ${incomplete.file.name} before uploading.`;
+      panel.querySelector('#trainingQueueFeedback').textContent = message;
+      return;
+    }
     const ready = [...queue];
+    let uploadedCount = 0;
+    let currentItem = null;
     queueSaving = true;
     renderQueue();
     try {
       const training=window.TmisStore.selected('tmis-trainings');
       if(!training) throw new Error('Open a saved training first.');
       for(const item of ready) {
-        const attachment=await window.TmisStore.upload('trainings',training.id,item.file,item.type,item.year,item.remarks);
+        currentItem = item;
+        const uploadedAttachment=await window.TmisStore.upload('trainings',training.id,item.file,item.type,item.year,item.remarks);
+        const attachment={...uploadedAttachment,office:uploadedAttachment.office||uploaderOffice};
         attachments.push(attachment);
+        uploadedCount += 1;
         const queueIndex = queue.indexOf(item);
         if (queueIndex >= 0) queue.splice(queueIndex, 1);
         fire('added',attachment);
         renderQueue();
       }
-    } catch(error) {panel.querySelector('#trainingQueueFeedback').textContent=error.message;return;}
+    } catch(error) {
+      const detail = error instanceof Error ? error.message : 'The server could not save the file.';
+      const fileName = currentItem?.file?.name;
+      const message = fileName ? `${fileName} failed to upload. ${detail}` : `Attachments failed to upload. ${detail}`;
+      panel.querySelector('#trainingQueueFeedback').textContent = message;
+      if (uploadedCount > 0) {
+        panel.querySelector('#trainingQueueFeedback').textContent = `${uploadedCount} attachment${uploadedCount === 1 ? '' : 's'} uploaded successfully before the error. ${message}`;
+      }
+      return;
+    }
     finally { queueSaving = false; renderQueue(); }
-    panel.querySelector('#trainingQueueFeedback').textContent = `${ready.length} attachment${ready.length === 1 ? '' : 's'} added.`;
+    const successMessage = `${uploadedCount} attachment${uploadedCount === 1 ? '' : 's'} uploaded successfully.`;
+    panel.querySelector('#trainingQueueFeedback').textContent = successMessage;
     first = Math.max(0, attachments.length - visibleCount());
     renderQueue();
     render();
@@ -203,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
       cards.innerHTML = '<p class="training-attachment-empty">No attachments yet. Add images or PDFs to this training.</p>';
       return;
     }
-    cards.innerHTML = `<button type="button" class="training-attachment-nav" data-step="-1" aria-label="Previous attachments" ${first === 0 ? 'disabled' : ''}><i class="bi bi-chevron-left"></i></button><div class="training-attachment-track" style="--visible:${visible}">${attachments.slice(first, first + visible).map((item, offset) => `<article class="training-attachment-card"><button type="button" class="training-attachment-preview" data-view="${first + offset}" aria-label="View ${escapeHtml(item.name)}">${item.pdf ? '<span class="training-attachment-pdf"><i class="bi bi-file-earmark-pdf-fill"></i><strong>PDF</strong></span>' : `<img src="${window.TmisStore.escape(item.url)}" alt="" loading="lazy">`}<span class="training-attachment-kind">${item.pdf ? 'PDF document' : 'Image'}</span><span class="training-attachment-overlay"><i class="bi bi-arrows-angle-expand"></i> Open preview</span></button><div class="training-attachment-info"><span class="training-attachment-category"><i class="bi bi-tag-fill"></i>${escapeHtml(item.type)}</span><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><div class="training-attachment-meta"><span><i class="bi bi-calendar3"></i>${escapeHtml(item.year)}</span><small>Attachment ${first + offset + 1} of ${attachments.length}</small></div><div class="training-attachment-actions"><button type="button" data-view="${first + offset}"><i class="bi bi-eye"></i> View</button><button type="button" data-edit="${first + offset}"><i class="bi bi-pencil"></i> Edit</button><button type="button" data-delete="${first + offset}"><i class="bi bi-trash3"></i> Delete</button></div></div></article>`).join('')}</div><button type="button" class="training-attachment-nav" data-step="1" aria-label="Next attachments" ${first >= attachments.length - visible ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>`;
+    cards.innerHTML = `<button type="button" class="training-attachment-nav" data-step="-1" aria-label="Previous attachments" ${first === 0 ? 'disabled' : ''}><i class="bi bi-chevron-left"></i></button><div class="training-attachment-track" style="--visible:${visible}">${attachments.slice(first, first + visible).map((item, offset) => `<article class="training-attachment-card"><button type="button" class="training-attachment-preview" data-view="${first + offset}" aria-label="View ${escapeHtml(item.name)}">${item.pdf ? '<span class="training-attachment-pdf"><i class="bi bi-file-earmark-pdf-fill"></i><strong>PDF</strong></span>' : `<img src="${window.TmisStore.escape(item.url)}" alt="" loading="lazy">`}<span class="training-attachment-kind">${item.pdf ? 'PDF document' : 'Image'}</span><span class="training-attachment-overlay"><i class="bi bi-arrows-angle-expand"></i> Open preview</span></button><div class="training-attachment-info"><span class="training-attachment-category"><i class="bi bi-tag-fill"></i>${escapeHtml(item.type)}</span><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><div class="training-attachment-meta"><span><i class="bi bi-calendar3"></i>${escapeHtml(item.year)}</span><span class="training-attachment-office" title="Uploaded from office"><i class="bi bi-building"></i>${escapeHtml(item.office || uploaderOffice)}</span><small>Attachment ${first + offset + 1} of ${attachments.length}</small></div><div class="training-attachment-actions"><button type="button" data-view="${first + offset}"><i class="bi bi-eye"></i> View</button><button type="button" data-edit="${first + offset}"><i class="bi bi-pencil"></i> Edit</button><button type="button" data-delete="${first + offset}"><i class="bi bi-trash3"></i> Delete</button></div></div></article>`).join('')}</div><button type="button" class="training-attachment-nav" data-step="1" aria-label="Next attachments" ${first >= attachments.length - visible ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>`;
   }
   cards.addEventListener('click', event => {
     const step = event.target.closest('[data-step]');

@@ -1959,11 +1959,21 @@ class="layout-fixed"
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionOffice">Office</label>
-                  <input class="form-control" id="interventionOffice" name="office" type="text" maxlength="120" placeholder="e.g. DA RFO IV-A" required />
+                  <select class="form-select" id="interventionOffice" name="office" required>
+                    <option value="">Select office</option>
+                    @foreach($interventionOffices as $office)
+                      <option value="{{ $office->org_id }}" data-office-name="{{ $office->name }}" data-region-name="{{ $office->region_name }}">{{ $office->name }} — {{ $office->region_name }}</option>
+                    @endforeach
+                  </select>
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionYear">Year covered</label>
-                  <input class="form-control" id="interventionYear" name="yearCovered" type="number" min="1900" max="2100" step="1" value="2026" required />
+                  <select class="form-select" id="interventionYear" name="yearCovered" required>
+                    <option value="">Select year</option>
+                    @for($year = now()->year + 1; $year >= 1990; $year--)
+                      <option value="{{ $year }}" @selected($year === now()->year)>{{ $year }}</option>
+                    @endfor
+                  </select>
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionAction">Delivery action</label>
@@ -1974,7 +1984,12 @@ class="layout-fixed"
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionType">Type</label>
-                  <input class="form-control" id="interventionType" name="type" type="text" maxlength="80" placeholder="e.g. Seeds, fertilizer, training" required />
+                  <select class="form-select" id="interventionType" name="type" required>
+                    <option value="">Select intervention type</option>
+                    @foreach($interventionTypeOptions as $option)
+                      <option value="{{ $option->label }}">{{ $option->label }}</option>
+                    @endforeach
+                  </select>
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionUnit">Unit</label>
@@ -2226,5 +2241,5 @@ class="layout-fixed"
     <script src="{{ asset('src/js/participants/update/fa-sections.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-edit.js?v=association-reload-toast-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-edit-members.js?v=association-farmer-table-2') }}"></script>
-    <script src="{{ asset('src/js/participants/update/fa-edit-actions.js') }}"></script>
+    <script src="{{ asset('src/js/participants/update/fa-edit-actions.js?v=intervention-selectors-1') }}"></script>
 @endsection

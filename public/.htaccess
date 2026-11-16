@@ -23,3 +23,17 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+<IfModule mod_authz_core.c>
+    <FilesMatch "(^\.|\.(env|log|ini|sql|bak|dist)$|^(artisan|composer\.(json|lock)|package(-lock)?\.json|phpunit\.xml|vite\.config\..*)$)">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    Header always set X-Permitted-Cross-Domain-Policies "none"
+</IfModule>

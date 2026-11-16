@@ -1034,12 +1034,26 @@
   transform: translateY(-2px);
 }
 
+.app-main .app-main-body .card-upcoming-training > .card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.app-main .app-main-body .card-upcoming-training > .card-header .btn-modal {
+  flex: 0 0 36px;
+  margin-left: auto;
+}
+
 /* card header */
 .app-main
   .app-main-body
   .card-upcoming-training
   .card-header
   .card-header-text {
+  flex: 1 1 auto;
+  min-width: 0;
   color: #263238;
   font-size: 14px;
   font-family: 'inter';
@@ -1053,7 +1067,8 @@
   /* Each training item is a Bootstrap col-12, so it always fills its row. */
   display: flex;
   align-items: flex-start;
-  justify-content: space-around;
+  justify-content: flex-start;
+  align-items: center;
   gap: 10px;
   margin: 0;
   padding: 0 10px;
@@ -1151,6 +1166,35 @@
   transition: transform 0.5s ease-in-out;
 }
 
+.app-main .app-main-body .card-upcoming-training .upcoming-training-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 8px;
+  margin-top: 3px;
+}
+
+.app-main .app-main-body .card-upcoming-training .upcoming-training-status {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 3px 8px;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-surface);
+  border: 1px solid var(--color-primary-light);
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.app-main .app-main-body .card-upcoming-training .upcoming-training-countdown {
+  color: var(--color-text-muted);
+  font-size: 9px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Card date range and location */
 .app-main
   .app-main-body
@@ -1185,6 +1229,11 @@
   overflow-wrap: anywhere;
 }
 
+.app-main .app-main-body .card-upcoming-training .card-location-text {
+  display: block;
+  line-height: 1.45;
+}
+
 /* card slot */
 .app-main .app-main-body .card-upcoming-training .card-wrapper .card-slot {
   display: flex;
@@ -1194,13 +1243,28 @@
   background-color: #e8f5e9;
   outline: 1px solid #e0e0e0;
   color: #2e7d32;
-  width: 46px;
-  height: 46px;
-  border-radius: 12%;
-  padding: 8px 12px;
+  width: auto;
+  min-width: 76px;
+  max-width: 92px;
+  flex: 0 0 auto;
+  min-height: 46px;
+  height: auto;
+  border-radius: 10px;
+  padding: 7px 9px;
   line-height: 1.2;
   font-size: 12px;
   font-weight: 600;
+}
+
+.app-main .app-main-body .card-upcoming-training .card-slot .slot-text {
+  font-size: 9px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.app-main .app-main-body .card-upcoming-training .card-slot .slot-number {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* View all button */

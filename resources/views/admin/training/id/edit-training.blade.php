@@ -61,7 +61,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-participants.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-highlights.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training-highlights.css') }}" />
-    <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training-attachments-cards.css') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training-attachments-cards.css?v=attachment-source-office-3') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-logs.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training.css?v=multi-training-locations-2') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training-participants.css?v=participant-roster-compact-9') }}" />
@@ -2010,7 +2010,7 @@ class="layout-fixed"
     <script src="{{ asset('src/js/training/id/edit-training-participants.js?v=participant-roster-compact-9') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-highlights.js?v=4k-export-preset-2') }}"></script>
     <script src="{{ asset('src/js/training/id/edit-training-highlights.js?v=highlight-upload-10mb-2') }}"></script>
-    <script src="{{ asset('src/js/training/id/edit-training-attachments-cards.js?v=attachment-size-50mb-1') }}"></script>
+    <script src="{{ asset('src/js/training/id/edit-training-attachments-cards.js?v=attachment-source-office-3') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-logs.js?v=live-logs-20261109-3') }}"></script>
     <script src="{{ asset('src/js/training/id/edit-training.js?v=multi-training-locations-2') }}"></script>
 @endsection

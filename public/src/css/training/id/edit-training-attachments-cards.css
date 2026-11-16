@@ -29,10 +29,11 @@
 .training-attachment-info > strong { min-height:34px; overflow-wrap:anywhere; color:var(--color-text-primary); font-size:12px; }
 .training-attachment-category { width:fit-content; max-width:100%; overflow:hidden; padding:5px 8px; border-radius:20px; color:var(--color-primary-dark); background:var(--color-primary-surface); font-size:12px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
 .training-attachment-category i { margin-right:6px; }
-.training-attachment-meta { display:flex; align-items:center; justify-content:space-between; gap:5px; color:var(--color-text-secondary); font-size:10px; }
+.training-attachment-meta { display:flex; align-items:center; justify-content:flex-start; flex-wrap:wrap; gap:5px; color:var(--color-text-secondary); font-size:10px; }
 .training-attachment-meta span { padding:5px 7px; border:1px solid var(--color-border); border-radius:9px; white-space:nowrap; }
+.training-attachment-meta .training-attachment-office { flex:0 1 auto; width:fit-content; max-width:100%; min-width:0; overflow-wrap:anywhere; white-space:normal; }
 .training-attachment-meta i { margin-right:5px; }
-.training-attachment-meta small { font-size:10px; text-align:right; }
+.training-attachment-meta small { margin-left:auto; font-size:10px; text-align:right; }
 .training-attachment-actions { display:flex; gap:7px; margin-top:2px; }
 .training-attachment-actions button,.training-attachment-actions a { display:inline-flex; flex:1; align-items:center; justify-content:center; gap:5px; min-height:31px; padding:5px 6px; border:1px solid var(--color-border); border-radius:7px; color:var(--color-primary-dark); background:var(--color-surface); font-size:10px; font-weight:600; text-decoration:none; }
 .training-attachment-actions button:hover,.training-attachment-actions a:hover { background:var(--color-primary-surface); }
@@ -71,6 +72,7 @@
 .training-queue-table th { color:var(--color-text-secondary); font-size:11px; white-space:nowrap; }
 .training-queue-table td { min-width:84px; vertical-align:middle; }
 .training-queue-table td:first-child { min-width:190px; }
+.training-queue-table .training-queue-office { min-width:145px; max-width:220px; color:var(--color-text-secondary); font-size:11px; white-space:normal; overflow-wrap:anywhere; }
 .training-queue-table .form-control,.training-queue-table .form-select { min-width:120px; border-color:var(--color-border); color:var(--color-text-primary); background:var(--color-surface); font-size:12px; }
 .training-queue-preview { display:flex; align-items:center; gap:8px; min-width:0; }
 .training-queue-preview i { color:var(--color-primary); font-size:22px; }

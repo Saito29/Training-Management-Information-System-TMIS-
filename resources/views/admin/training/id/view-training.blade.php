@@ -56,7 +56,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/training/id/view-training.css?v=budget-overview-2') }}"
+      href="{{ asset('src/css/training/id/view-training.css?v=assessment-chart-theme-4') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-participants.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-pretest.css') }}" />
@@ -1930,7 +1930,7 @@ class="layout-fixed"
     </script>
     <script src="{{ asset('src/js/training/id/view-training-assessments.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script src="{{ asset('src/js/training/id/view-training.js?v=budget-overview-2') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training.js?v=assessment-chart-theme-4') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-participants.js?v=farmer-number-display-1') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-feedback-filters.js?v=association-option-details-1') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-pretest.js?v=average-number-only-1') }}"></script>

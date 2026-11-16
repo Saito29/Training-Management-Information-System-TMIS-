@@ -6,8 +6,8 @@
 @if ($summary !== '')
 Summary: {{ $summary }}
 @endif
-@if ($priority === 'high')
-Priority: Important
+@if (in_array($priority, ['high', 'critical'], true))
+Priority: {{ $priority === 'critical' ? 'Critical' : 'Important' }}
 @endif
 @if ($reference !== '')
 Reference: {{ $reference }}

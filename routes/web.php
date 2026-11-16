@@ -14,6 +14,7 @@ use App\Support\AttachmentTypeCatalog;
 use App\Support\ModuleAccess;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 require __DIR__.'/authentication/web.php';
@@ -60,6 +61,9 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::post('/system/nationalities', [SystemSettingsController::class, 'storeNationality'])->name('system.nationalities.store');
     Route::patch('/system/nationalities/{option}', [SystemSettingsController::class, 'updateNationality'])->whereNumber('option')->name('system.nationalities.update');
     Route::delete('/system/nationalities/{option}', [SystemSettingsController::class, 'deleteNationality'])->whereNumber('option')->name('system.nationalities.destroy');
+    Route::post('/system/intervention-types', [SystemSettingsController::class, 'storeInterventionType'])->name('system.intervention-types.store');
+    Route::patch('/system/intervention-types/{option}', [SystemSettingsController::class, 'updateInterventionType'])->whereNumber('option')->name('system.intervention-types.update');
+    Route::delete('/system/intervention-types/{option}', [SystemSettingsController::class, 'deleteInterventionType'])->whereNumber('option')->name('system.intervention-types.destroy');
     Route::get('/system/record-statuses', [SystemSettingsController::class, 'recordStatuses'])->name('system.record-statuses.index');
     Route::post('/system/record-statuses', [SystemSettingsController::class, 'storeRecordStatus'])->name('system.record-statuses.store');
     Route::patch('/system/record-statuses/{status}', [SystemSettingsController::class, 'updateRecordStatus'])->whereNumber('status')->name('system.record-statuses.update');
@@ -86,6 +90,8 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::get('/operations/training-queue-counts', [OperationsController::class, 'queueCounts'])->name('operations.training-queue-counts');
     Route::patch('/operations/notifications/{id}', [OperationsController::class, 'readNotification'])->whereNumber('id')->name('operations.notifications.read');
     Route::get('/operations/evaluations', [OperationsController::class, 'evaluations'])->name('operations.evaluations.index');
+    Route::get('/app/admin/participants/details/trash/export', [OperationsController::class, 'exportDeletedParticipants'])->name('admin.participants.details.trash.export');
+    Route::get('/app/admin/participants/details/trash/permanently-deleted', [OperationsController::class, 'permanentlyDeletedParticipants'])->name('admin.participants.details.trash.permanently-deleted');
     Route::get('/app/admin/participants/details/trash', [OperationsController::class, 'deletedParticipants'])->name('admin.participants.details.trash');
     Route::delete('/app/admin/participants/details/trash/{participant}', [OperationsController::class, 'permanentlyDeleteParticipant'])
         ->where('participant', '[A-Za-z0-9:_-]+')
@@ -164,8 +170,40 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::view('/app/admin/participants/details/fa-all-list', 'admin.participants.details.fa-all-list')->name('admin.participants.details.fa-all-list');
     Route::view('/app/admin/participants/details/fa-inactive', 'admin.participants.details.fa-inactive')->name('admin.participants.details.fa-inactive');
     Route::view('/app/admin/participants/details/inactive', 'admin.participants.details.inactive')->name('admin.participants.details.inactive');
-    Route::view('/app/admin/participants/id/edit-fa/{id?}', 'admin.participants.id.edit-fa')->where('id', '[A-Za-z0-9:_-]+')->name('admin.participants.id.edit-fa');
-    Route::view('/app/admin/participants/id/edit-farmer/{id?}', 'admin.participants.id.edit-farmer')->where('id', '[A-Za-z0-9:_-]+')->name('admin.participants.id.edit-farmer');
+    Route::get('/app/admin/participants/id/edit-fa/{id?}', function (Request $request): View {
+        $scope = ModuleAccess::registrationScope($request->user());
+        $interventionOffices = DB::table('organization')
+            ->join('region', 'region.region_id', '=', 'organization.region_id')
+            ->where('organization.is_active', 1)
+            ->when($scope['regionIds'] !== null, fn ($query) => $query->whereIn('organization.region_id', $scope['regionIds']))
+            ->when($scope['officeIds'] !== null, fn ($query) => $query->whereIn('organization.org_id', $scope['officeIds']))
+            ->orderBy('organization.name')
+            ->get(['organization.org_id', 'organization.name', 'organization.region_id', 'region.name as region_name']);
+        $interventionTypeOptions = DB::table('participant_options')
+            ->where('field', 'intervention_type')
+            ->where('is_active', true)
+            ->orderBy('label')
+            ->get(['id', 'value', 'label']);
+
+        return view('admin.participants.id.edit-fa', compact('interventionOffices', 'interventionTypeOptions'));
+    })->where('id', '[A-Za-z0-9:_-]+')->name('admin.participants.id.edit-fa');
+    Route::get('/app/admin/participants/id/edit-farmer/{id?}', function (Request $request): View {
+        $scope = ModuleAccess::registrationScope($request->user());
+        $interventionOffices = DB::table('organization')
+            ->join('region', 'region.region_id', '=', 'organization.region_id')
+            ->where('organization.is_active', 1)
+            ->when($scope['regionIds'] !== null, fn ($query) => $query->whereIn('organization.region_id', $scope['regionIds']))
+            ->when($scope['officeIds'] !== null, fn ($query) => $query->whereIn('organization.org_id', $scope['officeIds']))
+            ->orderBy('organization.name')
+            ->get(['organization.org_id', 'organization.name', 'organization.region_id', 'region.name as region_name']);
+        $interventionTypeOptions = DB::table('participant_options')
+            ->where('field', 'intervention_type')
+            ->where('is_active', true)
+            ->orderBy('label')
+            ->get(['id', 'value', 'label']);
+
+        return view('admin.participants.id.edit-farmer', compact('interventionOffices', 'interventionTypeOptions'));
+    })->where('id', '[A-Za-z0-9:_-]+')->name('admin.participants.id.edit-farmer');
     Route::view('/app/admin/participants/id/view-fa/{id?}', 'admin.participants.id.view-fa')->where('id', '[A-Za-z0-9:_-]+')->name('admin.participants.id.view-fa');
     Route::get('/app/admin/participants/id/view-farmer/{id?}', [OperationsController::class, 'viewFarmerProfile'])
         ->where('id', '[A-Za-z0-9:_-]+')
@@ -178,9 +216,9 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::view('/app/admin/training/details/incomplete', 'admin.training.details.incomplete')->name('admin.training.details.incomplete');
     Route::view('/app/admin/training/details/rp-inactive', 'admin.training.details.rp-inactive')->name('admin.training.details.rp-inactive');
     Route::view('/app/admin/training/details/rp-list', 'admin.training.details.rp-list')->name('admin.training.details.rp-list');
-    Route::view('/app/admin/training/id/edit-rp', 'admin.training.id.edit-rp')->name('admin.training.id.edit-rp');
+    Route::view('/app/admin/training/id/edit-rp/{id?}', 'admin.training.id.edit-rp')->where('id', '[A-Za-z0-9:_-]+')->name('admin.training.id.edit-rp');
     Route::view('/app/admin/training/id/edit-training/{id?}', 'admin.training.id.edit-training')->name('admin.training.id.edit-training');
-    Route::view('/app/admin/training/id/view-rp', 'admin.training.id.view-rp')->name('admin.training.id.view-rp');
+    Route::view('/app/admin/training/id/view-rp/{id?}', 'admin.training.id.view-rp')->where('id', '[A-Za-z0-9:_-]+')->name('admin.training.id.view-rp');
     Route::view('/app/admin/training/id/view-training/{title}/{id}', 'admin.training.id.view-training')
         ->where('title', '[A-Za-z0-9._-]+')
         ->where('id', '[A-Za-z0-9:_-]+')

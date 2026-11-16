@@ -16,7 +16,7 @@ function init(){
   const item=data(),recipients=resolveRecipients(item,users),target=RELATED_PAGES[item.relatedPage]||RELATED_PAGES[''];
   $('notificationTitleCount').textContent=`${$('notificationTitle').value.length} / 100`;$('notificationMessageCount').textContent=`${$('notificationMessage').value.length} / 10,000`;
   $('notificationPreviewTitle').textContent=item.title||'Your notification title';renderMessage($('notificationPreviewMessage'),item.summary||item.message.slice(0,240)||'Your summary will appear here as you type.');
-  $('notificationPreviewType').textContent=NOTIFICATION_TYPES[item.type]||'System';$('notificationPreviewPriority').hidden=item.priority!=='high';
+  $('notificationPreviewType').textContent=NOTIFICATION_TYPES[item.type]||'System';$('notificationPreviewPriority').hidden=!['high','critical'].includes(item.priority);$('notificationPreviewPriority').textContent=item.priority==='critical'?'Critical':'Important';$('notificationPreviewPriority').dataset.priority=item.priority;
   $('notificationPreviewIcon').className=`bi ${{system:'bi-bell',account:'bi-person-check',training:'bi-journal-text',participants:'bi-people',evaluation:'bi-clipboard-check'}[item.type]||'bi-bell'}`;
   $('notificationPreviewReference').hidden=!item.reference;$('notificationPreviewReference').textContent=item.reference;
   $('notificationPreviewAction').hidden=!target.href;$('notificationPreviewAction').textContent=target.href?`Open ${target.label.toLowerCase()}`:'';
@@ -62,7 +62,7 @@ function init(){
     if(draft?.actorId===actor.id && draft.data){
      const item=draft.data;draftId=draft.id||null;
      $('notificationTitle').value=String(item.title||'').slice(0,100);$('notificationMessage').value=String(item.message||'').slice(0,10000);$('notificationSummary').value=String(item.summary||'').slice(0,240);
-     $('notificationType').value=Object.hasOwn(NOTIFICATION_TYPES,item.type)?item.type:'system';$('notificationPriority').value=item.priority==='high'?'high':'normal';
+     $('notificationType').value=Object.hasOwn(NOTIFICATION_TYPES,item.type)?item.type:'system';$('notificationPriority').value=['high','critical'].includes(item.priority)?item.priority:'normal';
      $('notificationReference').value=String(item.reference||'').slice(0,80);$('notificationRelatedPage').value=Object.hasOwn(RELATED_PAGES,item.relatedPage)?item.relatedPage:'';
      const radio=form.querySelector(`input[name="notificationAudience"][value="${['users','role','all'].includes(item.audience)?item.audience:'users'}"]`);radio.checked=true;
      $('notificationRole').value=String(item.role||'');selected=new Set(Array.isArray(item.recipientIds)?item.recipientIds.filter(id=>typeof id==='string'):[]);
@@ -114,7 +114,7 @@ function init(){
    if(!resolveRecipients(item,users).length){feedback('Select at least one active recipient.','warning');return;}
    const composed=composeNotifications(item,users,actor);
    pending={actorId:actor.id,data:item,recipientIds:composed.map(entry=>entry.recipientId)};
-   $('confirmNotificationDescription').textContent=`Create this ${item.priority==='high'?'important ':''}notification for ${composed.length} active ${composed.length===1?'recipient':'recipients'}?`;
+   $('confirmNotificationDescription').textContent=`Create this ${item.priority==='critical'?'critical ':item.priority==='high'?'important ':''}notification for ${composed.length} active ${composed.length===1?'recipient':'recipients'}?`;
    const entries=[['Title',item.title],['Type',NOTIFICATION_TYPES[item.type]],['Audience',item.audience==='all'?'All active users':item.audience==='role'?item.role:'Selected users'],['Delivery','User inbox']];
    $('confirmNotificationDetails').replaceChildren(...entries.map(([label,value])=>{const row=make('div','');row.append(make('dt','',label),make('dd','',value));return row;}));
    $('confirmNotificationDialog').showModal();

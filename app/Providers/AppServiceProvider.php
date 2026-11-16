@@ -58,12 +58,17 @@ class AppServiceProvider extends ServiceProvider
             $view->with('systemBranding', app(SystemBranding::class)->forDisplay());
         });
 
-        RateLimiter::for('login', function (Request $request): array {
+        RateLimiter::for('login-edge', function (Request $request): Limit {
+            return Limit::perMinutes(30, 10)->by('login-edge:'.hash('sha256', (string) $request->ip()));
+        });
+
+        RateLimiter::for('password-recovery', function (Request $request): array {
             $email = $request->input('email');
+            $identity = is_string($email) ? strtolower(trim($email)) : '';
 
             return [
-                Limit::perMinute(20)->by('ip:'.$request->ip()),
-                Limit::perMinute(5)->by('account:'.hash('sha256', is_string($email) ? strtolower(trim($email)).'|'.$request->ip() : $request->ip())),
+                Limit::perMinutes(5, 10)->by('recovery-account:'.hash('sha256', $identity.'|'.$request->ip())),
+                Limit::perMinutes(20, 10)->by('recovery-ip:'.hash('sha256', (string) $request->ip())),
             ];
         });
     }

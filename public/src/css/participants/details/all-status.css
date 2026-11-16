@@ -328,6 +328,9 @@
 
 .review-data-table tbody tr { transition: background-color 0.18s ease; }
 .review-data-table tbody td { vertical-align: middle; }
+.review-data-table thead th { background: color-mix(in srgb, var(--color-primary-surface) 54%, var(--color-surface)); }
+.review-data-table tbody tr:nth-child(even) td { background-color: color-mix(in srgb, var(--color-primary-surface) 24%, var(--color-surface)); }
+.review-data-table tbody tr:hover td { background-color: color-mix(in srgb, var(--color-primary-surface) 68%, var(--color-surface)); }
 
 .review-data-table tfoot th {
   position: static;
@@ -354,6 +357,141 @@
 
 .review-table-state { padding: 42px 20px; color: var(--color-text-secondary); text-align: center; }
 .review-table-state i { display: block; margin-bottom: 8px; color: var(--color-primary-light); font-size: 28px; }
+
+/* Compact directory table inspired by the training selection layout. */
+.farmer-directory-table {
+  width: 1624px;
+  min-width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 12px;
+}
+
+.farmer-directory-table thead th {
+  padding: 10px 11px;
+  color: var(--color-text-secondary);
+  background: #f4f5f4;
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: none;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+.farmer-directory-table thead th.sortable-column:hover,
+.farmer-directory-table thead th.sortable-column:focus-visible {
+  color: var(--color-primary-dark);
+  background: var(--color-primary-surface);
+  outline: none;
+}
+
+.farmer-directory-table .sortable-column i {
+  margin-left: 4px;
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.farmer-directory-table .sortable-column i.bi-sort-up,
+.farmer-directory-table .sortable-column i.bi-sort-down {
+  color: var(--color-primary);
+}
+
+.farmer-directory-table tbody td {
+  padding: 10px 11px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 12px;
+}
+
+.farmer-directory-table th[data-column],
+.farmer-directory-table td[data-column] {
+  min-width: 0;
+}
+
+.farmer-directory-table [data-column='actions'] { width: 132px; }
+.farmer-directory-table [data-column='status'] { width: 100px; }
+.farmer-directory-table [data-column='id'] { width: 126px; }
+.farmer-directory-table [data-column='suffix'] { width: 92px; }
+.farmer-directory-table [data-column='birthDate'] { width: 132px; }
+.farmer-directory-table [data-column='sex'] { width: 84px; }
+.farmer-directory-table [data-column='yearCovered'] { width: 92px; }
+.farmer-directory-table [data-column='lastName'],
+.farmer-directory-table [data-column='firstName'],
+.farmer-directory-table [data-column='middleName'] { width: 138px; }
+.farmer-directory-table [data-column='region'] { width: 122px; }
+.farmer-directory-table [data-column='province'] { width: 116px; }
+.farmer-directory-table [data-column='district'] { width: 100px; }
+.farmer-directory-table [data-column='municipality'] { width: 145px; }
+.farmer-directory-table [data-column='barangay'] { width: 120px; }
+.farmer-directory-table [data-column='organization'] { width: 215px; }
+.farmer-directory-table [data-column='role'] { width: 120px; }
+.farmer-directory-table [data-column='civilStatus'] { width: 112px; }
+.farmer-directory-table [data-column='nationality'] { width: 110px; }
+.farmer-directory-table [data-column='placeOfBirth'] { width: 180px; }
+.farmer-directory-table [data-column='sitio'] { width: 120px; }
+.farmer-directory-table [data-column='fourPs'],
+.farmer-directory-table [data-column='pwd'],
+.farmer-directory-table [data-column='seniorCitizen'] { width: 86px; }
+.farmer-directory-table [data-column='indigenousGroup'] { width: 132px; }
+.farmer-directory-table [data-column='tribeName'] { width: 126px; }
+.farmer-directory-table [data-column='dietaryRestriction'] { width: 165px; }
+.farmer-directory-table [data-column='registered'] { width: 142px; }
+
+.farmer-directory-table tbody td:not([data-column='actions']) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.farmer-directory-table tbody tr:nth-child(odd) td {
+  background: var(--color-surface);
+}
+
+.farmer-directory-table tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--color-info) 4%, var(--color-surface));
+}
+
+.farmer-directory-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--color-info) 9%, var(--color-surface));
+}
+
+.farmer-directory-table tfoot th {
+  padding: 7px 8px;
+  background: var(--color-surface);
+  box-shadow: none;
+}
+
+.farmer-directory-table tfoot .form-control {
+  min-width: 88px;
+  min-height: 30px;
+  padding: 4px 7px;
+  font-size: 11px;
+}
+
+/* shared/theme.css has stronger generic .table rules, so scope these overrides above them. */
+html[data-theme='light'] .app-main .app-main-body .table.farmer-directory-table thead th {
+  padding: 10px 11px;
+  color: var(--color-text-secondary);
+  background-color: #f4f5f4;
+  border-bottom-color: var(--color-border);
+  box-shadow: none;
+  font-size: 11px;
+  letter-spacing: 0.025em;
+}
+
+html[data-theme='light'] .app-main .app-main-body .table.farmer-directory-table tbody tr:nth-child(odd) > * {
+  background-color: var(--color-surface);
+}
+
+html[data-theme='light'] .app-main .app-main-body .table.farmer-directory-table tbody tr:nth-child(even) > * {
+  background-color: color-mix(in srgb, var(--color-info) 4%, var(--color-surface));
+}
+
+html[data-theme='light'] .app-main .app-main-body .table.farmer-directory-table tbody tr:hover > * {
+  background-color: color-mix(in srgb, var(--color-info) 9%, var(--color-surface));
+}
 
 /* Row actions: view, edit, delete */
 .table-row-actions { display: flex; align-items: center; gap: 8px; min-width: 116px; }

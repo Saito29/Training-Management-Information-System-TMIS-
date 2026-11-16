@@ -24,7 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   activate(tabs[0]);
 
-  const id = new URLSearchParams(location.search).get('id');
+  const pathId = decodeURIComponent(location.pathname.split('/').filter(Boolean).at(-1) || '');
+  const id = pathId && pathId !== 'view-rp' ? pathId : new URLSearchParams(location.search).get('id');
   let records = [];
   try { const stored = JSON.parse(window.TmisStore.getItem('tmis-resource-persons') || '[]'); if (Array.isArray(stored)) records = stored; }
   catch { /* A missing or invalid saved list shows the empty state. */ }
@@ -56,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     remark.textContent = `Remarks: ${value('status_remarks')}`;
     document.getElementById('rpStatus').after(remark);
   }
-  document.getElementById('rpEditLink').href = `edit-rp?id=${encodeURIComponent(id)}`;
+  document.getElementById('rpEditLink').href = `../edit-rp/${encodeURIComponent(id)}`;
   document.querySelectorAll('[data-rp-field]').forEach(node => {
     const field = node.dataset.rpField;
     node.textContent = value(field) || 'Not provided';
@@ -145,10 +146,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const details = document.createElement('div'); details.className = 'rp-training-details';
     const dates = [date(item.start_date), date(item.end_date)].filter(Boolean);
     const dateText = dates.length === 2 && dates[0] !== dates[1] ? dates.join(' – ') : dates[0];
+    const trainingLocations = Array.isArray(item.trainingLocations) ? item.trainingLocations : [];
+    const locationDetails = trainingLocations.map(trainingLocation => {
+      const place = [trainingLocation.barangay, trainingLocation.municipality, trainingLocation.province, trainingLocation.region]
+        .filter(Boolean).join(', ');
+      return [trainingLocation.venue, place].filter(Boolean).join(' — ');
+    }).filter(Boolean);
     const location = [item.barangay_id, item.municipality_id, item.province_id].filter(Boolean).map(label).join(', ');
     details.append(
       detail('calendar3', 'Dates', dateText),
-      detail('geo-alt', 'Location', location),
+      detail('geo-alt', locationDetails.length > 1 ? `Training locations (${locationDetails.length})` : 'Location', locationDetails.length ? locationDetails.join('\n') : location),
       detail('building', 'Venue', item.venue_location),
       detail('broadcast', 'Delivery mode', item.delivery_mode)
     );

@@ -1,4 +1,4 @@
-﻿export const NOTIFICATION_TYPES = { account:'Account', training:'Training', participants:'Participants', evaluation:'Evaluation', system:'System' };
+export const NOTIFICATION_TYPES = { account:'Account', training:'Training', participants:'Participants', evaluation:'Evaluation', system:'System' };
 export const RELATED_PAGES = {
   '': { href:'',label:'No related page' },
   profile:{href:'users/profile',label:'My profile'},
@@ -27,7 +27,7 @@ export function composeNotifications(data, users, actor, {now=()=>new Date().toI
   const summary=String(data.summary||'').trim();
   if(summary.length>240)throw new Error('Keep the short summary within 240 characters.');
   if(!Object.hasOwn(NOTIFICATION_TYPES,data.type))throw new Error('Select a valid notification type.');
-  if(!['normal','high'].includes(data.priority))throw new Error('Select a valid priority.');
+  if(!['normal','high','critical'].includes(data.priority))throw new Error('Select a valid priority.');
   if(!Object.hasOwn(RELATED_PAGES,data.relatedPage||''))throw new Error('Select a related page from the list.');
   const recipients=resolveRecipients(data,users);if(!recipients.length)throw new Error('Select at least one active recipient.');
   const batchId=id(),createdAt=now(),target=RELATED_PAGES[data.relatedPage||''];

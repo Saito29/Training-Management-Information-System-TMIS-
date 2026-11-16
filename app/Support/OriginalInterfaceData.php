@@ -210,7 +210,12 @@ class OriginalInterfaceData
 
         $trainingIds = self::trainingDataQuery($user)->select('id');
 
-        $trainingDocuments = DB::table('training_attachments')->whereIn('training_id', $trainingIds)->get()->groupBy('training_id');
+        $trainingDocuments = DB::table('training_attachments')
+            ->leftJoin('users as attachment_uploaders', 'attachment_uploaders.user_id', '=', 'training_attachments.uploaded_by')
+            ->leftJoin('organization as attachment_offices', 'attachment_offices.org_id', '=', 'attachment_uploaders.org_id')
+            ->whereIn('training_attachments.training_id', $trainingIds)
+            ->get(['training_attachments.*', 'attachment_offices.name as uploaded_office_name'])
+            ->groupBy('training_id');
         $associationDocuments = DB::table('association_attachments')->whereIn('association_id', self::query($user, 'associations')->select('id'))->get()->groupBy('association_id');
 
         $participantDocuments = DB::table('participant_attachments')->whereIn('participant_id', clone $participantIds)->get()->groupBy('participant_id');
@@ -296,7 +301,7 @@ class OriginalInterfaceData
         parse_str((string) parse_url($page, PHP_URL_QUERY), $pageQuery);
         $pathId = self::trainingViewPageId();
         if ($pathId === '') {
-            $pathId = preg_match('~/(?:participants/id/(?:view|edit)-fa|participants/id/(?:view|edit)-farmer|training/id/edit-training|evaluation/id/(?:view|edit)-(?:pre-test|post-test|rp-evaluation|training-evaluation))/([^/]+)$~', $pagePath, $matches) === 1
+            $pathId = preg_match('~/(?:participants/id/(?:view|edit)-fa|participants/id/(?:view|edit)-farmer|training/id/(?:view|edit)-rp|training/id/edit-training|evaluation/id/(?:view|edit)-(?:pre-test|post-test|rp-evaluation|training-evaluation))/([^/]+)$~', $pagePath, $matches) === 1
                 ? rawurldecode($matches[1])
                 : '';
         }
@@ -335,6 +340,8 @@ class OriginalInterfaceData
                 ->get(['users_log.*', 'activity_actors.first_name as actor_first_name', 'activity_actors.middle_name as actor_middle_name', 'activity_actors.last_name as actor_last_name', 'activity_actors.extension_name as actor_extension_name', 'activity_roles.name as actor_role', 'activity_offices.name as activity_office', 'activity_regions.name as activity_region'])
                 ->filter(fn ($log): bool => str_ends_with($log->event, '_'.$selectedRecord->id))
                 ->map(function ($log) use ($logModule, $selectedRecord): array {
+                    $after = json_decode((string) ($log->new_values ?? '[]'), true);
+                    $after = is_array($after) ? $after : [];
                     $actorName = trim(implode(' ', array_filter([$log->actor_first_name ?? null, $log->actor_middle_name ?? null, $log->actor_last_name ?? null, $log->actor_extension_name ?? null]))) ?: 'Authorized system user';
                     $isFarmerCreation = $logModule === 'participants' && $log->event === 'participants_created_'.$selectedRecord->id;
                     $recordLabel = match ($logModule) {
@@ -351,6 +358,7 @@ class OriginalInterfaceData
                     };
                     $action = match (true) {
                         str_contains($log->event, '_created_') => 'created',
+                        str_contains($log->event, '_added_'), str_contains($log->event, '_uploaded_') => 'created',
                         str_contains($log->event, '_deleted_'), str_contains($log->event, '_removed_') => 'removed',
                         str_contains($log->event, '_restored_') => 'restored',
                         str_contains($log->event, '_updated_') => 'updated',
@@ -367,18 +375,26 @@ class OriginalInterfaceData
                         && $log->event === 'participants_updated_'.$selectedRecord->id;
                     $isBeneficiaryChange = str_contains($log->event, 'beneficiary');
                     $isAttachmentChange = str_contains($log->event, 'attachment') || str_contains($log->event, 'document');
+                    $isAttachmentAdded = str_contains($log->event, 'document_uploaded');
+                    $isQuestionnaireAddition = str_contains($log->event, 'questionnaires_added');
+                    $isParticipantAddition = str_contains($log->event, 'participants_added');
+                    $isHighlightChange = str_contains($log->event, 'highlight');
                     $category = $isAttachmentChange
                         ? 'attachment'
                         : ($isBeneficiaryChange
                             ? 'membership'
                             : ($logModule === 'trainings'
-                                ? (str_contains($log->event, 'enrollment') ? 'participant' : 'training')
+                                ? ($isParticipantAddition || str_contains($log->event, 'enrollment') ? 'participant' : 'training')
                                 : 'profile'));
                     $farmerName = trim(implode(' ', array_filter([$selectedRecord->first_name ?? null, $selectedRecord->middle_name ?? null, $selectedRecord->last_name ?? null, $selectedRecord->suffix ?? null]))) ?: 'the farmer';
                     $title = match (true) {
                         $isFarmerCreation => 'Farmer Profile Created',
                         $isFarmerProfileUpdate => 'Farmer Profile Updated',
                         $isBeneficiaryChange => 'Farmer Association Updated',
+                        $isQuestionnaireAddition => 'New questionnaires added',
+                        $isParticipantAddition => 'Participants added',
+                        $isAttachmentAdded => 'Training attachment added',
+                        $isHighlightChange => (($after['highlight_action'] ?? 'updated') === 'created' ? 'Training highlight added' : 'Training highlights updated'),
                         $isAttachmentChange => $recordLabel.' Attachment Updated',
                         $action === 'created' => $recordLabel.' Created',
                         $action === 'removed' => $recordLabel.' Removed',
@@ -386,10 +402,19 @@ class OriginalInterfaceData
                         str_contains($log->event, 'status') => $recordLabel.' Status Updated',
                         default => $recordLabel.' Updated',
                     };
+                    $addedQuestionnaireTypes = array_values(array_filter(is_array($after['questionnaire_types'] ?? null) ? $after['questionnaire_types'] : [], 'is_string'));
+                    $addedQuestionnaireNames = array_values(array_filter(is_array($after['questionnaire_names'] ?? null) ? $after['questionnaire_names'] : [], 'is_string'));
+                    $questionnaireTypeDescription = implode(' and ', $addedQuestionnaireTypes);
+                    $questionnaireNameDescription = implode(', ', $addedQuestionnaireNames);
+                    $questionnaireDescription = 'New '.($questionnaireTypeDescription !== '' ? $questionnaireTypeDescription.' ' : '').'questionnaire'.(count($addedQuestionnaireNames) === 1 ? '' : 's').' added to the training'.($questionnaireNameDescription !== '' ? ': '.$questionnaireNameDescription : '').'.';
                     $description = match (true) {
                         $isFarmerCreation => 'A new farmer profile was successfully registered for '.$farmerName.'.',
                         $isFarmerProfileUpdate => 'Farmer Profile information was updated.',
                         $isBeneficiaryChange => 'Farmer was linked to an association office successfully.',
+                        $isQuestionnaireAddition => $questionnaireDescription,
+                        $isParticipantAddition => (int) ($after['participant_count'] ?? 0).' farmer'.((int) ($after['participant_count'] ?? 0) === 1 ? '' : 's').' added to the training roster.',
+                        $isAttachmentAdded => trim((string) ($after['document_name'] ?? 'A training attachment')).' was added'.(filled($after['document_kind'] ?? null) ? ' as '.trim((string) $after['document_kind']) : '').'.',
+                        $isHighlightChange => trim((string) ($after['highlight_name'] ?? 'Training highlights / ways forward')).' '.(str_contains((string) ($after['highlight_name'] ?? ''), '/') ? 'were' : 'was').' '.(($after['highlight_action'] ?? 'updated') === 'created' ? 'added.' : 'updated.'),
                         $isAttachmentChange => $recordLabel.' attachment was updated.',
                         $action === 'created' => 'A new '.$recordLabel.' record was successfully created.',
                         $action === 'removed' => $recordLabel.' was removed.',
@@ -409,10 +434,10 @@ class OriginalInterfaceData
                         'date' => $log->created_at,
                         'status' => $log->outcome === 'success' ? 'Success' : ucfirst($log->outcome),
                         'icon' => match ($category) {
-                            'attachment' => 'bi-paperclip',
+                            'attachment' => $isAttachmentAdded ? 'bi-file-earmark-plus' : 'bi-paperclip',
                             'membership' => 'bi-building-check',
                             'participant' => 'bi-people',
-                            default => $isFarmerCreation ? 'bi-person-plus' : 'bi-clock-history',
+                            default => $isQuestionnaireAddition ? 'bi-ui-checks' : ($isHighlightChange ? 'bi-lightbulb' : ($isFarmerCreation ? 'bi-person-plus' : 'bi-clock-history')),
                         },
                     ];
                 })
@@ -446,7 +471,25 @@ class OriginalInterfaceData
 
         $documents = static function ($items, string $module, string $id): array {
 
-            return collect($items)->map(fn ($file): array => ['id' => (string) $file->id, 'name' => $file->original_name, 'file' => ['name' => $file->original_name, 'type' => $file->mime_type, 'size' => $file->size], 'type' => $file->original_kind ?? $file->kind, 'year' => (string) $file->year, 'remarks' => $file->remarks ?? '', 'url' => route('ui.documents.show', [$module, $id, $file->id]), 'dataUrl' => route('ui.documents.show', [$module, $id, $file->id]), 'pdf' => $file->mime_type === 'application/pdf', 'temporary' => false])->all();
+            return collect($items)->map(function ($file) use ($module, $id): array {
+                $document = [
+                    'id' => (string) $file->id,
+                    'name' => $file->original_name,
+                    'file' => ['name' => $file->original_name, 'type' => $file->mime_type, 'size' => $file->size],
+                    'type' => $file->original_kind ?? $file->kind,
+                    'year' => (string) $file->year,
+                    'remarks' => $file->remarks ?? '',
+                    'url' => route('ui.documents.show', [$module, $id, $file->id]),
+                    'dataUrl' => route('ui.documents.show', [$module, $id, $file->id]),
+                    'pdf' => $file->mime_type === 'application/pdf',
+                    'temporary' => false,
+                ];
+                if ($module === 'trainings') {
+                    $document['office'] = $file->uploaded_office_name ?? 'Office not recorded';
+                }
+
+                return $document;
+            })->all();
 
         };
 
@@ -599,7 +642,7 @@ class OriginalInterfaceData
                     $workflowStatus = match ($record->status) {
                         'For review' => 'For Review', 'For approval' => 'For Approval', 'For acceptance' => 'For Acceptance', 'Approved', 'Approved & Accepted' => 'Approved & Accepted', default => $record->status
                     };
-                    $item = array_replace($item, ['title' => $record->name, 'training_title' => $record->name, 'type' => $record->training_type, 'training_type' => $record->training_type, 'delivery_mode' => $record->delivery_mode, 'startDate' => $record->start_date, 'endDate' => $record->end_date, 'start_date' => $record->start_date, 'end_date' => $record->end_date, 'venue' => $record->venue, 'venue_location' => $record->venue, 'budget' => $record->budget, 'training_budget' => $record->budget, 'target_participants' => $record->target_participants, 'yearCovered' => $record->year_covered, 'dateEncoded' => substr((string) $record->created_at, 0, 10), 'province' => $record->province, 'district' => $record->district, 'municipality' => $record->municipality, 'barangay' => $record->barangay, 'is_active' => (bool) $record->is_active, 'statusRemarks' => $record->status_remarks, 'workflowStatus' => $workflowStatus, 'status' => ! $record->is_active ? 'Inactive' : $workflowStatus, 'version' => $record->version]);
+                    $item = array_replace($item, ['title' => $record->name, 'training_title' => $record->name, 'type' => $record->training_type, 'training_type' => $record->training_type, 'delivery_mode' => $record->delivery_mode, 'startDate' => $record->start_date, 'endDate' => $record->end_date, 'start_date' => $record->start_date, 'end_date' => $record->end_date, 'venue' => $record->venue, 'venue_location' => $record->venue, 'budget' => $record->budget, 'training_budget' => $record->budget, 'target_participants' => $record->target_participants, 'yearCovered' => $record->year_covered, 'dateEncoded' => substr((string) $record->created_at, 0, 10), 'province' => $record->province, 'district' => $record->district, 'municipality' => $record->municipality, 'barangay' => $record->barangay, 'office' => $offices[$record->org_id] ?? 'Office not recorded', 'is_active' => (bool) $record->is_active, 'statusRemarks' => $record->status_remarks, 'workflowStatus' => $workflowStatus, 'status' => ! $record->is_active ? 'Inactive' : $workflowStatus, 'version' => $record->version]);
 
                     $item['trainers'] = collect($trainingResources[$record->id] ?? [])->map(fn ($resource): array => ['id' => $resource->ui_id ?? (string) $resource->id, 'name' => $resource->name, 'role' => $resource->title ?? 'Resource person'])->all();
                     foreach ([

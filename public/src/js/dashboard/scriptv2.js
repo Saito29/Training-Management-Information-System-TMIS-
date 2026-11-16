@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function () {
     upcoming: {
       title: 'Upcoming Capacity-Building Activities',
       exportName: 'Upcoming-Capacity-Building-Activities',
-      description: 'Capacity-building activities scheduled today through the next three days.',
+      description: 'All eligible trainings with an end date today or later, sorted by the next start date. Trainings submitted for approval are excluded.',
       icon: 'bi-calendar-event',
       total: '0 trainings',
       headers: ['Training ID', 'Training', 'Type', 'District', 'Province', 'Municipality', 'Start Date', 'End Date', 'Venue', 'Participants', 'Status'],
@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
     budget: {
       title: 'Allocated Budget by District',
       exportName: 'Allocated-Budget-by-District',
-      description: 'Total training funds allocated to each beneficiary district.',
+      description: 'Training funds for every status except inactive, allocated by beneficiary district.',
       icon: 'bi-cash-coin',
       total: '₱950,000 allocated',
       headers: ['District', 'Allocated Budget', 'Released', 'Balance', 'Activities', 'Utilization'],
@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function () {
     budget: {
       title: 'Allocated Budget by District',
       exportName: 'Allocated-Budget-by-District',
-      description: 'Total training funds allocated to each beneficiary district.',
+      description: 'Training funds for every status except inactive, allocated by beneficiary district.',
       icon: 'bi-cash-coin',
       total: '₱950,000 allocated',
       headers: ['District', 'Allocated Budget', 'Released', 'Balance', 'Activities', 'Utilization'],

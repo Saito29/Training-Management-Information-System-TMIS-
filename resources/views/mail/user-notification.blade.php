@@ -9,8 +9,8 @@
     <main style="max-width:640px;margin:0 auto;padding:32px;background:#ffffff;border:1px solid #dfe7df;border-radius:12px;">
         <p style="margin:0 0 8px;color:#226649;font-size:12px;font-weight:700;letter-spacing:1.5px;">TMIS {{ strtoupper($type) }} NOTIFICATION</p>
         <h1 style="margin:0 0 20px;font-size:24px;line-height:1.35;">{{ $title }}</h1>
-        @if ($priority === 'high')
-            <p style="display:inline-block;margin:0 0 16px;padding:6px 10px;background:#fff2d6;color:#815500;border-radius:6px;font-size:13px;font-weight:700;">Important</p>
+        @if (in_array($priority, ['high', 'critical'], true))
+            <p style="display:inline-block;margin:0 0 16px;padding:6px 10px;background:{{ $priority === 'critical' ? '#fde8e9' : '#fff2d6' }};color:{{ $priority === 'critical' ? '#9e2631' : '#815500' }};border-radius:6px;font-size:13px;font-weight:700;">{{ $priority === 'critical' ? 'Critical' : 'Important' }}</p>
         @endif
         @if ($summary !== '')
             <p style="margin:0 0 20px;color:#52635a;font-size:15px;line-height:1.6;">{{ $summary }}</p>

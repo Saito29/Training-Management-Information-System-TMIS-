@@ -1591,6 +1591,7 @@ class="layout-fixed"
 <button class="nav-link" id="locations-tab" data-bs-toggle="pill" data-bs-target="#locations" type="button" role="tab" aria-controls="locations" aria-selected="false"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>Locations<small>Register geographic records</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
 <button class="nav-link" id="training-types-tab" data-bs-toggle="pill" data-bs-target="#training-types" type="button" role="tab" aria-controls="training-types" aria-selected="false"><i class="bi bi-mortarboard" aria-hidden="true"></i><span>Training types<small>Training registration choices</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
 <button class="nav-link" id="nationalities-tab" data-bs-toggle="pill" data-bs-target="#nationalities" type="button" role="tab" aria-controls="nationalities" aria-selected="false"><i class="bi bi-flag" aria-hidden="true"></i><span>Nationalities<small>Participant registration choices</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+<button class="nav-link" id="intervention-types-tab" data-bs-toggle="pill" data-bs-target="#intervention-types" type="button" role="tab" aria-controls="intervention-types" aria-selected="false"><i class="bi bi-box-seam" aria-hidden="true"></i><span>Intervention types<small>{{ $interventionTypeOptions->count() }} farmer support choices</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
 <button class="nav-link" id="record-statuses-tab" data-bs-toggle="pill" data-bs-target="#record-statuses" type="button" role="tab" aria-controls="record-statuses" aria-selected="false"><i class="bi bi-tags" aria-hidden="true"></i><span>Farmer statuses<small>{{ $recordStatusOptions->count() }} farmer statuses</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
 <button class="nav-link" id="offices-tab" data-bs-toggle="pill" data-bs-target="#offices" type="button" role="tab" aria-controls="offices" aria-selected="false"><i class="bi bi-buildings" aria-hidden="true"></i><span>Offices<small>Register offices per region</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
 <button class="nav-link" id="attachment-types-tab" data-bs-toggle="pill" data-bs-target="#attachment-types" type="button" role="tab" aria-controls="attachment-types" aria-selected="false"><i class="bi bi-paperclip" aria-hidden="true"></i><span>Attachment types<small>Farmer, association &amp; training files</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
@@ -1600,6 +1601,7 @@ class="layout-fixed"
 @include('admin.training-type-settings')
 @include('admin.office-settings')
 @include('admin.nationality-settings')
+@include('admin.intervention-type-settings')
 @include('admin.record-status-settings')
 @include('admin.attachment-type-settings')
 <div class="modal fade" id="settingsDeleteModal" tabindex="-1" aria-labelledby="settingsDeleteTitle" aria-hidden="true">

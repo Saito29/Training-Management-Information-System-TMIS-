@@ -93,8 +93,8 @@
 .assessment-chart-legend { display: grid; gap: 5px; margin-top: 4px; }
 .assessment-chart-key { display: flex; align-items: baseline; gap: 7px; min-width: 0; color: var(--color-text-secondary); font-size: 11px; line-height: 1.35; }
 .assessment-chart-key span:last-child { overflow-wrap: anywhere; }
-.assessment-chart-dot { flex: 0 0 9px; width: 9px; height: 9px; border-radius: 50%; background: #68a7f8; }
-.assessment-chart-key.posttest .assessment-chart-dot { background: #42c77d; }
+.assessment-chart-dot { flex: 0 0 9px; width: 9px; height: 9px; border-radius: 50%; background: var(--color-info); }
+.assessment-chart-key.posttest .assessment-chart-dot { background: var(--color-primary-dark); }
 .training-evaluation-card { display: flex; flex-direction: column; }
 .evaluation-score { display: flex; align-items: center; justify-content: center; flex: 1; gap: 17px; padding: 12px 0; }
 .evaluation-score-ring { display: grid; place-items: center; flex: 0 0 112px; width: 112px; height: 112px; border-radius: 50%; background: conic-gradient(#8a35d5 0 91.2%, var(--color-border) 91.2% 100%); }

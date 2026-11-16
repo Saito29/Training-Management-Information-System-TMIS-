@@ -427,6 +427,10 @@ class SystemSettingsController
                 ])
                 ->orderBy('label')
                 ->get(),
+            'interventionTypeOptions' => DB::table('participant_options')
+                ->where('field', 'intervention_type')
+                ->orderBy('label')
+                ->get(),
             'recordStatusOptions' => $this->recordStatusOptions(),
             'trainingTypeOptions' => $this->trainingTypeOptions(),
             'attachmentTypeCategories' => AttachmentTypeCatalog::CATEGORIES,
@@ -860,6 +864,59 @@ class SystemSettingsController
         });
 
         return response()->json(['message' => 'Nationality deleted.']);
+    }
+
+    public function storeInterventionType(Request $request): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $data = $request->validate(['name' => ['required', 'string', 'max:100']]);
+        $name = trim($data['name']);
+
+        if ($name === '' || DB::table('participant_options')->where('field', 'intervention_type')->whereRaw('LOWER(value) = ?', [mb_strtolower($name)])->exists()) {
+            throw ValidationException::withMessages(['name' => 'Enter a unique intervention type.']);
+        }
+
+        $id = DB::table('participant_options')->insertGetId([
+            'field' => 'intervention_type', 'value' => $name, 'label' => $name, 'is_active' => true,
+        ]);
+        AuditTrail::record($request, 'intervention_type_created_'.$id, $request->user(), after: ['record_name' => $name], category: 'settings');
+
+        return response()->json(['option' => ['id' => $id, 'field' => 'intervention_type', 'value' => $name, 'label' => $name, 'is_active' => true], 'message' => 'Intervention type added.'], 201);
+    }
+
+    public function updateInterventionType(Request $request, int $option): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $data = $request->validate(['name' => ['required', 'string', 'max:100']]);
+        $name = trim($data['name']);
+
+        $updated = DB::transaction(function () use ($request, $option, $name): array {
+            $existing = DB::table('participant_options')->where('id', $option)->where('field', 'intervention_type')->lockForUpdate()->first();
+            abort_unless($existing, 404);
+            if ($name === '' || DB::table('participant_options')->where('field', 'intervention_type')->where('id', '!=', $option)->whereRaw('LOWER(value) = ?', [mb_strtolower($name)])->exists()) {
+                throw ValidationException::withMessages(['name' => 'Enter a unique intervention type.']);
+            }
+
+            DB::table('participant_options')->where('id', $option)->update(['value' => $name, 'label' => $name]);
+            AuditTrail::record($request, 'intervention_type_updated_'.$option, $request->user(), before: ['record_name' => $existing->label], after: ['record_name' => $name], category: 'settings');
+
+            return ['id' => $option, 'field' => 'intervention_type', 'value' => $name, 'label' => $name, 'is_active' => (bool) $existing->is_active];
+        });
+
+        return response()->json(['option' => $updated, 'message' => 'Intervention type updated.']);
+    }
+
+    public function deleteInterventionType(Request $request, int $option): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        DB::transaction(function () use ($request, $option): void {
+            $existing = DB::table('participant_options')->where('id', $option)->where('field', 'intervention_type')->lockForUpdate()->first();
+            abort_unless($existing, 404);
+            DB::table('participant_options')->where('id', $option)->delete();
+            AuditTrail::record($request, 'intervention_type_deleted_'.$option, $request->user(), before: ['record_name' => $existing->label], category: 'settings');
+        });
+
+        return response()->json(['message' => 'Intervention type deleted.']);
     }
 
     public function attachmentTypes(Request $request, string $category): JsonResponse

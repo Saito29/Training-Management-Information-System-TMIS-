@@ -76,6 +76,7 @@
 .compose-preview-icon { display: grid; place-items: center; flex: 0 0 2.2rem; height: 2.2rem; border-radius: .7rem; background: var(--color-primary-surface); color: var(--color-primary-dark); font-size: 1rem; }
 .compose-preview-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; color: var(--color-text-secondary); font-size: .6rem; font-weight: 650; text-transform: uppercase; letter-spacing: .06em; }
 #notificationPreviewPriority { color: #8b5a00; background: #fff4dd; border-radius: 1rem; padding: .1rem .4rem; font-size: .55rem; }
+#notificationPreviewPriority[data-priority='critical'] { color: #9e2631; background: #fde8e9; }
 .compose-preview-card h3 { margin: .4rem 0 .35rem; font-size: .85rem; font-weight: 650; line-height: 1.5; overflow-wrap: anywhere; }
 .compose-preview-card p { margin: 0; color: var(--color-text-secondary); font-size: .75rem; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
 .compose-preview-time { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: .75rem; color: var(--color-text-secondary); font-size: .625rem; }
@@ -111,6 +112,7 @@
 .compose-page :is(button,a,input,textarea,select):focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
 [data-theme='dark'] .compose-feedback[data-type='error'] { color: #ffb9b9; background: #4b2727; }
 [data-theme='dark'] #notificationPreviewPriority { color: #f2c568; background: #43351c; }
+[data-theme='dark'] #notificationPreviewPriority[data-priority='critical'] { color: #ffb4b8; background: #4a2429; }
 @media(max-width:1199.98px) { .compose-layout { grid-template-columns: minmax(0,1.4fr) minmax(17rem,1fr); } .compose-audience { grid-template-columns: 1fr; } }
 @media(max-width:991.98px) { .compose-layout { grid-template-columns: 1fr; } .compose-preview { position: static; } }
 @media(max-width:575.98px) { .compose-fields { grid-template-columns: 1fr; } .compose-card-body,.compose-card header { padding: 1rem; } #notificationDraftStatus { flex-basis: 100%; } .compose-form-footer .btn { flex: 1 1 auto; } .compose-dialog dl { grid-template-columns: 1fr; } }

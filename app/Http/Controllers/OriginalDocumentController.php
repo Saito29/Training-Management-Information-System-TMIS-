@@ -61,7 +61,9 @@ class OriginalDocumentController
             after: $metadata + ['document_changes' => [$actionPast]],
             category: $module,
         );
-        app(AccountUpdateNotifier::class)->notifyRecordAttachment($request, $owner, $module, $actionPast, $documentName, $kind);
+        if ($module !== 'trainings') {
+            app(AccountUpdateNotifier::class)->notifyRecordAttachment($request, $owner, $module, $actionPast, $documentName, $kind);
+        }
     }
 
     private function owner(Request $request, string $module, string $id, string $action): object
@@ -222,9 +224,20 @@ class OriginalDocumentController
             DB::transaction(function () use ($request, $owner, $data, $content, $paths): void {
                 $training = DB::table('trainings')->where('id', $owner->id)->lockForUpdate()->first();
                 abort_unless($training->status === 'For review', 409, 'Return the training to review before editing highlights.');
+                $highlightExists = DB::table('training_highlights')
+                    ->where('training_id', $owner->id)
+                    ->where('slide', $data['slide'])
+                    ->exists();
                 DB::table('training_highlights')->updateOrInsert(['training_id' => $owner->id, 'slide' => $data['slide']], ['content' => json_encode($content, JSON_THROW_ON_ERROR), 'updated_at' => now(), 'created_at' => now()] + $paths);
                 DB::table('trainings')->where('id', $owner->id)->increment('ui_version');
-                AuditTrail::record($request, 'training_highlight_updated_'.$owner->id, $request->user(), category: 'trainings');
+                $highlightName = (int) $data['slide'] === 0 ? 'Key highlight' : 'Way forward';
+                AuditTrail::record(
+                    $request,
+                    'training_highlight_'.($highlightExists ? 'updated_' : 'created_').$owner->id,
+                    $request->user(),
+                    after: ['record_name' => $training->name, 'highlight_name' => $highlightName, 'highlight_action' => $highlightExists ? 'updated' : 'created', 'highlight_slide' => (int) $data['slide']],
+                    category: 'trainings',
+                );
             });
         } catch (\Throwable $exception) {
             foreach ($paths as $path) {

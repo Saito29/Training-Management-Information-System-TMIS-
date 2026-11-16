@@ -143,12 +143,12 @@ document.addEventListener('DOMContentLoaded', () => {
           const view = document.createElement('a');
           view.className = 'btn btn-sm btn-outline-success'; view.innerHTML = '<i class="bi bi-eye" aria-hidden="true"></i>';
           view.setAttribute('aria-label', `View ${nameOf(record)}`); view.title = 'View';
-          view.href = `../id/view-rp?id=${encodeURIComponent(record.id)}`;
+          view.href = `../id/view-rp/${encodeURIComponent(record.id)}`;
           view.target = '_blank'; view.rel = 'noopener noreferrer';
           const edit = document.createElement('a');
           edit.className = 'btn btn-sm btn-outline-primary'; edit.innerHTML = '<i class="bi bi-pencil-square" aria-hidden="true"></i>';
           edit.setAttribute('aria-label', `Edit ${nameOf(record)}`); edit.title = 'Edit';
-          edit.href = `../id/edit-rp?id=${encodeURIComponent(record.id)}`;
+          edit.href = `../id/edit-rp/${encodeURIComponent(record.id)}`;
           edit.target = '_blank'; edit.rel = 'noopener noreferrer';
           const remove = document.createElement('button');
           remove.type = 'button'; remove.className = 'btn btn-sm btn-outline-danger'; remove.innerHTML = '<i class="bi bi-trash" aria-hidden="true"></i>';
@@ -248,12 +248,14 @@ document.addEventListener('DOMContentLoaded', () => {
     clearUndo(); load();
   });
   byId('rpExport').addEventListener('click', () => {
+    if (!window.XLSX) { window.alert('Excel export is unavailable. Check your connection and try again.'); return; }
     const fields = columns.filter(([key]) => key !== 'actions');
-    const quote = (value) => `"${String(value).replaceAll('"', '""')}"`;
-    const rows = [fields.map(([, label]) => quote(label)).join(','), ...filtered().map((record) => fields.map(([key]) => quote(valueOf(record, key))).join(','))];
-    const url = URL.createObjectURL(new Blob(['\uFEFF', rows.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
-    const link = document.createElement('a'); link.href = url; link.download = 'resource-persons.csv'; link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const rows = filtered().map(record => Object.fromEntries(fields.map(([key, label]) => [label, valueOf(record, key)])));
+    const sheet = XLSX.utils.json_to_sheet(rows, { header: fields.map(([, label]) => label) });
+    sheet['!cols'] = fields.map(([, label]) => ({ wch: Math.max(14, label.length + 4) }));
+    const book = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(book, sheet, inactiveOnly ? 'Inactive Resource Persons' : 'Resource Persons');
+    XLSX.writeFile(book, `${inactiveOnly ? 'inactive_' : ''}resource_persons_${new Date().toISOString().slice(0, 10)}.xlsx`);
   });
   window.addEventListener('storage', (event) => { if (event.key === storageKey) load(); });
   window.addEventListener('tmis:data-updated', load);

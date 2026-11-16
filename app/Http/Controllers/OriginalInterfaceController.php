@@ -479,12 +479,30 @@ class OriginalInterfaceController
         }
         if ($existing && $module === 'trainings') {
             $previousMetadata = OriginalInterfaceData::unpack($existing->ui_data);
-            foreach (['interventions', 'bullets', 'dashboardSlide'] as $field) {
-                if (array_key_exists($field, $record) && $record[$field] !== ($previousMetadata[$field] ?? null)) {
-                    ModuleAccess::authorize($request, 'trainings.edit');
-                    abort_unless($existing->status === 'For review', 409, 'Return the training to review before editing its details.');
-                    AuditTrail::record($request, 'training_details_updated_'.$existing->id, $request->user(), category: 'trainings');
-                    break;
+            $changedMetadataFields = array_values(array_filter(
+                ['interventions', 'bullets', 'dashboardSlide'],
+                static fn (string $field): bool => array_key_exists($field, $record) && $record[$field] !== ($previousMetadata[$field] ?? null),
+            ));
+            if ($changedMetadataFields !== []) {
+                ModuleAccess::authorize($request, 'trainings.edit');
+                abort_unless($existing->status === 'For review', 409, 'Return the training to review before editing its details.');
+                $highlightFields = array_values(array_intersect($changedMetadataFields, ['bullets', 'dashboardSlide']));
+                $otherFields = array_values(array_diff($changedMetadataFields, $highlightFields));
+                if ($otherFields !== []) {
+                    AuditTrail::record($request, 'training_details_updated_'.$existing->id, $request->user(), after: ['changed_fields' => $otherFields], category: 'trainings');
+                }
+                if ($highlightFields !== []) {
+                    $highlightWasAdded = in_array('bullets', $highlightFields, true)
+                        && empty($previousMetadata['bullets'])
+                        && ! empty($record['bullets']);
+                    $highlightAction = $highlightWasAdded ? 'created' : 'updated';
+                    AuditTrail::record(
+                        $request,
+                        'training_highlights_'.$highlightAction.'_'.$existing->id,
+                        $request->user(),
+                        after: ['record_name' => $existing->name, 'highlight_name' => 'Highlights / Ways Forward', 'highlight_action' => $highlightAction, 'changed_fields' => $highlightFields],
+                        category: 'trainings',
+                    );
                 }
             }
         }
@@ -565,6 +583,7 @@ class OriginalInterfaceController
         }
         $oldMetadata = $existing ? OriginalInterfaceData::unpack($existing->ui_data) : [];
         $assignmentChanged = false;
+        $addedQuestionnaires = [];
         $questionnaireAssignments = [
             'pretest' => 'Pre-test',
             'posttest' => 'Post-test',
@@ -583,10 +602,15 @@ class OriginalInterfaceController
             if (array_intersect(array_keys($record), array_keys($questionnaireAssignments)) !== []) {
                 $questionnaireIds = [];
                 foreach ($questionnaireAssignments as $type => $kind) {
+                    $previousReferences = array_map('strval', $oldMetadata[$type] ?? []);
+                    $addedReferences = array_values(array_diff(array_map('strval', $record[$type] ?? []), $previousReferences));
                     foreach ($record[$type] ?? [] as $id) {
                         $questionnaire = OriginalInterfaceData::find($request->user(), 'questionnaires', (string) $id);
                         abort_unless($questionnaire && $questionnaire->kind === $kind && $questionnaire->org_id === $training->org_id && $questionnaire->region_id === $training->region_id, 422, 'Select questionnaires registered in the training office.');
                         $questionnaireIds[] = $questionnaire->id;
+                        if (in_array((string) $id, $addedReferences, true)) {
+                            $addedQuestionnaires[$type][] = $questionnaire->name;
+                        }
                     }
                 }
                 DB::table('training_questionnaire')->where('training_id', $databaseId)->delete();
@@ -724,6 +748,23 @@ class OriginalInterfaceController
                 $transition = $this->payload($request, ['status' => $target, 'version' => $current->version, 'reason' => $record['remarks'] ?? $record['statusRemarks'] ?? null]);
                 $operations->transition($transition, $databaseId);
             }
+            if ($addedQuestionnaires !== []) {
+                $questionnaireTypes = [
+                    'pretest' => 'Pre-test',
+                    'posttest' => 'Post-test',
+                    'trainingEvaluation' => 'Training evaluation',
+                    'rpEvaluation' => 'Resource person evaluation',
+                ];
+                $addedTypes = array_values(array_unique(array_map(static fn (string $type): string => $questionnaireTypes[$type], array_keys($addedQuestionnaires))));
+                $addedNames = array_values(array_unique(array_merge(...array_values($addedQuestionnaires))));
+                AuditTrail::record(
+                    $request,
+                    'training_questionnaires_added_'.$databaseId,
+                    $request->user(),
+                    after: ['record_name' => $current->name, 'questionnaire_types' => $addedTypes, 'questionnaire_names' => $addedNames],
+                    category: 'trainings',
+                );
+            }
         }
 
         return $temporaryId ? ['temporaryId' => $temporaryId, 'id' => $id] : null;
@@ -745,6 +786,12 @@ class OriginalInterfaceController
                 abort_unless($participant && $participant->is_active && $this->isParticipantBeneficiaryOf($participant->id, (int) $owner->region_id, (int) $owner->org_id), 422, 'Select active participants registered as beneficiaries of the training office.');
                 $ids[] = $participant->id;
             }
+            $existingParticipantIds = DB::table('training_participant')
+                ->where('training_id', $owner->id)
+                ->pluck('participant_id')
+                ->map(static fn (mixed $participantId): int => (int) $participantId)
+                ->all();
+            $addedParticipantCount = count(array_diff($ids, $existingParticipantIds));
             $removed = DB::table('training_participant')->where('training_id', $owner->id)->whereNotIn('participant_id', $ids);
             if ((clone $removed)->exists()) {
                 abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
@@ -756,6 +803,15 @@ class OriginalInterfaceController
             DB::table('trainings')->where('id', $owner->id)->increment('ui_version');
             DB::table('trainings')->where('id', $owner->id)->increment('version');
             AuditTrail::record($request, 'training_enrollment_updated_'.$owner->id, $request->user(), category: 'trainings');
+            if ($addedParticipantCount > 0) {
+                AuditTrail::record(
+                    $request,
+                    'training_participants_added_'.$owner->id,
+                    $request->user(),
+                    after: ['participant_count' => $addedParticipantCount],
+                    category: 'trainings',
+                );
+            }
         });
 
         return response()->json($interface->bootstrap($request->user()));
@@ -1109,7 +1165,7 @@ class OriginalInterfaceController
         abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
         $batches = [];
         foreach ($records as $raw) {
-            $record = Validator::make($raw, ['id' => ['required', 'string', 'max:100', Rule::unique('user_notifications', 'ui_id')], 'batchId' => ['required', 'string', 'max:100'], 'recipientId' => ['required', 'integer', Rule::notIn([(string) $request->user()->user_id]), Rule::exists('users', 'user_id')->whereNull('deleted_at')->where('active_status', 1)->where('status', 'Approved & Accepted')], 'title' => ['required', 'string', 'max:100'], 'summary' => ['nullable', 'string', 'max:240'], 'message' => ['required', 'string', 'max:10000'], 'type' => ['required', Rule::in(['account', 'training', 'participants', 'evaluation', 'system'])], 'priority' => ['required', Rule::in(['normal', 'high'])], 'reference' => ['nullable', 'string', 'max:80'], 'href' => ['nullable', Rule::in(['', 'users/profile', 'administration/update/for-approval', 'administration/details/all-status', 'training/details/all-status', 'participants/details/all-with-status', 'evaluation/details/list-questionnaire'])]])->validate();
+            $record = Validator::make($raw, ['id' => ['required', 'string', 'max:100', Rule::unique('user_notifications', 'ui_id')], 'batchId' => ['required', 'string', 'max:100'], 'recipientId' => ['required', 'integer', Rule::notIn([(string) $request->user()->user_id]), Rule::exists('users', 'user_id')->whereNull('deleted_at')->where('active_status', 1)->where('status', 'Approved & Accepted')], 'title' => ['required', 'string', 'max:100'], 'summary' => ['nullable', 'string', 'max:240'], 'message' => ['required', 'string', 'max:10000'], 'type' => ['required', Rule::in(['account', 'training', 'participants', 'evaluation', 'system'])], 'priority' => ['required', Rule::in(['normal', 'high', 'critical'])], 'reference' => ['nullable', 'string', 'max:80'], 'href' => ['nullable', Rule::in(['', 'users/profile', 'administration/update/for-approval', 'administration/details/all-status', 'training/details/all-status', 'participants/details/all-with-status', 'evaluation/details/list-questionnaire'])]])->validate();
             $batchId = $record['batchId'];
             $content = [
                 'title' => trim($record['title']),

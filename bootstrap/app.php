@@ -36,14 +36,14 @@ return Application::configure(basePath: dirname(__DIR__))
         });
         $exceptions->dontFlash(['token', 'verification_code', 'sensitive', 'code', 'secret', 'recoveryCodes']);
         $exceptions->render(function (ThrottleRequestsException $exception, Request $request): ?RedirectResponse {
-            if ($request->expectsJson() || ! $request->routeIs('login.store', 'verification.*', 'password.*')) {
+            if ($request->expectsJson() || ! $request->routeIs('login.store', 'maintenance.login.store', 'verification.*', 'password.*')) {
                 return null;
             }
 
             $route = $request->routeIs('verification.*') ? 'verification' : ($request->routeIs('password.*') ? 'password.request' : 'login');
 
             return redirect()->route($route)
-                ->withErrors(['authentication' => 'Too many attempts. Please wait a minute before trying again.'])
+                ->withErrors(['authentication' => 'Too many attempts. Please wait 10 minutes before trying again.'])
                 ->with('toast_type', 'warning');
         });
         $exceptions->shouldRenderJsonWhen(

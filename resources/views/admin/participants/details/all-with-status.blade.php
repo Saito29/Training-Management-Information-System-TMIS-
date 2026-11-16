@@ -56,7 +56,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/participants/details/all-status.css?v=all-status-page-size-1') }}"
+      href="{{ asset('src/css/participants/details/all-status.css?v=farmer-directory-table-5') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
@@ -1168,7 +1168,7 @@ class="layout-fixed"
                     id="reviewTableScroll"
                   >
                     <table
-                      class="table review-data-table align-middle"
+                      class="table review-data-table align-middle farmer-directory-table"
                       id="forReviewDataTable"
                     >
                       <caption class="visually-hidden">
@@ -1177,14 +1177,16 @@ class="layout-fixed"
                       <thead>
                         <tr>
                           <th data-column="actions">Actions</th>
-                          <th class="sortable-column" data-sort="status" data-column="status">
-                            Status
-                            <i class="bi bi-arrow-down-up"></i>
-                          </th>
                           <th class="sortable-column" data-sort="id" data-column="id">
                             Farmer ID / Core ID
                             <i class="bi bi-arrow-down-up"></i>
                           </th>
+                          <th class="sortable-column" data-sort="yearCovered" data-column="yearCovered">
+                            Year Covered <i class="bi bi-arrow-down-up"></i>
+                          </th>
+                          <th class="sortable-column" data-sort="lastName" data-column="lastName">Last Name <i class="bi bi-arrow-down-up"></i></th>
+                          <th class="sortable-column" data-sort="firstName" data-column="firstName">First Name <i class="bi bi-arrow-down-up"></i></th>
+                          <th class="sortable-column" data-sort="middleName" data-column="middleName">Middle Name <i class="bi bi-arrow-down-up"></i></th>
                           <th class="sortable-column" data-sort="region" data-column="region">
                             Region <i class="bi bi-arrow-down-up"></i>
                           </th>
@@ -1198,28 +1200,15 @@ class="layout-fixed"
                           <th class="sortable-column" data-sort="barangay" data-column="barangay">
                             Barangay <i class="bi bi-arrow-down-up"></i>
                           </th>
-                          <th class="sortable-column" data-sort="lastName" data-column="lastName">
-                            Last Name <i class="bi bi-arrow-down-up"></i>
-                          </th>
-                          <th class="sortable-column" data-sort="firstName" data-column="firstName">
-                            First Name <i class="bi bi-arrow-down-up"></i>
-                          </th>
-                          <th class="sortable-column" data-sort="middleName" data-column="middleName">
-                            Middle Name <i class="bi bi-arrow-down-up"></i>
-                          </th>
+                          <th class="sortable-column" data-sort="organization" data-column="organization">Farmer Organization <i class="bi bi-arrow-down-up"></i></th>
+                          <th class="sortable-column" data-sort="role" data-column="role">Farmer Role <i class="bi bi-arrow-down-up"></i></th>
+                          <th class="sortable-column" data-sort="status" data-column="status">Status <i class="bi bi-arrow-down-up"></i></th>
                           <th data-column="suffix">Extension</th>
                           <th class="sortable-column" data-sort="birthDate" data-column="birthDate">
                             Date of Birth <i class="bi bi-arrow-down-up"></i>
                           </th>
                           <th class="sortable-column" data-sort="sex" data-column="sex">
                             Sex <i class="bi bi-arrow-down-up"></i>
-                          </th>
-                          <th class="sortable-column" data-sort="organization" data-column="organization">
-                            Farmer Organization
-                            <i class="bi bi-arrow-down-up"></i>
-                          </th>
-                          <th class="sortable-column" data-sort="role" data-column="role">
-                            Farmer Role <i class="bi bi-arrow-down-up"></i>
                           </th>
                           <th data-column="civilStatus">Civil Status</th>
                           <th data-column="nationality">Nationality</th>
@@ -1231,9 +1220,6 @@ class="layout-fixed"
                           <th data-column="tribeName">Tribe Name</th>
                           <th data-column="dietaryRestriction">Dietary Restriction</th>
                           <th data-column="seniorCitizen">Senior Citizen</th>
-                          <th class="sortable-column" data-sort="yearCovered" data-column="yearCovered">
-                            Year Covered <i class="bi bi-arrow-down-up"></i>
-                          </th>
                           <th class="sortable-column" data-sort="registered" data-column="registered">
                             Registration Date
                             <i class="bi bi-arrow-down-up"></i>
@@ -1244,21 +1230,22 @@ class="layout-fixed"
                       <tfoot>
                         <tr>
                           <th data-column="actions"></th>
-                          <th data-column="status"><input class="form-control form-control-sm column-filter" data-column="status" type="search" placeholder="Search" /></th>
                           <th data-column="id"><input class="form-control form-control-sm column-filter" data-column="id" type="search" placeholder="Search" /></th>
+                          <th data-column="yearCovered"><input class="form-control form-control-sm column-filter" data-column="yearCovered" type="search" placeholder="Search" /></th>
+                          <th data-column="lastName"><input class="form-control form-control-sm column-filter" data-column="lastName" type="search" placeholder="Search" /></th>
+                          <th data-column="firstName"><input class="form-control form-control-sm column-filter" data-column="firstName" type="search" placeholder="Search" /></th>
+                          <th data-column="middleName"><input class="form-control form-control-sm column-filter" data-column="middleName" type="search" placeholder="Search" /></th>
                           <th data-column="region"><input class="form-control form-control-sm column-filter" data-column="region" type="search" placeholder="Search" /></th>
                           <th data-column="province"><input class="form-control form-control-sm column-filter" data-column="province" type="search" placeholder="Search" /></th>
                           <th data-column="district"><input class="form-control form-control-sm column-filter" data-column="district" type="search" placeholder="Search" /></th>
                           <th data-column="municipality"><input class="form-control form-control-sm column-filter" data-column="municipality" type="search" placeholder="Search" /></th>
                           <th data-column="barangay"><input class="form-control form-control-sm column-filter" data-column="barangay" type="search" placeholder="Search" /></th>
-                          <th data-column="lastName"><input class="form-control form-control-sm column-filter" data-column="lastName" type="search" placeholder="Search" /></th>
-                          <th data-column="firstName"><input class="form-control form-control-sm column-filter" data-column="firstName" type="search" placeholder="Search" /></th>
-                          <th data-column="middleName"><input class="form-control form-control-sm column-filter" data-column="middleName" type="search" placeholder="Search" /></th>
+                          <th data-column="organization"><input class="form-control form-control-sm column-filter" data-column="organization" type="search" placeholder="Search" /></th>
+                          <th data-column="role"><input class="form-control form-control-sm column-filter" data-column="role" type="search" placeholder="Search" /></th>
+                          <th data-column="status"><input class="form-control form-control-sm column-filter" data-column="status" type="search" placeholder="Search" /></th>
                           <th data-column="suffix"><input class="form-control form-control-sm column-filter" data-column="suffix" type="search" placeholder="Search" /></th>
                           <th data-column="birthDate"><input class="form-control form-control-sm column-filter" data-column="birthDate" type="date" /></th>
                           <th data-column="sex"><input class="form-control form-control-sm column-filter" data-column="sex" type="search" placeholder="Search" /></th>
-                          <th data-column="organization"><input class="form-control form-control-sm column-filter" data-column="organization" type="search" placeholder="Search" /></th>
-                          <th data-column="role"><input class="form-control form-control-sm column-filter" data-column="role" type="search" placeholder="Search" /></th>
                           <th data-column="civilStatus"><input class="form-control form-control-sm column-filter" data-column="civilStatus" type="search" placeholder="Search" /></th>
                           <th data-column="nationality"><input class="form-control form-control-sm column-filter" data-column="nationality" type="search" placeholder="Search" /></th>
                           <th data-column="placeOfBirth"><input class="form-control form-control-sm column-filter" data-column="placeOfBirth" type="search" placeholder="Search" /></th>
@@ -1269,7 +1256,6 @@ class="layout-fixed"
                           <th data-column="tribeName"><input class="form-control form-control-sm column-filter" data-column="tribeName" type="search" placeholder="Search" /></th>
                           <th data-column="dietaryRestriction"><input class="form-control form-control-sm column-filter" data-column="dietaryRestriction" type="search" placeholder="Search" /></th>
                           <th data-column="seniorCitizen"><input class="form-control form-control-sm column-filter" data-column="seniorCitizen" type="search" placeholder="Search" /></th>
-                          <th data-column="yearCovered"><input class="form-control form-control-sm column-filter" data-column="yearCovered" type="search" placeholder="Search" /></th>
                           <th data-column="registered"><input class="form-control form-control-sm column-filter" data-column="registered" type="date" /></th>
                         </tr>
                       </tfoot>
@@ -2013,5 +1999,5 @@ class="layout-fixed"
     <!-- nav -->
     <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/participants/details/all-status.js?v=profile-specific-table-actions-1') }}"></script>
+    <script src="{{ asset('src/js/participants/details/all-status.js?v=farmer-directory-table-5') }}"></script>
 @endsection

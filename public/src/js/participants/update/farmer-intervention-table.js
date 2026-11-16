@@ -434,9 +434,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!form.reportValidity()) return;
 
     const formData = new FormData(form);
+    const officeOption = form.elements.office.selectedOptions[0];
     const record = {
       title: String(formData.get('title')).trim(),
-      office: String(formData.get('office')).trim(),
+      office: officeOption?.dataset.officeName
+        ? `${officeOption.dataset.officeName} — ${officeOption.dataset.regionName}`
+        : '',
       yearCovered: String(formData.get('yearCovered')).trim(),
       action: String(formData.get('action')),
       type: String(formData.get('type')).trim(),

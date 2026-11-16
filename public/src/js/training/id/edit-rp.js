@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const id = new URLSearchParams(location.search).get('id');
+  const pathId = decodeURIComponent(location.pathname.split('/').filter(Boolean).at(-1) || '');
+  const id = pathId && pathId !== 'edit-rp' ? pathId : new URLSearchParams(location.search).get('id');
   const content = document.getElementById('rpContent');
   const viewLink = document.getElementById('rpEditLink');
   if (!id || !content || content.hidden) return;
@@ -12,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   const record = read().find(item => item.id === id);
   if (!record) return;
-  viewLink.href = `view-rp?id=${encodeURIComponent(id)}`;
+  viewLink.href = `../view-rp/${encodeURIComponent(id)}`;
 
   content.innerHTML = `
     <form id="rpEditForm" class="rp-edit-form">
@@ -26,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div><label for="rpEditStatus">Status</label><select id="rpEditStatus" name="status"><option>Active</option><option>Inactive</option></select></div>
         <div class="rp-edit-field-wide rp-edit-remarks" id="rpEditRemarksWrap" hidden><label for="rpEditRemarks">Inactive remarks <small>(optional)</small></label><textarea id="rpEditRemarks" name="status_remarks" rows="3" maxlength="500" placeholder="Add a reason or note for the inactive status"></textarea></div>
       </div></section>
-      <section class="rp-edit-section"><h3><i class="bi bi-building" aria-hidden="true"></i> Affiliation and credentials</h3><div class="rp-edit-fields">
+      <section class="rp-edit-section"><h3><i class="bi bi-building" aria-hidden="true"></i> Affiliation and credentials</h3><div class="rp-edit-fields rp-edit-affiliation-fields">
         <div><label for="rpEditOffice">Affiliated office <span aria-hidden="true">*</span></label><input id="rpEditOffice" name="office" type="text" maxlength="150" required /></div>
         <div class="rp-edit-field-wide"><span class="rp-edit-list-label" id="rpQualificationLabel">Qualifications</span><ul class="rp-edit-bullet-list" id="rpQualificationList" aria-labelledby="rpQualificationLabel"></ul><button class="rp-edit-add-item" type="button" data-add-rp-item="qualification"><i class="bi bi-plus-circle" aria-hidden="true"></i> Add qualification</button></div>
         <div class="rp-edit-field-wide"><span class="rp-edit-list-label" id="rpExpertiseLabel">Expertise</span><ul class="rp-edit-bullet-list" id="rpExpertiseList" aria-labelledby="rpExpertiseLabel"></ul><button class="rp-edit-add-item" type="button" data-add-rp-item="expertise"><i class="bi bi-plus-circle" aria-hidden="true"></i> Add expertise</button></div>

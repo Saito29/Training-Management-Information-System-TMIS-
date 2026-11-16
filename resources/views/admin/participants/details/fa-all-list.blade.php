@@ -56,7 +56,7 @@ class="layout-fixed" data-fa-list-status="Active"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/participants/details/all-status.css?v=all-status-page-size-1') }}"
+      href="{{ asset('src/css/participants/details/all-status.css?v=table-row-theme-1') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/participants/details/fa-all-list.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />

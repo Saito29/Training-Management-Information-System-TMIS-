@@ -58,7 +58,7 @@ class="layout-fixed"
       rel="stylesheet"
       href="{{ asset('src/css/training/id/view-training.css') }}"
     />
-    <link rel="stylesheet" href="{{ asset('src/css/training/id/view-rp.css?v=14') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/training/id/view-rp.css?v=15') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
     <title>DA-TMIS - View Resource Person</title>
@@ -1491,5 +1491,5 @@ class="layout-fixed"
     <!-- nav -->
     <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/training/id/view-rp.js?v=12') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-rp.js?v=13') }}"></script>
 @endsection

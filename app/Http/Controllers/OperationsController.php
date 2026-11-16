@@ -112,65 +112,197 @@ class OperationsController
     public function deletedParticipants(Request $request): View
     {
         ModuleAccess::authorizeNavigationPage($request, 'participants', 'details.trash');
-        $filters = $request->validate([
-            'search' => ['nullable', 'string', 'max:100'],
-            'per_page' => ['nullable', 'integer', Rule::in([20, 50, 100])],
-        ]);
+        $filters = $this->deletedParticipantFilters($request, true);
         $perPage = (int) ($filters['per_page'] ?? 20);
-        $participants = OriginalInterfaceData::query($request->user(), 'participants', true)
-            ->select([
-                'participants.id',
-                'participants.ui_id',
-                'participants.name',
-                'participants.first_name',
-                'participants.middle_name',
-                'participants.last_name',
-                'participants.suffix',
-                'participants.sex',
-                'participants.province',
-                'participants.municipality',
-                'participants.barangay',
-                'participants.is_active',
-                'participants.created_at',
-                'participants.deleted_at',
-                'participants.permanent_deletion_at',
-            ])
-            ->selectSub(DB::table('region')->select('name')->whereColumn('region.region_id', 'participants.region_id'), 'region_name')
-            ->selectSub(DB::table('organization')->select('name')->whereColumn('organization.org_id', 'participants.org_id'), 'office_name')
-            ->selectSub(DB::table('record_statuses')->select('name')->whereColumn('record_statuses.id', 'participants.record_status_id'), 'record_status_name')
-            ->when(array_key_exists('search', $filters), function (Builder $query) use ($filters): void {
-                $search = (string) $filters['search'];
-                if ($search === '') {
-                    return;
-                }
-                $term = '%'.$search.'%';
-                $query->where(function (Builder $query) use ($term): void {
-                    $query->where('participants.ui_id', 'like', $term)
-                        ->orWhere('participants.name', 'like', $term)
-                        ->orWhere('participants.first_name', 'like', $term)
-                        ->orWhere('participants.last_name', 'like', $term)
-                        ->orWhere('participants.province', 'like', $term)
-                        ->orWhere('participants.municipality', 'like', $term)
-                        ->orWhere('participants.barangay', 'like', $term)
-                        ->orWhereExists(fn (Builder $region): Builder => $region->selectRaw('1')
-                            ->from('region')
-                            ->whereColumn('region.region_id', 'participants.region_id')
-                            ->where('region.name', 'like', $term))
-                        ->orWhereExists(fn (Builder $office): Builder => $office->selectRaw('1')
-                            ->from('organization')
-                            ->whereColumn('organization.org_id', 'participants.org_id')
-                            ->where('organization.name', 'like', $term));
-                });
-            })
-            ->orderByDesc('participants.deleted_at')
-            ->orderByDesc('participants.id')
-            ->paginate($perPage)
-            ->withQueryString();
+        $query = $this->deletedParticipantQuery($request, $filters);
+        $this->sortDeletedParticipants($query, $filters);
+        $participants = $query->paginate($perPage)->withQueryString();
+        $participants->getCollection()->transform(fn (object $participant): object => $this->presentDeletedParticipant($participant));
+
+        $scopedParticipants = OriginalInterfaceData::query($request->user(), 'participants', true);
+        $regions = DB::table('region')->whereIn('region_id', (clone $scopedParticipants)->select('region_id'))->orderBy('name')->get(['region_id', 'name']);
+        $offices = DB::table('organization')->whereIn('org_id', (clone $scopedParticipants)->select('org_id'))->orderBy('name')->get(['org_id', 'name']);
+        $provinces = (clone $scopedParticipants)->whereNotNull('province')->where('province', '!=', '')->distinct()->orderBy('province')->pluck('province');
+        $districts = (clone $scopedParticipants)->whereNotNull('district')->where('district', '!=', '')->distinct()->orderBy('district')->pluck('district');
+        $municipalities = (clone $scopedParticipants)->whereNotNull('municipality')->where('municipality', '!=', '')->distinct()->orderBy('municipality')->pluck('municipality');
+        $barangays = (clone $scopedParticipants)->whereNotNull('barangay')->where('barangay', '!=', '')->distinct()->orderBy('barangay')->pluck('barangay');
+        $years = (clone $scopedParticipants)->whereNotNull('created_at')->selectRaw('DISTINCT EXTRACT(YEAR FROM created_at)::integer AS year')->orderByDesc('year')->pluck('year');
 
         return view('admin.participants.details.trash', [
             'participants' => $participants,
             'canRestore' => ModuleAccess::isAdministrator($request->user()),
+            'filterOptions' => compact('regions', 'offices', 'provinces', 'districts', 'municipalities', 'barangays', 'years'),
         ]);
+    }
+
+    public function exportDeletedParticipants(Request $request): JsonResponse
+    {
+        ModuleAccess::authorizeNavigationPage($request, 'participants', 'details.trash');
+        $filters = $this->deletedParticipantFilters($request, false);
+        $query = $this->deletedParticipantQuery($request, $filters);
+        $this->sortDeletedParticipants($query, $filters);
+
+        return response()->json($query->get()->map(fn (object $participant): array => $this->deletedParticipantExportRow($participant))->values());
+    }
+
+    public function permanentlyDeletedParticipants(Request $request): View
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'per_page' => ['nullable', 'integer', Rule::in([20, 50, 100])],
+        ]);
+
+        $logs = DB::table('users_log')
+            ->leftJoin('users as actor', 'users_log.actor_user_id', '=', 'actor.user_id')
+            ->where('users_log.category', 'participants')
+            ->where('users_log.event', 'like', 'participants_permanently_deleted_%')
+            ->where('users_log.outcome', 'success')
+            ->select([
+                'users_log.id', 'users_log.event', 'users_log.reference', 'users_log.old_values',
+                'users_log.created_at', 'actor.first_name as actor_first_name',
+                'actor.middle_name as actor_middle_name', 'actor.last_name as actor_last_name',
+            ])
+            ->orderByDesc('users_log.created_at')
+            ->orderByDesc('users_log.id');
+
+        if (filled($filters['search'] ?? null)) {
+            $term = '%'.trim((string) $filters['search']).'%';
+            $logs->where(function (Builder $query) use ($term): void {
+                $query->where('users_log.reference', 'like', $term)
+                    ->orWhereRaw('CAST(users_log.old_values AS TEXT) LIKE ?', [$term])
+                    ->orWhere('actor.first_name', 'like', $term)
+                    ->orWhere('actor.last_name', 'like', $term);
+            });
+        }
+
+        $perPage = (int) ($filters['per_page'] ?? 20);
+        $records = $logs->paginate($perPage)->withQueryString();
+        $records->getCollection()->transform(function (object $log): object {
+            $values = $this->auditValues($log->old_values);
+            $log->farmer_number = (string) ($values['record_name'] ?? 'Previously deleted record');
+            $log->deleted_by = trim(implode(' ', array_filter([
+                $log->actor_first_name,
+                $log->actor_middle_name,
+                $log->actor_last_name,
+            ]))) ?: 'System administrator';
+
+            return $log;
+        });
+
+        return view('admin.participants.details.permanently-deleted', ['records' => $records]);
+    }
+
+    /** @return array<string, mixed> */
+    private function deletedParticipantFilters(Request $request, bool $includePageSize): array
+    {
+        $rules = [
+            'search' => ['nullable', 'string', 'max:100'],
+            'year' => ['nullable', 'integer', 'min:2000', 'max:2200'],
+            'region_id' => ['nullable', 'integer', 'min:1'],
+            'org_id' => ['nullable', 'integer', 'min:1'],
+            'province' => ['nullable', 'string', 'max:100'],
+            'district' => ['nullable', 'string', 'max:100'],
+            'municipality' => ['nullable', 'string', 'max:100'],
+            'barangay' => ['nullable', 'string', 'max:100'],
+            'sort' => ['nullable', Rule::in(['farmerNumber', 'year', 'last_name', 'first_name', 'middle_name', 'status', 'region_name', 'province', 'district', 'municipality', 'barangay', 'office_name', 'sex', 'created_at', 'deleted_at', 'permanent_deletion_at'])],
+            'direction' => ['nullable', Rule::in(['asc', 'desc'])],
+        ];
+        if ($includePageSize) {
+            $rules['per_page'] = ['nullable', 'integer', Rule::in([20, 50, 100])];
+        }
+
+        return $request->validate($rules);
+    }
+
+    private function deletedParticipantQuery(Request $request, array $filters): Builder
+    {
+        return OriginalInterfaceData::query($request->user(), 'participants', true)
+            ->select([
+                'participants.id', 'participants.ui_id', 'participants.ui_data', 'participants.name',
+                'participants.first_name', 'participants.middle_name', 'participants.last_name', 'participants.suffix',
+                'participants.date_of_birth', 'participants.sex', 'participants.province', 'participants.district',
+                'participants.municipality', 'participants.barangay', 'participants.region_id', 'participants.org_id',
+                'participants.association_role', 'participants.is_active', 'participants.created_at', 'participants.deleted_at',
+                'participants.permanent_deletion_at',
+            ])
+            ->selectSub(DB::table('region')->select('name')->whereColumn('region.region_id', 'participants.region_id'), 'region_name')
+            ->selectSub(DB::table('organization')->select('name')->whereColumn('organization.org_id', 'participants.org_id'), 'office_name')
+            ->selectSub(DB::table('associations')->select('name')->whereColumn('associations.id', 'participants.association_id'), 'association_name')
+            ->selectSub(DB::table('record_statuses')->select('name')->whereColumn('record_statuses.id', 'participants.record_status_id'), 'record_status_name')
+            ->when(isset($filters['year']), fn (Builder $query): Builder => $query->whereYear('participants.created_at', (int) $filters['year']))
+            ->when(isset($filters['region_id']), fn (Builder $query): Builder => $query->where('participants.region_id', (int) $filters['region_id']))
+            ->when(isset($filters['org_id']), fn (Builder $query): Builder => $query->where('participants.org_id', (int) $filters['org_id']))
+            ->when(isset($filters['province']), fn (Builder $query): Builder => $query->where('participants.province', $filters['province']))
+            ->when(isset($filters['district']), fn (Builder $query): Builder => $query->where('participants.district', $filters['district']))
+            ->when(isset($filters['municipality']), fn (Builder $query): Builder => $query->where('participants.municipality', $filters['municipality']))
+            ->when(isset($filters['barangay']), fn (Builder $query): Builder => $query->where('participants.barangay', $filters['barangay']))
+            ->when(filled($filters['search'] ?? null), function (Builder $query) use ($filters): void {
+                $term = '%'.trim((string) $filters['search']).'%';
+                $query->where(function (Builder $query) use ($term): void {
+                    foreach (['participants.ui_id', 'participants.name', 'participants.first_name', 'participants.middle_name', 'participants.last_name', 'participants.province', 'participants.district', 'participants.municipality', 'participants.barangay'] as $column) {
+                        $query->orWhere($column, 'like', $term);
+                    }
+                    $query->orWhereExists(fn (Builder $region): Builder => $region->selectRaw('1')->from('region')->whereColumn('region.region_id', 'participants.region_id')->where('region.name', 'like', $term))
+                        ->orWhereExists(fn (Builder $office): Builder => $office->selectRaw('1')->from('organization')->whereColumn('organization.org_id', 'participants.org_id')->where('organization.name', 'like', $term));
+                });
+            });
+    }
+
+    private function sortDeletedParticipants(Builder $query, array $filters): void
+    {
+        $sortColumns = [
+            'farmerNumber' => 'participants.id', 'year' => 'participants.created_at',
+            'last_name' => 'participants.last_name', 'first_name' => 'participants.first_name',
+            'middle_name' => 'participants.middle_name', 'status' => 'participants.record_status_id',
+            'region_name' => 'region_name', 'province' => 'participants.province', 'district' => 'participants.district',
+            'municipality' => 'participants.municipality', 'barangay' => 'participants.barangay',
+            'office_name' => 'office_name', 'sex' => 'participants.sex', 'created_at' => 'participants.created_at',
+            'deleted_at' => 'participants.deleted_at', 'permanent_deletion_at' => 'participants.permanent_deletion_at',
+        ];
+        $sort = (string) ($filters['sort'] ?? 'deleted_at');
+        $query->orderBy($sortColumns[$sort] ?? 'participants.deleted_at', (string) ($filters['direction'] ?? 'desc'))
+            ->orderByDesc('participants.id');
+    }
+
+    private function presentDeletedParticipant(object $participant): object
+    {
+        $metadata = $participant->ui_data ? OriginalInterfaceData::unpack($participant->ui_data) : [];
+        $participant->farmer_number = OriginalInterfaceData::farmerNumber($participant);
+        $participant->registration_year = substr((string) $participant->created_at, 0, 4);
+        $participant->farmer_organization = (string) ($metadata['organization'] ?? $metadata['associate_name'] ?? $participant->association_name ?? '');
+        $participant->farmer_role = (string) ($metadata['role'] ?? $metadata['associate_role'] ?? $participant->association_role ?? '');
+
+        return $participant;
+    }
+
+    private function deletedParticipantExportRow(object $participant): array
+    {
+        $participant = $this->presentDeletedParticipant($participant);
+        $date = static fn (?string $value): string => $value ? Carbon::parse($value)->timezone('Asia/Manila')->format('Y-m-d H:i') : '';
+
+        return [
+            'Farmer ID' => $participant->farmer_number,
+            'Year Registered' => $participant->registration_year,
+            'Last Name' => $participant->last_name,
+            'First Name' => $participant->first_name,
+            'Middle Name' => $participant->middle_name,
+            'Extension' => $participant->suffix,
+            'Previous Status' => $participant->record_status_name ?: ($participant->is_active ? 'Active' : 'Inactive'),
+            'Region' => $participant->region_name,
+            'Province' => $participant->province,
+            'District' => $participant->district,
+            'Municipality / City' => $participant->municipality,
+            'Barangay' => $participant->barangay,
+            'Office' => $participant->office_name,
+            'Farmer Organization' => $participant->farmer_organization,
+            'Farmer Role' => $participant->farmer_role,
+            'Sex' => $participant->sex,
+            'Date of Birth' => $participant->date_of_birth,
+            'Registered' => $date($participant->created_at),
+            'Deleted' => $date($participant->deleted_at),
+            'Permanent Deletion' => $date($participant->permanent_deletion_at),
+        ];
     }
 
     public function viewFarmerProfile(Request $request, ?string $id = null): View
@@ -271,6 +403,7 @@ class OperationsController
                 'deleted_at' => $lockedRecord->deleted_at,
                 'permanent_deletion_at' => $lockedRecord->permanent_deletion_at,
                 'ui_id' => $lockedRecord->ui_id,
+                'record_name' => OriginalInterfaceData::farmerNumber($lockedRecord),
             ]);
 
             $deleted = DB::table('participants')

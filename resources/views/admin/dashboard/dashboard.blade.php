@@ -6,7 +6,7 @@ class="layout-fixed"
 
 @section('head')
 <link rel="stylesheet" href="{{ asset('src/css/dashboard/database-dashboard.css') }}">
-<script src="{{ asset('src/js/dashboard/database-dashboard.js') }}" defer></script>
+<script src="{{ asset('src/js/dashboard/database-dashboard.js?v=dashboard-upcoming-training-window-2') }}" defer></script>
 <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="{{ asset('src/js/shared/page-loading.js') }}"></script>
@@ -70,7 +70,7 @@ class="layout-fixed"
       href="https://cdn.datatables.net/buttons/3.2.5/css/buttons.dataTables.min.css"
     />
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
-    <link rel="stylesheet" href="{{ asset('src/css/dashboard/app.css?v=dashboard-tooltip-report-layout-3') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/dashboard/app.css?v=dashboard-highlight-layout-3') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
     <title>Dashboard | TMIS</title>
@@ -1370,7 +1370,7 @@ class="layout-fixed"
           <!-- fifth row -->
           <!-- Upcoming training and Highlights and recommendation  -->
           <div class="row fifth-row g-4">
-            <div class="col-12 col-xl-4">
+            <div class="col-12 col-xl-5 dashboard-upcoming-column">
               <div class="card card-upcoming-training">
                 <div class="card-header">
                   <h5 class="card-header-text">Upcoming Training</h5>
@@ -1398,16 +1398,43 @@ class="layout-fixed"
     $upcomingStart->format('Y') === $upcomingEnd->format('Y') => $upcomingStart->format('M j').'–'.$upcomingEnd->format('M j, Y'),
     default => $upcomingStart->format('M j, Y').'–'.$upcomingEnd->format('M j, Y'),
   };
+  $upcomingLocations = collect($upcomingTraining['trainingLocations'] ?? [])->map(function (array $location): string {
+    $address = implode(', ', array_filter([
+      $location['barangay'] ?? null,
+      $location['municipality'] ?? null,
+      $location['province'] ?? null,
+      $location['region'] ?? null,
+    ]));
+
+    return implode(' — ', array_filter([$location['venue'] ?? null, $address]));
+  })->filter()->unique()->values();
+  if ($upcomingLocations->isEmpty()) {
+    $address = implode(', ', array_filter([
+      $upcomingTraining['barangay'] ?? null,
+      $upcomingTraining['municipality'] ?? null,
+      $upcomingTraining['province'] ?? null,
+      $upcomingTraining['region'] ?? null,
+    ]));
+    $upcomingLocations = collect([implode(' — ', array_filter([$upcomingTraining['venue'] ?? null, $address]))])->filter()->values();
+  }
 @endphp
-<div class="card-wrapper col-12 mb-3"><div class="card-date" aria-label="Starts {{ $upcomingStart->format('F j, Y') }}"><span class="card-month">{{ $upcomingStart->format('M') }}</span><span class="card-date-text">{{ $upcomingStart->format('j') }}</span></div><div class="card-training-wrapper"><div class="card-training-title"><a href="{{ route('admin.training.id.view-training', ['id' => $upcomingTraining['id']]) }}" class="card-text-title nav-link">{{ $upcomingTraining['title'] }}</a></div><div class="card-dl-range"><div class="card-date-range"><i class="bi bi-calendar3" aria-hidden="true"></i><span class="card-range-date">{{ $upcomingDateRange }}</span></div><div class="card-location"><i class="bi bi-geo-alt" aria-hidden="true"></i><span class="card-location-text">{{ $upcomingTraining['venue'] }}</span></div></div></div><div class="card-slot"><span class="slot-text">Participants</span><span class="slot-number">{{ $upcomingTraining['target_participants'] ?? count($upcomingTraining['participants']) }}</span></div></div>
+<div class="card-wrapper col-12 mb-3">
+  <div class="card-date" aria-label="Starts {{ $upcomingStart->format('F j, Y') }}"><span class="card-month">{{ $upcomingStart->format('M') }}</span><span class="card-date-text">{{ $upcomingStart->format('j') }}</span></div>
+  <div class="card-training-wrapper">
+    <div class="card-training-title"><a href="{{ route('admin.training.id.view-training', ['id' => $upcomingTraining['id']]) }}" class="card-text-title nav-link">{{ $upcomingTraining['title'] }}</a></div>
+    <div class="upcoming-training-meta"><span class="upcoming-training-status">{{ $upcomingTraining['status'] ?? 'Status not recorded' }}</span><span class="upcoming-training-countdown">@if($upcomingTraining['daysUntilStart'] > 0)Starts in {{ $upcomingTraining['daysUntilStart'] }} {{ $upcomingTraining['daysUntilStart'] === 1 ? 'day' : 'days' }} @elseif($upcomingTraining['daysUntilStart'] === 0)Starts today @else In progress · ends {{ $upcomingEnd->format('M j') }}@endif</span></div>
+    <div class="card-dl-range"><div class="card-date-range"><i class="bi bi-calendar3" aria-hidden="true"></i><span class="card-range-date">{{ $upcomingDateRange }}</span></div><div class="card-location"><i class="bi bi-geo-alt" aria-hidden="true"></i><span class="card-location-text">{{ $upcomingLocations->implode(' · ') }}</span></div></div>
+  </div>
+  <div class="card-slot"><span class="slot-text">Participants</span><span class="slot-number">{{ $upcomingTraining['target_participants'] ?? count($upcomingTraining['participants']) }}</span></div>
+</div>
 @empty
-<div class="card-wrapper col-12 mb-3"><div class="card-date"><span class="card-month"></span><span class="card-date-text"></span></div><div class="card-training-wrapper"><div class="card-training-title"><span class="card-text-title">No upcoming training</span></div><div class="card-dl-range"><div class="card-date-range"><i class="bi bi-calendar3" aria-hidden="true"></i><span class="card-range-date">No upcoming date</span></div><div class="card-location"><span class="card-location-text"></span></div></div></div><div class="card-slot" hidden><span class="slot-number"></span></div></div>
+<div class="card-wrapper col-12 mb-3"><div class="card-date"><span class="card-month"></span><span class="card-date-text"></span></div><div class="card-training-wrapper"><div class="card-training-title"><span class="card-text-title">No upcoming or in-progress trainings</span></div><div class="card-dl-range"><div class="card-date-range"><i class="bi bi-calendar3" aria-hidden="true"></i><span class="card-range-date">Training dates that have ended are hidden</span></div><div class="card-location"><span class="card-location-text"></span></div></div></div><div class="card-slot" hidden><span class="slot-number"></span></div></div>
 @endforelse
 </div>
                 </div>
               </div>
             </div>
-            <div class="col-12 col-xl-8">
+            <div class="col-12 col-xl-7 dashboard-highlights-column">
               <div class="card community-feedback-card h-100">
                 <div
                   id="communityFeedbackCarousel"
@@ -1416,7 +1443,7 @@ class="layout-fixed"
                   aria-roledescription="carousel"
                   aria-label="Community feedback"
                 >
-                  <div class="carousel-inner"><article class="carousel-item active dashboard-highlight-empty"><div><i class="bi bi-images" aria-hidden="true"></i><h3>No highlights yet</h3><p>Training highlights and community feedback will appear here when they are available.</p></div></article></div>
+                  <div class="carousel-inner"><article class="carousel-item active dashboard-highlight-empty"><div><i class="bi bi-images" aria-hidden="true"></i><h3>No highlights to show</h3><p>Selected training highlights and ways forward will appear here.</p></div></article></div>
                   <div class="carousel-indicators community-feedback-indicators">
                     <button
                       type="button"
@@ -2295,6 +2322,6 @@ class="layout-fixed"
 
     <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/dashboard/scriptv2.js?v=dashboard-card-reports-2') }}"></script>
-    <script src="{{ asset('src/js/dashboard/training-highlight-carousel.js') }}"></script>
+    <script src="{{ asset('src/js/dashboard/scriptv2.js?v=dashboard-upcoming-training-window-2') }}"></script>
+    <script src="{{ asset('src/js/dashboard/training-highlight-carousel.js?v=dashboard-highlight-layout-3') }}"></script>
 @endsection
