@@ -606,7 +606,7 @@ class OperationsController
 
     public function transition(Request $request, int $id): JsonResponse|RedirectResponse
     {
-        $data = $request->validate(['status' => ['required', Rule::in(['For approval', 'For acceptance', 'Approved & Accepted', 'For review'])], 'version' => ['required', 'integer', 'min:1'], 'reason' => ['nullable', 'string', 'max:2000']]);
+        $data = $request->validate(['status' => ['required', Rule::in(['For approval', 'For acceptance', 'Approved & Accepted', 'For review', 'Rejected'])], 'version' => ['required', 'integer', 'min:1'], 'reason' => ['nullable', 'string', 'max:2000']]);
         DB::transaction(function () use ($request, $id, $data): void {
             $this->applyTrainingTransition($request, $id, $data);
         });
@@ -685,19 +685,26 @@ class OperationsController
         abort_unless($training->is_active, 409, 'Inactive trainings cannot change status.');
         abort_unless((int) $training->version === (int) $data['version'], 409, 'Training changed. Refresh before trying again.');
         $allowed = [
-            'For review' => ['For approval'],
+            'For review' => ['For approval', 'Rejected'],
             'For approval' => ['For acceptance', 'For review'],
             'For acceptance' => ['Approved & Accepted', 'For approval', 'For review'],
+            'Rejected' => ['For review'],
             'Approved & Accepted' => [],
         ];
         abort_unless(in_array($data['status'], $allowed[$training->status] ?? [], true), 409, 'Invalid training status transition.');
-        if (in_array($training->status, ['For approval', 'For acceptance'], true)
+        if ((in_array($training->status, ['For approval', 'For acceptance'], true)
             && in_array($data['status'], ['For approval', 'For review'], true)
+            || ($training->status === 'Rejected' && $data['status'] === 'For review'))
             && blank($data['reason'] ?? null)) {
             throw ValidationException::withMessages(['reason' => 'Add a reason when returning a training to an earlier status.']);
         }
+        if ($data['status'] === 'Rejected' && blank($data['reason'] ?? null)) {
+            throw ValidationException::withMessages(['reason' => 'Add a reason when rejecting a training.']);
+        }
         $permission = match ([$training->status, $data['status']]) {
             ['For review', 'For approval'] => 'trainings.submit',
+            ['For review', 'Rejected'] => 'trainings.submit',
+            ['Rejected', 'For review'] => 'trainings.submit',
             ['For approval', 'For acceptance'], ['For approval', 'For review'] => 'trainings.approve',
             ['For acceptance', 'Approved & Accepted'], ['For acceptance', 'For approval'], ['For acceptance', 'For review'] => 'trainings.accept',
             default => null,
@@ -707,44 +714,251 @@ class OperationsController
             abort_unless(ModuleAccess::isAdministrator($request->user()), 403, 'Only System Administrators can finalize training acceptance.');
         }
         if ($training->status === 'For review' && $data['status'] === 'For approval') {
-            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
-            $requiredTypes = DB::table('attachment_type_options')
-                ->where('category', 'training')
-                ->where('is_required', true)
-                ->lockForUpdate()
-                ->pluck('name');
-            $uploadedTypes = DB::table('training_attachments')
-                ->where('training_id', $id)
-                ->get(['original_kind', 'kind', 'path'])
-                ->filter(fn ($attachment): bool => Storage::disk('local')->exists($attachment->path))
-                ->map(fn ($attachment): string => mb_strtolower(trim((string) ($attachment->original_kind ?: $attachment->kind))))
-                ->unique()
-                ->all();
-            $missingTypes = $requiredTypes
-                ->reject(fn (string $name): bool => in_array(mb_strtolower(trim($name)), $uploadedTypes, true))
-                ->values();
-
-            if ($missingTypes->isNotEmpty()) {
-                $message = 'Upload the required training attachment type(s): '.$missingTypes->implode(', ').'.';
-                $errors = ['required_attachments' => $message];
-                if ($missingTypes->contains(fn (string $name): bool => mb_strtolower(trim($name)) === 'training design')) {
-                    $errors['training_design'] = 'Upload a training design attachment before submitting for approval.';
-                }
-
-                throw ValidationException::withMessages($errors);
-            }
+            $this->assertTrainingReadyForApproval($id);
         }
-        DB::table('trainings')->where('id', $id)->update(['status' => $data['status'], 'version' => $training->version + 1, 'updated_at' => now()]);
+        if ($training->status === 'For approval' && $data['status'] === 'For acceptance') {
+            $this->assertTrainingHighlightsReadyForAcceptance($id);
+        }
+        $statusRemarks = $data['status'] === 'Rejected'
+            ? trim((string) $data['reason'])
+            : ($training->status === 'Rejected' && $data['status'] === 'For review' ? null : $training->status_remarks);
+        DB::table('trainings')->where('id', $id)->update([
+            'status' => $data['status'],
+            'status_remarks' => $statusRemarks,
+            'version' => $training->version + 1,
+            'updated_at' => now(),
+        ]);
         $changeId = DB::table('training_status_changes')->insertGetId(['training_id' => $id, 'actor_user_id' => $request->user()->user_id, 'from_status' => $training->status, 'to_status' => $data['status'], 'reason' => $data['reason'] ?? null, 'created_at' => now()]);
         /** The outbox is committed with the status, so mail failures cannot lose the notification. */
-        DB::table('users')->join('user_roles', 'users.role_id', '=', 'user_roles.role_id')->where('users.region_id', $training->region_id)->where('users.org_id', $training->org_id)
-            ->where('users.status', 'Approved & Accepted')->where('users.active_status', 1)->where('user_roles.is_active', 1)
-            ->select('users.user_id', 'users.email')->orderBy('users.user_id')->chunk(100, function ($users) use ($changeId): void {
-                foreach ($users as $user) {
-                    DB::table('training_notifications')->insert(['status_change_id' => $changeId, 'user_id' => $user->user_id, 'email' => $user->email, 'created_at' => now()]);
-                }
-            });
+        $matchingRuleIds = DB::table('training_notification_rules')
+            ->where('is_enabled', true)
+            ->where(function ($query) use ($training, $data): void {
+                $query->where(fn ($exact) => $exact->where('from_status', $training->status)->where('to_status', $data['status']))
+                    ->orWhere(fn ($all) => $all->where('from_status', '*')->where('to_status', '*'));
+            })
+            ->pluck('id');
+        $recipientRoleIds = $matchingRuleIds->isEmpty()
+            ? collect()
+            : DB::table('training_notification_rule_roles')
+                ->whereIn('rule_id', $matchingRuleIds)
+                ->where('is_enabled', true)
+                ->pluck('role_id')
+                ->unique()
+                ->values();
+
+        if ($recipientRoleIds->isNotEmpty()) {
+            DB::table('users')
+                ->join('user_roles', 'users.role_id', '=', 'user_roles.role_id')
+                ->whereIn('users.role_id', $recipientRoleIds)
+                ->where('users.region_id', $training->region_id)
+                ->where('users.org_id', $training->org_id)
+                ->where('users.status', 'Approved & Accepted')
+                ->where('users.active_status', 1)
+                ->whereNull('users.deleted_at')
+                ->where('user_roles.is_active', 1)
+                ->select('users.user_id', 'users.email')
+                ->orderBy('users.user_id')
+                ->chunk(100, function ($users) use ($changeId): void {
+                    foreach ($users as $user) {
+                        DB::table('training_notifications')->insert([
+                            'status_change_id' => $changeId,
+                            'user_id' => $user->user_id,
+                            'email' => $user->email,
+                            'created_at' => now(),
+                        ]);
+                    }
+                });
+        }
         $this->audit($request, 'trainings', $id, 'status_changed', ['status' => $training->status], ['status' => $data['status']]);
+    }
+
+    private function assertTrainingReadyForApproval(int $trainingId): void
+    {
+        DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+        $blockers = [];
+        $requiredTypes = DB::table('attachment_type_options')
+            ->where('category', 'training')
+            ->where('is_required', true)
+            ->lockForUpdate()
+            ->pluck('name')
+            ->push('Training design')
+            ->unique(fn (string $name): string => mb_strtolower(trim($name)));
+        $uploadedTypes = DB::table('training_attachments')
+            ->where('training_id', $trainingId)
+            ->get(['original_kind', 'kind', 'path'])
+            ->filter(fn ($attachment): bool => Storage::disk('local')->exists($attachment->path))
+            ->map(fn ($attachment): string => mb_strtolower(trim((string) ($attachment->original_kind ?: $attachment->kind))))
+            ->unique()
+            ->all();
+        $missingTypes = $requiredTypes
+            ->reject(fn (string $name): bool => in_array(mb_strtolower(trim($name)), $uploadedTypes, true))
+            ->values();
+        if ($missingTypes->isNotEmpty()) {
+            $blockers[] = 'Upload the required training attachment(s): '.$missingTypes->implode(', ').'.';
+        }
+
+        $participantIds = DB::table('training_participant')
+            ->join('participants', 'participants.id', '=', 'training_participant.participant_id')
+            ->where('training_participant.training_id', $trainingId)
+            ->where('participants.is_active', true)
+            ->whereNull('participants.deleted_at')
+            ->pluck('participants.id')
+            ->map(fn ($participantId): int => (int) $participantId)
+            ->all();
+        if ($participantIds === []) {
+            $blockers[] = 'Add at least one active participant to the training.';
+        }
+
+        $resourcePersonIds = DB::table('training_resource_person')
+            ->join('resource_persons', 'resource_persons.id', '=', 'training_resource_person.resource_person_id')
+            ->where('training_resource_person.training_id', $trainingId)
+            ->where('resource_persons.is_active', true)
+            ->whereNull('resource_persons.deleted_at')
+            ->pluck('resource_persons.id')
+            ->map(fn ($resourcePersonId): int => (int) $resourcePersonId)
+            ->all();
+        if ($resourcePersonIds === []) {
+            $blockers[] = 'Add at least one active resource person to the training.';
+        }
+
+        $questionnaires = DB::table('training_questionnaire')
+            ->join('questionnaires', 'questionnaires.id', '=', 'training_questionnaire.questionnaire_id')
+            ->where('training_questionnaire.training_id', $trainingId)
+            ->whereNull('questionnaires.deleted_at')
+            ->get(['questionnaires.id', 'questionnaires.kind', 'questionnaires.name']);
+        $requiredKinds = ['Pre-test', 'Post-test', 'Training evaluation', 'Resource person evaluation'];
+        $questionnaireIds = $questionnaires->pluck('id')->all();
+        $completeResponses = $questionnaireIds === []
+            ? collect()
+            : DB::table('assessment_results')
+                ->where('training_id', $trainingId)
+                ->whereIn('questionnaire_id', $questionnaireIds)
+                ->where('state', 'complete')
+                ->whereNull('deleted_at')
+                ->get(['questionnaire_id', 'participant_id', 'resource_person_id'])
+                ->groupBy('questionnaire_id');
+
+        foreach ($requiredKinds as $kind) {
+            $assignedQuestionnaires = $questionnaires->where('kind', $kind);
+            if ($assignedQuestionnaires->isEmpty()) {
+                $blockers[] = 'Assign a '.$kind.' questionnaire to the training.';
+
+                continue;
+            }
+
+            foreach ($assignedQuestionnaires as $questionnaire) {
+                $responses = $completeResponses->get($questionnaire->id, collect())
+                    ->filter(fn ($response): bool => $response->participant_id !== null
+                        && in_array((int) $response->participant_id, $participantIds, true));
+                if ($kind === 'Resource person evaluation') {
+                    $encodedResourcePeople = $responses->pluck('resource_person_id')
+                        ->filter(fn ($value): bool => $value !== null && in_array((int) $value, $resourcePersonIds, true))
+                        ->map(fn ($value): int => (int) $value)
+                        ->unique()
+                        ->all();
+                    $missingResourcePeople = array_diff($resourcePersonIds, $encodedResourcePeople);
+                    if ($missingResourcePeople !== []) {
+                        $blockers[] = 'Complete a resource-person evaluation for every assigned resource person using '.$questionnaire->name.'.';
+                    }
+
+                    continue;
+                }
+
+                $encodedParticipants = $responses->pluck('participant_id')->filter()->map(fn ($value): int => (int) $value)->unique()->all();
+                $missingParticipants = array_diff($participantIds, $encodedParticipants);
+                if ($missingParticipants !== []) {
+                    $blockers[] = 'Complete '.$kind.' results for all active training participants using '.$questionnaire->name.' ('.count($missingParticipants).' remaining).';
+                }
+            }
+        }
+
+        if ($blockers !== []) {
+            throw ValidationException::withMessages(['readiness' => implode(' ', array_unique($blockers))]);
+        }
+    }
+
+    private function assertTrainingHighlightsReadyForAcceptance(int $trainingId): void
+    {
+        $uiData = DB::table('trainings')->where('id', $trainingId)->value('ui_data');
+        $metadata = OriginalInterfaceData::unpack($uiData);
+        $hasBulletContent = collect($metadata['bullets'] ?? [])
+            ->flatten()
+            ->contains(fn (mixed $value): bool => filled($value));
+        $highlights = DB::table('training_highlights')->where('training_id', $trainingId)->get(['content', 'image_path']);
+        $hasSavedSlide = $highlights->contains(function ($highlight): bool {
+            $content = is_array($highlight->content) ? $highlight->content : json_decode((string) $highlight->content, true);
+            $hasText = is_array($content) && collect(['heading', 'description', 'quote'])
+                ->contains(fn (string $field): bool => filled($content[$field] ?? null));
+
+            return $hasText || filled($highlight->image_path);
+        });
+
+        abort_unless($hasSavedSlide || $hasBulletContent, 422, 'Add a highlight or ways-forward entry before moving the training to For Acceptance.');
+    }
+
+    public function restoreRejectedTraining(Request $request, int $id): JsonResponse
+    {
+        ModuleAccess::authorize($request, 'trainings.submit');
+        $data = $request->validate(['version' => ['required', 'integer', 'min:1']]);
+
+        DB::transaction(function () use ($request, $id, $data): void {
+            $this->applyTrainingTransition($request, $id, [
+                'status' => 'For review',
+                'version' => $data['version'],
+                'reason' => 'Restored from rejected training records.',
+            ]);
+        });
+
+        return response()->json(['message' => 'Training restored to For Review.']);
+    }
+
+    public function permanentlyDeleteRejectedTraining(Request $request, int $id): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        ModuleAccess::authorize($request, 'trainings.delete');
+        $data = $request->validate(['version' => ['required', 'integer', 'min:1']]);
+
+        $attachmentPaths = DB::transaction(function () use ($request, $id, $data): array {
+            $training = $this->query($request, 'trainings')->where('id', $id)->lockForUpdate()->first();
+            abort_unless($training, 404);
+            abort_unless($training->status === 'Rejected', 409, 'Only rejected trainings can be permanently deleted here.');
+            abort_unless((int) $training->version === (int) $data['version'], 409, 'Training changed. Refresh before trying again.');
+
+            $attachmentPaths = DB::table('training_attachments')->where('training_id', $id)->pluck('path')->all();
+            $highlightPaths = DB::table('training_highlights')->where('training_id', $id)->get(['image_path', 'logo_path'])
+                ->flatMap(fn ($highlight): array => [$highlight->image_path, $highlight->logo_path])
+                ->all();
+            $filePaths = array_values(array_unique(array_filter(
+                array_merge($attachmentPaths, $highlightPaths),
+                static fn (mixed $path): bool => is_string($path) && $path !== '',
+            )));
+
+            $statusChangeIds = DB::table('training_status_changes')->where('training_id', $id)->pluck('id');
+            DB::table('training_notifications')->whereIn('status_change_id', $statusChangeIds)->delete();
+            DB::table('training_status_changes')->where('training_id', $id)->delete();
+            DB::table('assessment_results')->where('training_id', $id)->delete();
+            DB::table('evaluation_responses')->where('training_id', $id)->delete();
+            DB::table('training_questionnaire')->where('training_id', $id)->delete();
+            DB::table('training_participant')->where('training_id', $id)->delete();
+            DB::table('training_resource_person')->where('training_id', $id)->delete();
+            DB::table('training_association')->where('training_id', $id)->delete();
+            DB::table('training_highlights')->where('training_id', $id)->delete();
+            DB::table('training_attachments')->where('training_id', $id)->delete();
+            $this->audit($request, 'trainings', $id, 'permanently_deleted', before: [
+                'status' => $training->status,
+                'record_name' => $training->name,
+            ]);
+            $deleted = DB::table('trainings')->where('id', $id)->where('status', 'Rejected')->delete();
+            abort_unless($deleted === 1, 409, 'Training could not be permanently deleted.');
+
+            return $filePaths;
+        });
+
+        if ($attachmentPaths !== []) {
+            Storage::disk('local')->delete($attachmentPaths);
+        }
+
+        return response()->json(['message' => 'Rejected training and its linked records were permanently deleted.']);
     }
 
     public function attachment(Request $request, int $id): JsonResponse|RedirectResponse
@@ -943,7 +1157,7 @@ class OperationsController
                 $notification->actor_suffix,
             );
             $notification->changed_at_human = Carbon::parse($notification->changed_at)
-                ->timezone(config('app.timezone'))
+                ->timezone(config('app.display_timezone', 'Asia/Manila'))
                 ->format('M j, Y g:i A');
             $notification->title = in_array($notification->to_status, ['For approval', 'For review'], true)
                 ? 'Training returned for changes'

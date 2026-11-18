@@ -1,5 +1,9 @@
 @if($isRevert)
 This training assigned to your office was returned for changes.
+@elseif($isSubmitted)
+A training assigned to your office has been submitted for approval.
+@elseif($isForwarded)
+A training assigned to your office has been forwarded for acceptance.
 @elseif($isFinalAcceptance)
 A training assigned to your office has received final approval and is now approved and accepted.
 @else

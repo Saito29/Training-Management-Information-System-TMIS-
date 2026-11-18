@@ -642,7 +642,24 @@ class OriginalInterfaceData
                     $workflowStatus = match ($record->status) {
                         'For review' => 'For Review', 'For approval' => 'For Approval', 'For acceptance' => 'For Acceptance', 'Approved', 'Approved & Accepted' => 'Approved & Accepted', default => $record->status
                     };
-                    $item = array_replace($item, ['title' => $record->name, 'training_title' => $record->name, 'type' => $record->training_type, 'training_type' => $record->training_type, 'delivery_mode' => $record->delivery_mode, 'startDate' => $record->start_date, 'endDate' => $record->end_date, 'start_date' => $record->start_date, 'end_date' => $record->end_date, 'venue' => $record->venue, 'venue_location' => $record->venue, 'budget' => $record->budget, 'training_budget' => $record->budget, 'target_participants' => $record->target_participants, 'yearCovered' => $record->year_covered, 'dateEncoded' => substr((string) $record->created_at, 0, 10), 'province' => $record->province, 'district' => $record->district, 'municipality' => $record->municipality, 'barangay' => $record->barangay, 'office' => $offices[$record->org_id] ?? 'Office not recorded', 'is_active' => (bool) $record->is_active, 'statusRemarks' => $record->status_remarks, 'workflowStatus' => $workflowStatus, 'status' => ! $record->is_active ? 'Inactive' : $workflowStatus, 'version' => $record->version]);
+                    $storedTrainingLocations = is_array($item['trainingLocations'] ?? null) ? array_values($item['trainingLocations']) : [];
+                    $primaryTrainingLocation = is_array($storedTrainingLocations[0] ?? null) ? $storedTrainingLocations[0] : [];
+                    $item['trainingLocations'] = array_merge([
+                        array_replace($primaryTrainingLocation, [
+                            'venue' => $record->venue,
+                            'region_id' => (string) $record->region_id,
+                            'region' => $regions[$record->region_id] ?? '',
+                            'province_id' => (string) ($record->province ?? ''),
+                            'province' => $record->province ?? '',
+                            'district_id' => (string) ($record->district ?? ''),
+                            'district' => $record->district ?? '',
+                            'municipality_id' => (string) ($record->municipality ?? ''),
+                            'municipality' => $record->municipality ?? '',
+                            'barangay_id' => (string) ($record->barangay ?? ''),
+                            'barangay' => $record->barangay ?? '',
+                        ]),
+                    ], array_slice($storedTrainingLocations, 1));
+                    $item = array_replace($item, ['name' => $record->name, 'title' => $record->name, 'training_title' => $record->name, 'description' => $record->description ?? '', 'training_description' => $record->description ?? '', 'partner_organization' => $record->partner_organization ?? '', 'type' => $record->training_type, 'training_type' => $record->training_type, 'delivery_mode' => $record->delivery_mode, 'startDate' => $record->start_date, 'endDate' => $record->end_date, 'start_date' => $record->start_date, 'end_date' => $record->end_date, 'venue' => $record->venue, 'venue_location' => $record->venue, 'budget' => $record->budget, 'training_budget' => $record->budget, 'target_participants' => $record->target_participants, 'year_covered' => $record->year_covered, 'yearCovered' => $record->year_covered, 'dateEncoded' => substr((string) $record->created_at, 0, 10), 'province_id' => (string) ($record->province ?? ''), 'province' => $record->province, 'district_id' => (string) ($record->district ?? ''), 'district' => $record->district, 'municipality_id' => (string) ($record->municipality ?? ''), 'municipality' => $record->municipality, 'barangay_id' => (string) ($record->barangay ?? ''), 'barangay' => $record->barangay, 'office' => $offices[$record->org_id] ?? 'Office not recorded', 'is_active' => (bool) $record->is_active, 'statusRemarks' => $record->status_remarks, 'workflowStatus' => $workflowStatus, 'status' => ! $record->is_active ? 'Inactive' : $workflowStatus, 'version' => $record->version]);
 
                     $item['trainers'] = collect($trainingResources[$record->id] ?? [])->map(fn ($resource): array => ['id' => $resource->ui_id ?? (string) $resource->id, 'name' => $resource->name, 'role' => $resource->title ?? 'Resource person'])->all();
                     foreach ([
@@ -764,7 +781,6 @@ class OriginalInterfaceData
             ->leftJoin('users as actor', 'training_status_changes.actor_user_id', '=', 'actor.user_id')
             ->leftJoin('organization as actor_office', 'actor.org_id', '=', 'actor_office.org_id')
             ->leftJoin('region as actor_region', 'actor.region_id', '=', 'actor_region.region_id')
-            ->leftJoin('user_roles as actor_role', 'actor.role_id', '=', 'actor_role.role_id')
             ->leftJoin('organization as training_office', 'trainings.org_id', '=', 'training_office.org_id')
             ->leftJoin('region as training_region', 'trainings.region_id', '=', 'training_region.region_id')
             ->where('training_notifications.user_id', $user->user_id)
@@ -776,7 +792,7 @@ class OriginalInterfaceData
                 'actor.first_name as actor_first_name', 'actor.middle_name as actor_middle_name',
                 'actor.last_name as actor_last_name', 'actor.extension_name as actor_suffix',
                 'actor_office.name as actor_office_name',
-                'actor_region.name as actor_region_name', 'actor_role.name as actor_role_name',
+                'actor_region.name as actor_region_name',
                 'training_region.name as training_region_name',
             ]) as $notification) {
 
@@ -787,23 +803,26 @@ class OriginalInterfaceData
                 $notification->actor_suffix,
             );
             $changedAt = Carbon::parse($notification->changed_at)
-                ->timezone(config('app.timezone'))
+                ->timezone(config('app.display_timezone', 'Asia/Manila'))
                 ->format('M j, Y g:i A');
-            $isRevert = in_array($notification->to_status, ['For approval', 'For review'], true);
-            $title = $isRevert ? 'Training returned for changes' : ($notification->to_status === 'Approved & Accepted' ? 'Training approved and accepted' : 'Training status updated');
-            $action = $isRevert ? 'returned from '.$notification->from_status.' to '.$notification->to_status : 'moved from '.$notification->from_status.' to '.$notification->to_status;
+            [$title, $action] = match ([$notification->from_status, $notification->to_status]) {
+                ['For review', 'For approval'] => ['Training submitted for approval', 'submitted for approval'],
+                ['For approval', 'For acceptance'] => ['Training forwarded for acceptance', 'forwarded for acceptance'],
+                ['For acceptance', 'Approved & Accepted'] => ['Training approved and accepted', 'approved and accepted'],
+                ['For review', 'Rejected'] => ['Training rejected', 'rejected'],
+                default => ['Training returned for changes', 'returned from '.$notification->from_status.' to '.$notification->to_status],
+            };
             $reason = trim((string) $notification->reason);
             $officeName = $notification->training_office_name ?: 'Office not recorded';
             $actorOffice = $notification->actor_office_name ?: 'Office not recorded';
             $actorRegion = $notification->actor_region_name ?: 'Region not recorded';
-            $actorRole = $notification->actor_role_name ?: 'User';
             $trainingRegion = $notification->training_region_name ?: 'Region not recorded';
             $summary = 'Training '.$action.'. Changed by '.$actorName.' · '.$actorOffice.' - '.$actorRegion.' · '.$changedAt.'.';
             $message = 'Training “'.$notification->training_name.'” (ID '.($notification->training_public_id ?? $notification->training_id).') was '.$action.'.';
-            if ($isRevert && $reason !== '') {
+            if ($reason !== '') {
                 $message .= ' Reason: '.$reason;
             }
-            $message .= ' Changed by '.$actorName.' ('.$actorRole.', '.$actorOffice.' - '.$actorRegion.') on '.$changedAt.'. Training office / organization: '.$officeName.' - '.$trainingRegion.'.';
+            $message .= ' Changed by '.$actorName.' ('.$actorOffice.' - '.$actorRegion.') on '.$changedAt.'. Training office / organization: '.$officeName.' - '.$trainingRegion.'.';
 
             $stores['tmis-notifications'][] = [
                 'id' => 'status-'.$notification->id,
@@ -818,7 +837,6 @@ class OriginalInterfaceData
                 'changedBy' => $actorName,
                 'actorOffice' => $actorOffice,
                 'actorRegion' => $actorRegion,
-                'actorRole' => $actorRole,
                 'office' => $officeName,
                 'region' => $trainingRegion,
                 'reason' => $reason,
@@ -863,6 +881,14 @@ class OriginalInterfaceData
             'roles' => $isAdministrator ? DB::table('user_roles')->where('is_active', 1)->where('name', '<>', 'System Administrator')->pluck('name')->all() : [],
             'stores' => $stores,
             'attachmentTypes' => AttachmentTypeCatalog::namesByCategory(),
+            'requiredAttachments' => [
+                'training' => DB::table('attachment_type_options')
+                    ->where('category', 'training')
+                    ->where('is_required', true)
+                    ->orderBy('name')
+                    ->pluck('name')
+                    ->all(),
+            ],
             'farmerStatuses' => str_contains($pagePath, '/participants/') ? $recordStatuses->values() : [],
             'actor' => (new AccountDisplay)->forUser($user),
             'regions' => DB::table('region')->where('is_active', 1)->get(['region_id', 'name']),

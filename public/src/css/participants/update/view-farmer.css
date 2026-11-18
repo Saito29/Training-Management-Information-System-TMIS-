@@ -4809,3 +4809,14 @@
 .activity-log-meta-item.activity-log-reference {
   grid-column: span 1;
 }
+
+/* Keep training overview cards readable when score summaries are present. */
+.training-preview-card{display:grid!important;grid-template-columns:76px minmax(0,1fr);grid-template-rows:minmax(126px,auto) 48px;grid-template-areas:"art main" "scores scores";align-items:stretch;min-height:180px;padding:0;gap:0}
+.training-preview-art{grid-area:art;align-self:start;justify-self:center}
+.training-preview-main{grid-area:main;min-width:0;overflow:hidden}
+.training-preview-main>strong{-webkit-line-clamp:2}
+.training-preview-scores{grid-area:scores;width:100%;min-width:0;min-height:48px}
+.training-preview-scores>span{min-width:0;padding:0 3px;text-align:center}
+.training-preview-scores strong{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.training-data-table .training-action-heading,.training-data-table .training-action-cell{width:60px!important;text-align:center}
+.training-table-title-text{display:block;max-width:330px;white-space:normal;font-size:10px}

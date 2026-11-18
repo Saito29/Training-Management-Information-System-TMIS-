@@ -56,7 +56,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/participants/update/view-farmer.css?v=farmer-training-detail-table-5') }}"
+      href="{{ asset('src/css/participants/update/view-farmer.css?v=farmer-training-metrics-6') }}"
     />
     @if(isset($deletedFarmerReview))
       <link rel="stylesheet" href="{{ asset('src/css/participants/details/deleted-farmers.css?v=deleted-farmer-profile-1') }}" />
@@ -3119,7 +3119,7 @@ class="layout-fixed"
     <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-profile-tabs.js?v=participated-training-history-2') }}"></script>
-    <script src="{{ asset('src/js/participants/update/farmer-training-table.js?v=filters-region-office-10') }}"></script>
+    <script src="{{ asset('src/js/participants/update/farmer-training-table.js?v=farmer-training-metrics-12') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-intervention-table.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-activity-logs.js?v=actor-role-omission-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/attachment-manager.js') }}"></script>

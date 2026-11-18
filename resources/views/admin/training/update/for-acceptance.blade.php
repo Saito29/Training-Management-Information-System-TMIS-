@@ -56,7 +56,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/training/update/for-acceptance.css') }}?v=selection-controls-1"
+      href="{{ asset('src/css/training/update/for-acceptance.css') }}?v=workflow-filters-db-selection-1"
     />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
@@ -67,8 +67,8 @@ class="layout-fixed"
 
 -->
       <script type="module" src="{{ asset('src/js/shared/activity-log.js') }}"></script>
-  <link rel="stylesheet" href="{{ asset('src/css/shared/toast.css') }}">
-    <script src="{{ asset('src/js/shared/toast.js') }}" defer></script>
+  <link rel="stylesheet" href="{{ asset('src/css/shared/toast.css') }}?v=status-toast-info-1">
+    <script src="{{ asset('src/js/shared/toast.js?v=status-toast-info-1') }}" defer></script>
 @endsection
 
 @section('content')
@@ -997,6 +997,10 @@ class="layout-fixed"
                         <option value="">All training types</option>
                       </select>
                     </div>
+                    <div class="toolbar-filter" id="regionFilterGroup" data-admin-only-region-filter hidden>
+                      <label for="regionFilter">Region</label
+                      ><select id="regionFilter" class="form-select"><option value="">All regions</option></select>
+                    </div>
                     <div class="toolbar-filter">
                       <label for="provinceFilter">Province</label
                       ><select id="provinceFilter" class="form-select">
@@ -1815,7 +1819,7 @@ class="layout-fixed"
                 <h5 class="modal-title" id="reviewForwardModalLabel">
                   Approve & Accept Training
                 </h5>
-                <p>Only a System Administrator can move selected trainings to the final approved and accepted status.</p>
+                <p>Only a System Administrator can finalize acceptance. Review the training and its saved highlight or ways-forward entry first.</p>
               </div>
             </div>
             <button
@@ -1842,6 +1846,11 @@ class="layout-fixed"
               <div class="approval-attachment-viewer" id="approvalAttachmentViewer">
                 <p class="approval-attachment-empty">Select a training to view its attached design.</p>
               </div>
+            </section>
+            <section class="requirements-panel" aria-labelledby="finalAcceptanceReadinessTitle">
+              <h6 id="finalAcceptanceReadinessTitle">Training readiness summary</h6>
+              <p class="requirements-intro">Review the saved highlight or ways-forward content before final acceptance.</p>
+              <div id="acceptanceRequirements" aria-live="polite"></div>
             </section>
           </div>
           <div class="modal-footer review-modal-footer">
@@ -2000,5 +2009,6 @@ class="layout-fixed"
     <!-- nav -->
     <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/training/update/for-acceptance.js?v=training-id-path-1') }}"></script>
+    <script src="{{ asset('src/js/training/update/workflow-modal-readiness.js?v=detailed-workflow-modal-2') }}"></script>
+    <script src="{{ asset('src/js/training/update/for-acceptance.js?v=workflow-filters-db-selection-1') }}"></script>
 @endsection

@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('body-attributes')
-class="layout-fixed"
+class="layout-fixed training-all-status-page"
 @endsection
 
 @section('head')
@@ -56,7 +56,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/training/details/all-status.css?v=table-row-theme-1') }}"
+      href="{{ asset('src/css/training/details/all-status.css?v=action-colors-theme-2') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>

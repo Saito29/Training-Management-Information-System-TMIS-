@@ -4,10 +4,10 @@
     {date:'2025-05-23', association:'Batangas Growers Association'},
   ];
   const answerGroups = window.TMIS_PAGE
-    ? ['pre-test','post-test','training-evaluation','rp-evaluation'].flatMap(kind => window.TmisTrainingData.results(kind).map(item => ({
-      date:item.date,
-      association:window.TmisStore.records('tmis-farmers').find(farmer => farmer.id === item.farmerId)?.association || '',
-    }))).filter(group => group.association)
+    ? ['pre-test','post-test','training-evaluation','rp-evaluation'].flatMap(kind => window.TmisTrainingData.results(kind).flatMap(item => {
+      const associations = item.associationNames?.length ? item.associationNames : [item.association || ''];
+      return associations.filter(Boolean).map(association => ({date:item.date, association}));
+    }))
     : sampleAnswerGroups;
   const associationRecords = window.TMIS_PAGE ? window.TmisStore.records('tmis-farmer-associations') : [];
   const state = {date:'', association:''};
@@ -48,6 +48,13 @@
   }
 
   window.trainingFeedbackFilters = {
+    matchesAssociation(response, association) {
+      if (!association) return true;
+      const associations = response?.associationNames;
+      return Array.isArray(associations) && associations.length
+        ? associations.includes(association)
+        : response?.association === association;
+    },
     register(dateSelect, associationSelect, onChange) {
       controls.push({dateSelect, associationSelect, onChange});
       dateSelect.addEventListener('change', () => {

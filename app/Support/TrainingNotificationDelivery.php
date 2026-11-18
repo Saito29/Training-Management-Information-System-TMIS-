@@ -30,9 +30,29 @@ class TrainingNotificationDelivery
                 ->where('users.user_id', $change->actor_user_id)
                 ->select('users.first_name', 'users.middle_name', 'users.last_name', 'users.extension_name', 'actor_office.name as office_name')
                 ->first();
-            $eligible = DB::table('users')->join('user_roles', 'users.role_id', '=', 'user_roles.role_id')->where('users.user_id', $entry->user_id)
-                ->where('users.email', $entry->email)->where('users.org_id', $training->org_id)->where('users.region_id', $training->region_id)
-                ->where('users.active_status', 1)->where('users.status', 'Approved & Accepted')->where('user_roles.is_active', 1)->exists();
+            $ruleIds = DB::table('training_notification_rules')
+                ->where('is_enabled', true)
+                ->where(function ($query) use ($change): void {
+                    $query->where(fn ($exact) => $exact->where('from_status', $change->from_status)->where('to_status', $change->to_status))
+                        ->orWhere(fn ($all) => $all->where('from_status', '*')->where('to_status', '*'));
+                })
+                ->pluck('id');
+            $roleIds = $ruleIds->isNotEmpty()
+                ? DB::table('training_notification_rule_roles')->whereIn('rule_id', $ruleIds)->where('is_enabled', true)->pluck('role_id')->unique()
+                : collect();
+            $eligible = $roleIds->isNotEmpty()
+                && DB::table('users')
+                    ->join('user_roles', 'users.role_id', '=', 'user_roles.role_id')
+                    ->where('users.user_id', $entry->user_id)
+                    ->where('users.email', $entry->email)
+                    ->where('users.org_id', $training->org_id)
+                    ->where('users.region_id', $training->region_id)
+                    ->where('users.active_status', 1)
+                    ->where('users.status', 'Approved & Accepted')
+                    ->whereNull('users.deleted_at')
+                    ->whereIn('users.role_id', $roleIds)
+                    ->where('user_roles.is_active', 1)
+                    ->exists();
             if (! $eligible) {
                 DB::table('training_notifications')->where('id', $id)->update(['cancelled_at' => now()]);
 
@@ -46,7 +66,7 @@ class TrainingNotificationDelivery
                     $actor?->extension_name,
                 );
                 $changedAt = Carbon::parse($change->created_at)
-                    ->timezone(config('app.timezone'))
+                    ->timezone(config('app.display_timezone', 'Asia/Manila'))
                     ->format('M j, Y g:i A');
                 Mail::to($entry->email)->send(new TrainingStatusChanged(
                     $training->name,

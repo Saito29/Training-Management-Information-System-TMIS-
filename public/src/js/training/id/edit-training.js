@@ -473,8 +473,8 @@ document.addEventListener('DOMContentLoaded', () => {
     district_id: selectedTraining.district_id || selectedTraining.district || '',
     municipality_id: selectedTraining.municipality_id || selectedTraining.municipality || '',
     barangay_id: selectedTraining.barangay_id || selectedTraining.barangay || '',
-    delivery_mode: selectedTraining.delivery_mode || 'In-person',
-    target_participants: String(selectedTraining.target_participants || ''),
+    delivery_mode: selectedTraining.delivery_mode || '',
+    target_participants: String(selectedTraining.target_participants ?? ''),
     trainers: selectedTraining.trainers || [],
     pretest: selectedTraining.pretest || [],
     posttest: selectedTraining.posttest || [],
@@ -484,10 +484,15 @@ document.addEventListener('DOMContentLoaded', () => {
     trainingLocations: selectedTraining.trainingLocations || [],
   } : null;
   let saved;
-  try {
-    const previous = JSON.parse(window.TmisStore.getItem(storageKey) || 'null');
-    saved = initialValues ? {...initialValues, ...(previous && typeof previous === 'object' ? previous : {})} : previous;
-  } catch { saved = initialValues; }
+  if (window.TMIS_PAGE) {
+    // Database-backed training fields are canonical; stale browser drafts must not override them.
+    saved = initialValues;
+  } else {
+    try {
+      const previous = JSON.parse(window.TmisStore.getItem(storageKey) || 'null');
+      saved = initialValues ? {...initialValues, ...(previous && typeof previous === 'object' ? previous : {})} : previous;
+    } catch { saved = initialValues; }
+  }
   if (saved && typeof saved === 'object') {
     Object.entries(saved).forEach(([name, value]) => {
       if (name === 'trainers' || Object.hasOwn(questionnaireLists, name) || name === 'associationIds' || addressNames.includes(name) || name === 'delivery_mode' || name === 'implementing_office') return;

@@ -253,9 +253,48 @@
   if(!window.TmisStore)return;
   const store=window.TmisStore, training=()=>store.selected('tmis-trainings');
   const farmers=()=>store.records('tmis-farmers');
-  const results=kind=>store.records('tmis-'+kind+'-encoded').filter(item=>item.status==='complete' && training() && Number(item.trainingDatabaseId)===Number(training()._db_id));
   const normalize=value=>String(value??'').trim().toLocaleLowerCase();
-  function participantsForEncoding(selectedTraining,kind,includeResultId='',resourcePersonId='') {
+  const farmer=result=>result?._participantRecord||farmers().find(item=>String(item.id)===String(result?.farmerId));
+  const associationsForFarmer=(farmerRecord,associationRecords=store.records('tmis-farmer-associations'),selectedTraining=training())=>{
+    if(!farmerRecord)return [];
+    const linkedIds=new Set((selectedTraining?.associationIds||[]).map(String));
+    const memberIds=new Set([
+      farmerRecord.association_id,
+      farmerRecord.association_db_id,
+      ...(farmerRecord.associationMemberships||[]).flatMap(membership=>[membership.id,membership.databaseId]),
+    ].filter(value=>value!==undefined&&value!==null).map(String));
+    const identifiers=association=>[association.id,association._db_id].filter(value=>value!==undefined&&value!==null).map(String);
+    const candidates=linkedIds.size
+      ? associationRecords.filter(association=>identifiers(association).some(id=>linkedIds.has(id)))
+      : associationRecords.filter(association=>identifiers(association).some(id=>memberIds.has(id)));
+
+    return candidates.filter(association=>{
+      const isMember=identifiers(association).some(id=>memberIds.has(id));
+      if(isMember)return true;
+      if(!linkedIds.size)return false;
+      const regionMatches=association.region_id&&farmerRecord.region_id
+        ? String(association.region_id)===String(farmerRecord.region_id)
+        : normalize(association.region)===normalize(farmerRecord.region);
+      return regionMatches&&['province','municipality','barangay'].every(field=>
+        normalize(association[field])!==''&&normalize(association[field])===normalize(farmerRecord[field])
+      );
+    }).map(association=>association.association_name||association.name||association.id).filter(Boolean).filter((name,index,names)=>names.indexOf(name)===index);
+  };
+  const results=kind=>{
+    const selectedTraining=training();
+    if(!selectedTraining)return [];
+    const participantsById=new Map(farmers().map(item=>[String(item.id),item]));
+    const associationRecords=store.records('tmis-farmer-associations');
+    return store.records('tmis-'+kind+'-encoded')
+      .filter(item=>item.status==='complete'&&Number(item.trainingDatabaseId)===Number(selectedTraining._db_id))
+      .map(item=>{
+        const participant=participantsById.get(String(item.farmerId));
+        const associationNames=associationsForFarmer(participant,associationRecords,selectedTraining);
+        const fallbackAssociation=selectedTraining.associationIds?.length? '' : participant?.association||'';
+        return {...item,_participantRecord:participant,associationNames,association:associationNames[0]||fallbackAssociation};
+      });
+  };
+  function participantsForEncoding(selectedTraining,kind,includeResultId='',resourcePersonId='',questionnaireId='') {
     if(!selectedTraining)return [];
     const associationIds=new Set((selectedTraining.associationIds||[]).map(String));
     const enrolledIds=new Set((selectedTraining.participants||[]).map(String));
@@ -298,25 +337,27 @@
         && String(result.id)!==String(includeResultId)
         && String(result.farmerId||'')===farmerId
         && belongsToTraining(result)
+        && (questionnaireId
+          ? String(result.questionnaireId||'')===String(questionnaireId)
+          : !['pre-test','post-test'].includes(kind))
         && (kind!=='rp-evaluation'||(resourcePersonId&&String(result.resourcePersonId||'')===String(resourcePersonId)))
       );
     });
   }
   const questionnaires=kind=>store.records('tmis-'+kind+'-questionnaires');
-  const farmer=result=>farmers().find(item=>item.id===result.farmerId);
-  const comments=items=>items.filter(item=>item.comments).map(item=>({farmer:farmer(item)?.name||item.farmerName||'Participant',rating:item.ratings?.length?item.ratings.reduce((sum,rating)=>sum+Number(rating.rating),0)/item.ratings.length:0,text:item.comments}));
+  const comments=items=>items.filter(item=>item.comments).map(item=>({farmer:farmer(item)?.name||item.farmerName||'Participant',farmerId:String(item.farmerId||''),association:item.association||'',associationNames:item.associationNames||[],rating:item.ratings?.length?item.ratings.reduce((sum,rating)=>sum+Number(rating.rating),0)/item.ratings.length:0,text:item.comments}));
   function questions(kind,items=results(kind)) {
     const ids=[...new Set(items.map(item=>item.questionnaireId))];
     let counter=0;
     return ids.flatMap(id=>{
       const definition=questionnaires(kind).find(item=>item.id===id);
-      return (definition?.questions||[]).map((question,index)=>({id:++counter,prompt:typeof question==='string'?question:question.text,responses:items.filter(item=>item.questionnaireId===id && item.ratings?.[index]).map(item=>({participant:farmer(item)?.name||item.farmerName||'Participant',farmer:farmer(item)?.name||item.farmerName||'Participant',association:farmer(item)?.association||'',answeredAt:item.date,rating:Number(item.ratings[index].rating)}))}));
+      return (definition?.questions||[]).map((question,index)=>({id:++counter,prompt:typeof question==='string'?question:question.text,responses:items.filter(item=>item.questionnaireId===id&&item.ratings?.[index]).map(item=>({participant:farmer(item)?.name||item.farmerName||'Participant',farmer:farmer(item)?.name||item.farmerName||'Participant',farmerId:String(item.farmerId||''),association:item.association||'',associationNames:item.associationNames||[],answeredAt:item.date,rating:Number(item.ratings[index].rating)}))}));
     });
   }
   function assessment(kind){return (training()?.[kind.replace('-','')]||[]).map(id=>{const definition=questionnaires(kind).find(item=>item.id===id),items=results(kind).filter(item=>item.questionnaireId===id);return {id,name:definition?.trainingQuestionnaire||id,itemCount:Number(definition?.totalItems)||null,averageCorrect:items.length?items.reduce((sum,item)=>sum+Number(item.score),0)/items.length:null};});}
-  function scores(kind,id){return results(kind).filter(item=>item.questionnaireId===id).map(item=>{const participant=farmer(item);return {id:participant?.farmerNumber||item.farmerId,name:participant?.name||item.farmerName||'Participant',association:participant?.association||'',answeredAt:item.date,score:Number(item.score)};});}
+  function scores(kind,id){return results(kind).filter(item=>item.questionnaireId===id).map(item=>{const participant=farmer(item);return {id:participant?.farmerNumber||item.farmerId,name:participant?.name||item.farmerName||'Participant',farmerId:String(item.farmerId||''),association:item.association||'',associationNames:item.associationNames||[],answeredAt:item.date,score:Number(item.score)};});}
   function resources(){return (training()?.trainers||[]).map(resource=>{const items=results('rp-evaluation').filter(item=>item.resourcePersonId===resource.id);return {...resource,initials:resource.name.split(' ').map(part=>part[0]).slice(0,2).join(''),questions:questions('rp-evaluation',items),comments:comments(items)};});}
-  window.TmisTrainingData={results,questions,comments:()=>comments(results('training-evaluation')),resources,assessment,scores,participantCount:()=>training()?.participants?.length||0,participantsForEncoding};
+  window.TmisTrainingData={results,questions,comments:()=>comments(results('training-evaluation')),resources,assessment,scores,associationNamesForFarmer:associationsForFarmer,participantCount:()=>training()?.participants?.length||0,participantsForEncoding};
 })();
 
 (() => {
@@ -528,6 +569,37 @@
       if(trainingTrack&&trainingCarousel&&trainingEmpty&&trainingControls){
         const template=trainingTrack.querySelector('.training-preview-card')?.cloneNode(true);
         const attendedTrainings=store.records('tmis-trainings').filter(item=>(item.participants||[]).includes(farmer.id));
+        const matchesFarmer=result=>[farmer.id,farmer._db_id].some(id=>id!==undefined&&id!==null&&String(result.farmerId||'')===String(id));
+        const resultsForTraining=(kind,training)=>store.records(`tmis-${kind}-encoded`).filter(result=>{
+          if(result.status!=='complete'||!matchesFarmer(result))return false;
+          const trainingDatabaseId=String(training._db_id||'');
+          const resultDatabaseId=String(result.trainingDatabaseId||'');
+          if(trainingDatabaseId&&resultDatabaseId)return trainingDatabaseId===resultDatabaseId;
+          return [training.id,trainingDatabaseId].filter(Boolean).some(id=>String(result.trainingId||'')===String(id));
+        });
+        const averageAssessment=(kind,training)=>{
+          const results=resultsForTraining(kind,training);
+          if(kind==='training-evaluation'){
+            const ratings=results.flatMap(result=>Array.isArray(result.ratings)?result.ratings.filter(item=>item?.rating!==null&&item?.rating!==undefined&&item?.rating!=='').map(item=>Number(item.rating)).filter(Number.isFinite):[]);
+            if(ratings.length)return ratings.reduce((sum,value)=>sum+value,0)/ratings.length;
+            const scores=results.filter(result=>result.score!==null&&result.score!==undefined&&result.score!=='').map(result=>Number(result.score)).filter(Number.isFinite);
+            if(scores.length)return scores.reduce((sum,value)=>sum+value,0)/scores.length;
+            return null;
+          }
+          const questionnaires=store.records(`tmis-${kind}-questionnaires`);
+          let totalEarned=0;
+          let totalPossible=0;
+          for(const result of results){
+            if(result.score===null||result.score===undefined||result.score==='')return null;
+            const questionnaire=questionnaires.find(item=>String(item.id)===String(result.questionnaireId));
+            const possible=Number(result.totalItems||result.total_items||result.totalQuestions||questionnaire?.totalItems||questionnaire?.questions?.length);
+            const earned=Number(result.score);
+            if(!Number.isFinite(earned)||!Number.isFinite(possible)||possible<=0)return null;
+            totalEarned+=earned;
+            totalPossible+=possible;
+          }
+          return totalPossible?totalEarned/totalPossible*100:null;
+        };
         const formatTrainingDate=value=>{if(!value)return '';const parsed=new Date(`${String(value).slice(0,10)}T00:00:00`);return Number.isNaN(parsed.getTime())?'':new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeZone:'Asia/Manila'}).format(parsed);};
         trainingTrack.replaceChildren();
         if(template&&attendedTrainings.length){
@@ -540,7 +612,11 @@
             if(dates[0])dates[0].textContent=[formatTrainingDate(training.startDate||training.start_date),formatTrainingDate(training.endDate||training.end_date)].filter(Boolean).join(' – ')||'Dates not recorded';
             if(dates[1])dates[1].textContent=training.venue||training.venue_location||[training.barangay,training.municipality,training.province].filter(Boolean).join(', ')||training.office||'Location not recorded';
             const status=card.querySelector('.training-status');if(status){status.className='training-status';status.textContent='Participation recorded';}
-            card.querySelectorAll('.training-preview-scores strong').forEach(value=>{value.textContent='No results';});
+            const preTest=averageAssessment('pre-test',training);
+            const postTest=averageAssessment('post-test',training);
+            const rating=averageAssessment('training-evaluation',training);
+            const scoreValues=[preTest===null?'No results':`${preTest.toFixed(2)}%`,postTest===null?'No results':`${postTest.toFixed(2)}%`,rating===null?'No results':`${rating.toFixed(2)} / 5`];
+            card.querySelectorAll('.training-preview-scores strong').forEach((value,index)=>{value.textContent=scoreValues[index]||'No results';});
             trainingTrack.append(card);
           }
           trainingCarousel.hidden=false;trainingEmpty.hidden=true;trainingControls.hidden=false;

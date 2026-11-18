@@ -22,9 +22,12 @@ class TrainingStatusChanged extends Mailable
 
     public function envelope(): Envelope
     {
-        $subject = in_array($this->status, ['For approval', 'For review'], true)
-            ? 'TMIS training returned for changes: '.$this->trainingName
-            : ($this->status === 'Approved & Accepted' ? 'TMIS training approved and accepted: '.$this->trainingName : 'TMIS training status: '.$this->status);
+        $subject = match ([$this->fromStatus, $this->status]) {
+            ['For review', 'For approval'] => 'TMIS training submitted for approval: '.$this->trainingName,
+            ['For approval', 'For acceptance'] => 'TMIS training forwarded for acceptance: '.$this->trainingName,
+            ['For acceptance', 'Approved & Accepted'] => 'TMIS training approved and accepted: '.$this->trainingName,
+            default => $this->isReturn() ? 'TMIS training returned for changes: '.$this->trainingName : 'TMIS training status: '.$this->status,
+        };
 
         return new Envelope(subject: $subject);
     }
@@ -44,9 +47,20 @@ class TrainingStatusChanged extends Mailable
                 'actorOffice' => $this->actorOffice,
                 'trainingOffice' => $this->trainingOffice,
                 'changedAt' => $this->changedAt,
-                'isRevert' => in_array($this->status, ['For approval', 'For review'], true),
+                'isRevert' => $this->isReturn(),
+                'isSubmitted' => $this->fromStatus === 'For review' && $this->status === 'For approval',
+                'isForwarded' => $this->fromStatus === 'For approval' && $this->status === 'For acceptance',
                 'isFinalAcceptance' => $this->status === 'Approved & Accepted',
             ],
         );
+    }
+
+    private function isReturn(): bool
+    {
+        return in_array([$this->fromStatus, $this->status], [
+            ['For approval', 'For review'],
+            ['For acceptance', 'For approval'],
+            ['For acceptance', 'For review'],
+        ], true);
     }
 }

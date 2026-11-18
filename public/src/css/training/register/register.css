@@ -788,5 +788,20 @@
 .training-location-card-heading { margin-bottom:12px; color:var(--color-text-primary); font-size:13px; }
 .training-location-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 .training-location-fields label { margin:0; color:var(--color-text-secondary); font-size:12px; font-weight:600; }
-.training-location-fields input { margin-top:5px; }
+.training-location-fields :is(input,select) { width:100%; min-height:40px; margin-top:5px; border:1px solid var(--color-border); border-radius:8px; background-color:var(--color-surface); color:var(--color-text-primary); }
+.training-location-fields select option { color:var(--color-text-primary); background-color:var(--color-surface); }
+.training-location-fields :is(input,select):focus { border-color:var(--color-primary); outline:0; box-shadow:0 0 0 .2rem color-mix(in srgb,var(--color-primary) 20%,transparent); }
+.training-location-heading .btn-outline-success { color:#1b5e20; border-color:#388e3c; background:#e8f5e9; }
+.training-location-heading .btn-outline-success:is(:hover,:focus-visible) { color:#fff; border-color:#2e7d32; background:#2e7d32; }
+.training-location-card-heading .btn-outline-danger { color:#a12b26; border-color:#e1aaa6; background:#fff1f0; }
+.training-location-card-heading .btn-outline-danger:is(:hover,:focus-visible) { color:#fff; border-color:#b3261e; background:#b3261e; }
+[data-theme='dark'] body.training-register-page .training-location-heading { border-color:var(--color-border); background:color-mix(in srgb,var(--color-primary-surface) 38%,var(--color-surface)); }
+[data-theme='dark'] body.training-register-page .training-location-heading .btn-outline-success { color:#a5d6a7; border-color:#66bb6a; background:#1b3420; }
+[data-theme='dark'] body.training-register-page .training-location-heading .btn-outline-success:is(:hover,:focus-visible) { color:#101812; border-color:#81c784; background:#81c784; }
+[data-theme='dark'] body.training-register-page .training-location-card-heading .btn-outline-danger { color:#ffb4ab; border-color:#77403a; background:#3a2221; }
+[data-theme='dark'] body.training-register-page .training-location-card-heading .btn-outline-danger:is(:hover,:focus-visible) { color:#fff; border-color:#b3261e; background:#9d332b; }
+[data-theme='dark'] body.training-register-page .training-location-fields :is(input,select) { color-scheme:dark; border-color:#465149; background-color:#171d18; color:#f1f5f2; }
+[data-theme='dark'] body.training-register-page .training-location-fields select option { color:#f1f5f2; background-color:#171d18; }
+[data-theme='dark'] body.training-register-page .training-location-fields :is(input,select):disabled { border-color:#303830; background-color:#0f1410; color:#8d9890; opacity:1; }
+[data-theme='dark'] body.training-register-page .training-location-fields :is(input,select):focus { border-color:#66bb6a; box-shadow:0 0 0 .2rem rgba(102,187,106,.22); }
 @media(max-width:575.98px) { .training-location-heading,.training-edit-location-heading { align-items:flex-start; flex-direction:column; } .training-location-fields { grid-template-columns:1fr; } }

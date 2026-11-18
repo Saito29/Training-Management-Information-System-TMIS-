@@ -57,7 +57,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/training/register/register.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/evaluation/encode/rp-evaluation.css') }}" />
-    <link rel="stylesheet" href="{{ asset('src/css/evaluation/encode/training-picker.css?v=encode-training-picker-5') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/evaluation/encode/training-picker.css?v=encode-training-picker-7') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/evaluation/encode/compact-type.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/evaluation/encode/encoded-answer-actions.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/evaluation/create/questionnaire-toast.css') }}" />
@@ -1459,6 +1459,6 @@ class="layout-fixed"
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/evaluation/create/questionnaire-toast.js') }}"></script>
     <script src="{{ asset('src/js/evaluation/encode/rp-evaluation.js?v=enrolled-farmer-restriction-1') }}"></script>
-    <script src="{{ asset('src/js/evaluation/encode/training-picker.js?v=encode-training-picker-10') }}"></script>
+    <script src="{{ asset('src/js/evaluation/encode/training-picker.js?v=encode-training-picker-11') }}"></script>
     <script src="{{ asset('src/js/evaluation/encode/encoded-answer-actions.js') }}"></script>
 @endsection

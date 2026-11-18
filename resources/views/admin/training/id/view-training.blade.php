@@ -62,7 +62,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-pretest.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-posttest.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-resource.css') }}" />
-    <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-evaluation.css') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-evaluation.css?v=association-assessment-breakdown-gap-2') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-highlights.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-attachments-cards.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/view-training-logs.css') }}" />
@@ -1932,11 +1932,11 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="{{ asset('src/js/training/id/view-training.js?v=assessment-chart-theme-4') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-participants.js?v=farmer-number-display-1') }}"></script>
-    <script src="{{ asset('src/js/training/id/view-training-feedback-filters.js?v=association-option-details-1') }}"></script>
-    <script src="{{ asset('src/js/training/id/view-training-pretest.js?v=average-number-only-1') }}"></script>
-    <script src="{{ asset('src/js/training/id/view-training-posttest.js?v=average-number-only-1') }}"></script>
-    <script src="{{ asset('src/js/training/id/view-training-resource.js?v=average-rating-format-2') }}"></script>
-    <script src="{{ asset('src/js/training/id/view-training-evaluation.js?v=average-rating-format-2') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training-feedback-filters.js?v=association-assessment-breakdown-1') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training-pretest.js?v=association-assessment-breakdown-1') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training-posttest.js?v=association-assessment-breakdown-1') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training-resource.js?v=association-assessment-breakdown-1') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-training-evaluation.js?v=association-assessment-breakdown-1') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-highlights.js?v=4k-export-preset-2') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-attachments-cards.js') }}"></script>
     <script src="{{ asset('src/js/training/id/view-training-logs.js?v=live-logs-20261109-3') }}"></script>

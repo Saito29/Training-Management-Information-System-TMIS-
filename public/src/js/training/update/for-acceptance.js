@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
      Reference data (mock). Province → Municipality → Barangay hierarchy
      drives the synced location filters.
   ------------------------------------------------------------------ */
-  const LOCATIONS = [
+  const SAMPLE_LOCATIONS = [
     {
       region: 'Region IV-A (CALABARZON)',
       province: 'Quezon',
@@ -82,17 +82,37 @@ document.addEventListener('DOMContentLoaded', () => {
       ],
     },
   ];
-  const places = LOCATIONS.flatMap((p) =>
-    p.municipalities.flatMap((m) =>
-      m.barangays.map((b) => ({
-        region: p.region,
-        province: p.province,
-        district: m.district,
-        municipality: m.name,
-        barangay: b,
-      }))
-    )
-  );
+  const registrationData = window.TMIS_PAGE?.registration;
+  const databaseLocations = Array.isArray(registrationData?.locations) ? registrationData.locations : [];
+  const databaseRegions = Array.isArray(window.TMIS_PAGE?.regions) ? window.TMIS_PAGE.regions : (registrationData?.regions || []);
+  const regionNames = new Map(databaseRegions.map(region => [String(region.region_id ?? region.id), region.name]));
+  const locationById = new Map(databaseLocations.map(location => [String(location.id), location]));
+  const ancestorName = (location, kind) => {
+    let parent = locationById.get(String(location.parent_id ?? ''));
+    while (parent) {
+      if (String(parent.kind).toLowerCase() === kind) return parent.name;
+      parent = locationById.get(String(parent.parent_id ?? ''));
+    }
+    return '';
+  };
+  const databasePlaces = databaseLocations.filter(location => String(location.kind).toLowerCase() === 'barangay').map(location => ({
+    region: regionNames.get(String(location.region_id)) || '',
+    regionId: String(location.region_id ?? ''),
+    province: ancestorName(location, 'province'),
+    district: ancestorName(location, 'district'),
+    municipality: ancestorName(location, 'municipality'),
+    barangay: location.name,
+  })).filter(location => location.province && location.municipality && location.barangay);
+  const places = window.TMIS_PAGE
+    ? databasePlaces
+    : SAMPLE_LOCATIONS.flatMap(region => region.municipalities.flatMap(municipality => municipality.barangays.map(barangay => ({
+      region: region.region,
+      regionId: '',
+      province: region.province,
+      district: municipality.district,
+      municipality: municipality.name,
+      barangay,
+    }))));
   const TYPES = {
     'Farmer Field School': [
       'Rice Farmer Field School',
@@ -118,7 +138,10 @@ document.addEventListener('DOMContentLoaded', () => {
       'Agri-Entrepreneurship Workshop',
     ],
   };
-  const typeNames = Object.keys(TYPES);
+  const databaseTrainingTypes = Array.isArray(registrationData?.options?.training_type)
+    ? registrationData.options.training_type.map(option => String(option.value || '')).filter(Boolean)
+    : [];
+  const typeNames = window.TMIS_PAGE ? [...new Set(databaseTrainingTypes)] : Object.keys(TYPES);
   // This queue only contains trainings that passed review and await a decision.
   const ACCEPTANCE_STATUSES = ['For Acceptance'];
   const OFFICES = [
@@ -258,6 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
     global: '',
     status: 'For Acceptance',
     type: '',
+    region: '',
     province: '',
     municipality: '',
     barangay: '',
@@ -268,6 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
     selected: null,
     selectedIds: new Set(),
   };
+  const selectionId = value => String(value ?? '');
 
   const statusBadgeClass = (status) =>
     ({
@@ -286,18 +311,40 @@ document.addEventListener('DOMContentLoaded', () => {
           year: 'numeric',
         }).format(d);
   };
-  const notify = (title, message, warn = false) => {
+  const notify = (title, message, type = 'success') => {
+    const toastType = typeof type === 'boolean' ? (type ? 'warning' : 'success') : type;
     $('#reviewToastTitle').textContent = title;
     $('#reviewToastMessage').textContent = message;
-    $('#reviewToastTime').textContent = new Intl.DateTimeFormat('en-PH', {timeZone: 'Asia/Manila', 
-      hour: 'numeric',
-      minute: '2-digit',
+    $('#reviewToastTime').textContent = new Intl.DateTimeFormat('en-PH', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: 'Asia/Manila',
     }).format(new Date());
-    $('#reviewToastIcon').className =
-      `bi me-2 ${warn ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill'}`;
-    $('#reviewToast').classList.toggle('review-toast-blocked', warn);
+    $('#reviewToast').dataset.type = toastType;
+    $('#reviewToastIcon').className = `bi me-2 ${({ success: 'bi-check-circle-fill', warning: 'bi-exclamation-triangle-fill', error: 'bi-x-circle-fill', info: 'bi-info-circle-fill' })[toastType] || 'bi-check-circle-fill'}`;
+    $('#reviewToast').classList.toggle('review-toast-blocked', toastType === 'warning' || toastType === 'error');
     toast.show();
   };
+  const statusToastStorageKey = 'tmis-training-status-transition-toast';
+  const showStoredStatusToast = () => {
+    try {
+      const saved = sessionStorage.getItem(statusToastStorageKey);
+      if (!saved) return;
+      sessionStorage.removeItem(statusToastStorageKey);
+      const notice = JSON.parse(saved);
+      notify(notice.title, notice.message, notice.type || 'success');
+    } catch (_) { /* Storage may be disabled by the browser. */ }
+  };
+  const reloadWithStatusToast = (title, message, type = 'success') => {
+    try { sessionStorage.setItem(statusToastStorageKey, JSON.stringify({ title, message, type })); }
+    catch (_) {
+      notify(title, message, type);
+      window.setTimeout(() => location.reload(), 3200);
+      return;
+    }
+    location.reload();
+  };
+  showStoredStatusToast();
 
   /* ------------------------------------------------------------------
      Header / footer / column toggle (built once; columns hide via class)
@@ -354,7 +401,10 @@ document.addEventListener('DOMContentLoaded', () => {
     el.value = items.includes(value) ? value : '';
   };
   const syncLocationFilters = () => {
-    const inProvince = places.filter(
+    const inRegion = places.filter(
+      (place) => !state.region || place.region === state.region
+    );
+    const inProvince = inRegion.filter(
       (p) => !state.province || p.province === state.province
     );
     const inMunicipality = inProvince.filter(
@@ -363,7 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setOptions(
       '#provinceFilter',
       'All provinces',
-      uniq(places.map((p) => p.province)),
+      uniq(inRegion.map((p) => p.province)),
       state.province
     );
     setOptions(
@@ -386,6 +436,9 @@ document.addEventListener('DOMContentLoaded', () => {
     state.status
   );
   setOptions('#trainingTypeFilter', 'All training types', typeNames, '');
+  const canFilterByRegion = window.TMIS_PAGE?.administrator === true;
+  $('#regionFilterGroup').hidden = !canFilterByRegion;
+  setOptions('#regionFilter', 'All regions', uniq(databaseRegions.map(region => region.name).filter(Boolean)), state.region);
   setOptions(
     '#yearCoveredFilter',
     'All years',
@@ -394,6 +447,21 @@ document.addEventListener('DOMContentLoaded', () => {
   );
   syncLocationFilters();
 
+  const matchesLocationFilters = (record) => {
+    const selected = state.region || state.province || state.municipality || state.barangay;
+    if (!selected) return true;
+    const locationRecords = [
+      { region: record.region, province: record.province, municipality: record.municipality, barangay: record.barangay },
+      ...(Array.isArray(record.trainingLocations) ? record.trainingLocations : []),
+    ];
+
+    return locationRecords.some(location =>
+      (!state.region || location.region === state.region)
+      && (!state.province || location.province === state.province)
+      && (!state.municipality || location.municipality === state.municipality)
+      && (!state.barangay || location.barangay === state.barangay)
+    );
+  };
   const filtered = () =>
     records.filter(
       (r) =>
@@ -402,9 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
         (!state.global ||
           Object.values(r).join(' ').toLowerCase().includes(state.global)) &&
         (!state.type || r.type === state.type) &&
-        (!state.province || r.province === state.province) &&
-        (!state.municipality || r.municipality === state.municipality) &&
-        (!state.barangay || r.barangay === state.barangay) &&
+        matchesLocationFilters(r) &&
         (!state.year || String(r.yearCovered) === state.year) &&
         Object.entries(state.columns).every(
           ([k, v]) => !v || String(r[k]).toLowerCase().includes(v.toLowerCase())
@@ -444,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const updateSelectionUI = (rows = sorted()) => {
     const selectAll = $('#selectAllTrainings');
     const selectedCount = $('#selectedTrainingCount');
-    const selectedVisible = rows.filter((record) => state.selectedIds.has(record.id)).length;
+    const selectedVisible = rows.filter((record) => state.selectedIds.has(selectionId(record.id))).length;
     if (selectAll) {
       selectAll.checked = rows.length > 0 && selectedVisible === rows.length;
       selectAll.indeterminate = selectedVisible > 0 && selectedVisible < rows.length;
@@ -457,8 +523,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const mayRevert = mayAccept || window.TMIS_PAGE?.permissions?.includes('trainings.accept');
     if ($('#bulkForwardButton')) $('#bulkForwardButton').hidden = !state.selectedIds.size || !mayAccept;
     if ($('#bulkRevertButton')) $('#bulkRevertButton').hidden = !state.selectedIds.size || !mayRevert;
+    body.querySelectorAll('[data-training-row-id]').forEach((row) => {
+      const selected = state.selectedIds.has(selectionId(row.dataset.trainingRowId));
+      row.classList.toggle('is-selected', selected);
+      row.setAttribute('aria-selected', String(selected));
+      const checkbox = row.querySelector('[data-select-training]');
+      if (checkbox) checkbox.checked = selected;
+    });
   };
-  const selectionCell = (record) => `<td class="row-select-cell"><input class="form-check-input row-select-training" type="checkbox" data-select-training="${esc(record.id)}" aria-label="Select training ${esc(record.id)}" ${state.selectedIds.has(record.id) ? 'checked' : ''} /></td>`;
+  const selectionCell = (record) => `<td class="row-select-cell"><input class="form-check-input row-select-training" type="checkbox" data-select-training="${esc(selectionId(record.id))}" aria-label="Select training ${esc(record.id)}" ${state.selectedIds.has(selectionId(record.id)) ? 'checked' : ''} /></td>`;
   const cell = (c, r) => {
     const v = r[c.key];
     const html = c.badge
@@ -489,7 +562,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.page * state.perPage
           );
     body.innerHTML = rows
-      .map((r) => `<tr>${selectionCell(r)}${actions(r)}${COLUMNS.map((c) => cell(c, r)).join('')}</tr>`)
+      .map((r) => `<tr data-training-row-id="${esc(selectionId(r.id))}" tabindex="0" aria-label="Select training ${esc(r.title || r.id)}">${selectionCell(r)}${actions(r)}${COLUMNS.map((c) => cell(c, r)).join('')}</tr>`)
       .join('');
     applyColumns();
     empty.hidden = Boolean(rows.length);
@@ -529,6 +602,12 @@ document.addEventListener('DOMContentLoaded', () => {
     state.type = e.target.value;
     refresh();
   });
+  $('#regionFilter').addEventListener('change', (e) => {
+    state.region = e.target.value;
+    state.province = state.municipality = state.barangay = '';
+    syncLocationFilters();
+    refresh();
+  });
   $('#yearCoveredFilter').addEventListener('change', (e) => {
     state.year = e.target.value;
     refresh();
@@ -542,10 +621,15 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#municipalityFilter').addEventListener('change', (e) => {
     state.municipality = e.target.value;
     state.barangay = '';
-    if (state.municipality && !state.province)
-      state.province = places.find(
+    if (state.municipality && !state.province) {
+      const match = places.find(
         (p) => p.municipality === state.municipality
-      ).province;
+      );
+      if (match) {
+        state.province = match.province;
+        if (canFilterByRegion) state.region = match.region;
+      }
+    }
     syncLocationFilters();
     refresh();
   });
@@ -556,11 +640,13 @@ document.addEventListener('DOMContentLoaded', () => {
         (p) =>
           p.barangay === state.barangay &&
           (!state.municipality || p.municipality === state.municipality) &&
-          (!state.province || p.province === state.province)
+          (!state.province || p.province === state.province) &&
+          (!state.region || p.region === state.region)
       );
       if (match) {
         state.municipality = match.municipality;
         state.province = match.province;
+        if (canFilterByRegion) state.region = match.region;
       }
     }
     syncLocationFilters();
@@ -575,20 +661,36 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#reviewHeadRow').addEventListener('change', (e) => {
     if (e.target.id !== 'selectAllTrainings') return;
     sorted().forEach((record) => {
-      if (e.target.checked) state.selectedIds.add(record.id);
-      else state.selectedIds.delete(record.id);
+      if (e.target.checked) state.selectedIds.add(selectionId(record.id));
+      else state.selectedIds.delete(selectionId(record.id));
     });
     render();
   });
   body.addEventListener('change', (e) => {
     const id = e.target.dataset.selectTraining;
     if (!id) return;
-    if (e.target.checked) state.selectedIds.add(id);
-    else state.selectedIds.delete(id);
+    if (e.target.checked) state.selectedIds.add(selectionId(id));
+    else state.selectedIds.delete(selectionId(id));
+    updateSelectionUI();
+  });
+  body.addEventListener('click', (event) => {
+    if (event.target.closest('button, a, input, select, textarea, label')) return;
+    const row = event.target.closest('[data-training-row-id]');
+    if (!row) return;
+    const id = selectionId(row.dataset.trainingRowId);
+    state.selectedIds.has(id) ? state.selectedIds.delete(id) : state.selectedIds.add(id);
+    updateSelectionUI();
+  });
+  body.addEventListener('keydown', (event) => {
+    if (!['Enter', ' '].includes(event.key) || !event.target.matches('tr[data-training-row-id]')) return;
+    event.preventDefault();
+    const id = selectionId(event.target.dataset.trainingRowId);
+    state.selectedIds.has(id) ? state.selectedIds.delete(id) : state.selectedIds.add(id);
     updateSelectionUI();
   });
   $('#clearReviewFilters').addEventListener('click', () => {
-    state.global = state.type = state.province = state.municipality = '';
+    state.global = state.type = state.region = state.province = state.municipality = '';
+    $('#regionFilter').value = '';
     state.status = 'For Acceptance';
     $('#statusFilter').value = 'For Acceptance';
     state.barangay = state.year = '';
@@ -692,11 +794,49 @@ document.addEventListener('DOMContentLoaded', () => {
     viewer.append(message);
   };
 
+  const renderFinalAcceptanceRequirements = (items) => {
+    const checks = items.flatMap(training => window.TmisWorkflowReadiness.acceptanceRequirements(training).map(check => ({
+      ...check,
+      label: items.length > 1 ? `${training.id} · ${check.label}` : check.label,
+    })));
+    window.TmisWorkflowReadiness.renderRequirements($('#acceptanceRequirements'), checks);
+  };
+
+  const openFinalAcceptanceModal = (items) => {
+    const first = items[0];
+    if (!first) return;
+
+    $('#reviewForwardModalLabel').textContent = items.length === 1
+      ? 'Finalize Training Acceptance'
+      : 'Finalize Training Acceptance';
+    $('#reviewForwardDetails').innerHTML = detailRows(
+      window.TmisWorkflowReadiness.transitionDetails(items, 'For Acceptance', 'Approved & Accepted').map(([label, value]) => [label, items.length > 1 && label === 'Training records' ? value : esc(value)])
+    );
+    $('#editTrainingLink').hidden = items.length !== 1;
+    if (items.length === 1) $('#editTrainingLink').href = `../id/edit-training/${encodeURIComponent(first.id)}`;
+    $('#confirmForwardButton').innerHTML = '<i class="bi bi-patch-check-fill me-1"></i>Approve & Accept';
+    renderAttachmentPreview(first);
+    renderFinalAcceptanceRequirements(items);
+    acceptModal.show();
+  };
+
   const detailRows = (pairs) =>
     pairs.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('');
   const findRecord = (id) => records.find((r) => r.id === id);
-  const selectedRecords = () => records.filter((record) => state.selectedIds.has(record.id));
+  const selectedRecords = () => records.filter((record) => state.selectedIds.has(selectionId(record.id)));
+  const trainingSummary = (items, limit = 2) => {
+    const labels = items.slice(0, limit).map(item => {
+      const location = [item.office || item.implementingOffice, item.region].filter(Boolean).join(' · ');
+      return `${item.id} · ${item.title || item.training_title || 'Untitled training'}${location ? ` · ${location}` : ''}`;
+    });
+    const remaining = items.length - labels.length;
+    return `${labels.join('; ')}${remaining > 0 ? `; and ${remaining} more` : ''}`;
+  };
   const showReturnModal = (items) => {
+    if (!items.length) {
+      notify('No trainings selected', 'Select at least one training before returning it.', 'warning');
+      return;
+    }
     state.selected = items[0] || null;
     $('#rejectDetails').innerHTML = `<dt>Selected trainings</dt><dd>${items.length}</dd><dt>Current queue</dt><dd>For Acceptance</dd>`;
     $('#returnStatus').value = 'For Approval';
@@ -706,7 +846,16 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   const submitTransition = async (status, reason = '') => {
     const items = selectedRecords();
-    if (!items.length) return;
+    if (!items.length) {
+      notify('No trainings selected', 'Select at least one training before changing its status.', 'warning');
+      return false;
+    }
+    const fromStatus = 'For Acceptance';
+    const successTitle = status === 'Approved & Accepted'
+      ? 'Training approved and accepted'
+      : 'Training reverted';
+    const successMessage = `${trainingSummary(items)}. Status changed: ${fromStatus} → ${status}.${reason ? ` Reason: ${reason.slice(0, 180)}${reason.length > 180 ? '…' : ''}` : ''}`;
+    notify('Status update in progress', `${items.length} training(s) · ${trainingSummary(items)}. Requested status: ${status}.`, 'info');
     try {
       if (window.TMIS_PAGE) {
         const apiStatus = { 'Approved & Accepted': 'Approved & Accepted', 'For Approval': 'For approval', 'For Review': 'For review' }[status];
@@ -715,16 +864,20 @@ document.addEventListener('DOMContentLoaded', () => {
           reason,
           trainings: items.map((record) => ({ id: Number(record._db_id), version: Number(record.version) })),
         });
-        location.reload();
-        return;
+        reloadWithStatusToast(successTitle, successMessage);
+        return true;
       }
       const latest = window.TmisStore.records('tmis-trainings');
-      await window.TmisStore.setItem('tmis-trainings', JSON.stringify(latest.map((item) => state.selectedIds.has(item.id) ? { ...item, status, remarks: reason } : item)));
-    } catch (error) { notify('Status update blocked', error.message, true); throw error; }
+      await window.TmisStore.setItem('tmis-trainings', JSON.stringify(latest.map((item) => state.selectedIds.has(selectionId(item.id)) ? { ...item, status, remarks: reason } : item)));
+    } catch (error) {
+      notify('Status update failed', `${trainingSummary(items)}. No status change was saved. ${error.message || 'The selected trainings could not be updated.'}`, 'error');
+      return false;
+    }
     items.forEach((item) => { item.status = status; item.remarks = reason; });
     state.selectedIds.clear();
     refresh();
-    notify('Training statuses updated', `${items.length} training(s) moved to ${status}.`);
+    notify(successTitle, successMessage, 'success');
+    return true;
   };
 
   body.addEventListener('click', (e) => {
@@ -732,26 +885,12 @@ document.addEventListener('DOMContentLoaded', () => {
       rj = e.target.closest('[data-reject]');
     if (a) {
       const r = findRecord(a.dataset.accept);
-      state.selectedIds = new Set([r.id]);
+      if (!r) return;
+      state.selectedIds = new Set([selectionId(r.id)]);
       updateSelectionUI();
-      $('#reviewForwardDetails').innerHTML = detailRows([
-        ['Training ID', esc(r.id)],
-        ['Training Title', esc(r.title)],
-        ['Training Type', esc(r.type)],
-        [
-          'Training Status',
-          `<span class="status-badge ${statusBadgeClass(r.status)}">${esc(r.status)}</span>`,
-        ],
-        ['Location and Venue', esc(`${r.venue}, ${r.location}`)],
-      ]);
-      $('#editTrainingLink').href =
-        `../id/edit-training/${encodeURIComponent(r.id)}`;
-      $('#editTrainingLink').hidden = false;
-      $('#confirmForwardButton').innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Accept Training';
-      renderAttachmentPreview(r);
-      acceptModal.show();
+      openFinalAcceptanceModal([r]);
     } else if (rj) {
-      state.selectedIds = new Set([rj.dataset.reject]);
+      state.selectedIds = new Set([selectionId(rj.dataset.reject)]);
       updateSelectionUI();
       showReturnModal(selectedRecords());
     }
@@ -759,18 +898,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('#bulkForwardButton').addEventListener('click', () => {
     const items = selectedRecords();
-    if (!items.length || !window.TMIS_PAGE?.administrator) return;
+    if (!items.length) {
+      notify('No trainings selected', 'Select at least one training to approve and accept.', 'warning');
+      return;
+    }
+    if (!window.TMIS_PAGE?.administrator) {
+      notify('Action unavailable', 'Only a system administrator can approve and accept multiple trainings.', 'info');
+      return;
+    }
     state.selected = items[0];
-    $('#reviewForwardDetails').innerHTML = detailRows([['Selected trainings', String(items.length)], ['From status', 'For Acceptance'], ['Final status', 'Approved & Accepted']]);
-    $('#editTrainingLink').hidden = true;
-    $('#confirmForwardButton').innerHTML = '<i class="bi bi-patch-check-fill me-1"></i>Approve selected';
-    approveModal.show();
+    openFinalAcceptanceModal(items);
   });
   $('#bulkRevertButton').addEventListener('click', () => showReturnModal(selectedRecords()));
 
   confirmAccept.addEventListener('click', async () => {
-    await submitTransition('Approved & Accepted');
-    acceptModal.hide();
+    if (await submitTransition('Approved & Accepted')) acceptModal.hide();
   });
 
   $('#rejectRemarks').addEventListener('input', (e) => {
@@ -779,9 +921,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   confirmRemarks.addEventListener('click', async () => {
     const remarks = $('#rejectRemarks').value.trim();
-    if (!remarks) return;
-    await submitTransition($('#returnStatus').value, remarks);
-    rejectModal.hide();
+    if (!remarks) {
+      notify('Remarks required', 'Add a reason before returning the selected training.', 'warning');
+      return;
+    }
+    if (await submitTransition($('#returnStatus').value, remarks)) rejectModal.hide();
   });
 
   /* ------------------------------------------------------------------

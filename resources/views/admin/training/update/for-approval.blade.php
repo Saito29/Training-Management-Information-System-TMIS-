@@ -56,7 +56,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/training/update/for-approval.css') }}?v=selection-controls-1"
+      href="{{ asset('src/css/training/update/for-approval.css') }}?v=detailed-workflow-modal-3"
     />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
@@ -67,8 +67,8 @@ class="layout-fixed"
 
 -->
       <script type="module" src="{{ asset('src/js/shared/activity-log.js') }}"></script>
-  <link rel="stylesheet" href="{{ asset('src/css/shared/toast.css') }}">
-    <script src="{{ asset('src/js/shared/toast.js') }}" defer></script>
+  <link rel="stylesheet" href="{{ asset('src/css/shared/toast.css') }}?v=status-toast-info-1">
+    <script src="{{ asset('src/js/shared/toast.js?v=status-toast-info-1') }}" defer></script>
 @endsection
 
 @section('content')
@@ -979,6 +979,10 @@ class="layout-fixed"
                         <option value="">All training types</option>
                       </select>
                     </div>
+                    <div class="toolbar-filter" id="regionFilterGroup" data-admin-only-region-filter hidden>
+                      <label for="regionFilter">Region</label
+                      ><select id="regionFilter" class="form-select"><option value="">All regions</option></select>
+                    </div>
                     <div class="toolbar-filter">
                       <label for="provinceFilter">Province</label
                       ><select id="provinceFilter" class="form-select">
@@ -1794,9 +1798,9 @@ class="layout-fixed"
               <div>
                 <span class="review-modal-eyebrow">Training</span>
                 <h5 class="modal-title" id="reviewForwardModalLabel">
-                  Approve Training
+                  Forward Training to For Acceptance
                 </h5>
-                <p>Confirm the verified training details before recording approval.</p>
+                <p>Review the training record, attached design, and saved highlight or ways-forward entry.</p>
               </div>
             </div>
             <button
@@ -1822,6 +1826,21 @@ class="layout-fixed"
               </div>
               <div class="approval-attachment-viewer" id="approvalAttachmentViewer">
                 <p class="approval-attachment-empty">Select a training to view its attached design.</p>
+              </div>
+            </section>
+            <section class="requirements-panel" aria-labelledby="acceptanceReadinessTitle">
+              <h6 id="acceptanceReadinessTitle">Requirements before forwarding</h6>
+              <p class="requirements-intro">At least one highlight or ways-forward entry must be saved before moving this training to For Acceptance.</p>
+              <div id="acceptanceRequirements" aria-live="polite"></div>
+            </section>
+            <section class="acceptance-content-panel" aria-label="Training highlights and ways forward">
+              <div class="acceptance-content-section">
+                <div class="acceptance-content-heading"><i class="bi bi-lightbulb"></i><h6>Highlights</h6></div>
+                <div id="acceptanceHighlights" class="acceptance-content-list" aria-live="polite"></div>
+              </div>
+              <div class="acceptance-content-section">
+                <div class="acceptance-content-heading"><i class="bi bi-signpost-split"></i><h6>Ways forward</h6></div>
+                <div id="acceptanceWaysForward" class="acceptance-content-list" aria-live="polite"></div>
               </div>
             </section>
           </div>
@@ -1981,5 +2000,6 @@ class="layout-fixed"
     <!-- nav -->
     <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/training/update/for-approval.js?v=training-id-path-1') }}"></script>
+    <script src="{{ asset('src/js/training/update/workflow-modal-readiness.js?v=detailed-workflow-modal-3') }}"></script>
+    <script src="{{ asset('src/js/training/update/for-approval.js?v=workflow-filters-db-selection-1') }}"></script>
 @endsection

@@ -8,6 +8,47 @@ document.addEventListener('DOMContentLoaded', () => {
       .filter(Boolean)
       .map(String));
 
+    const resultsForTraining = (kind, training) => window.TmisStore.records(`tmis-${kind}-encoded`).filter(result => {
+      const farmerMatches = [farmer.id, farmer._db_id].some(id => id !== undefined && id !== null && String(result.farmerId || '') === String(id));
+      if (result.status !== 'complete' || !farmerMatches) return false;
+
+      const trainingDatabaseId = String(training._db_id || '');
+      const resultDatabaseId = String(result.trainingDatabaseId || '');
+      if (trainingDatabaseId && resultDatabaseId) return trainingDatabaseId === resultDatabaseId;
+
+      return [training.id, trainingDatabaseId].filter(Boolean).some(id => String(result.trainingId || '') === String(id));
+    });
+    const averageTestScore = (kind, training) => {
+      const results = resultsForTraining(kind, training);
+      const questionnaires = window.TmisStore.records(`tmis-${kind}-questionnaires`);
+      let totalEarned = 0;
+      let totalPossible = 0;
+
+      for (const result of results) {
+        if (result.score === null || result.score === undefined || result.score === '') return null;
+
+        const questionnaire = questionnaires.find(item => String(item.id) === String(result.questionnaireId));
+        const possible = Number(result.totalItems || result.total_items || result.totalQuestions || questionnaire?.totalItems || questionnaire?.questions?.length);
+        const earned = Number(result.score);
+        if (!Number.isFinite(earned) || !Number.isFinite(possible) || possible <= 0) return null;
+
+        totalEarned += earned;
+        totalPossible += possible;
+      }
+
+      return totalPossible ? totalEarned / totalPossible * 100 : null;
+    };
+    const averageRating = training => {
+      const results = resultsForTraining('training-evaluation', training);
+      const ratings = results.flatMap(result => Array.isArray(result.ratings)
+        ? result.ratings.filter(item => item?.rating !== null && item?.rating !== undefined && item?.rating !== '').map(item => Number(item.rating)).filter(Number.isFinite)
+        : []);
+      if (ratings.length) return ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+
+      const scores = results.filter(result => result.score !== null && result.score !== undefined && result.score !== '').map(result => Number(result.score)).filter(Number.isFinite);
+      return scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : null;
+    };
+
     return window.TmisStore.records('tmis-trainings')
       .filter(training =>
         (training.participants || []).includes(farmer.id)
@@ -22,9 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
         location: item.venue,
         office: item.office || '',
         organizer: item.office || '',
-        preTest: null,
-        postTest: null,
-        rating: null,
+        preTest: averageTestScore('pre-test', item),
+        postTest: averageTestScore('post-test', item),
+        rating: averageRating(item),
       }));
   };
   let records = (window.TMIS_PAGE ? databaseRecords() : [

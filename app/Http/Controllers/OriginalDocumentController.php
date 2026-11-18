@@ -9,6 +9,7 @@ use App\Support\ModuleAccess;
 use App\Support\OriginalInterfaceData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -203,8 +204,21 @@ class OriginalDocumentController
     public function highlight(Request $request, string $id, OriginalInterfaceData $interface): JsonResponse
     {
         $owner = $this->owner($request, 'trainings', $id, 'edit');
-        $data = $request->validate(['slide' => ['required', 'integer', 'min:0', 'max:1'], 'content' => ['required', 'json'], 'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'], 'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240']]);
+        $data = $request->validate([
+            'slide' => ['required', 'integer', 'min:0', 'max:1'],
+            'content' => ['required', 'json'],
+            'bullets' => ['required', 'json'],
+            'dashboardSlide' => ['required', 'integer', Rule::in([-1, 0, 1])],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+        ]);
         $raw = json_decode($data['content'], true, 512, JSON_THROW_ON_ERROR);
+        $bullets = json_decode($data['bullets'], true, 512, JSON_THROW_ON_ERROR);
+        Validator::make(['bullets' => $bullets], [
+            'bullets' => ['required', 'array', 'size:2'],
+            'bullets.*' => ['array', 'max:100'],
+            'bullets.*.*' => ['string', 'max:1000'],
+        ])->validate();
         $rules = [];
         foreach (['heading' => 100, 'description' => 300, 'quote' => 300, 'trainingTitle' => 120, 'officeName' => 100] as $field => $max) {
             $rules[$field] = ['nullable', 'string', 'max:'.$max];
@@ -221,21 +235,39 @@ class OriginalDocumentController
                     $paths[$field.'_path'] = $request->file($field)->store('training-highlights', 'local');
                 }
             }
-            DB::transaction(function () use ($request, $owner, $data, $content, $paths): void {
+            DB::transaction(function () use ($request, $owner, $data, $content, $bullets, $paths): void {
                 $training = DB::table('trainings')->where('id', $owner->id)->lockForUpdate()->first();
                 abort_unless($training->status === 'For review', 409, 'Return the training to review before editing highlights.');
+                $metadata = OriginalInterfaceData::unpack($training->ui_data);
+                $previousBullets = $metadata['bullets'] ?? [[], []];
+                $previousDashboardSlide = $metadata['dashboardSlide'] ?? 0;
                 $highlightExists = DB::table('training_highlights')
                     ->where('training_id', $owner->id)
                     ->where('slide', $data['slide'])
                     ->exists();
                 DB::table('training_highlights')->updateOrInsert(['training_id' => $owner->id, 'slide' => $data['slide']], ['content' => json_encode($content, JSON_THROW_ON_ERROR), 'updated_at' => now(), 'created_at' => now()] + $paths);
-                DB::table('trainings')->where('id', $owner->id)->increment('ui_version');
+                $metadata['bullets'] = $bullets;
+                $metadata['dashboardSlide'] = (int) $data['dashboardSlide'];
+                DB::table('trainings')->where('id', $owner->id)->update([
+                    'ui_data' => Crypt::encryptString(json_encode($metadata, JSON_THROW_ON_ERROR)),
+                    'ui_version' => $training->ui_version + 1,
+                ]);
                 $highlightName = (int) $data['slide'] === 0 ? 'Key highlight' : 'Way forward';
                 AuditTrail::record(
                     $request,
                     'training_highlight_'.($highlightExists ? 'updated_' : 'created_').$owner->id,
                     $request->user(),
-                    after: ['record_name' => $training->name, 'highlight_name' => $highlightName, 'highlight_action' => $highlightExists ? 'updated' : 'created', 'highlight_slide' => (int) $data['slide']],
+                    after: [
+                        'record_name' => $training->name,
+                        'highlight_name' => $highlightName,
+                        'highlight_action' => $highlightExists ? 'updated' : 'created',
+                        'highlight_slide' => (int) $data['slide'],
+                        'changed_fields' => array_values(array_filter([
+                            'highlights',
+                            $previousBullets !== $bullets ? 'bullets' : null,
+                            (int) $previousDashboardSlide !== (int) $data['dashboardSlide'] ? 'dashboard_slide' : null,
+                        ])),
+                    ],
                     category: 'trainings',
                 );
             });

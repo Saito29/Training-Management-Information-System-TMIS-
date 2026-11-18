@@ -56,7 +56,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/participants/update/view-farmer.css') }}"
+      href="{{ asset('src/css/participants/update/view-farmer.css?v=association-training-table-1') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/participants/update/fa-overview.css?v=member-details-remove-1') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
@@ -937,22 +937,34 @@ class="layout-fixed"
                     <div class="training-table-content">
                       <div class="review-pagination training-pagination" id="trainingPaginationTop" aria-label="Top training table pagination"></div>
                       <div class="table-responsive review-table-scroll training-table-scroll">
-                        <table class="table review-data-table training-data-table align-middle" id="trainingDataTable">
+                        <table class="table review-data-table training-data-table align-middle" id="trainingDataTable" data-training-view-route="{{ route('admin.training.id.view-training.title', ['title' => '__title__', 'id' => '__id__']) }}">
                           <caption class="visually-hidden">Training records for this association</caption>
                           <thead>
                             <tr>
+                              <th scope="col" class="training-action-heading">Action</th>
                               <th scope="col" class="training-sortable" data-sort="title" tabindex="0">Training Name <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                               <th scope="col" class="training-sortable" data-sort="category" tabindex="0">Category <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                              <th scope="col" class="training-sortable" data-sort="year" tabindex="0">Year <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                               <th scope="col" class="training-sortable" data-sort="date" tabindex="0">Dates <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                              <th scope="col" class="training-sortable" data-sort="region" tabindex="0">Region <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                               <th scope="col" class="training-sortable" data-sort="location" tabindex="0">Location <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
-                              <th scope="col" class="training-sortable" data-sort="organizer" tabindex="0">Organizer <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                              <th scope="col" class="training-sortable" data-sort="organizer" tabindex="0">Office <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                              <th scope="col" class="training-sortable" data-sort="preTest" tabindex="0">Pre-Test <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                              <th scope="col" class="training-sortable" data-sort="postTest" tabindex="0">Post-Test <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
+                              <th scope="col" class="training-sortable" data-sort="rating" tabindex="0">Rating <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                             </tr>
                             <tr class="training-filter-row">
+                              <th></th>
                               <th><label class="visually-hidden" for="trainingFilterTitle">Filter by training name</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterTitle" data-column="title" type="search" placeholder="Filter name" /></th>
                               <th><label class="visually-hidden" for="trainingFilterCategory">Filter by category</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterCategory" data-column="category" type="search" placeholder="Filter category" /></th>
+                              <th><label class="visually-hidden" for="trainingFilterYear">Filter by year</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterYear" data-column="year" type="search" placeholder="Filter year" /></th>
                               <th><label class="visually-hidden" for="trainingFilterDate">Filter by date</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterDate" data-column="date" type="search" placeholder="Filter dates" /></th>
+                              <th><label class="visually-hidden" for="trainingFilterRegion">Filter by region</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterRegion" data-column="region" type="search" placeholder="Filter region" /></th>
                               <th><label class="visually-hidden" for="trainingFilterLocation">Filter by location</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterLocation" data-column="location" type="search" placeholder="Filter location" /></th>
-                              <th><label class="visually-hidden" for="trainingFilterOrganizer">Filter by organizer</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterOrganizer" data-column="organizer" type="search" placeholder="Filter organizer" /></th>
+                              <th><label class="visually-hidden" for="trainingFilterOrganizer">Filter by office</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterOrganizer" data-column="organizer" type="search" placeholder="Filter office" /></th>
+                              <th><label class="visually-hidden" for="trainingFilterPreTest">Filter by pre-test result</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterPreTest" data-column="preTest" type="search" placeholder="Pre-test" /></th>
+                              <th><label class="visually-hidden" for="trainingFilterPostTest">Filter by post-test result</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterPostTest" data-column="postTest" type="search" placeholder="Post-test" /></th>
+                              <th><label class="visually-hidden" for="trainingFilterRating">Filter by rating</label><input class="form-control form-control-sm training-column-filter" id="trainingFilterRating" data-column="rating" type="search" placeholder="Rating" /></th>
                             </tr>
                           </thead>
                           <tbody id="trainings-table-body"></tbody>
@@ -2148,5 +2160,5 @@ class="layout-fixed"
     <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-overview.js?v=member-details-remove-1') }}"></script>
-    <script src="{{ asset('src/js/participants/update/fa-sections.js') }}"></script>
+    <script src="{{ asset('src/js/participants/update/fa-sections.js?v=association-score-aggregation-2') }}"></script>
 @endsection

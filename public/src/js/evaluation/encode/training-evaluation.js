@@ -103,7 +103,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     body.setAttribute('aria-busy', 'false');
   }
-  function selectFarmer(r) { selectedFarmer = r; $('farmerId').value = r.id; $('farmerName').value = r.name; $('farmerAssociation').value = r.association; $('farmerLocation').value = r.location; $('farmerBirthday').value = dateLabel(r.birthday); if (questionnaires.length) $('encodeStatus').textContent = 'Fields marked * are required.'; renderFarmers(); updateSummary(); }
+  function selectFarmer(r) {
+    if (selectedFarmer?.id === r.id) {
+      selectedFarmer = null;
+      ['farmerId', 'farmerName', 'farmerAssociation', 'farmerLocation', 'farmerBirthday'].forEach(id => { $(id).value = ''; });
+    } else {
+      selectedFarmer = r;
+      $('farmerId').value = r.id;
+      $('farmerName').value = r.name;
+      $('farmerAssociation').value = r.association;
+      $('farmerLocation').value = r.location;
+      $('farmerBirthday').value = dateLabel(r.birthday);
+      if (questionnaires.length) $('encodeStatus').textContent = 'Fields marked * are required.';
+    }
+    renderFarmers();
+    updateSummary();
+  }
   function updateOrganizations() { const control = $('organizationFilter'), chosen = control.value; control.replaceChildren(new Option('All organizations', '')); [...new Set(farmers.map(r => r.association).filter(Boolean))].sort().forEach(name => control.add(new Option(name, name))); control.value = [...control.options].some(option => option.value === chosen) ? chosen : ''; }
   function refreshFarmersForTraining() {
     const training = window.TMIS_TRAINING_PICKER?.selectedTraining() || null;
@@ -174,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!draft && !form.reportValidity()) return;
     const ratings = (q?.questions || []).map((question, index) => ({ question: typeof question === 'string' ? question : String(question.text || ''), rating: Number(form.querySelector(`input[name="rating_${index}"]:checked`)?.value) || null }));
     const record = { id: activeDraftId || crypto.randomUUID(), trainingId: training?.id || resumedDraft?.trainingId || '', questionnaireId: q?.id || '', questionnaireName: q?.questionnaireName || '', implementingOffice: q?.office || '', farmerId: selectedFarmer?.id || '', farmerName: selectedFarmer?.name || '', farmerAssociation: selectedFarmer?.association || '', farmerLocation: selectedFarmer?.location || '', farmerBirthday: selectedFarmer?.birthday || '', farmerSex: selectedFarmer?.sex || '', date: $('testDate').value, ratings, comments: $('comments').value.trim(), status: draft ? 'draft' : 'complete', savedAt: existingRecord?.savedAt || new Date().toISOString(), updatedAt: recordMode === 'edit' ? new Date().toISOString() : undefined };
-    try { const records = read('tmis-training-evaluation-encoded'), index = records.findIndex(item => item.id === record.id); if (index >= 0) records[index] = record; else records.push(record); await window.TmisStore.setItem('tmis-training-evaluation-encoded', JSON.stringify(records)); if (draft) { activeDraftId = record.id; $('summaryStatus').textContent = 'Draft saved'; } else if (recordMode !== 'edit') clearEntry(); notify(recordMode === 'edit' ? 'Training evaluation updated.' : draft ? 'Training evaluation draft saved.' : 'Training evaluation saved.'); }
+    try { const records = read('tmis-training-evaluation-encoded'), index = records.findIndex(item => item.id === record.id); if (index >= 0) records[index] = record; else records.push(record); await window.TmisStore.setItem('tmis-training-evaluation-encoded', JSON.stringify(records)); if (draft) { activeDraftId = record.id; $('summaryStatus').textContent = 'Draft saved'; } else if (recordMode !== 'edit') { clearEntry(); window.TMIS_TRAINING_PICKER?.select(''); } notify(recordMode === 'edit' ? 'Training evaluation updated.' : draft ? 'Training evaluation draft saved.' : 'Training evaluation saved.'); }
     catch { notify('Unable to save this training evaluation. Refresh and try again.', 'error'); }
   }
   $('organizationFilter').addEventListener('change', () => { currentPage = 1; renderFarmers(); });

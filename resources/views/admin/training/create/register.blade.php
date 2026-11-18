@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('body-attributes')
-class="layout-fixed"
+class="layout-fixed training-register-page"
 @endsection
 
 @section('head')
@@ -54,7 +54,7 @@ class="layout-fixed"
       href="https://cdn.jsdelivr.net/npm/admin-lte@4.8.4/dist/css/adminlte.min.css"
     />
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
-    <link rel="stylesheet" href="{{ asset('src/css/training/register/register.css?v=training-location-selectors-1') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/training/register/register.css?v=training-location-theme-2') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
     <title>Register Training</title>
@@ -920,19 +920,20 @@ class="layout-fixed"
                         <h6 class="card-header-title">1. Training Information</h6>
                       </div>
                       <div class="row">
-                        <div class="col-12 col-lg-6 mb-3">
+                        <div class="col-12 mb-3">
                           <label for="training_title" class="form-label"
                             >Training Title
                             <span class="text-required">*</span></label
                           >
-                          <input
-                            type="text"
+                          <textarea
                             id="training_title"
                             name="training_title"
                             class="form-control"
-                            placeholder="Enter training title"
+                            rows="3"
+                            maxlength="255"
+                            placeholder="Enter the full training title"
                             required
-                          />
+                          ></textarea>
                         </div>
                         <div class="col-12 col-lg-6 mb-3">
                           <label for="implementing_office" class="form-label"

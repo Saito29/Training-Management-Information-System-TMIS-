@@ -55,6 +55,9 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::post('/system/database/import', [DatabaseBackupController::class, 'import'])->middleware('throttle:1,10')->name('system.database.import');
     Route::post('/system/database/restore', [DatabaseBackupController::class, 'restore'])->middleware('throttle:1,10')->name('system.database.restore');
     Route::post('/system/settings', [SystemSettingsController::class, 'update'])->name('system.settings.update');
+    Route::post('/system/training-notification-rules', [SystemSettingsController::class, 'createTrainingNotificationRule'])->name('system.training-notification-rules.store');
+    Route::patch('/system/training-notification-rules/{rule}', [SystemSettingsController::class, 'updateTrainingNotificationRule'])->whereNumber('rule')->name('system.training-notification-rules.update');
+    Route::delete('/system/training-notification-rules/{rule}', [SystemSettingsController::class, 'deleteTrainingNotificationRule'])->whereNumber('rule')->name('system.training-notification-rules.destroy');
     Route::post('/system/branding', [SystemSettingsController::class, 'updateBranding'])->name('system.branding.update');
     Route::get('/system/data-scope', [SystemSettingsController::class, 'scopeOptions'])->name('system.scope.options');
     Route::post('/system/data-scope', [SystemSettingsController::class, 'scope'])->name('system.scope');
@@ -100,6 +103,8 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::patch('/operations/evaluations/{response}', [OperationsController::class, 'updateEvaluation'])->whereNumber('response')->name('operations.evaluations.update');
     Route::delete('/operations/evaluations/{response}', [OperationsController::class, 'deleteEvaluation'])->whereNumber('response')->name('operations.evaluations.destroy');
     Route::post('/operations/trainings/{id}/status', [OperationsController::class, 'transition'])->whereNumber('id')->name('operations.trainings.status');
+    Route::post('/operations/trainings/{id}/restore-rejected', [OperationsController::class, 'restoreRejectedTraining'])->whereNumber('id')->name('operations.trainings.restore-rejected');
+    Route::delete('/operations/trainings/{id}/permanently-delete', [OperationsController::class, 'permanentlyDeleteRejectedTraining'])->whereNumber('id')->name('operations.trainings.permanently-delete');
     Route::patch('/operations/trainings/{id}/active', [OperationsController::class, 'setActive'])->whereNumber('id')->name('operations.trainings.active');
     Route::post('/operations/trainings/bulk-status', [OperationsController::class, 'bulkTransition'])->middleware('throttle:30,1')->name('operations.trainings.bulk-status');
     Route::post('/operations/trainings/{id}/attachments', [OperationsController::class, 'attachment'])->whereNumber('id')->name('operations.trainings.attachments');

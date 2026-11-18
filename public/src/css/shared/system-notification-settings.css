@@ -1,0 +1,51 @@
+.training-notification-settings .settings-card-header{align-items:flex-start}
+.training-notification-settings .settings-card-header .btn{flex:0 0 auto;font-size:.74rem}
+.notification-control-notice{display:flex;gap:.75rem;align-items:flex-start;padding:.9rem 1rem;margin-bottom:1.1rem;border:1px solid color-mix(in srgb,var(--color-primary) 25%,var(--color-border));border-radius:.75rem;background:var(--color-primary-surface)}
+.notification-control-notice>i{margin-top:.12rem;color:var(--color-primary-dark)}
+.notification-control-notice p{display:grid;gap:.15rem;margin:0;color:var(--color-text-secondary);font-size:.72rem;line-height:1.5}
+.notification-control-notice strong{color:var(--color-text-primary);font-size:.77rem}
+.notification-rules-table-wrap{overflow-x:auto;border:1px solid var(--color-border);border-radius:.75rem;background:var(--color-surface)}
+.notification-rules-table{min-width:680px;margin:0;color:var(--color-text-primary);font-size:.76rem}
+.notification-rules-table thead th{padding:.75rem .85rem;color:var(--color-text-secondary);background:var(--color-bg);font-size:.67rem;font-weight:700;letter-spacing:.045em;text-transform:uppercase;white-space:nowrap}
+.notification-rules-table tbody td{padding:.8rem .85rem;border-top:1px solid var(--color-border);vertical-align:middle}
+.notification-rule-transition{display:block;color:var(--color-text-primary);font-size:.78rem}
+.notification-rule-transition+small{display:block;margin-top:.2rem;color:var(--color-text-secondary);font-size:.67rem}
+.notification-rule-state{display:inline-flex;padding:.28rem .65rem;border-radius:999px;font-size:.66rem;font-weight:700}
+.notification-rule-state.is-enabled{color:#176237;background:#e4f5e9}
+.notification-rule-state.is-disabled{color:#7a5a16;background:#fff2d5}
+.notification-rule-role-badges{display:flex;flex-wrap:wrap;gap:.35rem}
+.notification-rule-role-badges>span{padding:.28rem .55rem;border:1px solid var(--color-border);border-radius:999px;color:var(--color-text-secondary);background:var(--color-bg);font-size:.65rem;font-weight:600}
+.notification-rule-role-badges>.notification-rule-no-roles{border-color:color-mix(in srgb,var(--color-warning) 35%,var(--color-border));color:var(--color-warning-dark,#805b00);background:color-mix(in srgb,var(--color-warning) 8%,var(--color-surface))}
+.notification-rule-actions{display:flex;justify-content:flex-end;gap:.4rem;white-space:nowrap}
+.notification-rule-actions .btn{display:inline-flex;align-items:center;gap:.3rem;font-size:.68rem}
+.notification-rule-modal{overflow:hidden;border:1px solid var(--color-border);border-radius:1rem;background:var(--color-surface);color:var(--color-text-primary);box-shadow:0 1.2rem 3rem #10251a26}
+.notification-rule-modal .modal-header,.notification-rule-modal .modal-footer{padding:1rem 1.25rem;border-color:var(--color-border);background:var(--color-surface)}
+.notification-rule-modal .modal-body{padding:1.15rem 1.25rem;background:var(--color-surface)}
+.notification-rule-modal .modal-title{margin:0;color:var(--color-text-primary);font-size:1rem;font-weight:700}
+.notification-rule-modal .modal-header p{margin:.25rem 0 0;color:var(--color-text-secondary);font-size:.72rem}
+.notification-rule-eyebrow{display:block;margin-bottom:.3rem;color:var(--color-primary-dark);font-size:.6rem;font-weight:750;letter-spacing:.1em}
+.notification-rule-modal .form-label{margin-bottom:.35rem;color:var(--color-text-primary);font-size:.72rem;font-weight:650}
+.notification-rule-modal .form-select,.notification-rule-modal .form-control{min-height:2.5rem;border-color:var(--color-border);color:var(--color-text-primary);background-color:var(--color-bg);font-size:.75rem}
+.notification-rule-enabled-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.8rem 0;margin-top:.55rem;border-bottom:1px solid var(--color-border)}
+.notification-rule-enabled-row>div:first-child{display:grid;gap:.15rem}
+.notification-rule-enabled-row strong{font-size:.75rem}
+.notification-rule-enabled-row small{color:var(--color-text-secondary);font-size:.66rem}
+.notification-rule-enabled-row .form-check-input{width:2.25rem;height:1.15rem;margin:0}
+.notification-rule-enabled-row .form-check-input:checked{border-color:var(--color-primary);background-color:var(--color-primary)}
+.notification-role-fieldset{padding:1rem 0 0;border:0}
+.notification-role-fieldset legend{margin-bottom:.2rem;color:var(--color-text-primary);font-size:.78rem;font-weight:700}
+.notification-role-fieldset>p{margin-bottom:.7rem;color:var(--color-text-secondary);font-size:.68rem}
+.notification-rule-roles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
+.notification-role-toggle{display:flex;align-items:center;justify-content:space-between;gap:.75rem;min-width:0;padding:.65rem .75rem;border:1px solid var(--color-border);border-radius:.65rem;background:var(--color-bg);cursor:pointer}
+.notification-role-toggle>span{display:grid;gap:.12rem;min-width:0}
+.notification-role-toggle strong{color:var(--color-text-primary);font-size:.7rem;font-weight:650}
+.notification-role-toggle small{color:var(--color-text-secondary);font-size:.62rem;line-height:1.35}
+.notification-role-switch{flex:0 0 auto;margin:0;padding:0}
+.notification-role-switch .form-check-input{width:2.15rem;height:1.15rem;margin:0;cursor:pointer}
+.notification-role-switch .form-check-input:checked{border-color:var(--color-primary);background-color:var(--color-primary)}
+.notification-rule-modal .modal-footer .btn{font-size:.72rem;font-weight:650}
+.notification-rules-feedback{margin:.7rem 0 0;color:var(--color-text-secondary);font-size:.72rem}
+[data-theme='dark'] .notification-rule-state.is-enabled{color:#b7e5c3;background:#183c28}
+[data-theme='dark'] .notification-rule-state.is-disabled{color:#f2d18b;background:#46381a}
+[data-theme='dark'] .notification-rule-modal .form-select,[data-theme='dark'] .notification-rule-modal .form-control{color-scheme:dark}
+@media(max-width:575.98px){.training-notification-settings .settings-card-header{flex-wrap:wrap}.training-notification-settings .settings-card-header .btn{width:100%}.notification-rule-roles{grid-template-columns:1fr}.notification-rule-modal .modal-footer{align-items:stretch;flex-direction:column-reverse}.notification-rule-modal .modal-footer .btn{width:100%}}

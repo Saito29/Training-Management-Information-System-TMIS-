@@ -14,7 +14,7 @@
 <div class="table-responsive"><table class="table"><thead><tr><th>Training</th><th>Questionnaire</th><th>Participant</th><th>Answers</th><th>Encoded at</th><th>Actions</th></tr></thead><tbody>@forelse($responses as $response)
 @php($questions = json_decode($response->questionnaire_questions, true) ?? [])
 @php($answers = json_decode($response->answers, true) ?? [])
-<tr><td>{{ $response->training_name }}</td><td>{{ $response->questionnaire_name }}</td><td>{{ $response->participant_name }}</td><td><ol>@foreach($answers as $answer)<li>{{ $answer }}</li>@endforeach</ol></td><td>{{ $response->created_at }}</td><td class="d-flex flex-column gap-2">
+<tr><td>{{ $response->training_name }}</td><td>{{ $response->questionnaire_name }}</td><td>{{ $response->participant_name }}</td><td><ol>@foreach($answers as $answer)<li>{{ $answer }}</li>@endforeach</ol></td><td>{{ $response->created_at ? \Illuminate\Support\Carbon::parse($response->created_at)->timezone(config('app.display_timezone', 'Asia/Manila'))->format('M j, Y g:i A') : '—' }}</td><td class="d-flex flex-column gap-2">
 @if(\App\Support\ModuleAccess::allows(auth()->user(), 'evaluations.edit'))
 <details><summary>Edit response</summary><form method="post" action="{{ route('operations.evaluations.update', $response->id) }}" class="mt-2">@csrf @method('PATCH')
 <input type="hidden" name="training_id" value="{{ $response->training_id }}"><input type="hidden" name="questionnaire_id" value="{{ $response->questionnaire_id }}"><input type="hidden" name="participant_id" value="{{ $response->participant_id }}">

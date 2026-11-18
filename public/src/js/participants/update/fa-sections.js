@@ -34,6 +34,102 @@ document.addEventListener('DOMContentLoaded', () => {
     window.XLSX.utils.book_append_sheet(book, sheet, labels[0] === 'Training Name' ? 'Trainings' : 'Interventions');
     window.XLSX.writeFile(book, `${filename}_${associationId}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
+  const normalizeLocationValue = value => String(value ?? '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
+  const associationMetricsCache = new Map();
+  const farmerMatchesTrainingLocation = (farmer, training) => {
+    const offices = Array.isArray(farmer.beneficiaryOffices) ? farmer.beneficiaryOffices : [];
+    const primaryOffice = offices.find(office => office.isPrimary) || offices[0] || {};
+    const farmerRegion = farmer.region || primaryOffice.region || '';
+    const farmerRegionId = farmer.region_id || primaryOffice.region_id || '';
+    const locations = Array.isArray(training.trainingLocations) && training.trainingLocations.length
+      ? training.trainingLocations
+      : [training];
+
+    return locations.some(location => {
+      const trainingRegion = location.region || training.region || '';
+      const trainingRegionId = location.region_id || training.region_id || '';
+      const sameRegion = farmerRegionId && trainingRegionId
+        ? String(farmerRegionId) === String(trainingRegionId)
+        : normalizeLocationValue(farmerRegion) !== '' && normalizeLocationValue(farmerRegion) === normalizeLocationValue(trainingRegion);
+      const sameProvince = normalizeLocationValue(farmer.province) !== ''
+        && normalizeLocationValue(farmer.province) === normalizeLocationValue(location.province || training.province);
+      const sameMunicipality = normalizeLocationValue(farmer.municipality) !== ''
+        && normalizeLocationValue(farmer.municipality) === normalizeLocationValue(location.municipality || training.municipality);
+      const sameBarangay = normalizeLocationValue(farmer.barangay) !== ''
+        && normalizeLocationValue(farmer.barangay) === normalizeLocationValue(location.barangay || training.barangay);
+
+      return sameRegion && sameProvince && sameMunicipality && sameBarangay;
+    });
+  };
+  const associationTrainingResults = (training, association) => {
+    const cacheKey = `${associationId}:${training._db_id || training.id}`;
+    if (associationMetricsCache.has(cacheKey)) return associationMetricsCache.get(cacheKey);
+
+    const associationIds = new Set([associationId, association?._db_id].filter(Boolean).map(String));
+    const farmers = window.TmisStore.records('tmis-farmers');
+    const eligibleFarmerIds = new Set();
+
+    farmers.forEach(farmer => {
+      const membershipIds = [
+        farmer.association_id,
+        farmer.association_db_id,
+        ...(farmer.associationMemberships || []).flatMap(membership => [membership.id, membership.databaseId]),
+      ].filter(value => value !== undefined && value !== null).map(String);
+      const isMember = membershipIds.some(id => associationIds.has(id));
+
+      if (isMember || farmerMatchesTrainingLocation(farmer, training)) {
+        [farmer.id, farmer._db_id].filter(value => value !== undefined && value !== null).forEach(id => eligibleFarmerIds.add(String(id)));
+      }
+    });
+
+    const belongsToTraining = result => {
+      const resultDatabaseId = String(result.trainingDatabaseId || '');
+      const trainingDatabaseId = String(training._db_id || '');
+      if (resultDatabaseId && trainingDatabaseId) return resultDatabaseId === trainingDatabaseId;
+
+      return [training.id, trainingDatabaseId].filter(Boolean).some(id => String(result.trainingId || '') === String(id));
+    };
+    const resultsFor = kind => window.TmisStore.records(`tmis-${kind}-encoded`).filter(result =>
+      result.status === 'complete'
+      && eligibleFarmerIds.has(String(result.farmerId || ''))
+      && belongsToTraining(result)
+    );
+    const summarizeTests = kind => {
+      const results = resultsFor(kind);
+      if (!results.length) return 'No results';
+
+      const questionnaires = window.TmisStore.records(`tmis-${kind}-questionnaires`);
+      let earnedPoints = 0;
+      let possiblePoints = 0;
+      for (const result of results) {
+        const questionnaire = questionnaires.find(item => String(item.id) === String(result.questionnaireId));
+        const possible = Number(result.totalItems || result.total_items || result.totalQuestions || questionnaire?.totalItems || questionnaire?.questions?.length);
+        const earned = Number(result.score);
+        if (result.score === null || result.score === undefined || result.score === '' || !Number.isFinite(earned) || !Number.isFinite(possible) || possible <= 0) {
+          return 'No results';
+        }
+        earnedPoints += earned;
+        possiblePoints += possible;
+      }
+
+      return possiblePoints ? `${earnedPoints} / ${possiblePoints} · ${(earnedPoints / possiblePoints * 100).toFixed(2)}%` : 'No results';
+    };
+    const ratingValues = resultsFor('training-evaluation')
+      .flatMap(result => Array.isArray(result.ratings) ? result.ratings : [])
+      .map(item => item?.rating)
+      .filter(value => value !== null && value !== undefined && value !== '')
+      .map(Number)
+      .filter(Number.isFinite);
+
+    const summary = {
+      preTest: summarizeTests('pre-test'),
+      postTest: summarizeTests('post-test'),
+      rating: ratingValues.length ? `${(ratingValues.reduce((total, value) => total + value, 0) / ratingValues.length).toFixed(2)} / 5` : 'No results',
+    };
+    associationMetricsCache.set(cacheKey, summary);
+
+    return summary;
+  };
 
   function setupTable(config) {
     const table = document.getElementById(config.table);
@@ -47,7 +143,41 @@ document.addEventListener('DOMContentLoaded', () => {
     const state = { page: 1, size: 8, sort: null, direction: 1 };
     const data = () => {
       const records = readAssociation()?.[config.source];
-      return Array.isArray(records) ? records : [];
+      if (config.source !== 'trainings') return Array.isArray(records) ? records : [];
+
+      const association = readAssociation();
+      const linkedRecords = Array.isArray(records) ? records : [];
+      const associationKeys = new Set([associationId, association?._db_id].filter(Boolean).map(String));
+      const databaseTrainings = window.TmisStore.records('tmis-trainings');
+      const associationTrainings = databaseTrainings.filter(training =>
+        (training.associationIds || []).some(id => associationKeys.has(String(id)))
+      );
+      const byTrainingId = new Map(associationTrainings.map(training => [String(training.id), training]));
+      const merged = linkedRecords.map(linked => ({ ...(byTrainingId.get(String(linked.id)) || {}), ...linked }));
+      const presentIds = new Set(merged.map(training => String(training.id)));
+
+      associationTrainings.forEach(training => {
+        if (!presentIds.has(String(training.id))) merged.push(training);
+      });
+
+      return merged.map(training => {
+        const date = training.date || [training.startDate || training.start_date, training.endDate || training.end_date].filter(Boolean).join(' – ');
+        const assessmentSummary = associationTrainingResults(training, association);
+        return {
+          ...training,
+          id: String(training.id || ''),
+          title: training.title || training.name || 'Untitled training',
+          category: training.category || training.type || training.training_type || 'Training',
+          year: training.year || training.yearCovered || training.year_covered || String(training.startDate || training.start_date || '').slice(0, 4),
+          date: date || 'Not recorded',
+          region: training.region || 'Not recorded',
+          location: training.location || training.venue || training.venue_location || 'Not recorded',
+          organizer: training.organizer || training.office || 'Not recorded',
+          preTest: assessmentSummary.preTest,
+          postTest: assessmentSummary.postTest,
+          rating: assessmentSummary.rating,
+        };
+      });
     };
     const filtered = () => {
       const query = search.value.trim().toLocaleLowerCase();
@@ -66,6 +196,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const visible = rows.slice(start, start + state.size);
       body.replaceChildren();
       visible.forEach(record => {
+        if (config.renderRow) {
+          body.append(config.renderRow(record));
+          return;
+        }
         const row = make('tr');
         config.keys.forEach(key => row.append(make('td', '', record[key] || '—')));
         body.append(row);
@@ -117,10 +251,56 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById(config.export).addEventListener('click', () => exportRows(filtered(), config.keys, config.labels, config.filename));
     if (config.refresh) document.getElementById(config.refresh).addEventListener('click', render);
     window.addEventListener('storage', event => { if (event.key === 'tmis-farmer-associations') render(); });
+    window.addEventListener('tmis:data-updated', () => { associationMetricsCache.clear(); render(); });
     render();
   }
 
-  setupTable({ source: 'trainings', table: 'trainingDataTable', body: 'trainings-table-body', search: 'trainingGlobalSearch', clear: 'clearTrainingFilters', export: 'exportTrainingTable', empty: 'trainingTableEmpty', filterSelector: '.training-column-filter', sortSelector: '.training-sortable', pagers: ['trainingPaginationTop', 'trainingPaginationBottom'], keys: ['title', 'category', 'date', 'location', 'organizer'], labels: ['Training Name', 'Category', 'Dates', 'Location', 'Organizer'], filename: 'association_trainings' });
+  const trainingTitleSegment = title => String(title || 'training').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'training';
+  const trainingViewUrl = training => (document.getElementById('trainingDataTable').dataset.trainingViewRoute || '/app/admin/training/id/view-training/__title__/__id__')
+    .replace('__title__', trainingTitleSegment(training.title))
+    .replace('__id__', encodeURIComponent(training.id));
+  const renderAssociationTraining = training => {
+    const row = make('tr');
+    const action = make('td', 'training-action-cell');
+    const link = make('a', 'training-row-action');
+    link.href = trainingViewUrl(training);
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.title = 'View training information';
+    link.setAttribute('aria-label', `View ${training.title}`);
+    link.append(make('i', 'bi bi-eye-fill'));
+    action.append(link);
+    row.append(action);
+
+    [
+      training.title,
+      training.category,
+      training.year,
+      training.date,
+      training.region,
+      training.location,
+      training.organizer,
+      training.preTest,
+      training.postTest,
+      training.rating,
+    ].forEach((value, index) => {
+      const cell = make('td');
+      if (index === 0) {
+        cell.append(make('strong', 'training-table-title-text', value));
+      } else if (index === 2) {
+        cell.append(make('span', 'training-year-value', value));
+      } else if (index === 6) {
+        cell.append(make('span', 'training-office-value', value));
+      } else {
+        cell.textContent = clean(value) || 'Not recorded';
+      }
+      row.append(cell);
+    });
+
+    return row;
+  };
+
+  setupTable({ source: 'trainings', table: 'trainingDataTable', body: 'trainings-table-body', search: 'trainingGlobalSearch', clear: 'clearTrainingFilters', export: 'exportTrainingTable', empty: 'trainingTableEmpty', filterSelector: '.training-column-filter', sortSelector: '.training-sortable', pagers: ['trainingPaginationTop', 'trainingPaginationBottom'], keys: ['title', 'category', 'year', 'date', 'region', 'location', 'organizer', 'preTest', 'postTest', 'rating'], labels: ['Training Name', 'Category', 'Year', 'Dates', 'Region', 'Location', 'Office', 'Pre-Test', 'Post-Test', 'Rating'], filename: 'association_trainings', renderRow: renderAssociationTraining });
   setupTable({ source: 'interventions', table: 'interventionDataTable', body: 'interventionTableBody', search: 'interventionGlobalSearch', clear: 'clearInterventionFilters', export: 'exportInterventions', refresh: 'refreshInterventions', count: 'interventionRecordCount', filterSelector: '.intervention-column-filter', sortSelector: '.intervention-sortable', pagers: ['interventionPaginationTop', 'interventionPaginationBottom'], keys: ['title', 'office', 'yearCovered', 'action', 'type', 'unit', 'qty', 'remarks'], labels: ['Intervention', 'Office', 'Year Covered', 'Actions', 'Type', 'Unit', 'Qty', 'Remarks'], filename: 'association_interventions' });
 
   const documentList = document.getElementById('attachmentList');

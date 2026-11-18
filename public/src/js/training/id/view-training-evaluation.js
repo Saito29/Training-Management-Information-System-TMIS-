@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedDate = '';
   let selectedAssociation = '';
   const matches = response => (!selectedDate || response.answeredAt === selectedDate) &&
-    (!selectedAssociation || response.association === selectedAssociation);
+    window.trainingFeedbackFilters.matchesAssociation(response, selectedAssociation);
   const filtered = question => (question?.responses||[]).filter(matches);
   const stats = question => {
     const responses = filtered(question);
@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedRating = null;
 
   panel.innerHTML = `<section class="training-evaluation-card training-card" aria-labelledby="trainingEvaluationTitle"><header class="training-evaluation-header"><div class="training-evaluation-heading"><span class="training-evaluation-icon"><i class="bi bi-star-half" aria-hidden="true"></i></span><div><span class="training-evaluation-eyebrow">Training feedback</span><h2 id="trainingEvaluationTitle">Questionnaire results</h2><p>Rating distribution and average score for every evaluation question.</p></div></div><span class="training-evaluation-sample">Saved responses</span></header><div class="training-evaluation-summary"><div><span>Evaluation questions</span><strong>${questions.length}</strong></div><div><span>Participants who evaluated</span><strong>${uniqueEvaluators} <small>/ ${totalParticipants}</small></strong></div><div><span>Response rate</span><strong>${(totalParticipants ? Math.round(uniqueEvaluators / totalParticipants * 100) : 0)}%</strong></div></div><div class="training-evaluation-table-wrap table-responsive"><table class="table training-evaluation-table"><thead><tr><th scope="col">Questionnaire</th><th scope="col">5 <i class="bi bi-star-fill"></i></th><th scope="col">4 <i class="bi bi-star-fill"></i></th><th scope="col">3 <i class="bi bi-star-fill"></i></th><th scope="col">2 <i class="bi bi-star-fill"></i></th><th scope="col">1 <i class="bi bi-star-fill"></i></th><th scope="col">Total score</th><th scope="col">Average</th></tr></thead><tbody id="trainingEvaluationRows"></tbody></table></div><p class="training-evaluation-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> Select a rating count to see which participants gave that rating.</p></section><section class="training-evaluation-detail training-card" aria-labelledby="trainingEvaluationDetailTitle"><header class="training-evaluation-detail-header"><div><span class="training-evaluation-eyebrow">Participant breakdown</span><h2 id="trainingEvaluationDetailTitle"></h2><p id="trainingEvaluationDetailPrompt"></p></div><span class="training-evaluation-detail-count" id="trainingEvaluationDetailCount"></span></header><div class="training-evaluation-detail-body"><div id="trainingEvaluationRatingTabs" class="training-evaluation-rating-tabs" role="group" aria-label="Filter participants by rating"></div><div class="table-responsive"><table class="table training-evaluation-participants"><thead><tr><th scope="col">Participant</th><th scope="col">Rating</th></tr></thead><tbody id="trainingEvaluationParticipants"></tbody></table></div></div></section>`;
+  panel.querySelector('.training-evaluation-table-wrap').insertAdjacentHTML('afterend', '<section class="association-score-breakdown" aria-labelledby="evaluationAssociationSummaryTitle"><header><div><span>Association results</span><h3 id="evaluationAssociationSummaryTitle">Average training evaluation by farmer association</h3><p>Average rating and percentage of the maximum score across all answered items.</p></div></header><div class="table-responsive"><table class="table"><thead><tr><th scope="col">Farmer association</th><th scope="col">Participants</th><th scope="col">Average rating / 5</th><th scope="col">Average percentage</th></tr></thead><tbody id="evaluationAssociationSummaryRows"></tbody></table></div></section>');
   panel.insertAdjacentHTML('beforeend', `<section class="training-evaluation-comments training-card" aria-labelledby="trainingEvaluationCommentsTitle"><header class="training-evaluation-detail-header"><div><span class="training-evaluation-eyebrow">Written feedback</span><h2 id="trainingEvaluationCommentsTitle">Farmer comments</h2><p>What participating farmers said about the training.</p></div><span class="training-evaluation-detail-count">${comments.length} comments</span></header><div class="resource-comment-list">${comments.map(comment => `<article class="resource-comment"><span class="training-evaluation-avatar" aria-hidden="true">${escape(comment.farmer.split(' ').map(part => part[0]).slice(0,2).join(''))}</span><div><div class="resource-comment-heading"><strong>${escape(comment.farmer)}</strong><span>${Number(comment.rating).toFixed(2)} <i class="bi bi-star-fill" aria-hidden="true"></i></span></div><p>${escape(comment.text)}</p></div></article>`).join('')}</div></section>`);
   panel.querySelector('.training-evaluation-header').insertAdjacentHTML('afterend', `<div class="evaluation-scope-filters"><label>Answer date<select id="trainingEvaluationDate" class="form-select"><option value="">All dates</option><option value="2025-05-22">May 22, 2025</option><option value="2025-05-23">May 23, 2025</option></select></label><label>Farmer association<select id="trainingEvaluationAssociation" class="form-select"><option value="">All associations</option><option>San Antonio Farmers Cooperative</option><option>Batangas Growers Association</option></select></label></div>`);
 
@@ -92,7 +93,28 @@ document.addEventListener('DOMContentLoaded', () => {
       ? visibleComments.map(comment => `<article class="resource-comment"><span class="training-evaluation-avatar" aria-hidden="true">${escape(comment.farmer.split(' ').map(part => part[0]).slice(0,2).join(''))}</span><div><div class="resource-comment-heading"><strong>${escape(comment.farmer)}</strong><span>${Number(comment.rating).toFixed(2)} <i class="bi bi-star-fill" aria-hidden="true"></i></span></div><p>${escape(comment.text)}</p></div></article>`).join('')
       : '<p class="evaluation-filter-empty">No farmer comments for these filters.</p>';
   }
-  function renderFiltered() { renderScope(); renderRows(); renderDetail(); }
+  function renderAssociationSummary() {
+    const groups = new Map();
+    questions.forEach(question => filtered(question).forEach(response => {
+      const names = selectedAssociation
+        ? (window.trainingFeedbackFilters.matchesAssociation(response, selectedAssociation) ? [selectedAssociation] : [])
+        : (response.associationNames?.length ? response.associationNames : [response.association || 'No association linked']);
+      names.forEach(name => {
+        if (!groups.has(name)) groups.set(name, {score: 0, answers: 0, participants: new Set()});
+        const group = groups.get(name);
+        group.score += Number(response.rating) || 0;
+        group.answers++;
+        group.participants.add(String(response.farmerId || response.participant));
+      });
+    }));
+    const entries = [...groups.entries()].sort(([first], [second]) => first.localeCompare(second));
+    $('#evaluationAssociationSummaryRows').innerHTML = entries.length ? entries.map(([name, group]) => {
+      const average = group.answers ? group.score / group.answers : null;
+      const percentage = average === null ? null : average / 5 * 100;
+      return `<tr><th scope="row">${escape(name)}</th><td>${group.participants.size}</td><td>${average === null ? '—' : average.toFixed(2)}</td><td>${percentage === null ? 'No results' : `${percentage.toFixed(2)}%`}</td></tr>`;
+    }).join('') : '<tr><td colspan="4" class="association-score-empty">No association evaluation results found for these filters.</td></tr>';
+  }
+  function renderFiltered() { renderScope(); renderRows(); renderDetail(); renderAssociationSummary(); }
   $('#trainingEvaluationRows').addEventListener('click', event => {
     const button = event.target.closest('[data-question][data-rating]');
     if (!button) return;

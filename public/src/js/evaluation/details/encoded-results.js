@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const dialog = bootstrap.Modal.getOrCreateInstance($('encodedAnswerModal'));
   const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
   const date = (value) => value && !Number.isNaN(Date.parse(value)) ? new Date(value).toLocaleDateString() : '-';
-  const submitted = (value) => value && !Number.isNaN(Date.parse(value)) ? new Date(value).toLocaleString() : '-';
+  const submitted = (value) => value && !Number.isNaN(Date.parse(value)) ? new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(new Date(value)) : '-';
   let records = [];
   let page = 1;
   let pageSize = 10;

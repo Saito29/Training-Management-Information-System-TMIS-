@@ -25,6 +25,18 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SystemSettingsController
 {
+    private const TRAINING_NOTIFICATION_TRANSITIONS = [
+        ['from_status' => '*', 'to_status' => '*'],
+        ['from_status' => 'For review', 'to_status' => 'For approval'],
+        ['from_status' => 'For review', 'to_status' => 'Rejected'],
+        ['from_status' => 'For approval', 'to_status' => 'For acceptance'],
+        ['from_status' => 'For approval', 'to_status' => 'For review'],
+        ['from_status' => 'For acceptance', 'to_status' => 'Approved & Accepted'],
+        ['from_status' => 'For acceptance', 'to_status' => 'For approval'],
+        ['from_status' => 'For acceptance', 'to_status' => 'For review'],
+        ['from_status' => 'Rejected', 'to_status' => 'For review'],
+    ];
+
     public function trash(Request $request): View
     {
         $request->merge(['state' => 'trash']);
@@ -276,6 +288,29 @@ class SystemSettingsController
         abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
         $isSuperAdministrator = ModuleAccess::isSuperAdministrator($request->user());
         $roles = $isSuperAdministrator ? DB::table('user_roles')->orderBy('role_id')->get() : collect();
+        $notificationRoles = $isSuperAdministrator
+            ? DB::table('user_roles')->where('is_active', 1)->orderBy('name')->get(['role_id', 'name'])
+            : collect();
+        $notificationRules = collect();
+        if ($isSuperAdministrator) {
+            $enabledRolesByRule = DB::table('training_notification_rule_roles')
+                ->where('is_enabled', true)
+                ->get(['rule_id', 'role_id'])
+                ->groupBy('rule_id')
+                ->map(fn ($assignments) => $assignments->pluck('role_id')->map(fn ($roleId): int => (int) $roleId)->all());
+            $notificationRules = DB::table('training_notification_rules')
+                ->orderBy('from_status')
+                ->orderBy('to_status')
+                ->get()
+                ->map(fn ($rule): array => [
+                    'id' => (int) $rule->id,
+                    'fromStatus' => $rule->from_status,
+                    'toStatus' => $rule->to_status,
+                    'isEnabled' => (bool) $rule->is_enabled,
+                    'roleIds' => $enabledRolesByRule->get($rule->id, []),
+                ])
+                ->values();
+        }
         $roleAccountCounts = $isSuperAdministrator
             ? DB::table('users')->select('role_id')->selectRaw('COUNT(*) as account_count')->groupBy('role_id')->pluck('account_count', 'role_id')
             : collect();
@@ -410,6 +445,9 @@ class SystemSettingsController
         return view('admin.system-settings', [
             'settings' => DB::table('system_settings')->where('id', 1)->first(),
             'roles' => $roles,
+            'notificationRoles' => $notificationRoles,
+            'notificationRules' => $notificationRules,
+            'notificationTransitions' => self::TRAINING_NOTIFICATION_TRANSITIONS,
             'roleAccountCounts' => $roleAccountCounts,
             'roleCredentialCounts' => $roleCredentialCounts,
             'credentialTypes' => $credentialTypes,
@@ -486,6 +524,131 @@ class SystemSettingsController
         abort_unless(ModuleAccess::isSuperAdministrator($request->user()), 403);
 
         return $this->saveMaintenanceSettings($request);
+    }
+
+    public function createTrainingNotificationRule(Request $request): JsonResponse
+    {
+        abort_unless(ModuleAccess::isSuperAdministrator($request->user()), 403);
+        $data = $this->validateTrainingNotificationRule($request);
+
+        $id = DB::transaction(function () use ($request, $data): int {
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            abort_if(DB::table('training_notification_rules')
+                ->where('from_status', $data['from_status'])
+                ->where('to_status', $data['to_status'])
+                ->exists(), 409, 'A notification rule already exists for this transition. Edit the existing rule instead.');
+
+            $id = DB::table('training_notification_rules')->insertGetId([
+                'from_status' => $data['from_status'],
+                'to_status' => $data['to_status'],
+                'is_enabled' => (bool) $data['is_enabled'],
+                'created_by' => $request->user()->user_id,
+                'updated_by' => $request->user()->user_id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $this->replaceTrainingNotificationRuleRoles($id, array_map('intval', $data['role_ids']));
+            AuditTrail::record($request, 'training_notification_rule_created_'.$id, $request->user(), after: ['is_enabled' => (bool) $data['is_enabled']], category: 'settings');
+
+            return $id;
+        });
+
+        return response()->json(['id' => $id, 'message' => 'Training notification rule created.'], 201);
+    }
+
+    public function updateTrainingNotificationRule(Request $request, int $rule): JsonResponse
+    {
+        abort_unless(ModuleAccess::isSuperAdministrator($request->user()), 403);
+        $data = $this->validateTrainingNotificationRule($request);
+
+        DB::transaction(function () use ($request, $rule, $data): void {
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            $existing = DB::table('training_notification_rules')->where('id', $rule)->lockForUpdate()->first();
+            abort_unless($existing, 404);
+            abort_if(DB::table('training_notification_rules')
+                ->where('from_status', $data['from_status'])
+                ->where('to_status', $data['to_status'])
+                ->where('id', '!=', $rule)
+                ->exists(), 409, 'A notification rule already exists for this transition.');
+
+            DB::table('training_notification_rules')->where('id', $rule)->update([
+                'from_status' => $data['from_status'],
+                'to_status' => $data['to_status'],
+                'is_enabled' => (bool) $data['is_enabled'],
+                'updated_by' => $request->user()->user_id,
+                'updated_at' => now(),
+            ]);
+            $this->replaceTrainingNotificationRuleRoles($rule, array_map('intval', $data['role_ids']));
+            AuditTrail::record(
+                $request,
+                'training_notification_rule_updated_'.$rule,
+                $request->user(),
+                ['is_enabled' => (bool) $existing->is_enabled],
+                ['is_enabled' => (bool) $data['is_enabled']],
+                category: 'settings',
+            );
+        });
+
+        return response()->json(['message' => 'Training notification rule updated.']);
+    }
+
+    public function deleteTrainingNotificationRule(Request $request, int $rule): JsonResponse
+    {
+        abort_unless(ModuleAccess::isSuperAdministrator($request->user()), 403);
+
+        DB::transaction(function () use ($request, $rule): void {
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            $existing = DB::table('training_notification_rules')->where('id', $rule)->lockForUpdate()->first();
+            abort_unless($existing, 404);
+            DB::table('training_notification_rules')->where('id', $rule)->delete();
+            AuditTrail::record($request, 'training_notification_rule_deleted_'.$rule, $request->user(), category: 'settings');
+        });
+
+        return response()->json(['message' => 'Training notification rule deleted.']);
+    }
+
+    /** @return array{from_status: string, to_status: string, is_enabled: bool, role_ids: list<string>} */
+    private function validateTrainingNotificationRule(Request $request): array
+    {
+        $data = $request->validate([
+            'from_status' => ['required', 'string', Rule::in(array_values(array_unique(array_column(self::TRAINING_NOTIFICATION_TRANSITIONS, 'from_status'))))],
+            'to_status' => ['required', 'string', Rule::in(array_values(array_unique(array_column(self::TRAINING_NOTIFICATION_TRANSITIONS, 'to_status'))))],
+            'is_enabled' => ['required', 'boolean'],
+            'role_ids' => ['present', 'array', 'max:100'],
+            'role_ids.*' => ['integer', 'distinct', Rule::exists('user_roles', 'role_id')->where('is_active', 1)],
+        ]);
+
+        abort_unless(in_array([
+            'from_status' => $data['from_status'],
+            'to_status' => $data['to_status'],
+        ], self::TRAINING_NOTIFICATION_TRANSITIONS, true), 422, 'Select a supported training status transition.');
+
+        return [
+            'from_status' => $data['from_status'],
+            'to_status' => $data['to_status'],
+            'is_enabled' => (bool) $data['is_enabled'],
+            'role_ids' => array_values($data['role_ids']),
+        ];
+    }
+
+    /** Replace role toggle states while keeping disabled roles visible in settings. */
+    private function replaceTrainingNotificationRuleRoles(int $ruleId, array $enabledRoleIds): void
+    {
+        DB::table('training_notification_rule_roles')->where('rule_id', $ruleId)->delete();
+        $enabledRoleIds = array_map('intval', $enabledRoleIds);
+        $now = now();
+        $rows = DB::table('user_roles')->where('is_active', 1)->orderBy('role_id')->pluck('role_id')
+            ->map(fn ($roleId): array => [
+                'rule_id' => $ruleId,
+                'role_id' => (int) $roleId,
+                'is_enabled' => in_array((int) $roleId, $enabledRoleIds, true),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])->all();
+
+        if ($rows !== []) {
+            DB::table('training_notification_rule_roles')->insert($rows);
+        }
     }
 
     public function manageSuperAdministrators(Request $request): RedirectResponse|JsonResponse

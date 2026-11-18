@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedDate = '';
   let selectedAssociation = '';
   const matches = response => (!selectedDate || response.answeredAt === selectedDate) &&
-    (!selectedAssociation || response.association === selectedAssociation);
+    window.trainingFeedbackFilters.matchesAssociation(response, selectedAssociation);
   const filtered = question => (question?.responses||[]).filter(matches);
   const stats = question => { const responses = filtered(question); return {count:responses.length, score:responses.reduce((sum, response) => sum + response.rating, 0)}; };
   let selectedResource = resources[0]?.id;
@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const $ = selector => panel.querySelector(selector);
   panel.innerHTML = `<section class="resource-evaluation-card training-card" aria-labelledby="resourceEvaluationTitle"><header class="training-evaluation-header"><div class="training-evaluation-heading"><span class="training-evaluation-icon"><i class="bi bi-person-check" aria-hidden="true"></i></span><div><span class="training-evaluation-eyebrow">Farmer feedback</span><h2 id="resourceEvaluationTitle">Resource Person Evaluation</h2><p>Review questionnaire ratings for each resource person.</p></div></div><div class="resource-select-wrap"><label for="resourcePersonSelect">Resource person</label><select id="resourcePersonSelect" class="form-select">${resources.map(resource => `<option value="${escape(resource.id)}" data-title="${escape(resource.name)}" data-details="${escape(resource.details)}" data-office="${escape(resource.office)}">${escape(resource.name)}</option>`).join('')}</select></div></header><div class="resource-person-summary"><span class="resource-person-avatar" id="resourcePersonAvatar"></span><div><strong id="resourcePersonName"></strong><small id="resourcePersonRole"></small></div><span class="training-evaluation-sample">Saved farmer responses</span></div><div class="training-evaluation-summary"><div><span>Evaluation questions</span><strong id="resourceQuestionCount"></strong></div><div><span>Farmers who evaluated</span><strong id="resourceFarmerCount"></strong></div><div><span>Overall average</span><strong id="resourceOverallAverage"></strong></div></div><div class="training-evaluation-table-wrap table-responsive"><table class="table training-evaluation-table"><thead><tr><th scope="col">Questionnaire</th><th scope="col">5 <i class="bi bi-star-fill"></i></th><th scope="col">4 <i class="bi bi-star-fill"></i></th><th scope="col">3 <i class="bi bi-star-fill"></i></th><th scope="col">2 <i class="bi bi-star-fill"></i></th><th scope="col">1 <i class="bi bi-star-fill"></i></th><th scope="col">Total score</th><th scope="col">Average</th></tr></thead><tbody id="resourceEvaluationRows"></tbody></table></div><p class="training-evaluation-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> Select a rating count to see which farmers gave that rating.</p></section><section class="resource-evaluation-detail training-card" aria-labelledby="resourceDetailTitle"><header class="training-evaluation-detail-header"><div><span class="training-evaluation-eyebrow">Farmer breakdown</span><h2 id="resourceDetailTitle"></h2><p id="resourceDetailPrompt"></p></div><span class="training-evaluation-detail-count" id="resourceDetailCount"></span></header><div class="training-evaluation-detail-body"><div id="resourceRatingTabs" class="training-evaluation-rating-tabs" role="group" aria-label="Filter farmers by rating"></div><div class="table-responsive"><table class="table training-evaluation-participants"><thead><tr><th scope="col">Farmer</th><th scope="col">Rating</th></tr></thead><tbody id="resourceEvaluationFarmers"></tbody></table></div></div></section><section class="resource-comments-card training-card" aria-labelledby="resourceCommentsTitle"><header class="training-evaluation-detail-header"><div><span class="training-evaluation-eyebrow">Written feedback</span><h2 id="resourceCommentsTitle">Farmer comments</h2><p>Comments about the selected resource person.</p></div><span class="training-evaluation-detail-count" id="resourceCommentCount"></span></header><div class="resource-comment-list" id="resourceCommentList"></div></section>`;
   panel.querySelector('.training-evaluation-header').insertAdjacentHTML('afterend', `<div class="evaluation-scope-filters"><label>Answer date<select id="resourceEvaluationDate" class="form-select"><option value="">All dates</option><option value="2025-05-22">May 22, 2025</option><option value="2025-05-23">May 23, 2025</option></select></label><label>Farmer association<select id="resourceEvaluationAssociation" class="form-select"><option value="">All associations</option><option>San Antonio Farmers Cooperative</option><option>Batangas Growers Association</option></select></label></div>`);
+  panel.querySelector('.resource-evaluation-card .training-evaluation-table-wrap').insertAdjacentHTML('afterend', '<section class="association-score-breakdown" aria-labelledby="resourceAssociationSummaryTitle"><header><div><span>Association results</span><h3 id="resourceAssociationSummaryTitle">Average resource-person rating by farmer association</h3><p>Average rating and percentage of the maximum score across all answered items.</p></div></header><div class="table-responsive"><table class="table"><thead><tr><th scope="col">Farmer association</th><th scope="col">Participants</th><th scope="col">Average rating / 5</th><th scope="col">Average percentage</th></tr></thead><tbody id="resourceAssociationSummaryRows"></tbody></table></div></section>');
 
   function render() {
     const resource = resources.find(item => item.id === selectedResource);
@@ -79,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const question = resource.questions.find(item => item.id === selectedQuestion);
     const total = resource.questions.reduce((sum, item) => sum + stats(item).score, 0);
     const count = resource.questions.reduce((sum, item) => sum + stats(item).count, 0);
+    renderAssociationSummary(resource);
     $('#resourcePersonSelect').value = resource.id;
     $('#resourcePersonAvatar').textContent = resource.initials;
     $('#resourcePersonName').textContent = resource.name;
@@ -105,6 +107,27 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     $('#resourceCommentCount').textContent = `${visibleComments.length} comments`;
     $('#resourceCommentList').innerHTML = visibleComments.length ? visibleComments.map(comment => `<article class="resource-comment"><span class="training-evaluation-avatar" aria-hidden="true">${escape(comment.farmer.split(' ').map(part => part[0]).slice(0,2).join(''))}</span><div><div class="resource-comment-heading"><strong>${escape(comment.farmer)}</strong><span>${Number(comment.rating).toFixed(2)} <i class="bi bi-star-fill" aria-hidden="true"></i></span></div><p>${escape(comment.text)}</p></div></article>`).join('') : '<p class="evaluation-filter-empty">No farmer comments for these filters.</p>';
+  }
+  function renderAssociationSummary(resource) {
+    const groups = new Map();
+    resource.questions.forEach(question => filtered(question).forEach(response => {
+      const names = selectedAssociation
+        ? (window.trainingFeedbackFilters.matchesAssociation(response, selectedAssociation) ? [selectedAssociation] : [])
+        : (response.associationNames?.length ? response.associationNames : [response.association || 'No association linked']);
+      names.forEach(name => {
+        if (!groups.has(name)) groups.set(name, {score: 0, answers: 0, participants: new Set()});
+        const group = groups.get(name);
+        group.score += Number(response.rating) || 0;
+        group.answers++;
+        group.participants.add(String(response.farmerId || response.farmer));
+      });
+    }));
+    const entries = [...groups.entries()].sort(([first], [second]) => first.localeCompare(second));
+    $('#resourceAssociationSummaryRows').innerHTML = entries.length ? entries.map(([name, group]) => {
+      const average = group.answers ? group.score / group.answers : null;
+      const percentage = average === null ? null : average / 5 * 100;
+      return `<tr><th scope="row">${escape(name)}</th><td>${group.participants.size}</td><td>${average === null ? '—' : average.toFixed(2)}</td><td>${percentage === null ? 'No results' : `${percentage.toFixed(2)}%`}</td></tr>`;
+    }).join('') : '<tr><td colspan="4" class="association-score-empty">No association resource-person results found for these filters.</td></tr>';
   }
   $('#resourcePersonSelect').addEventListener('change', event => { selectedResource = event.target.value; selectedQuestion = 1; selectedRating = null; render(); });
   window.trainingFeedbackFilters.register($('#resourceEvaluationDate'), $('#resourceEvaluationAssociation'), scope => {

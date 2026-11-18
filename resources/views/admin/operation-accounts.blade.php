@@ -1714,8 +1714,8 @@ class="layout-fixed"
                         <div><small>Office</small><strong>{{ $account->office_name ?? 'Not assigned' }}</strong></div>
                         <div><small>Approval</small><strong>{{ $account->status ?? 'Not specified' }}</strong></div>
                         <div><small>Account state</small><strong>{{ $account->deleted_at ? 'Trashed' : ($account->active_status ? 'Active' : 'Inactive') }}</strong></div>
-                        <div><small>Registered</small><strong>{{ $account->is_created_at ? \Illuminate\Support\Carbon::parse($account->is_created_at)->format('M j, Y g:i A') : 'Not recorded' }}</strong></div>
-                        <div><small>Last updated</small><strong>{{ $account->is_updated_at ? \Illuminate\Support\Carbon::parse($account->is_updated_at)->format('M j, Y g:i A') : 'Not updated' }}</strong></div>
+                        <div><small>Registered</small><strong>{{ $account->is_created_at ? \Illuminate\Support\Carbon::parse($account->is_created_at)->timezone(config('app.display_timezone', 'Asia/Manila'))->format('M j, Y g:i A') : 'Not recorded' }}</strong></div>
+                        <div><small>Last updated</small><strong>{{ $account->is_updated_at ? \Illuminate\Support\Carbon::parse($account->is_updated_at)->timezone(config('app.display_timezone', 'Asia/Manila'))->format('M j, Y g:i A') : 'Not updated' }}</strong></div>
                       </div>
                       <section class="account-credential-access" aria-label="Role access profile adjustments">
                         <div><h3>Permissions added by profile</h3>

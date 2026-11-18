@@ -56,7 +56,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/training/update/for-review.css') }}"
+      href="{{ asset('src/css/training/update/for-review.css?v=detailed-workflow-modal-2') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
@@ -67,8 +67,8 @@ class="layout-fixed"
 
 -->
       <script type="module" src="{{ asset('src/js/shared/activity-log.js') }}"></script>
-  <link rel="stylesheet" href="{{ asset('src/css/shared/toast.css') }}">
-    <script src="{{ asset('src/js/shared/toast.js') }}" defer></script>
+  <link rel="stylesheet" href="{{ asset('src/css/shared/toast.css') }}?v=status-toast-info-1">
+    <script src="{{ asset('src/js/shared/toast.js?v=status-toast-info-1') }}" defer></script>
 @endsection
 
 @section('content')
@@ -980,6 +980,10 @@ class="layout-fixed"
                         <option value="">All training types</option>
                       </select>
                     </div>
+                    <div class="toolbar-filter" id="regionFilterGroup" data-admin-only-region-filter hidden>
+                      <label for="regionFilter">Region</label
+                      ><select id="regionFilter" class="form-select"><option value="">All regions</option></select>
+                    </div>
                     <div class="toolbar-filter">
                       <label for="provinceFilter">Province</label
                       ><select id="provinceFilter" class="form-select">
@@ -1795,7 +1799,7 @@ class="layout-fixed"
                 <h5 class="modal-title" id="reviewForwardModalLabel">
                   Submit Training for Approval
                 </h5>
-                <p>A training design must be on file to forward this training.</p>
+                <p>Review the training details and confirm each readiness requirement before submitting.</p>
               </div>
             </div>
             <button
@@ -1809,10 +1813,11 @@ class="layout-fixed"
           </div>
           <div class="modal-body review-modal-body">
             <dl class="review-record-details" id="reviewForwardDetails"></dl>
-            <div class="requirements-panel">
-              <h6>Requirements / Attachments</h6>
-              <div id="designRequirement"></div>
-            </div>
+            <section class="requirements-panel" aria-labelledby="approvalReadinessTitle">
+              <h6 id="approvalReadinessTitle">Requirements before submission</h6>
+              <p class="requirements-intro">Every item must be ready before the training can move to For Approval.</p>
+              <div id="designRequirement" aria-live="polite"></div>
+            </section>
           </div>
           <div class="modal-footer review-modal-footer">
             <span
@@ -1871,7 +1876,7 @@ class="layout-fixed"
                 <h5 class="modal-title" id="rejectTrainingModalLabel">
                   Reject Training
                 </h5>
-                <p>This training will be removed from the review list.</p>
+                <p>The training will be marked Rejected and remain available here to restore or permanently delete.</p>
               </div>
             </div>
             <button
@@ -1887,21 +1892,21 @@ class="layout-fixed"
             <dl class="review-record-details" id="rejectDetails"></dl>
             <div class="mt-3">
               <label for="rejectRemarks" class="form-label reject-remarks-label"
-                >Remarks <span class="text-body-secondary">(optional)</span></label
+                >Rejection reason <span class="text-danger">Required</span></label
               >
               <textarea
                 id="rejectRemarks"
                 class="form-control"
                 rows="4"
                 maxlength="500"
+                required
                 placeholder="State the reason for rejecting this training"
               ></textarea>
             </div>
           </div>
           <div class="modal-footer review-modal-footer">
             <span
-              ><i class="bi bi-shield-exclamation"></i> This action updates the
-              training status</span
+              ><i class="bi bi-shield-exclamation"></i> Rejected records can be restored or permanently deleted</span
             >
             <div>
               <button
@@ -1914,11 +1919,27 @@ class="layout-fixed"
                 type="button"
                 class="btn reject-confirm-button"
                 id="confirmRejectButton"
+                disabled
               >
                 <i class="bi bi-x-circle-fill me-1"></i>Reject Training
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="permanentlyDeleteTrainingModal" tabindex="-1" aria-labelledby="permanentlyDeleteTrainingTitle" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content review-modal-content">
+          <div class="modal-header review-modal-header">
+            <div class="review-modal-heading">
+              <span class="review-modal-icon review-modal-icon-danger"><i class="bi bi-trash3-fill" aria-hidden="true"></i></span>
+              <div><span class="review-modal-eyebrow review-eyebrow-danger">Permanent deletion</span><h5 class="modal-title" id="permanentlyDeleteTrainingTitle">Permanently delete this training?</h5><p>This action removes the rejected training and its linked records.</p></div>
+            </div>
+            <button type="button" class="btn review-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+          </div>
+          <div class="modal-body review-modal-body"><dl class="review-record-details" id="permanentlyDeleteTrainingDetails"></dl><p class="alert alert-danger mb-0">This cannot be undone. Linked participants, resource-person assignments, evaluation results, status history, highlights, and uploaded files will also be deleted. The audit log will retain the deletion event.</p></div>
+          <div class="modal-footer review-modal-footer"><button type="button" class="btn review-modal-dismiss" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-danger" id="confirmPermanentlyDeleteTrainingButton"><i class="bi bi-trash3-fill me-1" aria-hidden="true"></i>Delete permanently</button></div>
         </div>
       </div>
     </div>
@@ -1968,5 +1989,6 @@ class="layout-fixed"
     <!-- nav -->
     <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/training/update/for-review.js?v=training-id-path-1') }}"></script>
+    <script src="{{ asset('src/js/training/update/workflow-modal-readiness.js?v=detailed-workflow-modal-2') }}"></script>
+    <script src="{{ asset('src/js/training/update/for-review.js?v=workflow-filters-db-selection-1') }}"></script>
 @endsection

@@ -42,7 +42,7 @@ function init(){
  }
  function formatDraftDate(value){
   const date=new Date(value);
-  return Number.isNaN(date.getTime())?'Date not recorded':new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'short'}).format(date);
+  return Number.isNaN(date.getTime())?'Date not recorded':new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Manila'}).format(date);
  }
  function restoreDraft(draft){
   const actor=currentActor(),item=draft.data;

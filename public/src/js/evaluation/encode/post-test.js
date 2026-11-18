@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateSummary();
       return;
     }
-    const eligible = window.TmisTrainingData.participantsForEncoding(training, 'post-test', existingRecord?.id || '');
+    const eligible = window.TmisTrainingData.participantsForEncoding(training, 'post-test', existingRecord?.id || '', '', selectedQuestionnaire()?.id || '');
     const eligibleIds = new Set(eligible.map(record => String(record.id)));
     farmers = loadFarmers().filter(farmer => eligibleIds.has(farmer.id));
     if (selectedFarmer && !farmers.some(farmer => farmer.id === selectedFarmer.id)) {
@@ -172,7 +172,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (index >= 0) records[index] = record; else records.push(record);
       await window.TmisStore.setItem('tmis-post-test-encoded', JSON.stringify(records));
       if (draft) { activeDraftId = record.id; $('summaryStatus').textContent = 'Draft saved'; }
-      else if (recordMode !== 'edit') clearEntry();
+      else if (recordMode !== 'edit') {
+        clearEntry();
+        window.TMIS_TRAINING_PICKER?.select('');
+      }
       notify(recordMode === 'edit' ? 'Post-test result updated.' : draft ? 'Draft saved to the database.' : 'Post-test result saved to the database.');
     } catch { notify('Unable to save this result. Refresh and try again.', 'error'); }
   }

@@ -11,7 +11,27 @@ document.addEventListener('DOMContentLoaded', () => {
     barangay: byId('trainingFilterBarangay'), office: byId('trainingFilterOffice'),
   };
   const values = (record, ...keys) => keys.map(key => record?.[key]).find(value => value !== undefined && value !== null && String(value).trim() !== '') || '';
-  const trainingLocation = record => values(record, 'location') || [values(record, 'barangay'), values(record, 'municipality'), values(record, 'province')].filter(Boolean).join(', ');
+  const trainingLocations = record => {
+    const storedLocations = Array.isArray(record?.trainingLocations) ? record.trainingLocations.filter(location => location && typeof location === 'object') : [];
+    const locations = storedLocations.length ? storedLocations : [record || {}];
+    const seen = new Set();
+
+    return locations.map((location, index) => {
+      const venue = String(values(location, 'venue') || (index === 0 ? values(record, 'venue', 'venue_location') : '')).trim();
+      const barangay = String(values(location, 'barangay') || (index === 0 ? values(record, 'barangay') : '')).trim();
+      const municipality = String(values(location, 'municipality') || (index === 0 ? values(record, 'municipality') : '')).trim();
+      const province = String(values(location, 'province') || (index === 0 ? values(record, 'province') : '')).trim();
+      const region = String(values(location, 'region') || (index === 0 ? values(record, 'region') : '')).trim();
+      const address = [barangay ? `Brgy. ${barangay}` : '', municipality, province].filter(Boolean).join(', ');
+      const identity = `${venue}|${address}|${region}`.toLocaleLowerCase();
+
+      if (seen.has(identity) || (!venue && !address && !region)) return null;
+      seen.add(identity);
+
+      return { venue, address: address || venue || 'Location not set', region };
+    }).filter(Boolean);
+  };
+  const trainingLocation = record => trainingLocations(record).map(location => [location.address, location.region].filter(Boolean).join(' · ')).join(' | ');
   const dateLabel = value => {
     if (!value) return '—';
     const date = new Date(`${value}T00:00:00`);
@@ -43,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
       district: String(values(record, 'district') || ''), municipality: String(values(record, 'municipality') || ''),
       barangay: String(values(record, 'barangay') || ''), venue: String(values(record, 'venue', 'venue_location') || ''),
       startDate: String(values(record, 'startDate', 'start_date') || ''), endDate: String(values(record, 'endDate', 'end_date') || ''),
+      trainingLocations: trainingLocations(record),
       location: String(trainingLocation(record)),
     })).filter(record => record.id);
 
@@ -151,10 +172,17 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (item.kind === 'location') {
           cell.className = 'training-picker-location';
           const location = document.createElement('strong');
-          location.textContent = item.value;
+          const locationList = record.trainingLocations;
+          location.textContent = locationList[0]?.address || item.value;
           const details = document.createElement('small');
-          details.textContent = `${record.region || 'Region not set'}${record.barangay ? ` · Brgy. ${record.barangay}` : ''}`;
+          details.textContent = locationList[0]?.region || record.region || 'Region not set';
           cell.append(location, details);
+          locationList.slice(1).forEach((secondaryLocation, index) => {
+            const secondary = document.createElement('small');
+            secondary.className = 'training-picker-secondary-location';
+            secondary.textContent = `Additional location ${index + 1}: ${secondaryLocation.address}${secondaryLocation.region ? ` · ${secondaryLocation.region}` : ''}${secondaryLocation.venue && secondaryLocation.venue !== record.venue ? ` · ${secondaryLocation.venue}` : ''}`;
+            cell.append(secondary);
+          });
         } else {
           cell.textContent = item.value;
         }

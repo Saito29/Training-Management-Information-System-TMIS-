@@ -889,4 +889,32 @@
 .review-data-table .row-select-cell { padding-right: 4px !important; padding-left: 4px !important; text-align: center; vertical-align: middle; }
 .review-data-table .selection-column .form-check-input,
 .review-data-table .row-select-cell .form-check-input { width: 16px; height: 16px; margin: 0; accent-color: #2e7d32; cursor: pointer; }
+.review-data-table tbody tr[data-training-row-id] { cursor: pointer; }
+.review-data-table tbody tr[data-training-row-id]:hover td { background-color: rgba(46,125,50,.055); }
+.review-data-table tbody tr[data-training-row-id].is-selected td { background-color: #e8f5e9; }
+.review-data-table tbody tr[data-training-row-id]:focus-visible { outline: 2px solid #2e7d32; outline-offset: -2px; }
 .selection-count { align-self: center; color: #607d8b; font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+.requirements-intro{margin:0 0 10px;color:#607d8b;font-size:12px;line-height:1.45}
+.requirements-panel .workflow-requirements-list{display:grid;gap:7px;margin:0;padding:0;list-style:none}
+.requirements-panel .workflow-requirements-list li{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:9px;margin:0;padding:9px 10px;border:1px solid #e0e0e0;border-radius:8px;background:#fff}
+.workflow-requirements-list li>i{font-size:15px;color:#2e7d32}
+.workflow-requirements-list li.is-missing>i{color:#c47b12}
+.workflow-requirement-copy{display:grid;min-width:0;gap:2px}
+.workflow-requirement-copy strong{color:#263238;font-size:12px;font-weight:650}
+.workflow-requirement-copy small{color:#607d8b;font-size:11px;line-height:1.4}
+.requirements-panel .workflow-requirements-list li>span{margin:0;padding:3px 8px;color:#1b5e20;background:#e8f5e9;border-radius:999px;font-size:10px;font-weight:700;white-space:nowrap}
+.requirements-panel .workflow-requirements-list li.is-missing>span{color:#8a5700;background:#fff3d9}
+.workflow-selected-trainings{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.workflow-selected-trainings li{display:grid;gap:3px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;background:#f7f9f7}
+.workflow-selected-trainings strong{font-size:12px}
+.workflow-selected-trainings span{color:#607d8b;font-size:11px}
+.review-modal-footer .forward-confirm-button{min-height:36px;padding:7px 12px;font-size:12px;line-height:1.3;white-space:normal}
+.review-modal-footer>div{align-items:center;flex-wrap:wrap}
+[data-theme='dark'] .requirements-intro,[data-theme='dark'] .workflow-requirement-copy small,[data-theme='dark'] .workflow-selected-trainings span{color:#b0bec5}
+[data-theme='dark'] .requirements-panel .workflow-requirements-list li,[data-theme='dark'] .workflow-selected-trainings li{border-color:#455a64;background:#263238}
+[data-theme='dark'] .workflow-requirement-copy strong,[data-theme='dark'] .workflow-selected-trainings strong{color:#edf3f5}
+[data-theme='dark'] .review-data-table tbody tr[data-training-row-id]:hover td{background-color:rgba(129,199,132,.1)}
+[data-theme='dark'] .review-data-table tbody tr[data-training-row-id].is-selected td{background-color:#24442a}
+[data-theme='dark'] .requirements-panel .workflow-requirements-list li.is-missing>span{color:#f4d18b;background:#453718}
+@media(max-width:575.98px){.review-modal-footer>div{width:100%;justify-content:flex-end}.review-modal-footer .forward-confirm-button{max-width:190px}}

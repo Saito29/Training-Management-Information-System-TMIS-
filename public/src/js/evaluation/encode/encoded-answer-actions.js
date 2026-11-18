@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.body.append(dialog);
   dialog.querySelector('[data-farmer]').textContent = record.farmerName || '—';
   dialog.querySelector('[data-questionnaire]').textContent = record.questionnaireName || '—';
-  dialog.querySelector('[data-submitted]').textContent = record.savedAt && !Number.isNaN(Date.parse(record.savedAt)) ? new Date(record.savedAt).toLocaleString() : '—';
+  dialog.querySelector('[data-submitted]').textContent = record.savedAt && !Number.isNaN(Date.parse(record.savedAt)) ? new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(new Date(record.savedAt)) : '—';
   const modal = bootstrap.Modal.getOrCreateInstance(dialog);
   button.addEventListener('click', () => modal.show());
   dialog.querySelector('[data-confirm-delete]').addEventListener('click', async () => {
