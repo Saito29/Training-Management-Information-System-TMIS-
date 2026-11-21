@@ -1957,7 +1957,7 @@ class="layout-fixed"
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
     <!-- nav -->
-    <script src="{{ asset('src/js/shared/nav.js?v=notification-bell-ready-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=notification-read-state-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/administration/id/edit-user.js?v=account-permission-actions-1') }}"></script>
 @endsection

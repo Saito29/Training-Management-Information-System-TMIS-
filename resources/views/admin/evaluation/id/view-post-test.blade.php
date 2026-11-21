@@ -1529,7 +1529,7 @@ class="layout-fixed questionnaire-view-page" data-questionnaire-type="post-test"
     <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.8.4/dist/js/adminlte.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-    <script src="{{ asset('src/js/shared/nav.js?v=notification-bell-ready-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=notification-read-state-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/evaluation/id/view-post-test.js') }}"></script>
     <script src="{{ asset('src/js/evaluation/id/questionnaire-delete.js') }}"></script>

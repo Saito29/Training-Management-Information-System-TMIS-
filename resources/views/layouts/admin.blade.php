@@ -24,7 +24,7 @@
     @endif
     @yield('head')
     <link rel="stylesheet" href="{{ asset('src/css/shared/account-avatar.css') }}">
-    <link rel="stylesheet" href="{{ asset('src/css/shared/notification-content.css?v=notification-bell-ready-1') }}">
+    <link rel="stylesheet" href="{{ asset('src/css/shared/notification-content.css?v=notification-read-state-1') }}">
     <script>window.TMIS_NAV_ACCESS = {{ Illuminate\Support\Js::from($navigationAccess) }};</script>
     <script src="{{ asset('src/js/shared/navigation-access.js?v=admin-profile-navigation-5') }}" defer></script>
     @if($navigationAccess['administrator'] ?? false)

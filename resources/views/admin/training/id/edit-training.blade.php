@@ -1997,7 +1997,7 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- nav -->
-    <script src="{{ asset('src/js/shared/nav.js?v=notification-bell-ready-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=notification-read-state-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script id="trainingQuestionnaireData" type="application/json">
       {"pretest":[{"id":"PRE-GEN-01","name":"General Knowledge Assessment (Pre-test)","itemCount":12,"averageCorrect":8.1},{"id":"PRE-CROP-01","name":"Crop Production Pre-test","itemCount":12,"averageCorrect":8.328}],"posttest":[{"id":"POST-GEN-01","name":"General Knowledge Assessment (Post-test)","itemCount":12,"averageCorrect":10.2},{"id":"POST-CROP-01","name":"Crop Production Post-test","itemCount":12,"averageCorrect":10.5168}]}

@@ -1994,7 +1994,7 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- nav -->
-    <script src="{{ asset('src/js/shared/nav.js?v=notification-bell-ready-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=notification-read-state-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/training/update/workflow-modal-readiness.js?v=detailed-workflow-modal-3') }}"></script>
     <script src="{{ asset('src/js/training/update/for-approval.js?v=workflow-filters-db-selection-1') }}"></script>

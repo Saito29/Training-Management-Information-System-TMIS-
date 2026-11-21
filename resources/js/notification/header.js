@@ -76,15 +76,23 @@ function refresh() {
     list.replaceChildren(...items.slice(0, 10).map(item => {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = `notification-menu-item ${item.readAt ? '' : 'is-unread'}`;
+      const isUnread = !item.readAt;
+      button.className = `notification-menu-item ${isUnread ? 'is-unread' : ''}`;
+      button.setAttribute('aria-label', `${isUnread ? 'Unread' : 'Read'} notification: ${item.title}`);
       const content = document.createElement('span');
       content.className = 'notification-item-copy';
+      const heading = document.createElement('span');
+      heading.className = 'notification-item-heading';
       const title = document.createElement('span'); title.className = 'notification-item-title'; title.textContent = item.title;
+      const readState = document.createElement('span');
+      readState.className = `notification-read-state ${isUnread ? 'is-unread' : 'is-read'}`;
+      readState.textContent = isUnread ? 'Unread' : 'Read';
+      heading.append(title, readState);
       const summary = document.createElement('span'); summary.className = 'notification-item-summary';
       const cleanSummary = removeRepeatedTitle(item.summary, item.title);
       const preview = cleanSummary || removeRepeatedTitle(item.message, item.title);
       summary.textContent = preview.length > 240 ? `${preview.slice(0,237).trimEnd()}…` : preview;
-      content.append(title, summary); button.append(content);
+      content.append(heading, summary); button.append(content);
       button.addEventListener('click', async () => {
         const latest = JSON.parse(window.TmisStore.getItem(stateKey) || '{}');
         latest[item.id] = { ...latest[item.id], readAt: new Date().toISOString() };

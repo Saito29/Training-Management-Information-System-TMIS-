@@ -2316,7 +2316,7 @@ class="layout-fixed"
     <script src="https://cdn.datatables.net/buttons/3.2.5/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/3.2.5/js/buttons.print.min.js"></script>
 
-    <script src="{{ asset('src/js/shared/nav.js?v=notification-bell-ready-1') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=notification-read-state-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/dashboard/scriptv2.js?v=dashboard-upcoming-seven-day-window-1') }}"></script>
     <script src="{{ asset('src/js/dashboard/training-highlight-carousel.js?v=dashboard-highlight-layout-3') }}"></script>

@@ -13,10 +13,46 @@
   min-width: 0;
 }
 
+.notification-menu-item.is-unread {
+  background-color: color-mix(in srgb, var(--color-primary-surface) 62%, var(--color-surface));
+}
+
+.notification-menu-item.is-unread .notification-item-title {
+  color: var(--color-primary-dark);
+}
+
+.notification-item-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .5rem;
+  min-width: 0;
+}
+
 .notification-item-title {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow-wrap: anywhere;
   white-space: normal;
   line-height: 1.4;
+}
+
+.notification-read-state {
+  flex: 0 0 auto;
+  padding: .12rem .4rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  font-size: .58rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.notification-read-state.is-unread {
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  color: var(--color-primary-dark);
+  background: var(--color-primary-surface);
 }
 
 .notification-item-summary {
@@ -36,4 +72,17 @@
 
 [data-theme='dark'] .notification-menu-item {
   color: var(--color-text-primary);
+}
+
+[data-theme='dark'] .notification-menu-item.is-unread {
+  background-color: color-mix(in srgb, var(--color-primary-surface) 58%, var(--color-surface));
+}
+
+[data-theme='dark'] .notification-menu-item.is-unread .notification-item-title,
+[data-theme='dark'] .notification-read-state.is-unread {
+  color: var(--color-primary);
+}
+
+[data-theme='dark'] .notification-read-state {
+  background: var(--color-bg);
 }
