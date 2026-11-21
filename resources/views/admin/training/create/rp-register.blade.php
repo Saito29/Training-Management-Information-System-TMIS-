@@ -24,11 +24,7 @@ class="layout-fixed"
       href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
       rel="stylesheet"
     />
-    <link
-      href="https://db.onlinewebfonts.com/c/07e0cde7ae44d7e3cdc61a55fe9af110?family=Blanka"
-      rel="stylesheet"
-    />
-    <!-- Box icons -->
+        <!-- Box icons -->
     <!-- Basic Icons -->
     <link
       href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css"
@@ -63,8 +59,8 @@ class="layout-fixed"
 
 -->
       <script type="module" src="{{ asset('src/js/shared/activity-log.js') }}"></script>
-  <link rel="stylesheet" href="{{ asset('src/css/shared/toast.css') }}">
-    <script src="{{ asset('src/js/shared/toast.js') }}" defer></script>
+  <link rel="stylesheet" href="{{ asset('src/css/shared/toast.css?v=rp-registration-toast-1') }}">
+    <script src="{{ asset('src/js/shared/toast.js?v=rp-registration-info-1') }}" defer></script>
 @endsection
 
 @section('content')
@@ -798,7 +794,7 @@ class="layout-fixed"
           <div class="row second-row g-4">
             <div class="col-12 col-lg-3"><div class="sticky-column"><div class="card card-progress-bar p-2"><div class="card-body"><ol class="wizard-steps" id="wizard-steps">
               <li class="is-current" data-step="0"><h6 class="wizard-header">Personal Information</h6><span class="wizard-context">Name, title and suffix</span></li>
-              <li data-step="1"><h6 class="wizard-header">Organization Affiliation</h6><span class="wizard-context">Office, qualifications and expertise</span></li>
+              <li data-step="1"><h6 class="wizard-header">Organization Affiliation</h6><span class="wizard-context">Region, office, qualifications and expertise</span></li>
               <li data-step="2"><h6 class="wizard-header">Contact Information</h6><span class="wizard-context">Phone number or email address</span></li>
             </ol></div></div><div class="card card-step-summary p-2 mt-3"><div class="card-body"><div class="step-summary-top d-flex align-items-center justify-content-between"><span class="step-summary-label" id="step_summary_label">Step 1 of 3</span><span class="step-summary-percent" id="step_summary_percent">0%</span></div><div class="progress step-summary-bar" role="progressbar" aria-label="Registration progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="step_summary_bar"><div class="progress-bar" id="step_summary_fill" style="width:0%"></div></div><p class="step-summary-message" id="step_summary_message">Enter the resource person's name.</p></div></div></div></div>
             <div class="col-12 col-lg-6"><div class="card card-form p-2"><div class="card-body"><form id="rpRegisterForm" class="row" autocomplete="on" novalidate>
@@ -811,17 +807,18 @@ class="layout-fixed"
                 <div class="col-12 col-md-6 mb-3" id="rpOtherTitleWrap" hidden><label for="rpOtherTitle" class="form-label">Other title <span class="text-required">*</span></label><input id="rpOtherTitle" name="other_title" type="text" class="form-control" maxlength="40" placeholder="Enter title as it should appear before the name"></div>
               </div><div class="rp-step-actions"><button class="btn btn-submit" type="button" data-next>Next <i class="bi bi-arrow-right" aria-hidden="true"></i></button></div></fieldset>
               <fieldset class="wizard-step rp-wizard-step" data-step="1" hidden><div class="form-header d-flex align-items-center gap-2"><i class="bi bi-building-fill"></i><h6 class="card-header-title" tabindex="-1">2. Organization Affiliation</h6></div><div class="row">
-                <div class="col-12 mb-3"><label for="rpOffice" class="form-label">Affiliated office <span class="text-required">*</span></label><select id="rpOffice" name="office" class="form-select" required><option value="">Choose office</option><option value="DA-SAAD">DA-SAAD</option><option value="DA-AMIA">DA-AMIA</option><option value="DA-Livestock">DA-Livestock</option><option value="DA-HVCDP">DA-HVCDP</option><option value="DA-Rice Program">DA-Rice Program</option><option value="DA-Corn Program">DA-Corn Program</option><option value="DA-ATI">DA-ATI</option><option value="Agricultural Training Division (ATD)">Agricultural Training Division (ATD)</option><option value="Provincial Agriculture Office">Provincial Agriculture Office</option><option value="Municipal Agriculture Office">Municipal Agriculture Office</option><option value="Other">Other</option></select></div>
-                <div class="col-12 mb-3" id="rpOtherOfficeWrap" hidden><label for="rpOtherOffice" class="form-label">Specify office <span class="text-required">*</span></label><input id="rpOtherOffice" name="other_office" type="text" class="form-control" maxlength="120"></div>
+                <div class="col-12 col-md-6 mb-3"><label for="rpRegion" class="form-label">Region <span class="text-required">*</span></label><select id="rpRegion" name="region_id" class="form-select" required><option value="">Choose region</option></select></div>
+                <div class="col-12 col-md-6 mb-3"><label for="rpOffice" class="form-label">Affiliated office <span class="text-required">*</span></label><select id="rpOffice" name="org_id" class="form-select" required disabled><option value="">Choose region first</option></select></div>
+                <div class="col-12 col-md-6 mb-3"><label for="rpStatus" class="form-label">Status <span class="text-required">*</span></label><select id="rpStatus" name="status" class="form-select" required><option value="Active" selected>Active</option><option value="Inactive">Inactive</option></select></div>
                 <div class="col-12 mb-3"><label for="rpQualification" class="form-label">Qualifications <span class="text-optional">(optional)</span></label><textarea id="rpQualification" name="qualification" class="form-control" rows="3" maxlength="500" placeholder="Degrees, licenses or certifications"></textarea></div>
                 <div class="col-12 mb-3"><label for="rpExpertise" class="form-label">Expertise <span class="text-optional">(optional)</span></label><textarea id="rpExpertise" name="expertise" class="form-control" rows="3" maxlength="500" placeholder="Topics or areas of specialization"></textarea></div>
               </div><div class="rp-step-actions"><button class="btn rp-back-button" type="button" data-back><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</button><button class="btn btn-submit" type="button" data-next>Next <i class="bi bi-arrow-right" aria-hidden="true"></i></button></div></fieldset>
               <fieldset class="wizard-step rp-wizard-step border-bottom-0" data-step="2" hidden><div class="form-header d-flex align-items-center gap-2"><i class="bi bi-envelope-at-fill"></i><h6 class="card-header-title" tabindex="-1">3. Contact Information</h6></div><p class="rp-help-text">Provide at least one way to contact this resource person.</p><div class="row">
                 <div class="col-12 col-md-6 mb-3"><label for="rpPhone" class="form-label">Phone number</label><input id="rpPhone" name="phone" type="tel" class="form-control" autocomplete="tel" inputmode="tel" maxlength="20" placeholder="e.g. 0917 123 4567"></div>
                 <div class="col-12 col-md-6 mb-3"><label for="rpEmail" class="form-label">Email address</label><input id="rpEmail" name="email" type="email" class="form-control" autocomplete="email" maxlength="150" placeholder="name@example.com"></div>
-              </div><p class="rp-form-status" id="rpFormStatus" role="status" aria-live="polite"></p><div class="rp-step-actions"><button class="btn rp-back-button" type="button" data-back><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</button><button class="btn btn-submit" type="submit">Register resource person <i class="bi bi-check2" aria-hidden="true"></i></button></div></fieldset>
+              </div><div class="rp-step-actions"><button class="btn rp-back-button" type="button" data-back><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</button><button class="btn btn-submit" type="submit">Register resource person <i class="bi bi-check2" aria-hidden="true"></i></button></div></fieldset>
             </form></div></div></div>
-            <div class="col-12 col-lg-3"><div class="sticky-column"><div class="card card-tips p-2"><div class="card-header d-flex align-items-center justify-content-start gap-2"><i class="bi bi-lightbulb"></i><h5 class="card-tips-title">Tips</h5></div><div class="card-body"><ul class="tips-list"><li class="list-item"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><p class="list-context">Complete all fields marked with <span class="list-required">*</span>.</p></li><li class="list-item"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><p class="list-context">Use the same office name used in training registration.</p></li><li class="list-item"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><p class="list-context">A phone number or email address is required.</p></li></ul></div></div></div></div>
+            <div class="col-12 col-lg-3"><div class="sticky-column"><div class="card card-tips p-2"><div class="card-header d-flex align-items-center justify-content-start gap-2"><i class="bi bi-lightbulb"></i><h5 class="card-tips-title">Tips</h5></div><div class="card-body"><ul class="tips-list"><li class="list-item"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><p class="list-context">Complete all fields marked with <span class="list-required">*</span>.</p></li><li class="list-item"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><p class="list-context">Choose an office registered within the selected region.</p></li><li class="list-item"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><p class="list-context">A phone number or email address is required.</p></li></ul></div></div></div></div>
           </div>
         </div>
       </main>
@@ -1460,8 +1457,8 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.8.4/dist/js/adminlte.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=notification-bell-ready-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <!-- Connect registration fieldsets with the wizard progress card. -->
-    <script src="{{ asset('src/js/training/register/rp-register.js') }}"></script>
+    <script src="{{ asset('src/js/training/register/rp-register.js?v=resource-person-status-5') }}"></script>
 @endsection

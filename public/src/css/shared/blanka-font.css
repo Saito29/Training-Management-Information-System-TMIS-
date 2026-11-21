@@ -1,0 +1,8 @@
+/* Blanka by Emmeran Richard / Troisième Type. The author permits personal and commercial use. */
+@font-face {
+  font-family: 'Blanka';
+  src: url('../../fonts/Blanka-Regular.otf') format('opentype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}

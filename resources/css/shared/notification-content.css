@@ -1,0 +1,39 @@
+.notification-count:not([data-notifications-ready='true']) {
+  visibility: hidden;
+}
+
+.notification-menu-item {
+  align-items: flex-start;
+}
+
+.notification-item-copy {
+  display: grid;
+  flex: 1 1 auto;
+  gap: .18rem;
+  min-width: 0;
+}
+
+.notification-item-title {
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+.notification-item-summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+  line-height: 1.45;
+}
+
+.notification-detail-body p {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+[data-theme='dark'] .notification-menu-item {
+  color: var(--color-text-primary);
+}

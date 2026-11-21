@@ -28,7 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
             if ($response->getStatusCode() >= 500 && $response->getStatusCode() !== 503) {
                 return $json
-                    ? response()->json(['message' => 'A system error occurred. Please try again later.'], 500)
+                    ? response()->json(['message' => 'A system error occurred. Please try again later.'], 500, ['Cache-Control' => 'no-store'])
                     : response()->view('errors.500', [], 500, ['Cache-Control' => 'no-store']);
             }
 

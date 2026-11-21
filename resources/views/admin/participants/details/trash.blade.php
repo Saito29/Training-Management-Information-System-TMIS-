@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link href="https://db.onlinewebfonts.com/c/07e0cde7ae44d7e3cdc61a55fe9af110?family=Blanka" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css') }}">
 <link rel="stylesheet" href="{{ asset('src/css/participants/details/all-status.css') }}">
 <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}">

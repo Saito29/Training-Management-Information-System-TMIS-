@@ -6,6 +6,10 @@ document.addEventListener('DOMContentLoaded', () => {
     || new URLSearchParams(location.search).get('id');
   const modal = bootstrap.Modal.getOrCreateInstance($('accountDeleteModal'));
   const toast = bootstrap.Toast.getOrCreateInstance($('reviewToast'), { delay: 5500 });
+  const canEditProfile = window.TmisStore.can('administration.edit')
+    && (!window.TmisStore.can('administration.page_access') || window.TmisStore.can('administration.view.id.edit-user'));
+  $('editUserProfile').hidden = !canEditProfile;
+  $('deleteUserProfile').hidden = !window.TmisStore.can('administration.delete');
   let pending = null, timer = null;
   const fullName = (user) => [user.firstName, user.middleName, user.lastName, user.suffix].filter(Boolean).join(' ') || 'Unnamed user';
   const initials = (user) => [user.firstName, user.lastName].map((part) => String(part || '').charAt(0)).join('').toUpperCase() || 'U';

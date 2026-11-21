@@ -163,7 +163,7 @@ body::-webkit-scrollbar-thumb:hover,
 }
 
 .app-wrapper .app-header .app-header-left .app-logo .app-logo-text .app-name {
-  font-family: 'blanka';
+  font-family: 'Blanka', sans-serif;
   color: #185e20;
   line-height: 1;
 }
@@ -448,23 +448,6 @@ body::-webkit-scrollbar-thumb:hover,
 .notification-menu-item:focus-visible {
   background: #f7f9f7;
   outline: none;
-}
-.notification-menu-item.is-unread {
-  background: #edf7ee;
-}
-.notification-menu-item.is-unread .notification-item-title {
-  color: #1b5e20;
-  font-weight: 800;
-}
-.notification-menu-item.is-unread::after {
-  position: absolute;
-  top: 18px;
-  right: 16px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #2e7d32;
-  content: '';
 }
 .notification-item-icon,
 .notification-detail-icon {
@@ -992,7 +975,7 @@ body::-webkit-scrollbar-thumb:hover,
   .offcanvas-brand
   .title-wrapper
   .offcanvas-title {
-  font-family: 'blanka';
+  font-family: 'Blanka', sans-serif;
   margin: 0;
   font-weight: 700;
   color: #185e20;

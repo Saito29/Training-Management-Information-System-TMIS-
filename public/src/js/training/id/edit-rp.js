@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const pathId = decodeURIComponent(location.pathname.split('/').filter(Boolean).at(-1) || '');
-  const id = pathId && pathId !== 'edit-rp' ? pathId : new URLSearchParams(location.search).get('id');
+  const pathId = location.pathname.match(/\/(?:view|edit)-rp\/([^/]+)\/?$/i)?.[1];
+  const id = pathId ? decodeURIComponent(pathId) : new URLSearchParams(location.search).get('id');
   const content = document.getElementById('rpContent');
   const viewLink = document.getElementById('rpEditLink');
   if (!id || !content || content.hidden) return;
@@ -13,7 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   const record = read().find(item => item.id === id);
   if (!record) return;
-  viewLink.href = `../view-rp/${encodeURIComponent(id)}`;
+  const resourcePersonRouteBase = location.pathname.replace(/\/(?:view|edit)-rp(?:\/[^/]+)?\/?$/i, '');
+  viewLink.href = `${resourcePersonRouteBase}/view-rp/${encodeURIComponent(id)}`;
 
   content.innerHTML = `
     <form id="rpEditForm" class="rp-edit-form">
@@ -27,10 +28,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <div><label for="rpEditStatus">Status</label><select id="rpEditStatus" name="status"><option>Active</option><option>Inactive</option></select></div>
         <div class="rp-edit-field-wide rp-edit-remarks" id="rpEditRemarksWrap" hidden><label for="rpEditRemarks">Inactive remarks <small>(optional)</small></label><textarea id="rpEditRemarks" name="status_remarks" rows="3" maxlength="500" placeholder="Add a reason or note for the inactive status"></textarea></div>
       </div></section>
-      <section class="rp-edit-section"><h3><i class="bi bi-building" aria-hidden="true"></i> Affiliation and credentials</h3><div class="rp-edit-fields rp-edit-affiliation-fields">
+      <section class="rp-edit-section"><h3><i class="bi bi-building" aria-hidden="true"></i> Affiliation and credentials</h3><div class="rp-edit-fields">
         <div><label for="rpEditOffice">Affiliated office <span aria-hidden="true">*</span></label><input id="rpEditOffice" name="office" type="text" maxlength="150" required /></div>
-        <div class="rp-edit-field-wide"><span class="rp-edit-list-label" id="rpQualificationLabel">Qualifications</span><ul class="rp-edit-bullet-list" id="rpQualificationList" aria-labelledby="rpQualificationLabel"></ul><button class="rp-edit-add-item" type="button" data-add-rp-item="qualification"><i class="bi bi-plus-circle" aria-hidden="true"></i> Add qualification</button></div>
-        <div class="rp-edit-field-wide"><span class="rp-edit-list-label" id="rpExpertiseLabel">Expertise</span><ul class="rp-edit-bullet-list" id="rpExpertiseList" aria-labelledby="rpExpertiseLabel"></ul><button class="rp-edit-add-item" type="button" data-add-rp-item="expertise"><i class="bi bi-plus-circle" aria-hidden="true"></i> Add expertise</button></div>
+        <div class="rp-edit-credential-field"><span class="rp-edit-list-label" id="rpQualificationLabel">Qualifications</span><ul class="rp-edit-bullet-list" id="rpQualificationList" aria-labelledby="rpQualificationLabel"></ul><button class="rp-edit-add-item" type="button" data-add-rp-item="qualification"><i class="bi bi-plus-circle" aria-hidden="true"></i> Add qualification</button></div>
+        <div class="rp-edit-credential-field"><span class="rp-edit-list-label" id="rpExpertiseLabel">Expertise</span><ul class="rp-edit-bullet-list" id="rpExpertiseList" aria-labelledby="rpExpertiseLabel"></ul><button class="rp-edit-add-item" type="button" data-add-rp-item="expertise"><i class="bi bi-plus-circle" aria-hidden="true"></i> Add expertise</button></div>
       </div></section>
       <section class="rp-edit-section"><h3><i class="bi bi-envelope" aria-hidden="true"></i> Contact information</h3><div class="rp-edit-fields">
         <div><label for="rpEditPhone">Phone number</label><input id="rpEditPhone" name="phone" type="tel" maxlength="20" autocomplete="tel" /></div>
@@ -58,8 +59,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const parts = text => String(text || '').split(/[\n;,]+/).map(item => item.trim()).filter(Boolean);
   const updateStatus = document.getElementById('rpEditUpdateStatus');
   const saveMessage = document.getElementById('rpEditSaveStatus');
+  const notify = (message, type) => window.TmisToast?.show(message, type);
   const setStatus = (state, message) => { updateStatus.dataset.state = state; updateStatus.textContent = message; };
   let syncStatus = () => {};
+  let skipNextDirtyInfo = false;
   const addBullet = (key, value = '') => {
     const item = document.createElement('li');
     const input = document.createElement('input'); input.type = 'text'; input.maxLength = 200;
@@ -93,23 +96,52 @@ document.addEventListener('DOMContentLoaded', () => {
   syncStatus = () => {
     const current = collect();
     const dirty = Object.keys(current).some(key => current[key] !== savedValues[key]);
+    const wasDirty = updateStatus.dataset.state === 'unsaved';
     setStatus(dirty ? 'unsaved' : 'saved', dirty ? 'Unsaved changes' : 'Up to date');
+    if (dirty && !wasDirty && !skipNextDirtyInfo) {
+      notify('Resource-person details changed. Save changes to apply them.', 'info');
+    }
+    skipNextDirtyInfo = false;
     if (dirty) saveMessage.textContent = '';
   };
+  form.elements.status.addEventListener('change', () => {
+    const status = form.elements.status.value;
+    notify(
+      status === 'Inactive'
+        ? 'Inactive status selected. Save changes to apply it to this resource person.'
+        : 'Active status selected. Save changes to reactivate this resource person.',
+      status === 'Inactive' ? 'warning' : 'info',
+    );
+    skipNextDirtyInfo = true;
+  });
   form.addEventListener('input', syncStatus);
   form.addEventListener('change', syncStatus);
   form.addEventListener('submit', async event => {
     event.preventDefault();
     const phone = form.elements.phone;
     phone.setCustomValidity(phone.value.trim() || form.elements.email.value.trim() ? '' : 'Enter a phone number or email address.');
-    if (!form.reportValidity()) return;
+    if (!form.reportValidity()) {
+      notify('Review the highlighted fields. Add a phone number or email address before saving.', 'warning');
+      return;
+    }
     const records = read();
     const index = records.findIndex(item => item.id === id);
-    if (index < 0) { setStatus('error', 'Save failed'); saveMessage.textContent = 'This resource person was removed in another tab.'; return; }
+    if (index < 0) {
+      setStatus('error', 'Save failed');
+      saveMessage.textContent = 'This resource person was removed in another tab.';
+      notify('This resource person was removed in another tab, so the changes were not saved.', 'error');
+      return;
+    }
     const previous = records[index];
     const update = collect();
     const changed = Object.keys(update).filter(key => update[key] !== (key in lists ? parts(previous[key]).join('\n') : String(previous[key] || (key === 'status' ? 'Active' : ''))));
-    if (!changed.length) { savedValues = { ...update }; setStatus('saved', 'Up to date'); saveMessage.textContent = 'No changes to save.'; return; }
+    if (!changed.length) {
+      savedValues = { ...update };
+      setStatus('saved', 'Up to date');
+      saveMessage.textContent = 'No changes to save.';
+      notify('No changes were detected. The resource-person record is already up to date.', 'info');
+      return;
+    }
     setStatus('saving', 'Saving…');
     const fieldLabels = { first_name: 'first name', middle_name: 'middle name', last_name: 'last name', suffix: 'suffix', title: 'professional title', office: 'office', qualification: 'qualification', expertise: 'expertise', phone: 'phone number', email: 'email address' };
     const logs = Array.isArray(previous.activityLogs) ? [...previous.activityLogs] : [];
@@ -124,8 +156,18 @@ document.addEventListener('DOMContentLoaded', () => {
       logs.push({ category: 'status', title: statusChanged ? 'Resource person status changed' : 'Inactive remarks updated', description: update.status === 'Inactive' && update.status_remarks ? `${description} Remarks: ${update.status_remarks}` : description, actor: 'System user', actorId: activityActorId, date, status: update.status, reference: id, icon: 'bi-arrow-left-right' });
     }
     records[index] = { ...previous, ...update, activityLogs: logs };
-    try { await window.TmisStore.setItem('tmis-resource-persons', JSON.stringify(records)); savedValues = { ...update }; setStatus('saved', 'Up to date'); saveMessage.textContent = 'Changes saved. Activity Logs will update when this page is reloaded.'; }
-    catch { setStatus('error', 'Save failed'); saveMessage.textContent = 'Could not save changes. Please try again.'; }
+    try {
+      await window.TmisStore.setItem('tmis-resource-persons', JSON.stringify(records));
+      savedValues = { ...update };
+      setStatus('saved', 'Up to date');
+      saveMessage.textContent = 'Changes saved. Activity Logs will update when this page is reloaded.';
+      notify(`Resource person ${previous.name || id} was updated successfully.`, 'success');
+    } catch (error) {
+      setStatus('error', 'Save failed');
+      const message = error instanceof Error ? error.message : 'Could not save resource-person changes. Please try again.';
+      saveMessage.textContent = message;
+      notify(message, error?.status === 422 || error?.status === 409 ? 'warning' : 'error');
+    }
   });
   for (const key of ['phone', 'email']) form.elements[key].addEventListener('input', () => form.elements.phone.setCustomValidity(''));
 });

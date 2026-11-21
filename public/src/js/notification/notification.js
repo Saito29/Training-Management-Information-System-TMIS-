@@ -240,16 +240,17 @@ function init(){
    const saveResult=await window.TmisStore.setItem('tmis-notifications',JSON.stringify([...existing,...items]));
    window.dispatchEvent(new Event('tmis:notifications-updated'));
    // The inbox write has completed; draft cleanup must not misreport a successful create.
-   let draftCleared=true;try{await removeDraft(actor,draftId);}catch{draftCleared=false;}
+   try{await removeDraft(actor,draftId);renderDrafts();}catch(cleanupError){console.error('The notification was sent, but its saved draft could not be removed.',cleanupError);}
    const batchId=items[0].batchId;await reset(false);$('notificationDraftStatus').textContent='Notification saved';
    $('confirmNotificationDialog').close();
-   let deliveryMessage=' No email or push was sent in this browser preview.',deliveryWarning=false;
+   let deliveryMessage=' This browser preview did not send an email.',deliveryWarning=false;
    if(window.TMIS_PAGE){
     const delivery=saveResult?.emailDelivery;
     if(!delivery){deliveryMessage=' Email delivery results were not returned by the server; check notification logs.';deliveryWarning=true;}
-    else{deliveryMessage=` Email accepted for delivery to ${delivery.accepted} recipient${delivery.accepted===1?'':'s'}; ${delivery.failed} failed.`;deliveryWarning=delivery.failed>0;}
+    else if(delivery.failed>0){deliveryMessage=` Email accepted for ${delivery.accepted} recipient${delivery.accepted===1?'':'s'}; ${delivery.failed} failed.`;deliveryWarning=true;}
+    else{deliveryMessage=` Email accepted for delivery to ${delivery.accepted} recipient${delivery.accepted===1?'':'s'}.`;}
    }
-   feedback(`Created ${items.length} TMIS inbox ${items.length===1?'notification':'notifications'}.${deliveryMessage}${draftCleared?'':' The old draft could not be cleared.'}`,deliveryWarning||!draftCleared?'warning':'success');
+   feedback(`Notification${items.length===1?'':'s'} created successfully.${deliveryMessage}`,deliveryWarning?'warning':'success');
    window.TmisActivity?.record({action:'create',module:'users',title:'Notification created',description:`A notification was saved for ${items.length} recipients.`,reference:batchId});
   }catch(error){$('confirmNotificationDialog').close();feedback(error.message||'The notification could not be created.',true);}
   finally{busy=false;$('confirmNotificationCreate').disabled=false;}

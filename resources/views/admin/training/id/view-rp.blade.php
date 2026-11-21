@@ -24,11 +24,7 @@ class="layout-fixed"
       href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
       rel="stylesheet"
     />
-    <link
-      href="https://db.onlinewebfonts.com/c/07e0cde7ae44d7e3cdc61a55fe9af110?family=Blanka"
-      rel="stylesheet"
-    />
-    <!-- Box icons -->
+        <!-- Box icons -->
     <!-- Basic Icons -->
     <link
       href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css"
@@ -58,7 +54,7 @@ class="layout-fixed"
       rel="stylesheet"
       href="{{ asset('src/css/training/id/view-training.css') }}"
     />
-    <link rel="stylesheet" href="{{ asset('src/css/training/id/view-rp.css?v=15') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/training/id/view-rp.css?v=17') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
     <title>DA-TMIS - View Resource Person</title>
@@ -839,9 +835,15 @@ class="layout-fixed"
           </section>
           <section id="rpEvaluationPanel" class="training-panel" role="tabpanel" aria-labelledby="rpEvaluationTab" hidden>
             <div class="rp-evaluation-heading"><div><span class="rp-section-eyebrow">Training feedback</span><h2>Resource Person Evaluation</h2><p id="rpEvaluationDescription">Ratings and comments from trainings facilitated by this resource person.</p></div></div>
+            <div class="rp-evaluation-overall" aria-label="Overall farmer rating summary">
+              <article><span>Overall farmer rating</span><strong id="rpOverallFarmerRating">No ratings yet</strong><small>Average of all submitted answer ratings</small></article>
+              <article><span>Rating answers counted</span><strong id="rpOverallRatingCount">0</strong><small>Completed questionnaire answers for this resource person</small></article>
+              <article><span>Trainings with ratings</span><strong id="rpRatedTrainingCount">0</strong><small>Training-level averages appear in the table</small></article>
+            </div>
+            <p class="rp-evaluation-calculation"><i class="bi bi-info-circle" aria-hidden="true"></i> Overall rating uses every completed farmer answer across trainings. Each training row shows that training’s average rating.</p>
             <div class="rp-evaluation-toolbar"><label for="rpEvaluationSearch" class="visually-hidden">Search evaluations</label><i class="bi bi-search" aria-hidden="true"></i><input id="rpEvaluationSearch" type="search" placeholder="Search training, location, farmer or feedback" autocomplete="off" /></div>
             <nav class="rp-evaluation-pagination rp-evaluation-pagination-top" aria-label="Evaluation pages above table"><div class="rp-evaluation-page-size"><label for="rpEvaluationPageSizeTop">Rows per page</label><select id="rpEvaluationPageSizeTop" data-evaluation-page-size><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="500">500</option><option value="1000">1000</option><option value="all">All</option></select></div><span data-evaluation-summary></span><div class="rp-evaluation-page-actions"><button type="button" data-evaluation-previous aria-label="Previous evaluation page"><i class="bi bi-chevron-left" aria-hidden="true"></i></button><span data-evaluation-page-numbers></span><button type="button" data-evaluation-next aria-label="Next evaluation page"><i class="bi bi-chevron-right" aria-hidden="true"></i></button></div></nav>
-            <div class="rp-evaluation-table-wrap"><table class="rp-evaluation-table"><thead><tr><th scope="col">Training title</th><th scope="col">Location</th><th scope="col">Rating</th><th scope="col"><span class="visually-hidden">Feedback details</span></th></tr></thead><tbody id="rpEvaluationRows"></tbody></table></div>
+            <div class="rp-evaluation-table-wrap"><table class="rp-evaluation-table"><thead><tr><th scope="col">Training title</th><th scope="col">Location</th><th scope="col">Farmer average</th><th scope="col"><span class="visually-hidden">Feedback details</span></th></tr></thead><tbody id="rpEvaluationRows"></tbody></table></div>
             <nav class="rp-evaluation-pagination" aria-label="Evaluation pages below table"><div class="rp-evaluation-page-size"><label for="rpEvaluationPageSizeBottom">Rows per page</label><select id="rpEvaluationPageSizeBottom" data-evaluation-page-size><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="500">500</option><option value="1000">1000</option><option value="all">All</option></select></div><span data-evaluation-summary></span><div class="rp-evaluation-page-actions"><button type="button" data-evaluation-previous aria-label="Previous evaluation page"><i class="bi bi-chevron-left" aria-hidden="true"></i></button><span data-evaluation-page-numbers></span><button type="button" data-evaluation-next aria-label="Next evaluation page"><i class="bi bi-chevron-right" aria-hidden="true"></i></button></div></nav>
           </section>
           <section id="rpLogsPanel" class="training-panel" role="tabpanel" aria-labelledby="rpLogsTab" hidden>
@@ -1489,7 +1491,7 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- nav -->
-    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=notification-bell-ready-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/training/id/view-rp.js?v=13') }}"></script>
+    <script src="{{ asset('src/js/training/id/view-rp.js?v=16') }}"></script>
 @endsection

@@ -24,11 +24,7 @@ class="layout-fixed"
       href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
       rel="stylesheet"
     />
-    <link
-      href="https://db.onlinewebfonts.com/c/07e0cde7ae44d7e3cdc61a55fe9af110?family=Blanka"
-      rel="stylesheet"
-    />
-    <!-- Box icons -->
+        <!-- Box icons -->
     <!-- Basic Icons -->
     <link
       href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css"
@@ -56,7 +52,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/participants/update/view-farmer.css?v=association-training-table-1') }}"
+      href="{{ asset('src/css/participants/update/view-farmer.css?v=association-intervention-detail-2') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/participants/update/fa-overview.css?v=member-details-remove-1') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
@@ -2157,8 +2153,8 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- nav -->
-    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=notification-bell-ready-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-overview.js?v=member-details-remove-1') }}"></script>
-    <script src="{{ asset('src/js/participants/update/fa-sections.js?v=association-score-aggregation-2') }}"></script>
+    <script src="{{ asset('src/js/participants/update/fa-sections.js?v=association-intervention-export-layout-3') }}"></script>
 @endsection

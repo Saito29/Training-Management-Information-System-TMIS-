@@ -22,7 +22,7 @@
     const numberFromQuery = farmerPage && /^\d{8,}$/.test(requestedId()) ? requestedId() : '';
     const farmerNumber = number || numberFromQuery;
     const path = location.pathname.match(/\/training\/id\/(?:view|edit)-training\/(?:[^/]+\/)?([^/]+)\/?$/)
-      || location.pathname.match(/\/(?:participants\/id\/(?:view|edit)-fa|participants\/id\/(?:view|edit)-farmer|training\/id\/(?:view|edit)-training|evaluation\/id\/(?:view|edit)-(?:pre-test|post-test|rp-evaluation|training-evaluation))\/([^/]+)\/?$/);
+      || location.pathname.match(/\/(?:administration\/id\/(?:edit|view)|participants\/id\/(?:view|edit)-fa|participants\/id\/(?:view|edit)-farmer|training\/id\/(?:view|edit)-training|evaluation\/id\/(?:view|edit)-(?:pre-test|post-test|rp-evaluation|training-evaluation))\/([^/]+)\/?$/);
     const pathId = path ? decodeURIComponent(path[1]) : '';
     return farmerNumber ? stores['tmis-farmers']?.find(record => record.farmerNumber === farmerNumber)?.id || farmerNumber : requestedId() || pathId;
   };
@@ -40,7 +40,11 @@
     const result = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      const error = new Error(Object.values(result.errors || {}).flat()[0] || result.message || 'The server could not save this change.');
+      const serverUnavailable = response.status >= 500;
+      const message = serverUnavailable
+        ? 'The system is temporarily unavailable. Your information was not saved. Try again when service is restored.'
+        : Object.values(result.errors || {}).flat()[0] || result.message || 'The server could not save this change.';
+      const error = new Error(message);
       error.status = response.status;
       error.data = result;
       throw error;
@@ -91,7 +95,7 @@
 
     if (/notification-state:/.test(key)) return '{}';
 
-    if (/notification-draft:/.test(key)) return null;
+    if (/notification-drafts?:/.test(key)) return null;
 
     if (/(columns|theme|page-size|table-state|filters|navigation)/.test(key)) return localStorage.getItem(key);
 
@@ -135,7 +139,7 @@
 
     }
 
-    if (key.startsWith('tmis-notification-draft:')) { await request('/ui/draft',{key,value}); stores[key]=value; return; }
+    if (key.startsWith('tmis-notification-draft:') || key.startsWith('tmis-notification-drafts:')) { await request('/ui/draft',{key,value}); stores[key]=value; return; }
 
     if (key.startsWith('tmis-notification-state:')) {
 
@@ -192,7 +196,7 @@
 
   async function removeItem(key) {
 
-    if (key.startsWith('tmis-notification-draft:')) { await request('/ui/draft',{key,value:null}); delete stores[key]; return; }
+    if (key.startsWith('tmis-notification-draft:') || key.startsWith('tmis-notification-drafts:')) { await request('/ui/draft',{key,value:null}); delete stores[key]; return; }
 
     throw new Error('Use the record deletion action.');
 
@@ -231,7 +235,9 @@
   }
 
   const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[character]);
-  window.TmisStore = {escape,getItem,setItem,removeItem,records,selected,request,publish,refresh,selectedId,saveRecord,upload,documentAction};
+  const can = permission => Array.isArray(window.TMIS_PAGE?.permissions)
+    && window.TMIS_PAGE.permissions.includes(permission);
+  window.TmisStore = {escape,getItem,setItem,removeItem,records,selected,request,publish,refresh,selectedId,saveRecord,upload,documentAction,can};
 
   window.TMIS_SESSION = {source:'database',userId:String(window.TMIS_PAGE.actor.id),user:{...window.TMIS_PAGE.actor,id:String(window.TMIS_PAGE.actor.id)}};
 
@@ -329,7 +335,7 @@
     copy.activities.rows=trainings.map(item=>[item.id,item.title,item.type||'',item.district||'',item.province||'',item.municipality||'',[item.startDate,item.endDate].filter(Boolean).join(' - '),item.participants?.length||0,money(Number(item.budget)||0),item.status]);
     copy.upcoming.title='Upcoming Capacity-Building Activities';
     copy.upcoming.exportName='Upcoming-Capacity-Building-Activities';
-    copy.upcoming.description='Capacity-building activities scheduled today through the next three days.';
+    copy.upcoming.description='Upcoming activities starting within the next seven days, plus in-progress activities that have not ended.';
     copy.upcoming.headers=['Training ID','Training','Type','District','Province','Municipality','Start Date','End Date','Venue','Participants','Status'];
     const formatDate=value=>{if(!value)return '';const date=new Date(String(value).slice(0,10)+'T00:00:00+08:00');return Number.isNaN(date.getTime())?String(value):date.toLocaleDateString('en-PH',{year:'numeric',month:'short',day:'numeric',timeZone:'Asia/Manila'});};
     copy.upcoming.rows=dashboard.upcoming.map(item=>[item.id,item.title,item.type||'',item.district||'',item.province||'',item.municipality||'',formatDate(item.startDate),formatDate(item.endDate||item.startDate),item.venue||'',item.target_participants??item.participants?.length??0,item.status||'']);
@@ -343,8 +349,11 @@
     copy.fca.description='Active association records with location, membership and status details.';
     copy.fca.headers=['Association ID','Association','Organization Type','Region','Office','District','Province','Municipality','Members','Status'];
     copy.fca.rows=associations.map(item=>[item.id,item.association_name,item.organization_type||item.organizationType||'',item.region||'',item.office||'',item.district||'',item.province||'',item.municipality||'',item.members?.length||0,item.status]);
-    copy.budget.headers=['District','Province',String(dashboard.currentYear)+' allocated',String(dashboard.previousYear)+' allocated','Approved trainings'];
-    copy.budget.rows=aggregate('district').map(item=>[item.district,item.province,money(item.current),money(item.previous),item.activities]);
+    copy.budget.title='Allocated Budget by Province and District';
+    copy.budget.exportName='Allocated-Budget-by-Province-and-District';
+    copy.budget.description='Training budget totals grouped by province and district.';
+    copy.budget.headers=['Province','District',String(dashboard.currentYear)+' allocated',String(dashboard.previousYear)+' allocated','Training activities'];
+    copy.budget.rows=aggregate('district').map(item=>[item.province,item.district,money(item.current),money(item.previous),item.activities]);
     copy.provinceBudget.headers=['Province',String(dashboard.currentYear)+' allocated',String(dashboard.previousYear)+' allocated','Approved trainings'];
     copy.provinceBudget.rows=aggregate('province').map(item=>[item.province,money(item.current),money(item.previous),item.activities]);
     copy.municipalityBudget.headers=['Municipality','Province',String(dashboard.currentYear)+' allocated',String(dashboard.previousYear)+' allocated','Approved trainings'];

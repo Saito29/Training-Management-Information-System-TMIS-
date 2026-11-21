@@ -20,6 +20,99 @@ document.addEventListener('DOMContentLoaded', () => {
     if (selectedType && attachmentTypes.includes(selectedType)) editAttachmentType.value = selectedType;
   }
   const clean = value => value === undefined || value === null ? '' : String(value);
+  const officeRegionNames = new Map((window.TMIS_PAGE?.regions || []).map(region => [String(region.region_id), region.name]));
+  const normalizeOfficeKey = value => String(value ?? '').trim().toLocaleLowerCase();
+  const interventionOfficeNames = new Map();
+  [...(window.TMIS_PAGE?.offices || []), ...(window.TMIS_PAGE?.registration?.offices || [])].forEach(office => {
+    const regionName = office.region_name || officeRegionNames.get(String(office.region_id)) || '';
+    const officeName = [office.name || office.office_name, regionName].filter(Boolean).join(' — ');
+    [office.org_id, office.office_id, office.id, office.name, office.office_name].filter(Boolean).forEach(key => {
+      interventionOfficeNames.set(normalizeOfficeKey(key), officeName || String(key));
+    });
+  });
+  document.querySelectorAll('#interventionOffice option').forEach(option => {
+    if (option.value) interventionOfficeNames.set(normalizeOfficeKey(option.value), option.textContent.trim() || option.value);
+  });
+  const canEditInterventions = Boolean(document.querySelector('#fa-intervention .intervention-add-button:not(:disabled)'));
+  const firstInterventionValue = (record, keys) => {
+    for (const key of keys) {
+      const value = record[key];
+      if (value !== undefined && value !== null && String(value).trim() !== '') return value;
+    }
+    return '';
+  };
+  const normalizeIntervention = record => {
+    const officeValue = firstInterventionValue(record, ['office', 'officeName', 'office_name', 'organization', 'implementingOffice', 'org_id', 'office_id']);
+    const officeObject = officeValue && typeof officeValue === 'object' ? officeValue : null;
+    const officeId = record.org_id ?? record.office_id ?? (typeof officeValue === 'number' || /^\d+$/.test(String(officeValue)) ? officeValue : null);
+    const officeName = officeObject?.name || officeObject?.officeName
+      || interventionOfficeNames.get(normalizeOfficeKey(officeId))
+      || interventionOfficeNames.get(normalizeOfficeKey(officeValue))
+      || officeValue;
+    const officeRegion = officeObject?.region_name || record.officeRegion || record.office_region || '';
+    const formattedOffice = officeName && officeRegion && !String(officeName).includes(String(officeRegion))
+      ? `${officeName} — ${officeRegion}`
+      : officeName;
+
+    return {
+      ...record,
+      title: firstInterventionValue(record, ['title', 'interventionTitle', 'intervention_title', 'intervention', 'name']),
+      office: formattedOffice,
+      yearCovered: firstInterventionValue(record, ['yearCovered', 'year_covered', 'year']),
+      action: firstInterventionValue(record, ['action', 'deliveryAction', 'delivery_action', 'deliveryStatus', 'delivery_status', 'status']),
+      type: firstInterventionValue(record, ['type', 'interventionType', 'intervention_type', 'category']),
+      unit: firstInterventionValue(record, ['unit', 'unitName', 'unit_name', 'measurementUnit', 'measurement_unit']),
+      qty: firstInterventionValue(record, ['qty', 'quantity', 'quantityProvided', 'quantity_provided']),
+      remarks: firstInterventionValue(record, ['remarks', 'notes', 'note', 'description']),
+    };
+  };
+  const renderInterventionRow = record => {
+    const row = make('tr');
+    if (canEditInterventions) {
+      const actionCell = make('td', 'intervention-row-action-cell');
+      const editButton = make('button', 'btn intervention-row-edit-button');
+      editButton.type = 'button';
+      editButton.dataset.editIntervention = String(record._sourceIndex);
+      editButton.setAttribute('aria-label', `Edit ${clean(record.title) || 'intervention'} details`);
+      editButton.title = 'Edit intervention';
+      editButton.innerHTML = '<i class="bi bi-pencil-square" aria-hidden="true"></i>';
+      actionCell.append(editButton);
+      row.append(actionCell);
+    }
+    ['title', 'office', 'yearCovered', 'action', 'type', 'unit', 'qty', 'remarks'].forEach(key => {
+      const value = record[key];
+      const displayValue = value === undefined || value === null || String(value).trim() === '' ? '—' : value;
+      const cell = make('td', `intervention-cell intervention-cell-${key}`);
+      if (key === 'title') {
+        cell.append(make('strong', 'intervention-record-title', displayValue));
+      } else if (key === 'office') {
+        const [officeName, ...regionParts] = clean(displayValue).split(' — ');
+        cell.append(make('strong', 'intervention-office-name', officeName));
+        if (regionParts.length) cell.append(make('span', 'intervention-cell-detail', regionParts.join(' — ')));
+        if (record.officeFromAssociation) {
+          cell.append(make('span', 'intervention-cell-origin', 'Association office'));
+          cell.title = 'Using the association’s registered office because this intervention has no office recorded.';
+        }
+      } else if (key === 'yearCovered') {
+        cell.append(make('span', 'intervention-year-pill', displayValue));
+      } else if (key === 'action') {
+        const statusClass = clean(displayValue).toLocaleLowerCase() === 'delivered'
+          ? 'intervention-status-delivered'
+          : 'intervention-status-not-delivered';
+        cell.append(make('span', `intervention-status ${statusClass}`, displayValue));
+      } else if (key === 'type') {
+        cell.append(make('span', 'intervention-type-pill', displayValue));
+      } else if (key === 'qty') {
+        cell.append(make('strong', 'intervention-quantity', displayValue));
+      } else if (key === 'remarks') {
+        cell.append(make('span', 'intervention-record-remarks', displayValue));
+      } else {
+        cell.textContent = clean(displayValue);
+      }
+      row.append(cell);
+    });
+    return row;
+  };
   const make = (tag, className, value) => {
     const element = document.createElement(tag);
     if (className) element.className = className;
@@ -28,8 +121,29 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   const exportRows = (records, keys, labels, filename) => {
     if (!window.XLSX) { alert('Excel export is unavailable. Check your connection and try again.'); return; }
-    const rows = records.map(record => Object.fromEntries(keys.map((key, index) => [labels[index], clean(record[key])])));
-    const sheet = window.XLSX.utils.json_to_sheet(rows, { header: labels });
+    let sheet;
+    if (filename === 'association_interventions') {
+      const association = readAssociation();
+      const fallbackRegion = clean(association?.region || association?.regionName || association?.region_name);
+      const headers = ['Intervention', 'Region', 'Office', 'Year Covered', 'Actions', 'Type', 'Unit', 'Qty', 'Remarks'];
+      const dataRows = records.map(record => {
+        let office = clean(record.office);
+        let region = clean(record.officeRegion || record.office_region);
+        const officeParts = office.split(/\s+\u2014\s+/);
+        if (officeParts.length > 1) {
+          office = officeParts.shift();
+          region = officeParts.join(' — ') || region;
+        }
+        region = (region || fallbackRegion).replace(/^Region\s+/i, '').replace(/\s*\([^)]*\)\s*$/, '');
+
+        return [clean(record.title), region, office, clean(record.yearCovered), clean(record.action), clean(record.type), clean(record.unit), clean(record.qty), clean(record.remarks)];
+      });
+      sheet = window.XLSX.utils.aoa_to_sheet([['Farmer Association Intervention'], ['Export'], headers, ...dataRows]);
+      sheet['!cols'] = [{ wch: 30 }, { wch: 14 }, { wch: 22 }, { wch: 15 }, { wch: 14 }, { wch: 24 }, { wch: 12 }, { wch: 10 }, { wch: 32 }];
+    } else {
+      const rows = records.map(record => Object.fromEntries(keys.map((key, index) => [labels[index], clean(record[key])])));
+      sheet = window.XLSX.utils.json_to_sheet(rows, { header: labels });
+    }
     const book = window.XLSX.utils.book_new();
     window.XLSX.utils.book_append_sheet(book, sheet, labels[0] === 'Training Name' ? 'Trainings' : 'Interventions');
     window.XLSX.writeFile(book, `${filename}_${associationId}_${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -142,10 +256,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const pagers = config.pagers.map(id => document.getElementById(id));
     const state = { page: 1, size: 8, sort: null, direction: 1 };
     const data = () => {
-      const records = readAssociation()?.[config.source];
-      if (config.source !== 'trainings') return Array.isArray(records) ? records : [];
-
       const association = readAssociation();
+      const records = association?.[config.source] ?? (config.source === 'interventions' ? association?.interventionRecords ?? association?.intervention : undefined);
+      if (config.source !== 'trainings') {
+        if (!Array.isArray(records)) return [];
+        return config.source === 'interventions' ? records.map((record, index) => {
+          const normalized = normalizeIntervention(record);
+          const associationOffice = firstInterventionValue(association, ['office', 'officeName', 'office_name', 'organization']);
+          const associationRegion = firstInterventionValue(association, ['region', 'regionName', 'region_name']);
+          const fallbackOffice = [associationOffice, associationRegion].filter(Boolean).join(' — ');
+
+          return {
+            ...normalized,
+            office: normalized.office || fallbackOffice,
+            officeFromAssociation: !normalized.office && Boolean(fallbackOffice),
+            _sourceIndex: index,
+          };
+        }) : records;
+      }
+
       const linkedRecords = Array.isArray(records) ? records : [];
       const associationKeys = new Set([associationId, association?._db_id].filter(Boolean).map(String));
       const databaseTrainings = window.TmisStore.records('tmis-trainings');
@@ -201,13 +330,16 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
         const row = make('tr');
-        config.keys.forEach(key => row.append(make('td', '', record[key] || '—')));
+        config.keys.forEach(key => {
+          const value = record[key];
+          row.append(make('td', '', value === undefined || value === null || String(value).trim() === '' ? '—' : value));
+        });
         body.append(row);
       });
       if (!visible.length && !empty) {
         const row = make('tr');
         const cell = make('td', 'intervention-empty-cell', 'No association intervention records available.');
-        cell.colSpan = config.keys.length;
+        cell.colSpan = config.source === 'interventions' ? config.keys.length + Number(canEditInterventions) : config.keys.length;
         row.append(cell);
         body.append(row);
       }
@@ -248,7 +380,10 @@ document.addEventListener('DOMContentLoaded', () => {
       header.addEventListener('click', sort);
       header.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); sort(); } });
     });
-    document.getElementById(config.export).addEventListener('click', () => exportRows(filtered(), config.keys, config.labels, config.filename));
+    document.getElementById(config.export).addEventListener('click', () => {
+      const rows = config.source === 'interventions' ? data() : filtered();
+      exportRows(rows, config.keys, config.labels, config.filename);
+    });
     if (config.refresh) document.getElementById(config.refresh).addEventListener('click', render);
     window.addEventListener('storage', event => { if (event.key === 'tmis-farmer-associations') render(); });
     window.addEventListener('tmis:data-updated', () => { associationMetricsCache.clear(); render(); });
@@ -301,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   setupTable({ source: 'trainings', table: 'trainingDataTable', body: 'trainings-table-body', search: 'trainingGlobalSearch', clear: 'clearTrainingFilters', export: 'exportTrainingTable', empty: 'trainingTableEmpty', filterSelector: '.training-column-filter', sortSelector: '.training-sortable', pagers: ['trainingPaginationTop', 'trainingPaginationBottom'], keys: ['title', 'category', 'year', 'date', 'region', 'location', 'organizer', 'preTest', 'postTest', 'rating'], labels: ['Training Name', 'Category', 'Year', 'Dates', 'Region', 'Location', 'Office', 'Pre-Test', 'Post-Test', 'Rating'], filename: 'association_trainings', renderRow: renderAssociationTraining });
-  setupTable({ source: 'interventions', table: 'interventionDataTable', body: 'interventionTableBody', search: 'interventionGlobalSearch', clear: 'clearInterventionFilters', export: 'exportInterventions', refresh: 'refreshInterventions', count: 'interventionRecordCount', filterSelector: '.intervention-column-filter', sortSelector: '.intervention-sortable', pagers: ['interventionPaginationTop', 'interventionPaginationBottom'], keys: ['title', 'office', 'yearCovered', 'action', 'type', 'unit', 'qty', 'remarks'], labels: ['Intervention', 'Office', 'Year Covered', 'Actions', 'Type', 'Unit', 'Qty', 'Remarks'], filename: 'association_interventions' });
+  setupTable({ source: 'interventions', table: 'interventionDataTable', body: 'interventionTableBody', search: 'interventionGlobalSearch', clear: 'clearInterventionFilters', export: 'exportInterventions', refresh: 'refreshInterventions', count: 'interventionRecordCount', filterSelector: '.intervention-column-filter', sortSelector: '.intervention-sortable', pagers: ['interventionPaginationTop', 'interventionPaginationBottom'], keys: ['title', 'office', 'yearCovered', 'action', 'type', 'unit', 'qty', 'remarks'], labels: ['Intervention', 'Office', 'Year Covered', 'Actions', 'Type', 'Unit', 'Qty', 'Remarks'], filename: 'association_interventions', renderRow: renderInterventionRow });
 
   const documentList = document.getElementById('attachmentList');
   let documentPage = 0;

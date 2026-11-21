@@ -137,6 +137,7 @@ class SystemSettingsController
             'credentialTypes' => DB::table('role_credentials')
                 ->join('user_roles', 'user_roles.role_id', '=', 'role_credentials.role_id')
                 ->where('user_roles.is_active', 1)
+                ->where('role_credentials.is_active', 1)
                 ->where('user_roles.name', '<>', 'System Administrator')
                 ->orderBy('role_credentials.role_id')
                 ->orderBy('role_credentials.name')
@@ -173,7 +174,7 @@ class SystemSettingsController
         $data = $request->validate([
             'action' => ['required', Rule::in(['update', 'delete', 'restore'])],
             'role_id' => ['required_if:action,update', 'integer', Rule::exists('user_roles', 'role_id')->where('is_active', 1)->whereNot('name', 'System Administrator')],
-            'role_credential_id' => ['nullable', 'integer', Rule::exists('role_credentials', 'role_credential_id')->where('role_id', $request->input('role_id'))],
+            'role_credential_id' => ['nullable', 'integer', Rule::exists('role_credentials', 'role_credential_id')->where('role_id', $request->input('role_id'))->where('is_active', 1)],
             'region_id' => ['required_if:action,update', 'integer', Rule::exists('region', 'region_id')->where('is_active', 1)],
             'org_id' => ['required_if:action,update', 'integer', Rule::exists('organization', 'org_id')->where('is_active', 1)->where('region_id', $request->input('region_id'))],
             'status' => ['required_if:action,update', Rule::in(['Pending approval', 'Rejected', 'Approved & Accepted'])],
@@ -210,10 +211,26 @@ class SystemSettingsController
                     && DB::table('role_credentials')
                         ->where('role_credential_id', $user->role_credential_id)
                         ->where('role_id', $data['role_id'])
+                        ->where('is_active', 1)
                         ->exists();
-                $changes['role_credential_id'] = array_key_exists('role_credential_id', $data)
+                $roleCredentialId = array_key_exists('role_credential_id', $data)
                     ? $data['role_credential_id']
                     : ($credentialMatchesRole ? $user->role_credential_id : null);
+                $roleName = DB::table('user_roles')->where('role_id', $data['role_id'])->value('name');
+                if ($data['status'] === 'Approved & Accepted' && $roleName !== 'System Administrator') {
+                    $hasValidCredential = $roleCredentialId !== null
+                        && DB::table('role_credentials')
+                            ->where('role_credential_id', $roleCredentialId)
+                            ->where('role_id', $data['role_id'])
+                            ->where('is_active', 1)
+                            ->exists();
+                    if (! $hasValidCredential) {
+                        throw ValidationException::withMessages([
+                            'role_credential_id' => 'Approval is blocked until an active credential for the selected role is assigned.',
+                        ]);
+                    }
+                }
+                $changes['role_credential_id'] = $roleCredentialId;
             } elseif ($data['action'] === 'delete') {
                 $changes = ['deleted_at' => now(), 'active_status' => 0];
             } else {
@@ -286,31 +303,46 @@ class SystemSettingsController
     public function index(Request $request): View
     {
         abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $isAdministrator = ModuleAccess::isAdministrator($request->user());
         $isSuperAdministrator = ModuleAccess::isSuperAdministrator($request->user());
         $roles = $isSuperAdministrator ? DB::table('user_roles')->orderBy('role_id')->get() : collect();
-        $notificationRoles = $isSuperAdministrator
-            ? DB::table('user_roles')->where('is_active', 1)->orderBy('name')->get(['role_id', 'name'])
-            : collect();
-        $notificationRules = collect();
-        if ($isSuperAdministrator) {
-            $enabledRolesByRule = DB::table('training_notification_rule_roles')
-                ->where('is_enabled', true)
-                ->get(['rule_id', 'role_id'])
-                ->groupBy('rule_id')
-                ->map(fn ($assignments) => $assignments->pluck('role_id')->map(fn ($roleId): int => (int) $roleId)->all());
-            $notificationRules = DB::table('training_notification_rules')
-                ->orderBy('from_status')
-                ->orderBy('to_status')
-                ->get()
-                ->map(fn ($rule): array => [
-                    'id' => (int) $rule->id,
-                    'fromStatus' => $rule->from_status,
-                    'toStatus' => $rule->to_status,
-                    'isEnabled' => (bool) $rule->is_enabled,
-                    'roleIds' => $enabledRolesByRule->get($rule->id, []),
-                ])
-                ->values();
-        }
+        $notificationRoles = DB::table('user_roles')->where('is_active', 1)->orderBy('name')->get(['role_id', 'name']);
+        $enabledRolesByRule = DB::table('training_notification_rule_roles')
+            ->where('is_enabled', true)
+            ->get(['rule_id', 'role_id'])
+            ->groupBy('rule_id')
+            ->map(fn ($assignments) => $assignments->pluck('role_id')->map(fn ($roleId): int => (int) $roleId)->all());
+        $notificationRules = DB::table('training_notification_rules')
+            ->orderBy('from_status')
+            ->orderBy('to_status')
+            ->get()
+            ->map(fn ($rule): array => [
+                'id' => (int) $rule->id,
+                'fromStatus' => $rule->from_status,
+                'toStatus' => $rule->to_status,
+                'isEnabled' => (bool) $rule->is_enabled,
+                'roleIds' => $enabledRolesByRule->get($rule->id, []),
+            ])
+            ->values();
+        $emailRolesByRule = DB::table('training_email_notification_rule_roles')
+            ->where('is_enabled', true)
+            ->get(['rule_id', 'role_id'])
+            ->groupBy('rule_id')
+            ->map(fn ($assignments) => $assignments->pluck('role_id')->map(fn ($roleId): int => (int) $roleId)->all());
+        $emailNotificationRules = DB::table('training_email_notification_rules')
+            ->orderBy('from_status')
+            ->orderBy('to_status')
+            ->get()
+            ->map(fn ($rule): array => [
+                'id' => (int) $rule->id,
+                'fromStatus' => $rule->from_status,
+                'toStatus' => $rule->to_status,
+                'isEnabled' => (bool) $rule->is_enabled,
+                'subjectTemplate' => $rule->subject_template,
+                'messageTemplate' => $rule->message_template,
+                'roleIds' => $emailRolesByRule->get($rule->id, []),
+            ])
+            ->values();
         $roleAccountCounts = $isSuperAdministrator
             ? DB::table('users')->select('role_id')->selectRaw('COUNT(*) as account_count')->groupBy('role_id')->pluck('account_count', 'role_id')
             : collect();
@@ -447,6 +479,9 @@ class SystemSettingsController
             'roles' => $roles,
             'notificationRoles' => $notificationRoles,
             'notificationRules' => $notificationRules,
+            'emailNotificationRules' => $emailNotificationRules,
+            'canManageNotificationRules' => $isAdministrator,
+            'canManageEmailNotificationRules' => $isAdministrator,
             'notificationTransitions' => self::TRAINING_NOTIFICATION_TRANSITIONS,
             'roleAccountCounts' => $roleAccountCounts,
             'roleCredentialCounts' => $roleCredentialCounts,
@@ -467,6 +502,10 @@ class SystemSettingsController
                 ->get(),
             'interventionTypeOptions' => DB::table('participant_options')
                 ->where('field', 'intervention_type')
+                ->whereNotExists(fn ($duplicate) => $duplicate->selectRaw('1')->from('participant_options as duplicate')
+                    ->where('duplicate.field', 'intervention_type')
+                    ->whereColumn('duplicate.id', '<', 'participant_options.id')
+                    ->whereRaw("LOWER(TRIM(COALESCE(NULLIF(duplicate.label, ''), duplicate.value))) = LOWER(TRIM(COALESCE(NULLIF(participant_options.label, ''), participant_options.value)))"))
                 ->orderBy('label')
                 ->get(),
             'recordStatusOptions' => $this->recordStatusOptions(),
@@ -513,6 +552,7 @@ class SystemSettingsController
                 ->orderBy('name')
                 ->get(),
             'scope' => $scope,
+            'isAdministrator' => $isAdministrator,
             'isSuperAdministrator' => $isSuperAdministrator,
             'superAdministrators' => $superAdministrators,
             'superAdminFilters' => $superAdminFilters,
@@ -528,7 +568,7 @@ class SystemSettingsController
 
     public function createTrainingNotificationRule(Request $request): JsonResponse
     {
-        abort_unless(ModuleAccess::isSuperAdministrator($request->user()), 403);
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
         $data = $this->validateTrainingNotificationRule($request);
 
         $id = DB::transaction(function () use ($request, $data): int {
@@ -558,7 +598,7 @@ class SystemSettingsController
 
     public function updateTrainingNotificationRule(Request $request, int $rule): JsonResponse
     {
-        abort_unless(ModuleAccess::isSuperAdministrator($request->user()), 403);
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
         $data = $this->validateTrainingNotificationRule($request);
 
         DB::transaction(function () use ($request, $rule, $data): void {
@@ -594,7 +634,7 @@ class SystemSettingsController
 
     public function deleteTrainingNotificationRule(Request $request, int $rule): JsonResponse
     {
-        abort_unless(ModuleAccess::isSuperAdministrator($request->user()), 403);
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
 
         DB::transaction(function () use ($request, $rule): void {
             DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
@@ -605,6 +645,127 @@ class SystemSettingsController
         });
 
         return response()->json(['message' => 'Training notification rule deleted.']);
+    }
+
+    public function createTrainingEmailNotificationRule(Request $request): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $data = $this->validateTrainingEmailNotificationRule($request);
+
+        $id = DB::transaction(function () use ($request, $data): int {
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            abort_if(DB::table('training_email_notification_rules')
+                ->where('from_status', $data['from_status'])
+                ->where('to_status', $data['to_status'])
+                ->exists(), 409, 'An email rule already exists for this transition. Edit the existing rule instead.');
+
+            $id = DB::table('training_email_notification_rules')->insertGetId([
+                'from_status' => $data['from_status'],
+                'to_status' => $data['to_status'],
+                'is_enabled' => (bool) $data['is_enabled'],
+                'subject_template' => $data['subject_template'] ?? null,
+                'message_template' => $data['message_template'] ?? null,
+                'created_by' => $request->user()->user_id,
+                'updated_by' => $request->user()->user_id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $this->replaceTrainingEmailNotificationRuleRoles($id, array_map('intval', $data['role_ids']));
+            AuditTrail::record($request, 'training_email_notification_rule_created_'.$id, $request->user(), after: ['is_enabled' => (bool) $data['is_enabled']], category: 'settings');
+
+            return $id;
+        });
+
+        return response()->json(['id' => $id, 'message' => 'Training email notification rule created.'], 201);
+    }
+
+    public function updateTrainingEmailNotificationRule(Request $request, int $rule): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $data = $this->validateTrainingEmailNotificationRule($request);
+
+        DB::transaction(function () use ($request, $rule, $data): void {
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            $existing = DB::table('training_email_notification_rules')->where('id', $rule)->lockForUpdate()->first();
+            abort_unless($existing, 404);
+            abort_if(DB::table('training_email_notification_rules')
+                ->where('from_status', $data['from_status'])
+                ->where('to_status', $data['to_status'])
+                ->where('id', '!=', $rule)
+                ->exists(), 409, 'An email rule already exists for this transition.');
+
+            DB::table('training_email_notification_rules')->where('id', $rule)->update([
+                'from_status' => $data['from_status'],
+                'to_status' => $data['to_status'],
+                'is_enabled' => (bool) $data['is_enabled'],
+                'subject_template' => $data['subject_template'] ?? null,
+                'message_template' => $data['message_template'] ?? null,
+                'updated_by' => $request->user()->user_id,
+                'updated_at' => now(),
+            ]);
+            $this->replaceTrainingEmailNotificationRuleRoles($rule, array_map('intval', $data['role_ids']));
+            AuditTrail::record(
+                $request,
+                'training_email_notification_rule_updated_'.$rule,
+                $request->user(),
+                ['is_enabled' => (bool) $existing->is_enabled],
+                ['is_enabled' => (bool) $data['is_enabled']],
+                category: 'settings',
+            );
+        });
+
+        return response()->json(['message' => 'Training email notification rule updated.']);
+    }
+
+    public function deleteTrainingEmailNotificationRule(Request $request, int $rule): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+
+        DB::transaction(function () use ($request, $rule): void {
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            $existing = DB::table('training_email_notification_rules')->where('id', $rule)->lockForUpdate()->first();
+            abort_unless($existing, 404);
+            DB::table('training_email_notification_rules')->where('id', $rule)->delete();
+            AuditTrail::record($request, 'training_email_notification_rule_deleted_'.$rule, $request->user(), category: 'settings');
+        });
+
+        return response()->json(['message' => 'Training email notification rule deleted.']);
+    }
+
+    /** @return array{from_status: string, to_status: string, is_enabled: bool, subject_template: ?string, message_template: ?string, role_ids: list<string>} */
+    private function validateTrainingEmailNotificationRule(Request $request): array
+    {
+        $data = $request->validate([
+            'from_status' => ['required', 'string', Rule::in(array_values(array_unique(array_column(self::TRAINING_NOTIFICATION_TRANSITIONS, 'from_status'))))],
+            'to_status' => ['required', 'string', Rule::in(array_values(array_unique(array_column(self::TRAINING_NOTIFICATION_TRANSITIONS, 'to_status'))))],
+            'is_enabled' => ['required', 'boolean'],
+            'subject_template' => ['nullable', 'string', 'max:255'],
+            'message_template' => ['nullable', 'string', 'max:5000'],
+            'role_ids' => ['present', 'array', 'max:100'],
+            'role_ids.*' => ['integer', 'distinct', Rule::exists('user_roles', 'role_id')->where('is_active', 1)],
+        ]);
+
+        abort_unless(in_array([
+            'from_status' => $data['from_status'],
+            'to_status' => $data['to_status'],
+        ], self::TRAINING_NOTIFICATION_TRANSITIONS, true), 422, 'Select a supported training status transition.');
+
+        return $data;
+    }
+
+    /** @param list<int> $roleIds */
+    private function replaceTrainingEmailNotificationRuleRoles(int $ruleId, array $roleIds): void
+    {
+        DB::table('training_email_notification_rule_roles')->where('rule_id', $ruleId)->delete();
+        foreach (array_unique($roleIds) as $roleId) {
+            DB::table('training_email_notification_rule_roles')->insert([
+                'rule_id' => $ruleId,
+                'role_id' => $roleId,
+                'is_enabled' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
     }
 
     /** @return array{from_status: string, to_status: string, is_enabled: bool, role_ids: list<string>} */
@@ -1035,7 +1196,7 @@ class SystemSettingsController
         $data = $request->validate(['name' => ['required', 'string', 'max:100']]);
         $name = trim($data['name']);
 
-        if ($name === '' || DB::table('participant_options')->where('field', 'intervention_type')->whereRaw('LOWER(value) = ?', [mb_strtolower($name)])->exists()) {
+        if ($name === '' || DB::table('participant_options')->where('field', 'intervention_type')->whereRaw("LOWER(TRIM(COALESCE(NULLIF(label, ''), value))) = ?", [mb_strtolower($name)])->exists()) {
             throw ValidationException::withMessages(['name' => 'Enter a unique intervention type.']);
         }
 
@@ -1056,7 +1217,7 @@ class SystemSettingsController
         $updated = DB::transaction(function () use ($request, $option, $name): array {
             $existing = DB::table('participant_options')->where('id', $option)->where('field', 'intervention_type')->lockForUpdate()->first();
             abort_unless($existing, 404);
-            if ($name === '' || DB::table('participant_options')->where('field', 'intervention_type')->where('id', '!=', $option)->whereRaw('LOWER(value) = ?', [mb_strtolower($name)])->exists()) {
+            if ($name === '' || DB::table('participant_options')->where('field', 'intervention_type')->where('id', '!=', $option)->whereRaw("LOWER(TRIM(COALESCE(NULLIF(label, ''), value))) = ?", [mb_strtolower($name)])->exists()) {
                 throw ValidationException::withMessages(['name' => 'Enter a unique intervention type.']);
             }
 

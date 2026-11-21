@@ -24,11 +24,7 @@ class="layout-fixed"
       href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
       rel="stylesheet"
     />
-    <link
-      href="https://db.onlinewebfonts.com/c/07e0cde7ae44d7e3cdc61a55fe9af110?family=Blanka"
-      rel="stylesheet"
-    />
-    <!-- Box icons -->
+        <!-- Box icons -->
     <!-- Basic Icons -->
     <link
       href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css"
@@ -56,7 +52,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/participants/update/view-farmer.css?v=farmer-training-metrics-6') }}"
+      href="{{ asset('src/css/participants/update/view-farmer.css?v=farmer-intervention-layout-3') }}"
     />
     @if(isset($deletedFarmerReview))
       <link rel="stylesheet" href="{{ asset('src/css/participants/details/deleted-farmers.css?v=deleted-farmer-profile-1') }}" />
@@ -2015,10 +2011,11 @@ class="layout-fixed"
                   </div>
                   <div class="review-pagination intervention-pagination" id="interventionPaginationTop" aria-label="Top intervention table pagination"></div>
                   <div class="table-responsive intervention-table-scroll">
-                    <table class="table intervention-data-table align-middle" id="interventionDataTable">
+                    <table class="table intervention-data-table intervention-readable-table intervention-action-table align-middle" id="interventionDataTable">
                       <caption class="visually-hidden">Interventions provided to this farmer</caption>
                       <thead>
                         <tr>
+                          <th scope="col">Action</th>
                           <th scope="col" class="intervention-sortable" data-sort="title" tabindex="0">Intervention <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                           <th scope="col" class="intervention-sortable" data-sort="office" tabindex="0">Office <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                           <th scope="col" class="intervention-sortable" data-sort="yearCovered" tabindex="0">Year Covered <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
@@ -2029,6 +2026,7 @@ class="layout-fixed"
                           <th scope="col" class="intervention-sortable" data-sort="remarks" tabindex="0">Remarks <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                         </tr>
                         <tr class="intervention-filter-row">
+                          <th></th>
                           <th><label class="visually-hidden" for="filterInterventionTitle">Filter interventions</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionTitle" data-column="title" type="search" placeholder="Filter intervention" /></th>
                           <th><label class="visually-hidden" for="filterInterventionOffice">Filter office</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionOffice" data-column="office" type="search" placeholder="Filter office" /></th>
                           <th><label class="visually-hidden" for="filterInterventionYear">Filter year covered</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionYear" data-column="yearCovered" type="search" placeholder="Filter year" /></th>
@@ -2040,7 +2038,7 @@ class="layout-fixed"
                         </tr>
                       </thead>
                       <tbody id="interventionTableBody">
-                        <tr><td colspan="8" class="intervention-empty-cell">Loading intervention records…</td></tr>
+                        <tr><td colspan="9" class="intervention-empty-cell">Loading intervention records…</td></tr>
                       </tbody>
                     </table>
                   </div>
@@ -2912,6 +2910,30 @@ class="layout-fixed"
         </div>
       </div>
     </div>
+    <div class="modal fade" id="viewInterventionModal" tabindex="-1" aria-labelledby="viewInterventionModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable intervention-form-dialog">
+        <div class="modal-content review-modal-content intervention-modal">
+          <div class="modal-header review-modal-header">
+            <div class="review-modal-heading">
+              <span class="review-modal-icon" aria-hidden="true"><i class="bi bi-eye"></i></span>
+              <div>
+                <span class="review-modal-eyebrow">Farmer support</span>
+                <h5 class="modal-title" id="viewInterventionModalLabel">Intervention details</h5>
+                <p>Review the recorded support, delivery status, and quantity for this farmer.</p>
+              </div>
+            </div>
+            <button type="button" class="btn review-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+          </div>
+          <div class="modal-body review-modal-body">
+            <dl id="viewInterventionDetails" class="intervention-detail-list"></dl>
+          </div>
+          <div class="modal-footer review-modal-footer">
+            <span><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Read-only intervention record</span>
+            <button type="button" class="btn review-modal-dismiss" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <!-- Modal toast notification -->
     <div class="toast-container position-fixed top-0 end-0 p-3">
       <div
@@ -3116,11 +3138,11 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- nav -->
-    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=notification-bell-ready-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-profile-tabs.js?v=participated-training-history-2') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-training-table.js?v=farmer-training-metrics-12') }}"></script>
-    <script src="{{ asset('src/js/participants/update/farmer-intervention-table.js') }}"></script>
+    <script src="{{ asset('src/js/participants/update/farmer-intervention-table.js?v=farmer-intervention-export-layout-4') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-activity-logs.js?v=actor-role-omission-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/attachment-manager.js') }}"></script>
 @endsection

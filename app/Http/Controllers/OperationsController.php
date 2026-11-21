@@ -737,7 +737,7 @@ class OperationsController
                     ->orWhere(fn ($all) => $all->where('from_status', '*')->where('to_status', '*'));
             })
             ->pluck('id');
-        $recipientRoleIds = $matchingRuleIds->isEmpty()
+        $inAppRoleIds = $matchingRuleIds->isEmpty()
             ? collect()
             : DB::table('training_notification_rule_roles')
                 ->whereIn('rule_id', $matchingRuleIds)
@@ -745,6 +745,24 @@ class OperationsController
                 ->pluck('role_id')
                 ->unique()
                 ->values();
+        $matchingEmailRules = DB::table('training_email_notification_rules')
+            ->where('is_enabled', true)
+            ->where(function ($query) use ($training, $data): void {
+                $query->where(fn ($exact) => $exact->where('from_status', $training->status)->where('to_status', $data['status']))
+                    ->orWhere(fn ($all) => $all->where('from_status', '*')->where('to_status', '*'));
+            })
+            ->orderByRaw('CASE WHEN from_status = ? AND to_status = ? THEN 0 ELSE 1 END', [$training->status, $data['status']])
+            ->get();
+        $emailRuleIds = $matchingEmailRules->pluck('id');
+        $emailRoleIds = $emailRuleIds->isNotEmpty()
+            ? DB::table('training_email_notification_rule_roles')
+                ->whereIn('rule_id', $emailRuleIds)
+                ->where('is_enabled', true)
+                ->pluck('role_id')
+                ->unique()
+                ->values()
+            : collect();
+        $recipientRoleIds = $inAppRoleIds->merge($emailRoleIds)->unique()->values();
 
         if ($recipientRoleIds->isNotEmpty()) {
             DB::table('users')
@@ -756,14 +774,16 @@ class OperationsController
                 ->where('users.active_status', 1)
                 ->whereNull('users.deleted_at')
                 ->where('user_roles.is_active', 1)
-                ->select('users.user_id', 'users.email')
+                ->select('users.user_id', 'users.email', 'users.role_id')
                 ->orderBy('users.user_id')
-                ->chunk(100, function ($users) use ($changeId): void {
+                ->chunk(100, function ($users) use ($changeId, $inAppRoleIds, $emailRoleIds): void {
                     foreach ($users as $user) {
                         DB::table('training_notifications')->insert([
                             'status_change_id' => $changeId,
                             'user_id' => $user->user_id,
                             'email' => $user->email,
+                            'in_app_enabled' => $inAppRoleIds->contains((int) $user->role_id),
+                            'email_enabled' => $emailRoleIds->contains((int) $user->role_id),
                             'created_at' => now(),
                         ]);
                     }
@@ -1138,6 +1158,7 @@ class OperationsController
             ->leftJoin('organization as actor_office', 'actor.org_id', '=', 'actor_office.org_id')
             ->leftJoin('organization as training_office', 'trainings.org_id', '=', 'training_office.org_id')
             ->where('training_notifications.user_id', $request->user()->user_id)
+            ->where('training_notifications.in_app_enabled', true)
             ->select(
                 'training_notifications.*', 'training_status_changes.training_id', 'training_status_changes.from_status',
                 'training_status_changes.to_status', 'training_status_changes.reason', 'training_status_changes.actor_user_id',
@@ -1192,8 +1213,8 @@ class OperationsController
 
     public function readNotification(Request $request, int $id): RedirectResponse|JsonResponse
     {
-        abort_unless(DB::table('training_notifications')->where('id', $id)->where('user_id', $request->user()->user_id)->exists(), 404);
-        DB::table('training_notifications')->where('id', $id)->where('user_id', $request->user()->user_id)->update(['read_at' => now()]);
+        abort_unless(DB::table('training_notifications')->where('id', $id)->where('user_id', $request->user()->user_id)->where('in_app_enabled', true)->exists(), 404);
+        DB::table('training_notifications')->where('id', $id)->where('user_id', $request->user()->user_id)->where('in_app_enabled', true)->update(['read_at' => now()]);
 
         return $request->expectsJson() ? response()->json(['message' => 'Notification marked read.']) : back();
     }
@@ -1211,6 +1232,12 @@ class OperationsController
 
     public function profile(Request $request): View
     {
+        $trainingOptions = $request->user() && ModuleAccess::allows($request->user(), 'trainings.read')
+            ? ModuleAccess::scope(DB::table('trainings')->whereNull('deleted_at'), $request->user())
+                ->orderBy('name')
+                ->get(['id', 'ui_id', 'name'])
+            : collect();
+
         return view('admin.users.profile', [
             'profileEntries' => $request->user()
                 ? $this->activityEntries($request->user())
@@ -1220,6 +1247,7 @@ class OperationsController
             'permissionBreakdown' => $request->user()
                 ? ModuleAccess::permissionBreakdown($request->user())
                 : ['role' => [], 'credential' => [], 'denied' => []],
+            'trainingOptions' => $trainingOptions,
         ]);
     }
 
@@ -1229,6 +1257,7 @@ class OperationsController
         $entries = DB::table('users_log')
             ->leftJoin('users as actor', 'users_log.actor_user_id', '=', 'actor.user_id')
             ->leftJoin('organization as actor_office', 'actor.org_id', '=', 'actor_office.org_id')
+            ->leftJoin('region as actor_region', 'actor.region_id', '=', 'actor_region.region_id')
             ->leftJoin('users as subject', 'users_log.user_id', '=', 'subject.user_id')
             ->where('users_log.actor_user_id', $user->user_id)
             ->whereIn('users_log.category', ['account', 'participants', 'trainings', 'associations', 'resource_persons', 'questionnaires', 'evaluation'])
@@ -1242,6 +1271,7 @@ class OperationsController
                 'actor.first_name as actor_first_name', 'actor.middle_name as actor_middle_name',
                 'actor.last_name as actor_last_name', 'actor.extension_name as actor_suffix',
                 'actor_office.name as actor_office_name',
+                'actor_region.name as actor_region_name',
             ])
             ->orderByDesc('users_log.created_at')
             ->orderByDesc('users_log.id')
@@ -1269,8 +1299,14 @@ class OperationsController
                 $entry->actor_last_name,
                 $entry->actor_suffix,
             );
-            if (is_string($entry->actor_office_name) && trim($entry->actor_office_name) !== '') {
-                $actorName .= ' - '.$entry->actor_office_name;
+            $actorLocation = array_filter([
+                is_string($entry->actor_office_name) ? trim($entry->actor_office_name) : '',
+                is_string($entry->actor_region_name)
+                    ? trim(preg_replace('/^Region\s+/i', '', trim($entry->actor_region_name)) ?? $entry->actor_region_name)
+                    : '',
+            ]);
+            if ($actorLocation !== []) {
+                $actorName .= ' - '.implode(', ', $actorLocation);
             }
             $entry->event = Str::headline(str_replace('_', ' ', $event));
             $entry->title = match ($category) {
@@ -1290,8 +1326,10 @@ class OperationsController
             $entry->action = $action;
             $entry->source = match ($category) {
                 'account' => 'account',
+                'participants' => 'farmer',
                 'resource_persons' => 'resource',
                 'associations' => 'association',
+                'trainings' => 'training',
                 default => $category,
             };
             $beforeValues = $this->auditValues($entry->old_values);
@@ -1313,6 +1351,7 @@ class OperationsController
                 $entry->actor_last_name,
                 $entry->actor_suffix,
                 $entry->actor_office_name,
+                $entry->actor_region_name,
                 $entry->old_values,
                 $entry->new_values,
                 $entry->request_id,

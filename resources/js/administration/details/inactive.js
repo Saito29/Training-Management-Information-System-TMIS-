@@ -56,13 +56,19 @@ document.addEventListener('DOMContentLoaded', () => {
     toast.show();
   }
   function read() {
-    const data = JSON.parse(window.TmisStore.getItem(key) || '[]');
-    if (!Array.isArray(data) || data.some((user) => !user || typeof user !== 'object' || !user.id)) throw new Error('Invalid registration data');
+    let data;
+    try {
+      const serialized = window.TmisStore?.getItem?.(key);
+      if (serialized) data = JSON.parse(serialized);
+    } catch { /* Fall back to the server-rendered account snapshot below. */ }
+    if (!Array.isArray(data)) data = window.TMIS_PAGE?.stores?.[key];
+    if (!Array.isArray(data)) throw new Error('Account records are missing from the page data. Reload the page to try again.');
+    if (data.some((user) => !user || typeof user !== 'object' || !user.id)) throw new Error('Account data contains an invalid registration.');
     return data;
   }
   function refresh() {
     try { records = read(); render(); }
-    catch { feedback('User registrations could not be loaded. Try refreshing.', 'error'); }
+    catch (error) { feedback(`User registrations could not be loaded. ${error.message || 'Try refreshing.'}`, 'error'); }
   }
   function actionLink(user, type, icon, file) {
     const link = document.createElement('a');
@@ -233,7 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshing = true;
     button.disabled = true;
     try {
-      if (window.TMIS_PAGE) await window.TmisStore.refresh();
+      if (window.TMIS_PAGE && typeof window.TmisStore?.refresh === 'function') await window.TmisStore.refresh();
+      else if (!Array.isArray(window.TMIS_PAGE?.stores?.[key])) throw new Error('Account data is unavailable.');
       records = read();
       render();
       feedback('User registrations refreshed.');

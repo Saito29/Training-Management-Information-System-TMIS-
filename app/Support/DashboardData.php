@@ -55,7 +55,9 @@ class DashboardData
             $funds[$coveredYear] += $budget;
             foreach ($geography as $field => &$rows) {
                 $label = ($item[$field] ?? '') ?: 'Not recorded';
-                $key = $field === 'municipality' ? (($item['province'] ?? '') ?: 'Not recorded').' / '.$label : $label;
+                $key = in_array($field, ['district', 'municipality'], true)
+                    ? (($item['province'] ?? '') ?: 'Not recorded').' / '.$label
+                    : $label;
                 $rows[$key] ??= [$field => $label, 'province' => $item['province'] ?? '', 'current' => 0.0, 'previous' => 0.0, 'amount' => 0.0, 'activities' => 0];
                 $rows[$key][$coveredYear === $year ? 'current' : 'previous'] += $budget;
                 $rows[$key]['amount'] += $budget;
@@ -155,6 +157,10 @@ class DashboardData
             }
 
             $daysUntilStart = (int) $today->diff($startDate)->format('%r%a');
+            if ($daysUntilStart > 7) {
+                continue;
+            }
+
             $upcoming[] = array_merge($training, ['daysUntilStart' => $daysUntilStart]);
         }
 

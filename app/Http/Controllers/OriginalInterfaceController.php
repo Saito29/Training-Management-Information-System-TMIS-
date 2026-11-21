@@ -562,6 +562,23 @@ class OriginalInterfaceController
                 $id = 'FA-'.now()->format('Y').'-'.str_pad((string) $sequence, 3, '0', STR_PAD_LEFT);
             }
             $metadata['id'] = $id;
+        } elseif ($module === 'resource_persons' && ! $existing && preg_match('/^RP-TEMP-[0-9a-f-]{36}$/i', $id) === 1) {
+            $temporaryId = $id;
+            DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            $year = now()->format('Y');
+            $sequence = 0;
+            foreach (DB::table('resource_persons')->where('ui_id', 'like', 'RP-'.$year.'-%')->pluck('ui_id') as $publicId) {
+                if (is_string($publicId) && preg_match('/^RP-'.preg_quote($year, '/').'-([0-9]+)$/D', $publicId, $matches) === 1) {
+                    $sequence = max($sequence, (int) $matches[1]);
+                }
+            }
+            $sequence++;
+            $id = 'RP-'.$year.'-'.str_pad((string) $sequence, 3, '0', STR_PAD_LEFT);
+            while (DB::table('resource_persons')->where('ui_id', $id)->exists()) {
+                $sequence++;
+                $id = 'RP-'.$year.'-'.str_pad((string) $sequence, 3, '0', STR_PAD_LEFT);
+            }
+            $metadata['id'] = $id;
         }
         DB::table($module)->where('id', $databaseId)->update(['ui_id' => $id, 'ui_data' => Crypt::encryptString(json_encode($metadata, JSON_THROW_ON_ERROR)), 'ui_version' => $existing ? $existing->ui_version + 1 : 1]);
         if ($module === 'participants') {
@@ -844,6 +861,87 @@ class OriginalInterfaceController
             $rules[$field] = ['sometimes', 'array', 'max:500'];
         }
         $rules += ['pretest.*' => ['string', 'max:100'], 'posttest.*' => ['string', 'max:100'], 'trainingEvaluation.*' => ['string', 'max:100'], 'rpEvaluation.*' => ['string', 'max:100'], 'associationIds.*' => ['string', 'distinct', 'max:100'], 'trainingLocations.*' => ['array'], 'trainingLocations.*.venue' => ['required', 'string', 'max:255'], 'trainingLocations.*.region_id' => ['required', 'string', 'max:100'], 'trainingLocations.*.region' => ['required', 'string', 'max:255'], 'trainingLocations.*.province_id' => ['required', 'string', 'max:100'], 'trainingLocations.*.province' => ['required', 'string', 'max:255'], 'trainingLocations.*.district_id' => ['required', 'string', 'max:100'], 'trainingLocations.*.district' => ['required', 'string', 'max:255'], 'trainingLocations.*.municipality_id' => ['required', 'string', 'max:100'], 'trainingLocations.*.municipality' => ['required', 'string', 'max:255'], 'trainingLocations.*.barangay_id' => ['required', 'string', 'max:100'], 'trainingLocations.*.barangay' => ['required', 'string', 'max:255'], 'trainers.*' => ['array'], 'trainers.*.id' => ['sometimes', 'string', 'max:100'], 'trainers.*.name' => ['sometimes', 'string', 'max:255'], 'questions.*.text' => ['sometimes', 'string', 'max:1000'], 'questions.*.maxRating' => ['sometimes', 'integer', 'min:1', 'max:10'], 'ratingScale.*.score' => ['required', 'integer', 'min:1', 'max:10'], 'ratingScale.*.label' => ['nullable', 'string', 'max:100'], 'ratingScale.*.description' => ['nullable', 'string', 'max:1000'], 'members.*.farmer_id' => ['sometimes', 'string', 'max:100'], 'members.*.position' => ['sometimes', 'nullable', 'string', 'max:255'], 'members.*.associate_role' => ['sometimes', 'nullable', 'string', 'max:255'], 'members.*.role' => ['sometimes', 'nullable', 'string', 'max:255'], 'ratings.*.rating' => ['nullable', 'numeric', 'min:0', 'max:10'], 'interventions.*.qty' => ['nullable', 'numeric', 'min:0'], 'interventions.*.title' => ['nullable', 'string', 'max:255'], 'interventions.*.remarks' => ['nullable', 'string', 'max:1000'], 'bullets.*' => ['array', 'max:100'], 'bullets.*.*' => ['string', 'max:1000']];
+        $rules += [
+            'interventions.*' => ['array'],
+            'interventions.*.office' => ['nullable', 'string', 'max:255'],
+            'interventions.*.officeName' => ['nullable', 'string', 'max:255'],
+            'interventions.*.office_name' => ['nullable', 'string', 'max:255'],
+            'interventions.*.organization' => ['nullable', 'string', 'max:255'],
+            'interventions.*.implementingOffice' => ['nullable', 'string', 'max:255'],
+            'interventions.*.officeRegion' => ['nullable', 'string', 'max:255'],
+            'interventions.*.office_region' => ['nullable', 'string', 'max:255'],
+            'interventions.*.office_id' => ['nullable', 'integer'],
+            'interventions.*.org_id' => ['nullable', 'integer'],
+            'interventions.*.interventionTitle' => ['nullable', 'string', 'max:255'],
+            'interventions.*.intervention_title' => ['nullable', 'string', 'max:255'],
+            'interventions.*.intervention' => ['nullable', 'string', 'max:255'],
+            'interventions.*.name' => ['nullable', 'string', 'max:255'],
+            'interventions.*.yearCovered' => ['nullable', 'integer', 'min:1990', 'max:2200'],
+            'interventions.*.year_covered' => ['nullable', 'integer', 'min:1990', 'max:2200'],
+            'interventions.*.year' => ['nullable', 'integer', 'min:1990', 'max:2200'],
+            'interventions.*.action' => ['nullable', 'string', 'max:80'],
+            'interventions.*.deliveryAction' => ['nullable', 'string', 'max:80'],
+            'interventions.*.delivery_action' => ['nullable', 'string', 'max:80'],
+            'interventions.*.deliveryStatus' => ['nullable', 'string', 'max:80'],
+            'interventions.*.delivery_status' => ['nullable', 'string', 'max:80'],
+            'interventions.*.type' => ['nullable', 'string', 'max:120'],
+            'interventions.*.interventionType' => ['nullable', 'string', 'max:120'],
+            'interventions.*.intervention_type' => ['nullable', 'string', 'max:120'],
+            'interventions.*.category' => ['nullable', 'string', 'max:120'],
+            'interventions.*.unit' => ['nullable', 'string', 'max:80'],
+            'interventions.*.unitName' => ['nullable', 'string', 'max:80'],
+            'interventions.*.unit_name' => ['nullable', 'string', 'max:80'],
+            'interventions.*.measurementUnit' => ['nullable', 'string', 'max:80'],
+            'interventions.*.measurement_unit' => ['nullable', 'string', 'max:80'],
+            'interventions.*.quantity' => ['nullable', 'numeric', 'min:0'],
+            'interventions.*.quantityProvided' => ['nullable', 'numeric', 'min:0'],
+            'interventions.*.quantity_provided' => ['nullable', 'numeric', 'min:0'],
+            'interventions.*.notes' => ['nullable', 'string', 'max:1000'],
+            'interventions.*.note' => ['nullable', 'string', 'max:1000'],
+            'interventions.*.description' => ['nullable', 'string', 'max:1000'],
+        ];
+
+        $rules += [
+            'interventions.*' => ['array'],
+            'interventions.*.office' => ['nullable', 'string', 'max:255'],
+            'interventions.*.officeName' => ['nullable', 'string', 'max:255'],
+            'interventions.*.office_name' => ['nullable', 'string', 'max:255'],
+            'interventions.*.organization' => ['nullable', 'string', 'max:255'],
+            'interventions.*.implementingOffice' => ['nullable', 'string', 'max:255'],
+            'interventions.*.officeRegion' => ['nullable', 'string', 'max:255'],
+            'interventions.*.office_region' => ['nullable', 'string', 'max:255'],
+            'interventions.*.office_id' => ['nullable', 'integer'],
+            'interventions.*.org_id' => ['nullable', 'integer'],
+            'interventions.*.title' => ['nullable', 'string', 'max:255'],
+            'interventions.*.interventionTitle' => ['nullable', 'string', 'max:255'],
+            'interventions.*.intervention_title' => ['nullable', 'string', 'max:255'],
+            'interventions.*.intervention' => ['nullable', 'string', 'max:255'],
+            'interventions.*.name' => ['nullable', 'string', 'max:255'],
+            'interventions.*.yearCovered' => ['nullable', 'integer', 'min:1990', 'max:2200'],
+            'interventions.*.year_covered' => ['nullable', 'integer', 'min:1990', 'max:2200'],
+            'interventions.*.year' => ['nullable', 'integer', 'min:1990', 'max:2200'],
+            'interventions.*.action' => ['nullable', 'string', 'max:80'],
+            'interventions.*.deliveryAction' => ['nullable', 'string', 'max:80'],
+            'interventions.*.delivery_action' => ['nullable', 'string', 'max:80'],
+            'interventions.*.deliveryStatus' => ['nullable', 'string', 'max:80'],
+            'interventions.*.delivery_status' => ['nullable', 'string', 'max:80'],
+            'interventions.*.type' => ['nullable', 'string', 'max:120'],
+            'interventions.*.interventionType' => ['nullable', 'string', 'max:120'],
+            'interventions.*.intervention_type' => ['nullable', 'string', 'max:120'],
+            'interventions.*.category' => ['nullable', 'string', 'max:120'],
+            'interventions.*.unit' => ['nullable', 'string', 'max:80'],
+            'interventions.*.unitName' => ['nullable', 'string', 'max:80'],
+            'interventions.*.unit_name' => ['nullable', 'string', 'max:80'],
+            'interventions.*.measurementUnit' => ['nullable', 'string', 'max:80'],
+            'interventions.*.measurement_unit' => ['nullable', 'string', 'max:80'],
+            'interventions.*.quantity' => ['nullable', 'numeric', 'min:0'],
+            'interventions.*.quantityProvided' => ['nullable', 'numeric', 'min:0'],
+            'interventions.*.quantity_provided' => ['nullable', 'numeric', 'min:0'],
+            'interventions.*.remarks' => ['nullable', 'string', 'max:1000'],
+            'interventions.*.notes' => ['nullable', 'string', 'max:1000'],
+            'interventions.*.note' => ['nullable', 'string', 'max:1000'],
+            'interventions.*.description' => ['nullable', 'string', 'max:1000'],
+        ];
 
         return Validator::make($input, $rules)->validate();
     }
@@ -870,7 +968,7 @@ class OriginalInterfaceController
             }
         }
         $postedOffice = $pick(['org_id', 'implementing_office', 'implementingOffice', 'office']);
-        if ($postedOffice !== null && $module !== 'resource_persons') {
+        if ($postedOffice !== null && ($module !== 'resource_persons' || ! $existing)) {
             $office = ctype_digit((string) $postedOffice) ? (int) $postedOffice : DB::table('organization')->where('name', $postedOffice)->where('region_id', $region)->value('org_id');
             if (! $office) {
                 throw ValidationException::withMessages(['office' => 'Select a registered office belonging to the selected region.']);
@@ -908,6 +1006,50 @@ class OriginalInterfaceController
         $last = $pick(['last_name', 'lastName', 'lname']);
         if (in_array($module, ['participants', 'resource_persons'], true) && ($first || $last)) {
             $name = trim(implode(' ', array_filter([$first, $middle, $last, $pick(['suffix', 'sfname', 'extension'])])));
+        }
+        if ($module === 'resource_persons' && ! $existing) {
+            Validator::make($item, [
+                'first_name' => ['required', 'string', 'max:80'],
+                'last_name' => ['required', 'string', 'max:80'],
+                'region_id' => ['required', 'integer'],
+                'org_id' => ['required', 'integer'],
+            ])->validate();
+
+            $registeredRegion = DB::table('region')
+                ->where('region_id', $region)
+                ->where('is_active', true)
+                ->lockForUpdate()
+                ->first();
+            if (! $registeredRegion) {
+                throw ValidationException::withMessages(['region_id' => 'Select an active registered region.']);
+            }
+
+            $registeredOffice = DB::table('organization')
+                ->where('org_id', $office)
+                ->where('region_id', $region)
+                ->where('is_active', true)
+                ->first();
+            if (! $registeredOffice) {
+                throw ValidationException::withMessages(['org_id' => 'Select an active office belonging to the selected region.']);
+            }
+
+            ModuleAccess::authorizeRegistrationRegion(
+                $request->user(),
+                (int) $region,
+                'The selected resource person region is outside your data visibility settings.',
+            );
+
+            $normalizedName = mb_strtolower(preg_replace('/\s+/u', ' ', trim((string) $name)));
+            $duplicateExists = DB::table('resource_persons')
+                ->where('region_id', $region)
+                ->whereNull('deleted_at')
+                ->whereRaw('LOWER(TRIM(name)) = ?', [$normalizedName])
+                ->exists();
+            if ($duplicateExists) {
+                throw ValidationException::withMessages([
+                    'first_name' => 'A resource person with this name is already registered in this region.',
+                ]);
+            }
         }
         $payload = ['name' => $name, 'region_id' => $region, 'org_id' => $office, 'description' => $pick(['training_description', 'description']), 'is_active' => ! in_array($item['status'] ?? '', ['Inactive', 'Removed', 'Deceased', 'Draft'], true)];
         if ($module === 'participants') {
@@ -1054,7 +1196,7 @@ class OriginalInterfaceController
         $resource = null;
         if ($questionnaire->kind === 'Resource person evaluation' && ! empty($item['resourcePersonId'])) {
             $resource = OriginalInterfaceData::find($request->user(), 'resource_persons', $item['resourcePersonId']);
-            abort_unless($resource && $resource->region_id === $questionnaire->region_id && $resource->org_id === $questionnaire->org_id, 422, 'Select a resource person in the same office.');
+            abort_unless($resource && $resource->region_id === $questionnaire->region_id, 422, 'Select a resource person registered in the training region.');
         }
         abort_if($state === 'complete' && $questionnaire->kind === 'Resource person evaluation' && ! $resource, 422, 'Select a resource person.');
         $training = null;
@@ -1279,9 +1421,13 @@ class OriginalInterfaceController
 
     private function notificationState(Request $request, array $raw): void
     {
-        $data = Validator::make($raw, ['id' => ['required', 'string', 'max:100'], 'readAt' => ['nullable', 'date'], 'archivedAt' => ['nullable', 'date']])->validate();
-        if (str_starts_with($data['id'], 'status-')) {
-            abort_unless(DB::table('training_notifications')->where('id', substr($data['id'], 7))->where('user_id', $request->user()->user_id)->update(['read_at' => $data['readAt'] ?? null]), 404);
+        $data = Validator::make($raw, ['id' => ['required', 'string', 'max:100'], 'readAt' => ['nullable', 'date'], 'archivedAt' => ['nullable', 'date'], 'hiddenIds' => ['sometimes', 'array', 'max:5000'], 'hiddenIds.*' => ['string', 'max:100']])->validate();
+        if ($data['id'] === '__existing-inbox-cleanup__') {
+            abort_unless($data['archivedAt'] !== null, 422);
+        } elseif (str_starts_with($data['id'], 'status-')) {
+            $notification = DB::table('training_notifications')->where('id', substr($data['id'], 7))->where('user_id', $request->user()->user_id)->where('in_app_enabled', true);
+            abort_unless((clone $notification)->exists(), 404);
+            $notification->update(['read_at' => $data['readAt'] ?? null]);
         } elseif (str_starts_with($data['id'], 'approval:')) {
             abort_unless(ModuleAccess::isAdministrator($request->user()), 404);
             abort_unless(DB::table('users')->where('user_id', substr($data['id'], 9))->where('status', 'Pending approval')->whereNull('deleted_at')->exists(), 404);
@@ -1295,7 +1441,7 @@ class OriginalInterfaceController
         $key = 'tmis-notification-state:'.$request->user()->user_id;
         $saved = DB::table('user_interface_drafts')->where('user_id', $request->user()->user_id)->where('draft_key', $key)->lockForUpdate()->first();
         $state = OriginalInterfaceData::unpack($saved?->payload);
-        $state[$data['id']] = Arr::only($data, ['readAt', 'archivedAt']);
+        $state[$data['id']] = Arr::only($data, ['readAt', 'archivedAt', 'hiddenIds']);
         DB::table('user_interface_drafts')->updateOrInsert(['user_id' => $request->user()->user_id, 'draft_key' => $key], ['payload' => Crypt::encryptString(json_encode($state, JSON_THROW_ON_ERROR)), 'created_at' => now(), 'updated_at' => now()]);
     }
 

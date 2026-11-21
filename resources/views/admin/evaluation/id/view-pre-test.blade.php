@@ -24,11 +24,7 @@ class="layout-fixed questionnaire-view-page" data-questionnaire-type="pre-test"
       href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
       rel="stylesheet"
     />
-    <link
-      href="https://db.onlinewebfonts.com/c/07e0cde7ae44d7e3cdc61a55fe9af110?family=Blanka"
-      rel="stylesheet"
-    />
-    <!-- Box icons -->
+        <!-- Box icons -->
     <!-- Basic Icons -->
     <link
       href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css"
@@ -1533,7 +1529,7 @@ class="layout-fixed questionnaire-view-page" data-questionnaire-type="pre-test"
     <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.8.4/dist/js/adminlte.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=notification-bell-ready-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/evaluation/id/view-pre-test.js') }}"></script>
     <script src="{{ asset('src/js/evaluation/id/questionnaire-delete.js') }}"></script>

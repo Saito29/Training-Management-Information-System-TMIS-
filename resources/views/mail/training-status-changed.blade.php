@@ -1,4 +1,6 @@
-@if($isRevert)
+@if($messageTemplate !== null)
+<p>{!! nl2br(e($messageTemplate)) !!}</p>
+@elseif($isRevert)
 <p>A training assigned to your office has been returned for changes.</p>
 @elseif($isSubmitted)
 <p>A training assigned to your office has been submitted for approval.</p>

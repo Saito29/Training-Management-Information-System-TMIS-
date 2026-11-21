@@ -92,7 +92,6 @@
     const signals = [toast.dataset.type, toast.className, toast.querySelector('.toast-header i')?.className || ''].join(' ').toLowerCase();
     if (/error|danger|exclamation-circle|x-circle/.test(signals)) return 'error';
     if (/warn|blocked|exclamation-triangle/.test(signals)) return 'warning';
-    if (/info|information/.test(signals)) return 'info';
     return 'success';
   }
   // Keep original elements, IDs, actions and Bootstrap lifecycle events intact.

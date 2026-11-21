@@ -78,7 +78,19 @@ function init() {
   $('inboxSearch').addEventListener('input',()=>{page=1;render();});$('inboxType').addEventListener('change',()=>{page=1;render();});
   document.querySelectorAll('[data-inbox-view]').forEach(button=>button.addEventListener('click',()=>{view=button.dataset.inboxView;page=1;render();}));
   $('clearInboxFilters').addEventListener('click',()=>{$('inboxSearch').value=$('inboxType').value='';page=1;render();});
-  $('markAllInboxRead').addEventListener('click',markAll);$('refreshInbox').addEventListener('click',()=>{feedback('');refresh();});
+  $('markAllInboxRead').addEventListener('click',markAll);
+  $('refreshInbox').addEventListener('click',async event=>{
+    const button=event.currentTarget;
+    button.disabled=true;
+    try{
+      if(typeof window.TmisStore?.refresh!=='function')throw new Error('The notification service is unavailable.');
+      await window.TmisStore.refresh();
+      refresh();
+      showToast('The notification inbox has been refreshed.','success');
+    }catch{
+      showToast('The notification inbox could not be refreshed. Check your connection and try again.','error');
+    }finally{button.disabled=false;}
+  });
 
   $('inboxPageSize').addEventListener('change',event=>{size=event.target.value;page=1;render();});$('inboxPrevious').addEventListener('click',()=>{if(page>1)page--;render();});$('inboxNext').addEventListener('click',()=>{page++;render();});
   window.addEventListener('tmis:activity-ready',refresh);window.addEventListener('storage',event=>{if(!event.key||event.key==='tmis-users'||event.key==='tmis-notifications'||event.key===stateKey())refresh();});

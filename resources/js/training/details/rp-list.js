@@ -48,7 +48,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const load = () => {
     try {
       const saved = JSON.parse(window.TmisStore.getItem(storageKey) || '[]');
-      records = Array.isArray(saved) ? saved.filter((record) => !inactiveOnly || record.status === 'Inactive') : [];
+      records = Array.isArray(saved) ? saved.filter((record) => {
+        const status = String(record.status || 'Active').toLowerCase();
+        return inactiveOnly ? status === 'inactive' : status === 'active';
+      }) : [];
     } catch { records = []; }
     const office = byId('rpOfficeFilter');
     const selected = office.value;
@@ -143,12 +146,12 @@ document.addEventListener('DOMContentLoaded', () => {
           const view = document.createElement('a');
           view.className = 'btn btn-sm btn-outline-success'; view.innerHTML = '<i class="bi bi-eye" aria-hidden="true"></i>';
           view.setAttribute('aria-label', `View ${nameOf(record)}`); view.title = 'View';
-          view.href = `../id/view-rp?id=${encodeURIComponent(record.id)}`;
+          view.href = `../id/view-rp/${encodeURIComponent(record.id)}`;
           view.target = '_blank'; view.rel = 'noopener noreferrer';
           const edit = document.createElement('a');
           edit.className = 'btn btn-sm btn-outline-primary'; edit.innerHTML = '<i class="bi bi-pencil-square" aria-hidden="true"></i>';
           edit.setAttribute('aria-label', `Edit ${nameOf(record)}`); edit.title = 'Edit';
-          edit.href = `../id/edit-rp?id=${encodeURIComponent(record.id)}`;
+          edit.href = `../id/edit-rp/${encodeURIComponent(record.id)}`;
           edit.target = '_blank'; edit.rel = 'noopener noreferrer';
           const remove = document.createElement('button');
           remove.type = 'button'; remove.className = 'btn btn-sm btn-outline-danger'; remove.innerHTML = '<i class="bi bi-trash" aria-hidden="true"></i>';
@@ -187,20 +190,35 @@ document.addEventListener('DOMContentLoaded', () => {
   ['rpStatusFilter', 'rpOfficeFilter', 'rpSearch'].forEach((id) => byId(id).addEventListener(id === 'rpSearch' ? 'input' : 'change', () => { page = 1; render(); }));
   byId('rpPageLength').addEventListener('change', () => { pageSize = byId('rpPageLength').value === 'all' ? 'all' : Number(byId('rpPageLength').value); page = 1; render(); });
   byId('rpClear').addEventListener('click', () => {
-    byId('rpStatusFilter').value = inactiveOnly ? 'Inactive' : ''; byId('rpOfficeFilter').value = ''; byId('rpSearch').value = '';
+    byId('rpStatusFilter').value = inactiveOnly ? 'Inactive' : 'Active'; byId('rpOfficeFilter').value = ''; byId('rpSearch').value = '';
     columnSearch.clear(); byId('rpColumnFilters').querySelectorAll('input').forEach((input) => { input.value = ''; });
     page = 1; render();
   });
   byId('rpRefresh').addEventListener('click', async (event) => {
     const button = event.currentTarget;
+    const originalTitle = button.title;
     button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.title = 'Refreshing resource persons';
     try {
-      if (window.TMIS_PAGE) await window.TmisStore.refresh();
+      if (!window.TMIS_PAGE || !window.TmisStore?.refresh) {
+        throw new Error('Resource-person refresh is unavailable. Reload the page and try again.');
+      }
+      await window.TmisStore.refresh();
+      page = 1;
       load();
+      const matchingRecords = filtered().length;
+      const totalRecords = records.length;
+      window.TmisToast?.show(
+        `Resource-person records refreshed. ${totalRecords} total record${totalRecords === 1 ? '' : 's'} loaded; ${matchingRecords} match the current filters.`,
+        'success',
+      );
     } catch (error) {
-      window.alert(error.message || 'Resource-person records could not be refreshed.');
+      window.TmisToast?.show(error.message || 'Resource-person records could not be refreshed. Try again.', 'error');
     } finally {
       button.disabled = false;
+      button.removeAttribute('aria-busy');
+      button.title = originalTitle;
     }
   });
   const clearUndo = () => {

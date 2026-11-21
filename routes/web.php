@@ -58,6 +58,9 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::post('/system/training-notification-rules', [SystemSettingsController::class, 'createTrainingNotificationRule'])->name('system.training-notification-rules.store');
     Route::patch('/system/training-notification-rules/{rule}', [SystemSettingsController::class, 'updateTrainingNotificationRule'])->whereNumber('rule')->name('system.training-notification-rules.update');
     Route::delete('/system/training-notification-rules/{rule}', [SystemSettingsController::class, 'deleteTrainingNotificationRule'])->whereNumber('rule')->name('system.training-notification-rules.destroy');
+    Route::post('/system/training-email-notification-rules', [SystemSettingsController::class, 'createTrainingEmailNotificationRule'])->name('system.training-email-notification-rules.store');
+    Route::patch('/system/training-email-notification-rules/{rule}', [SystemSettingsController::class, 'updateTrainingEmailNotificationRule'])->whereNumber('rule')->name('system.training-email-notification-rules.update');
+    Route::delete('/system/training-email-notification-rules/{rule}', [SystemSettingsController::class, 'deleteTrainingEmailNotificationRule'])->whereNumber('rule')->name('system.training-email-notification-rules.destroy');
     Route::post('/system/branding', [SystemSettingsController::class, 'updateBranding'])->name('system.branding.update');
     Route::get('/system/data-scope', [SystemSettingsController::class, 'scopeOptions'])->name('system.scope.options');
     Route::post('/system/data-scope', [SystemSettingsController::class, 'scope'])->name('system.scope');
@@ -187,6 +190,11 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
         $interventionTypeOptions = DB::table('participant_options')
             ->where('field', 'intervention_type')
             ->where('is_active', true)
+            ->whereNotExists(fn ($duplicate) => $duplicate->selectRaw('1')->from('participant_options as duplicate')
+                ->where('duplicate.field', 'intervention_type')
+                ->where('duplicate.is_active', true)
+                ->whereColumn('duplicate.id', '<', 'participant_options.id')
+                ->whereRaw("LOWER(TRIM(COALESCE(NULLIF(duplicate.label, ''), duplicate.value))) = LOWER(TRIM(COALESCE(NULLIF(participant_options.label, ''), participant_options.value)))"))
             ->orderBy('label')
             ->get(['id', 'value', 'label']);
 
@@ -204,6 +212,11 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
         $interventionTypeOptions = DB::table('participant_options')
             ->where('field', 'intervention_type')
             ->where('is_active', true)
+            ->whereNotExists(fn ($duplicate) => $duplicate->selectRaw('1')->from('participant_options as duplicate')
+                ->where('duplicate.field', 'intervention_type')
+                ->where('duplicate.is_active', true)
+                ->whereColumn('duplicate.id', '<', 'participant_options.id')
+                ->whereRaw("LOWER(TRIM(COALESCE(NULLIF(duplicate.label, ''), duplicate.value))) = LOWER(TRIM(COALESCE(NULLIF(participant_options.label, ''), participant_options.value)))"))
             ->orderBy('label')
             ->get(['id', 'value', 'label']);
 

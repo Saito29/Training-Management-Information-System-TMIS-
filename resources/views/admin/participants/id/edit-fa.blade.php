@@ -24,11 +24,7 @@ class="layout-fixed"
       href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
       rel="stylesheet"
     />
-    <link
-      href="https://db.onlinewebfonts.com/c/07e0cde7ae44d7e3cdc61a55fe9af110?family=Blanka"
-      rel="stylesheet"
-    />
-    <!-- Box icons -->
+        <!-- Box icons -->
     <!-- Basic Icons -->
     <link
       href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css"
@@ -56,7 +52,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/participants/update/view-farmer.css?v=association-training-table-1') }}"
+      href="{{ asset('src/css/participants/update/view-farmer.css?v=association-intervention-detail-2') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/participants/update/fa-overview.css?v=member-removal-modal-1') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training-participants.css') }}" />
@@ -1117,10 +1113,11 @@ class="layout-fixed"
                   </div>
                   <div class="review-pagination intervention-pagination" id="interventionPaginationTop" aria-label="Top intervention table pagination"></div>
                   <div class="table-responsive intervention-table-scroll">
-                    <table class="table intervention-data-table align-middle" id="interventionDataTable">
+                    <table class="table intervention-data-table intervention-editable-table intervention-action-table align-middle" id="interventionDataTable">
                       <caption class="visually-hidden">Interventions provided to this association</caption>
                       <thead>
                         <tr>
+                          <th scope="col">Action</th>
                           <th scope="col" class="intervention-sortable" data-sort="title" tabindex="0">Intervention <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                           <th scope="col" class="intervention-sortable" data-sort="office" tabindex="0">Office <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                           <th scope="col" class="intervention-sortable" data-sort="yearCovered" tabindex="0">Year Covered <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
@@ -1131,6 +1128,7 @@ class="layout-fixed"
                           <th scope="col" class="intervention-sortable" data-sort="remarks" tabindex="0">Remarks <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                         </tr>
                         <tr class="intervention-filter-row">
+                          <th></th>
                           <th><label class="visually-hidden" for="filterInterventionTitle">Filter interventions</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionTitle" data-column="title" type="search" placeholder="Filter intervention" /></th>
                           <th><label class="visually-hidden" for="filterInterventionOffice">Filter office</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionOffice" data-column="office" type="search" placeholder="Filter office" /></th>
                           <th><label class="visually-hidden" for="filterInterventionYear">Filter year covered</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionYear" data-column="yearCovered" type="search" placeholder="Filter year" /></th>
@@ -1142,7 +1140,7 @@ class="layout-fixed"
                         </tr>
                       </thead>
                       <tbody id="interventionTableBody">
-                        <tr><td colspan="8" class="intervention-empty-cell">Loading intervention records…</td></tr>
+                        <tr><td colspan="9" class="intervention-empty-cell">Loading intervention records…</td></tr>
                       </tbody>
                     </table>
                   </div>
@@ -2247,11 +2245,11 @@ class="layout-fixed"
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- nav -->
-    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=notification-bell-ready-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-overview.js?v=member-removal-modal-1') }}"></script>
-    <script src="{{ asset('src/js/participants/update/fa-sections.js?v=association-score-aggregation-2') }}"></script>
+    <script src="{{ asset('src/js/participants/update/fa-sections.js?v=association-intervention-export-layout-3') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-edit.js?v=association-reload-toast-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-edit-members.js?v=association-farmer-table-2') }}"></script>
-    <script src="{{ asset('src/js/participants/update/fa-edit-actions.js?v=intervention-selectors-1') }}"></script>
+    <script src="{{ asset('src/js/participants/update/fa-edit-actions.js?v=association-intervention-detail-1') }}"></script>
 @endsection

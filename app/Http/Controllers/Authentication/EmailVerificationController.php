@@ -20,8 +20,13 @@ class EmailVerificationController
 
         if (! $user || ! $user->isEligibleForLogin() || $pending->attempts >= 3) {
             $challenge->forget($request);
+            $credentialMissing = $user && $user->hasActiveRole() && ! $user->hasValidRoleCredential();
 
-            return redirect()->route('login')->withErrors(['email' => 'Please sign in again to request a verification code.']);
+            return redirect()->route('login')
+                ->withErrors(['email' => $credentialMissing
+                    ? 'Your account has no active role credential assigned. Contact a System Administrator before signing in.'
+                    : 'Please sign in again to request a verification code.'])
+                ->with('toast_type', $credentialMissing ? 'info' : 'warning');
         }
 
         [$local, $domain] = explode('@', $user->email, 2);

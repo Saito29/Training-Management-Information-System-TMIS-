@@ -1,8 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   const $ = (id) => document.getElementById(id);
   const key = 'tmis-users';
-  const can = (permission) => window.TmisStore.can(`administration.${permission}`);
-  const canPage = (page) => !can('page_access') || can(`view.${page}`);
   const deleteModal = bootstrap.Modal.getOrCreateInstance($('accountDeleteModal'));
   const fields = ['lastName', 'firstName', 'middleName', 'suffix', 'dateOfBirth', 'email', 'phone', 'role', 'region', 'office', 'position', 'createdAt'];
   const toast = bootstrap.Toast.getOrCreateInstance($('reviewToast'), { delay: 5500 });
@@ -18,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('scroll', positionToast, { passive: true });
   if (header && globalThis.ResizeObserver) new ResizeObserver(positionToast).observe(header);
   let filteredRecords = [];
-  const hiddenColumns = new Set(['id', 'dateOfBirth', 'email', 'phone', 'region', 'createdAt']);
+  const hiddenColumns = new Set(['id', 'dateOfBirth', 'email', 'phone', 'role', 'region', 'createdAt']);
   const columns = [
     ['actions', 'Actions'],
     ['status', 'Status'],
@@ -38,8 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
   let records = [], page = 1, pageSize = '20', refreshing = false, selectedId = null, pendingDelete = null, timer = null;
   const name = (user) => [user.firstName, user.middleName, user.lastName, user.suffix].filter(Boolean).join(' ') || 'Unnamed user';
-  const isSystemAdministrator = (user) => user.role === 'System Administrator';
-  const isAdministrator = Boolean(window.TMIS_PAGE?.administrator);
   const isPending = (user) => ['Pending approval', 'For Review'].includes(user.status);
   const isApproved = (user) => /^(approved|accepted|approved\s*&\s*accepted)$/i.test(String(user.status || '').trim());
   const statusLabel = (user) => isPending(user) ? 'For approval' : isApproved(user) ? 'Approved & Accepted' : user.status;
@@ -61,13 +57,19 @@ document.addEventListener('DOMContentLoaded', () => {
     toast.show();
   }
   function read() {
-    const data = JSON.parse(window.TmisStore.getItem(key) || '[]');
-    if (!Array.isArray(data) || data.some((user) => !user || typeof user !== 'object' || !user.id)) throw new Error('Invalid registration data');
+    let data;
+    try {
+      const serialized = window.TmisStore?.getItem?.(key);
+      if (serialized) data = JSON.parse(serialized);
+    } catch { /* Fall back to the server-rendered account snapshot below. */ }
+    if (!Array.isArray(data)) data = window.TMIS_PAGE?.stores?.[key];
+    if (!Array.isArray(data)) throw new Error('Account records are missing from the page data. Reload the page to try again.');
+    if (data.some((user) => !user || typeof user !== 'object' || !user.id)) throw new Error('Account data contains an invalid registration.');
     return data;
   }
   function refresh() {
     try { records = read(); render(); }
-    catch { feedback('User registrations could not be loaded. Try refreshing.', 'error'); }
+    catch (error) { feedback(`User registrations could not be loaded. ${error.message || 'Try refreshing.'}`, 'error'); }
   }
   function actionLink(user, type, icon, file) {
     const link = document.createElement('a');
@@ -188,11 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
     page = Math.min(page, pages);
     $('approvalTableBody').replaceChildren(...visible.slice((page - 1) * size, page * size).map((user) => {
       const row = document.createElement('tr'), actions = document.createElement('div'); actions.className = 'account-actions';
-      const availableActions = [];
-      if (can('read') && canPage('id.view-user') && (!isSystemAdministrator(user) || isAdministrator)) availableActions.push(actionLink(user, 'View', 'bi-eye', 'view-user'));
-      if (can('edit') && canPage('id.edit-user') && !isSystemAdministrator(user)) availableActions.push(actionLink(user, 'Edit', 'bi-pencil-square', 'edit-user'));
-      if (can('delete') && !isSystemAdministrator(user)) availableActions.push(deleteAction(user));
-      actions.append(...availableActions);
+      actions.append(actionLink(user, 'View', 'bi-eye', 'view-user'), actionLink(user, 'Edit', 'bi-pencil-square', 'edit-user'), deleteAction(user));
       [actions, statusLabel(user), user.id, ...fields.map((field) => display(user, field))].forEach((value, i) => {
         const cell = document.createElement('td');
         if (value instanceof Node) cell.append(value); else cell.textContent = value || '—';
@@ -243,7 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshing = true;
     button.disabled = true;
     try {
-      if (window.TMIS_PAGE) await window.TmisStore.refresh();
+      if (window.TMIS_PAGE && typeof window.TmisStore?.refresh === 'function') await window.TmisStore.refresh();
+      else if (!Array.isArray(window.TMIS_PAGE?.stores?.[key])) throw new Error('Account data is unavailable.');
       records = read();
       render();
       feedback('User registrations refreshed.');

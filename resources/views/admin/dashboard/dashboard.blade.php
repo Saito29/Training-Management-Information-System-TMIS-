@@ -26,11 +26,7 @@ class="layout-fixed"
       href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
       rel="stylesheet"
     />
-    <link
-      href="https://db.onlinewebfonts.com/c/07e0cde7ae44d7e3cdc61a55fe9af110?family=Blanka"
-      rel="stylesheet"
-    />
-    <link
+        <link
       rel="shortcut icon"
       href="{{ asset('assets/logo/Child Logo DA-SAAD/with DA [White Text].png') }}"
       type="image/x-icon"
@@ -1054,7 +1050,7 @@ class="layout-fixed"
                     </div>
                     <div class="card-header-title">
                       <h5 class="card-header-text">
-                        Allocated Training Budget by District
+                        Allocated Training Budget by Province and District
                       </h5>
                     </div>
                     <div class="card-tools">
@@ -1152,7 +1148,7 @@ class="layout-fixed"
                       </button>
                     </div>
                     <div class="card-body card-allocation-body">
-                      <div class="card-allocation-summary"><div><span>{{ $originalInterfaceData['dashboard']['currentYear'] ?? now()->year }} allocated</span><strong>PHP {{ number_format($originalInterfaceData['dashboard']['funds']['current'] ?? 0) }}</strong></div><div><span>{{ $originalInterfaceData['dashboard']['previousYear'] ?? now()->year - 1 }} allocated</span><strong>PHP {{ number_format($originalInterfaceData['dashboard']['funds']['previous'] ?? 0) }}</strong></div><div><span>Areas covered</span><strong>{{ count($originalInterfaceData['dashboard']['allocatedBudgetByProvince'] ?? []) }}</strong></div></div>
+                      <div class="card-allocation-summary"><div><span>{{ $originalInterfaceData['dashboard']['currentYear'] ?? now()->year }} allocated</span><strong>PHP {{ number_format($originalInterfaceData['dashboard']['funds']['current'] ?? 0) }}</strong></div><div><span>{{ $originalInterfaceData['dashboard']['previousYear'] ?? now()->year - 1 }} allocated</span><strong>PHP {{ number_format($originalInterfaceData['dashboard']['funds']['previous'] ?? 0) }}</strong></div><div><span>Province and district areas</span><strong>{{ count($originalInterfaceData['dashboard']['allocatedBudgetByDistrict'] ?? []) }}</strong></div></div>
                       <div
                         class="card-allocation-chart"
                         id="allocatedProvinceChart"
@@ -2320,8 +2316,8 @@ class="layout-fixed"
     <script src="https://cdn.datatables.net/buttons/3.2.5/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/3.2.5/js/buttons.print.min.js"></script>
 
-    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=notification-bell-ready-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
-    <script src="{{ asset('src/js/dashboard/scriptv2.js?v=dashboard-upcoming-training-window-2') }}"></script>
+    <script src="{{ asset('src/js/dashboard/scriptv2.js?v=dashboard-upcoming-seven-day-window-1') }}"></script>
     <script src="{{ asset('src/js/dashboard/training-highlight-carousel.js?v=dashboard-highlight-layout-3') }}"></script>
 @endsection

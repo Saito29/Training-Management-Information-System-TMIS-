@@ -108,9 +108,21 @@ class LoginChallenge
             $pending = $this->pending($request)->lockForUpdate()->first();
             $user = $pending ? User::where('user_id', $pending->user_id)->first() : null;
 
-            if (! $pending || ! $user || ! $account || ! $user->isEligibleForLogin()
+            if (! $pending || ! $user || ! $account
                 || ! hash_equals(hash('sha256', $account->password_hash), $request->session()->get('login_challenge.password_fingerprint', ''))) {
                 $this->forget($request);
+
+                return 'Your sign-in is no longer valid. Please sign in again.';
+            }
+
+            if (! $user->isEligibleForLogin()) {
+                $this->forget($request);
+                $credentialMissing = $user->hasActiveRole() && ! $user->hasValidRoleCredential();
+                if ($credentialMissing) {
+                    $request->session()->flash('toast_type', 'info');
+
+                    return 'Your account has no active role credential assigned. Contact a System Administrator before signing in.';
+                }
 
                 return 'Your sign-in is no longer valid. Please sign in again.';
             }
@@ -165,6 +177,11 @@ class LoginChallenge
             $user = $pending ? User::where('user_id', $pending->user_id)->first() : null;
 
             if (! $pending || ! $user || ! $user->isEligibleForLogin() || $pending->attempts >= 3) {
+                if ($user && $user->hasActiveRole() && ! $user->hasValidRoleCredential()) {
+                    $request->session()->flash('toast_type', 'info');
+                    throw ValidationException::withMessages(['verification_code' => 'Your account has no active role credential assigned. Contact a System Administrator before signing in.']);
+                }
+
                 throw ValidationException::withMessages(['verification_code' => 'Please sign in again to request a new code.']);
             }
 

@@ -333,9 +333,17 @@ class AuditLogController
             ]);
 
         foreach (['event', 'category'] as $field) {
+            if ($field === 'category' && ! empty($filters['training'])) {
+                continue;
+            }
             if (! empty($filters[$field])) {
                 $query->where('users_log.'.$field, $filters[$field]);
             }
+        }
+        if (! empty($filters['training'])) {
+            $trainingSuffix = '_'.(int) $filters['training'];
+            $query->where('users_log.category', 'trainings')
+                ->whereRaw('RIGHT(users_log.event, ?) = ?', [strlen($trainingSuffix), $trainingSuffix]);
         }
         if (! empty($filters['from'])) {
             $query->whereDate('users_log.created_at', '>=', $filters['from']);
@@ -359,16 +367,27 @@ class AuditLogController
         return $query;
     }
 
-    /** @return array{user?: string, event?: string, category?: string, from?: string, to?: string} */
+    /** @return array{user?: string, event?: string, category?: string, training?: int, from?: string, to?: string} */
     private function validatedFilters(Request $request): array
     {
-        return $request->validate([
+        $filters = $request->validate([
             'user' => ['nullable', 'string', 'max:150'],
             'event' => ['nullable', 'string', 'max:100'],
             'category' => ['nullable', 'string', 'max:50'],
+            'training' => ['nullable', 'integer', 'min:1'],
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
         ]);
+
+        if (! empty($filters['training'])) {
+            $training = ModuleAccess::scope(
+                DB::table('trainings')->whereNull('deleted_at'),
+                $request->user(),
+            )->where('id', (int) $filters['training'])->exists();
+            abort_unless($training, 404);
+        }
+
+        return $filters;
     }
 
     private function present(object $entry): object

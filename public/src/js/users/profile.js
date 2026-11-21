@@ -10,6 +10,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const date = new Date(birthday ? `${String(value).slice(0, 10)}T00:00:00+08:00` : value);
     return Number.isNaN(date.getTime()) ? 'Not available' : new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', ...(!birthday ? { timeStyle: 'short' } : {}), timeZone: 'Asia/Manila' }).format(date);
   };
+  const officeWithRegion = user => {
+    const office = String(user?.office || '').trim();
+    const region = String(user?.region || '').trim().replace(/^Region\s+/i, '');
+    return [office, region].filter(Boolean).join(', ') || 'Not available';
+  };
   function showTab(key, focus = false) {
     if (!tabs.some(tab => tab.dataset.profileTab === key)) key = 'account';
     tabs.forEach(tab => {
@@ -40,12 +45,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const query = $('myLogSearch').value.trim().toLowerCase();
     const category = $('myLogCategory').value;
     const sources = [...document.querySelectorAll('[data-log-source]')];
-    ['all', 'account', 'resource', 'association'].forEach(source => {
-      $(`logCount-${source}`).textContent = events.filter(event => source === 'all' || event.source === source).length;
+    const matchesSource = event => activeSource === 'all'
+      || (activeSource === 'status' ? event.category === 'status' : event.source === activeSource);
+    ['all', 'account', 'training', 'farmer', 'status', 'resource', 'association'].forEach(source => {
+      $(`logCount-${source}`).textContent = events.filter(event => source === 'all' || (source === 'status' ? event.category === 'status' : event.source === source)).length;
     });
     sources.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.logSource === activeSource)));
-    const filtered = events.filter(event => (activeSource === 'all' || event.source === activeSource)
-      && (!category || event.category === category)
+    const filtered = events.filter(event => matchesSource(event)
+      && (!category || (category.startsWith('area:') ? event.source === category.slice(5) : event.category === category))
       && `${event.title} ${event.detail} ${event.actor} ${event.reference} ${event.status} ${formatDate(event.date)}`.toLowerCase().includes(query));
     $('myLogBody').replaceChildren(...filtered.map(event => {
       const article = document.createElement('article'); article.className = 'self-activity-entry';
@@ -96,13 +103,13 @@ document.addEventListener('DOMContentLoaded', () => {
     $('myProfileAvatar').textContent = user ? [user.firstName, user.lastName].map(part => String(part || '').charAt(0)).join('').toUpperCase() || 'U' : 'U';
     $('myProfileEmail').textContent = user?.email || 'Account details are not connected yet.';
     $('myProfileRole').textContent = user?.role || 'Role not available';
-    $('myProfileOffice').textContent = user?.office || 'Not available';
+    $('myProfileOffice').textContent = officeWithRegion(user);
     const rawStatus = Number(user?.activeStatus) === 1 ? 'active' : 'inactive';
     const state = /^(approved|accepted|approved\s*&\s*accepted|active)$/i.test(rawStatus) ? ['Active', 'active'] : /^inactive$/i.test(rawStatus) ? ['Inactive', 'inactive'] : /^(pending approval|for[ -]review)$/i.test(rawStatus) ? ['For approval', 'pending'] : rawStatus ? [rawStatus, 'inactive'] : ['Not connected', 'inactive'];
     $('myProfileStatus').textContent = state[0]; $('myProfileStatus').className = `self-status ${state[1]}`;
     if (user) $('myProfileNotice').hidden = true;
     details('myPersonalDetails', [['First name', user?.firstName], ['Middle name', user?.middleName], ['Last name', user?.lastName], ['Extension', user?.suffix], ['Date of birth', formatDate(user?.dateOfBirth, true)], ['Work email', user?.email], ['Mobile number', user?.phone]]);
-    details('myAccountDetails', [['User ID', user?.id], ['User role', user?.role], ['Region', user?.region], ['Office / organization', user?.office], ['Position', user?.position], ['Approval status', user?.status || 'Not set'], ['Active status', state[0]], ['Registered date', formatDate(user?.createdAt)], ['Last updated', formatDate(user?.updatedAt)]]);
+    details('myAccountDetails', [['User ID', user?.id], ['User role', user?.role], ['Region', user?.region], ['Office / organization', officeWithRegion(user)], ['Position', user?.position], ['Approval status', user?.status || 'Not set'], ['Active status', state[0]], ['Registered date', formatDate(user?.createdAt)], ['Last updated', formatDate(user?.updatedAt)]]);
     events = profileLogEntries(window.TMIS_PROFILE_LOG_DATA?.entries || [])
       .sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
     renderLogs();

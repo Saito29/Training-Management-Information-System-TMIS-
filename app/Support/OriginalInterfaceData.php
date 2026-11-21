@@ -183,6 +183,7 @@ class OriginalInterfaceData
         $page = (string) request()->header('X-TMIS-PAGE', request()->fullUrl());
         $pagePath = (string) parse_url($page, PHP_URL_PATH);
         $normalizedPagePath = ltrim($pagePath, '/');
+        $isResourcePersonRegistrationPage = $normalizedPagePath === 'app/admin/training/create/rp-register';
         $farmerNumber = preg_match('~^app/admin/participants/id/(?:view|edit)-farmer/(\d+)$~', $normalizedPagePath, $matches) === 1
             ? $matches[1]
             : '';
@@ -784,6 +785,7 @@ class OriginalInterfaceData
             ->leftJoin('organization as training_office', 'trainings.org_id', '=', 'training_office.org_id')
             ->leftJoin('region as training_region', 'trainings.region_id', '=', 'training_region.region_id')
             ->where('training_notifications.user_id', $user->user_id)
+            ->where('training_notifications.in_app_enabled', true)
             ->get([
                 'training_notifications.*', 'training_status_changes.training_id', 'training_status_changes.from_status',
                 'training_status_changes.to_status', 'training_status_changes.reason', 'training_status_changes.actor_user_id',
@@ -845,7 +847,7 @@ class OriginalInterfaceData
                 'createdAt' => $notification->changed_at,
                 'readAt' => $notification->read_at,
                 'archivedAt' => null,
-                'href' => 'training/id/view-training?id='.rawurlencode($notification->training_public_id ?? (string) $notification->training_id),
+                'href' => 'training/id/view-training/'.rawurlencode((string) ($notification->training_public_id ?? $notification->training_id)),
             ];
 
         }
@@ -864,7 +866,7 @@ class OriginalInterfaceData
             ->get(['region_id', 'name']);
         $registrationOffices = DB::table('organization')->where('is_active', 1)
             ->when($registrationScope['regionIds'] !== null, fn ($query) => $query->whereIn('region_id', $registrationScope['regionIds']))
-            ->when($registrationScope['officeIds'] !== null, fn ($query) => $query->whereIn('org_id', $registrationScope['officeIds']))
+            ->when($registrationScope['officeIds'] !== null && ! $isResourcePersonRegistrationPage, fn ($query) => $query->whereIn('org_id', $registrationScope['officeIds']))
             ->orderBy('name')
             ->get(['org_id', 'region_id', 'name']);
 

@@ -167,6 +167,7 @@
 [data-theme] .user-toast-container .user-register-toast.is-success { --toast-accent: var(--color-success); }
 [data-theme] .user-toast-container .user-register-toast.is-warning { --toast-accent: var(--color-warning); }
 [data-theme] .user-toast-container .user-register-toast.is-error { --toast-accent: var(--color-danger); }
+[data-theme] .user-toast-container .user-register-toast.is-info { --toast-accent: var(--color-info); }
 @media (max-width: 575.98px) {
   .user-toast-container { top: 64px; }
 }

@@ -24,8 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   activate(tabs[0]);
 
-  const pathId = decodeURIComponent(location.pathname.split('/').filter(Boolean).at(-1) || '');
-  const id = pathId && pathId !== 'view-rp' ? pathId : new URLSearchParams(location.search).get('id');
+  const pathId = location.pathname.match(/\/(?:view|edit)-rp\/([^/]+)\/?$/i)?.[1];
+  const id = pathId ? decodeURIComponent(pathId) : new URLSearchParams(location.search).get('id');
   let records = [];
   try { const stored = JSON.parse(window.TmisStore.getItem('tmis-resource-persons') || '[]'); if (Array.isArray(stored)) records = stored; }
   catch { /* A missing or invalid saved list shows the empty state. */ }
@@ -57,7 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
     remark.textContent = `Remarks: ${value('status_remarks')}`;
     document.getElementById('rpStatus').after(remark);
   }
-  document.getElementById('rpEditLink').href = `../edit-rp/${encodeURIComponent(id)}`;
+  const resourcePersonRouteBase = location.pathname.replace(/\/(?:view|edit)-rp(?:\/[^/]+)?\/?$/i, '');
+  document.getElementById('rpEditLink').href = `${resourcePersonRouteBase}/edit-rp/${encodeURIComponent(id)}`;
   document.querySelectorAll('[data-rp-field]').forEach(node => {
     const field = node.dataset.rpField;
     node.textContent = value(field) || 'Not provided';
@@ -146,16 +147,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const details = document.createElement('div'); details.className = 'rp-training-details';
     const dates = [date(item.start_date), date(item.end_date)].filter(Boolean);
     const dateText = dates.length === 2 && dates[0] !== dates[1] ? dates.join(' – ') : dates[0];
-    const trainingLocations = Array.isArray(item.trainingLocations) ? item.trainingLocations : [];
-    const locationDetails = trainingLocations.map(trainingLocation => {
-      const place = [trainingLocation.barangay, trainingLocation.municipality, trainingLocation.province, trainingLocation.region]
-        .filter(Boolean).join(', ');
-      return [trainingLocation.venue, place].filter(Boolean).join(' — ');
-    }).filter(Boolean);
     const location = [item.barangay_id, item.municipality_id, item.province_id].filter(Boolean).map(label).join(', ');
     details.append(
       detail('calendar3', 'Dates', dateText),
-      detail('geo-alt', locationDetails.length > 1 ? `Training locations (${locationDetails.length})` : 'Location', locationDetails.length ? locationDetails.join('\n') : location),
+      detail('geo-alt', 'Location', location),
       detail('building', 'Venue', item.venue_location),
       detail('broadcast', 'Delivery mode', item.delivery_mode)
     );
@@ -211,9 +206,35 @@ document.addEventListener('DOMContentLoaded', () => {
     { rating: 4.8, responses: [{ farmer: 'Ramon Perez', feedback: 'The market access discussion gave us practical selling ideas.', suggestion: 'Invite a buyer for a future question and answer session.' }] },
   ];
   const evaluationRows = document.getElementById('rpEvaluationRows');
-  const evaluations = (window.TMIS_PAGE ? trainings.map(training=>{const results=window.TmisStore.records('tmis-rp-evaluation-encoded').filter(item=>item.status==='complete'&&item.resourcePersonId===record.id&&Number(item.trainingDatabaseId)===Number(training._db_id));const ratings=results.flatMap(item=>item.ratings||[]).map(item=>Number(item.rating));return {training,rating:ratings.length?ratings.reduce((sum,value)=>sum+value,0)/ratings.length:null,responses:results.map(item=>({farmer:item.farmerName,feedback:item.comments||'',suggestion:''}))};}) : isAssigned
-    ? [{ training, rating: training.evaluation_rating, responses: Array.isArray(training.evaluation_responses) ? training.evaluation_responses : [] }]
-    : previewTrainings.map((item, index) => ({ training: item, ...evaluationSamples[index] })));
+  const evaluations = (window.TMIS_PAGE ? trainings.map(training => {
+    const results = window.TmisStore.records('tmis-rp-evaluation-encoded').filter(item =>
+      item.status === 'complete'
+      && item.resourcePersonId === record.id
+      && Number(item.trainingDatabaseId) === Number(training._db_id)
+    );
+    const ratings = results.flatMap(item => Array.isArray(item.ratings) ? item.ratings : [])
+      .map(item => Number(item.rating))
+      .filter(rating => Number.isFinite(rating) && rating >= 1 && rating <= 5);
+
+    return {
+      training,
+      rating: ratings.length ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : null,
+      ratingCount: ratings.length,
+      responses: results.map(item => ({ farmer: item.farmerName, feedback: item.comments || '', suggestion: '' })),
+    };
+  }) : isAssigned
+    ? [{ training, rating: training.evaluation_rating, ratingCount: Array.isArray(training.evaluation_responses) ? training.evaluation_responses.length : 0, responses: Array.isArray(training.evaluation_responses) ? training.evaluation_responses : [] }]
+    : previewTrainings.map((item, index) => ({ training: item, ...evaluationSamples[index], ratingCount: evaluationSamples[index].responses.length })));
+  const allRatingsCount = evaluations.reduce((sum, entry) => sum + (entry.ratingCount || 0), 0);
+  const overallRating = allRatingsCount
+    ? evaluations.reduce((sum, entry) => sum + (entry.rating || 0) * (entry.ratingCount || 0), 0) / allRatingsCount
+    : null;
+  const overallRatingValue = document.getElementById('rpOverallFarmerRating');
+  const overallRatingCount = document.getElementById('rpOverallRatingCount');
+  const ratedTrainingCount = document.getElementById('rpRatedTrainingCount');
+  if (overallRatingValue) overallRatingValue.textContent = overallRating === null ? 'No ratings yet' : `${overallRating.toFixed(2)} / 5`;
+  if (overallRatingCount) overallRatingCount.textContent = String(allRatingsCount);
+  if (ratedTrainingCount) ratedTrainingCount.textContent = String(evaluations.filter(entry => entry.ratingCount > 0).length);
   if (!isAssigned) document.getElementById('rpEvaluationDescription').textContent = 'Preview ratings and feedback for the resource person profile.';
   const evaluationSearch = document.getElementById('rpEvaluationSearch');
   const evaluationPageSizes = [...document.querySelectorAll('#rpEvaluationPanel [data-evaluation-page-size]')];
@@ -241,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rating = Number(entry.rating);
     if (entry.rating !== undefined && entry.rating !== null && Number.isFinite(rating) && rating >= 0 && rating <= 5) {
       const badge = document.createElement('span'); badge.className = 'rp-evaluation-rating';
-      badge.textContent = `★ ${rating.toFixed(1)} / 5`;
+      badge.textContent = `★ ${rating.toFixed(2)} / 5`;
       ratingCell.append(badge);
     } else ratingCell.textContent = 'Not yet rated';
     const actionCell = document.createElement('td');

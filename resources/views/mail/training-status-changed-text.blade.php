@@ -1,4 +1,6 @@
-@if($isRevert)
+@if($messageTemplate !== null)
+{{ $messageTemplate }}
+@elseif($isRevert)
 This training assigned to your office was returned for changes.
 @elseif($isSubmitted)
 A training assigned to your office has been submitted for approval.

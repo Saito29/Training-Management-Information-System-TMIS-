@@ -32,12 +32,11 @@ class AccountRegistrationController
                 || ModuleAccess::allows($request->user(), 'administration.edit'),
             403,
         );
-        $scope = ModuleAccess::isAdministrator($request->user())
-            ? ['regionIds' => null, 'officeIds' => null]
-            : ModuleAccess::registrationScope($request->user());
+        $canAssignSystemAdministrator = ModuleAccess::isSuperAdministrator($request->user());
         $credentialTypes = DB::table('role_credentials')
             ->join('user_roles', 'user_roles.role_id', '=', 'role_credentials.role_id')
             ->where('user_roles.is_active', 1)
+            ->where('role_credentials.is_active', 1)
             ->where('user_roles.name', '<>', 'System Administrator')
             ->orderBy('role_credentials.role_id')
             ->orderBy('role_credentials.name')
@@ -58,8 +57,13 @@ class AccountRegistrationController
             ->get(['role_credential_id', 'permission'])
             ->groupBy('role_credential_id');
 
+        $roles = DB::table('user_roles')->where('is_active', 1)->orderBy('name');
+        if (! $canAssignSystemAdministrator) {
+            $roles->where('name', '<>', 'System Administrator');
+        }
+
         return response()->json([
-            'roles' => DB::table('user_roles')->where('is_active', 1)->where('name', '<>', 'System Administrator')->pluck('name'),
+            'roles' => $roles->pluck('name'),
             'credentialTypes' => $credentialTypes
                 ->groupBy('role')
                 ->map(fn ($credentials) => $credentials->map(fn (object $credential): array => [
@@ -70,12 +74,18 @@ class AccountRegistrationController
                 ])->values())
                 ->all(),
             'regions' => DB::table('region')->where('is_active', 1)
-                ->when($scope['regionIds'] !== null, fn ($query) => $query->whereIn('region_id', $scope['regionIds']))
                 ->get(['region_id as id', 'name']),
-            'offices' => DB::table('organization')->where('is_active', 1)
-                ->when($scope['regionIds'] !== null, fn ($query) => $query->whereIn('region_id', $scope['regionIds']))
-                ->when($scope['officeIds'] !== null, fn ($query) => $query->whereIn('org_id', $scope['officeIds']))
-                ->get(['region_id', 'name']),
+            'offices' => DB::table('organization')
+                ->join('region', 'region.region_id', '=', 'organization.region_id')
+                ->where('organization.is_active', 1)
+                ->where('region.is_active', 1)
+                ->orderBy('region.name')
+                ->orderBy('organization.name')
+                ->get([
+                    'organization.region_id',
+                    'region.name as region_name',
+                    'organization.name',
+                ]),
         ]);
     }
 
@@ -85,17 +95,35 @@ class AccountRegistrationController
         if (is_string($request->input('email'))) {
             $request->merge(['email' => strtolower(trim($request->input('email')))]);
         }
+        $canAssignSystemAdministrator = ModuleAccess::isSuperAdministrator($request->user());
         $roleId = DB::table('user_roles')->where('name', $request->input('role'))->where('is_active', 1)->value('role_id');
+        $roleRules = [
+            'required',
+            'string',
+            Rule::exists('user_roles', 'name')->where('is_active', 1),
+        ];
+        if (! $canAssignSystemAdministrator) {
+            $roleRules[] = Rule::notIn(['System Administrator']);
+        }
+        $credentialRules = [
+            $request->input('role') === 'System Administrator' ? 'nullable' : 'required',
+            'integer',
+            Rule::exists('role_credentials', 'role_credential_id')
+                ->where('role_id', (int) $roleId)
+                ->where('is_active', 1),
+        ];
         $data = $request->validate([
             'firstName' => ['required', 'string', 'max:150'], 'middleName' => ['nullable', 'string', 'max:150'],
             'lastName' => ['required', 'string', 'max:255'], 'suffix' => ['nullable', 'string', 'max:50'],
             'dateOfBirth' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
-            'email' => ['required', 'email', 'max:255'], 'phone' => ['nullable', 'string', 'max:20'],
+            'email' => ['required', 'string', 'email:rfc,dns', 'max:255'], 'phone' => ['nullable', 'string', 'max:20'],
             'sex' => ['nullable', Rule::in(['Male', 'Female'])],
-            'role' => ['required', 'string', Rule::notIn(['System Administrator']), Rule::exists('user_roles', 'name')->where('is_active', 1)],
-            'credentialTypeId' => ['nullable', 'integer', Rule::exists('role_credentials', 'role_credential_id')->where('role_id', (int) $roleId)],
+            'role' => $roleRules,
+            'credentialTypeId' => $credentialRules,
             'region' => ['required', 'string', Rule::exists('region', 'name')->where('is_active', 1)],
             'office' => ['required', 'string'], 'position' => ['required', 'string', 'max:255'],
+        ], [
+            'email.email' => 'Enter a valid email address on a domain configured to receive email. A password setup link will verify mailbox ownership.',
         ]);
         if (User::whereRaw('LOWER(email) = ?', [$data['email']])->exists()) {
             throw ValidationException::withMessages(['email' => 'This email is already registered.']);
@@ -104,9 +132,6 @@ class AccountRegistrationController
         $officeId = DB::table('organization')->where('name', $data['office'])->where('region_id', $regionId)->where('is_active', 1)->value('org_id');
         if (! $officeId) {
             throw ValidationException::withMessages(['office' => 'Select an active organization belonging to the selected region.']);
-        }
-        if (! ModuleAccess::isAdministrator($request->user())) {
-            ModuleAccess::authorizeRegistrationScope($request->user(), (int) $regionId, (int) $officeId, 'Select an office within your account scope.');
         }
         $user = DB::transaction(function () use ($request, $data, $regionId, $officeId): User {
             $user = new User;
@@ -147,9 +172,14 @@ class AccountRegistrationController
         $this->authorize($request, 'administration.read');
         $scope = ModuleAccess::registrationScope($request->user());
         $users = DB::table('users')->leftJoin('user_roles', 'users.role_id', '=', 'user_roles.role_id')
-            ->leftJoin('role_credentials', 'users.role_credential_id', '=', 'role_credentials.role_credential_id')
+            ->leftJoin('role_credentials', function ($join): void {
+                $join->on('users.role_credential_id', '=', 'role_credentials.role_credential_id')
+                    ->on('users.role_id', '=', 'role_credentials.role_id')
+                    ->where('role_credentials.is_active', 1);
+            })
             ->leftJoin('region', 'users.region_id', '=', 'region.region_id')->leftJoin('organization', 'users.org_id', '=', 'organization.org_id')
             ->whereNull('users.deleted_at')->whereIn('users.status', ['Pending approval', 'Rejected'])
+            ->when(! ModuleAccess::isSuperAdministrator($request->user()), fn ($query) => $query->where('user_roles.name', '<>', 'System Administrator'))
             ->when(! ModuleAccess::isAdministrator($request->user()) && $scope['regionIds'] !== null, fn ($query) => $query->whereIn('users.region_id', $scope['regionIds']))
             ->when(! ModuleAccess::isAdministrator($request->user()) && $scope['officeIds'] !== null, fn ($query) => $query->whereIn('users.org_id', $scope['officeIds']))
             ->select('users.user_id as id', 'users.first_name as firstName', 'users.middle_name as middleName', 'users.last_name as lastName', 'users.extension_name as suffix', 'users.date_of_birth as dateOfBirth', 'users.email', 'users.mobile_number as phone', 'users.position', 'users.status', 'users.is_created_at as createdAt', 'user_roles.name as role', 'role_credentials.name as credentialType', 'region.name as region', 'organization.name as office')->get();
@@ -161,7 +191,17 @@ class AccountRegistrationController
     public function update(Request $request, User $user): JsonResponse
     {
         $this->authorize($request, 'administration.approve');
-        abort_if(DB::table('user_roles')->where('role_id', $user->role_id)->where('name', 'System Administrator')->exists(), 404);
+        $isSystemAdministratorTarget = DB::table('user_roles')
+            ->where('role_id', $user->role_id)
+            ->where('name', 'System Administrator')
+            ->exists();
+        if ($isSystemAdministratorTarget) {
+            abort_unless(
+                ModuleAccess::isSuperAdministrator($request->user())
+                    && (int) $request->user()->user_id !== (int) $user->user_id,
+                404,
+            );
+        }
         if (! ModuleAccess::isAdministrator($request->user())) {
             abort_unless(
                 ModuleAccess::withinRegistrationScope($request->user(), (int) $user->region_id, (int) $user->org_id),
@@ -173,6 +213,23 @@ class AccountRegistrationController
         DB::transaction(function () use ($request, $user, $approved): void {
             $before = DB::table('users')->where('user_id', $user->user_id)->lockForUpdate()->first();
             abort_unless($before && $before->deleted_at === null && $before->status === 'Pending approval', 409, 'This account is no longer pending approval. Refresh the list.');
+            $targetRole = DB::table('user_roles')->where('role_id', $before->role_id)->where('is_active', 1)->first(['name']);
+            if (! $targetRole) {
+                throw ValidationException::withMessages(['role' => 'This account cannot be approved because its assigned role is no longer active.']);
+            }
+            if ($approved && $targetRole->name !== 'System Administrator') {
+                $hasCredential = $before->role_credential_id !== null
+                    && DB::table('role_credentials')
+                        ->where('role_credential_id', $before->role_credential_id)
+                        ->where('role_id', $before->role_id)
+                        ->where('is_active', 1)
+                        ->exists();
+                if (! $hasCredential) {
+                    throw ValidationException::withMessages([
+                        'credentialTypeId' => 'Approval is blocked because this role requires an active role credential. Assign a credential for this role before approving the account.',
+                    ]);
+                }
+            }
             $changes = ['status' => $approved ? 'Approved & Accepted' : 'Rejected', 'active_status' => $approved ? 1 : 0, 'is_updated_at' => now()];
             DB::table('users')->where('user_id', $user->user_id)->update($changes);
             AuditTrail::record($request, $approved ? 'account_approved' : 'account_rejected', $user, ['status' => $before->status, 'active_status' => $before->active_status], $changes);

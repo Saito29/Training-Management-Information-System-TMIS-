@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const rules = Array.isArray(settings.rules) ? settings.rules : [];
   const roles = Array.isArray(settings.roles) ? settings.roles : [];
   const transitions = Array.isArray(settings.transitions) ? settings.transitions : [];
+  const canEdit = settings.canEdit === true;
   const ruleBody = byId('trainingNotificationRulesBody');
   const empty = byId('trainingNotificationRulesEmpty');
   const editorElement = byId('trainingNotificationRuleModal');
@@ -109,6 +110,46 @@ document.addEventListener('DOMContentLoaded', () => {
     }));
   }
 
+  function updateNotificationPreview() {
+    const fromStatus = byId('notificationRuleFromStatus').value;
+    const toStatus = byId('notificationRuleToStatus').value;
+    const action = fromStatus === 'For review' && toStatus === 'For approval'
+      ? 'submitted for approval'
+      : fromStatus === 'For approval' && toStatus === 'For acceptance'
+        ? 'forwarded for acceptance'
+        : toStatus === 'Approved & Accepted'
+          ? 'approved and accepted'
+          : toStatus === 'Rejected'
+            ? 'rejected'
+            : toStatus === 'For review' || toStatus === 'For approval'
+              ? `returned from ${fromStatus} to ${toStatus} for changes`
+              : `changed from ${fromStatus || 'a status'} to ${toStatus || 'a status'}`;
+    const title = fromStatus === '*' && toStatus === '*'
+      ? 'Training status updated'
+      : fromStatus === 'For review' && toStatus === 'For approval'
+        ? 'Training submitted for approval'
+        : fromStatus === 'For approval' && toStatus === 'For acceptance'
+          ? 'Training forwarded for acceptance'
+          : toStatus === 'Approved & Accepted'
+            ? 'Training approved and accepted'
+            : toStatus === 'Rejected'
+              ? 'Training rejected'
+              : toStatus === 'For review' || toStatus === 'For approval'
+                ? 'Training returned for changes'
+                : 'Training status updated';
+    const recipientNames = [...form.querySelectorAll('[data-notification-role-id]:checked')]
+      .map(input => roles.find(role => String(role.role_id) === input.dataset.notificationRoleId)?.name)
+      .filter(Boolean);
+
+    byId('notificationRulePreviewTransition').textContent = transitionName(fromStatus, toStatus);
+    byId('notificationRulePreviewTitle').textContent = title;
+    const returnTransition = toStatus === 'Rejected'
+      || (fromStatus === 'For approval' && toStatus === 'For review')
+      || (fromStatus === 'For acceptance' && ['For approval', 'For review'].includes(toStatus));
+    byId('notificationRulePreviewMessage').textContent = `Training “Sample training” (ID TRN-26-000001) was ${action}.${returnTransition ? ' Reason: Sample reason.' : ''} Changed by Sample reviewer (DA-SAAD - Region IV-A) on Nov 21, 2026, 9:00 AM. Training office / organization: DA-SAAD - Region IV-A.`;
+    byId('notificationRulePreviewRecipients').textContent = recipientNames.length ? recipientNames.join(', ') : 'No recipient roles selected';
+  }
+
   function renderRules() {
     ruleBody.replaceChildren();
     for (const rule of rules) {
@@ -157,21 +198,23 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       roleCell.append(badges);
 
-      const actions = document.createElement('td');
-      actions.className = 'notification-rule-actions';
-      const edit = document.createElement('button');
-      edit.type = 'button';
-      edit.className = 'btn btn-sm btn-outline-primary';
-      edit.dataset.editNotificationRule = String(rule.id);
-      edit.innerHTML = '<i class="bi bi-pencil-square" aria-hidden="true"></i><span>Edit</span>';
-      const remove = document.createElement('button');
-      remove.type = 'button';
-      remove.className = 'btn btn-sm btn-outline-danger';
-      remove.dataset.deleteNotificationRule = String(rule.id);
-      remove.innerHTML = '<i class="bi bi-trash3" aria-hidden="true"></i><span>Delete</span>';
-      actions.append(edit, remove);
-
-      row.append(event, enabledCell, roleCell, actions);
+      row.append(event, enabledCell, roleCell);
+      if (canEdit) {
+        const actions = document.createElement('td');
+        actions.className = 'notification-rule-actions';
+        const edit = document.createElement('button');
+        edit.type = 'button';
+        edit.className = 'btn btn-sm btn-outline-primary';
+        edit.dataset.editNotificationRule = String(rule.id);
+        edit.innerHTML = '<i class="bi bi-pencil-square" aria-hidden="true"></i><span>Edit</span>';
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'btn btn-sm btn-outline-danger';
+        remove.dataset.deleteNotificationRule = String(rule.id);
+        remove.innerHTML = '<i class="bi bi-trash3" aria-hidden="true"></i><span>Delete</span>';
+        actions.append(edit, remove);
+        row.append(actions);
+      }
       ruleBody.append(row);
     }
     empty.hidden = rules.length > 0;
@@ -190,6 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
     populateToStatuses(rule?.toStatus || '');
     const defaultRoles = roles.filter(role => ['Program Administrator', 'System Administrator'].includes(role.name)).map(role => String(role.role_id));
     renderRoleToggles(rule?.roleIds || defaultRoles);
+    updateNotificationPreview();
     editor.show();
   }
 
@@ -221,10 +265,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  byId('addTrainingNotificationRule').addEventListener('click', () => openEditor());
-  byId('notificationRuleFromStatus').addEventListener('change', () => populateToStatuses());
-  form.addEventListener('submit', saveRule);
+  if (canEdit) {
+    byId('addTrainingNotificationRule')?.addEventListener('click', () => openEditor());
+    byId('notificationRuleFromStatus').addEventListener('change', () => populateToStatuses());
+    form.addEventListener('change', updateNotificationPreview);
+    byId('notificationRuleFromStatus').addEventListener('change', updateNotificationPreview);
+    byId('notificationRuleToStatus').addEventListener('change', updateNotificationPreview);
+    form.addEventListener('submit', saveRule);
+  }
   ruleBody.addEventListener('click', event => {
+    if (!canEdit) return;
     const edit = event.target.closest('[data-edit-notification-rule]');
     if (edit) {
       const rule = rules.find(item => String(item.id) === edit.dataset.editNotificationRule);
@@ -243,7 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
     deleteModal.show();
   });
 
-  byId('confirmDeleteTrainingNotificationRule').addEventListener('click', async event => {
+  byId('confirmDeleteTrainingNotificationRule')?.addEventListener('click', async event => {
     if (!pendingDeleteRuleId) return;
     const button = event.currentTarget;
     const error = byId('deleteTrainingNotificationRuleError');

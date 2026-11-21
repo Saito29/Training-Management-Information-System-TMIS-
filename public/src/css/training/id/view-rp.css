@@ -122,7 +122,6 @@
 .rp-view #rpTrainingsPanel .rp-training-detail > i { flex: 0 0 17px; color: var(--color-primary); font-size: 15px; }
 .rp-view #rpTrainingsPanel .rp-training-detail span { display: block; margin-bottom: 5px; color: var(--color-text-secondary); font-size: 11px; font-weight: 650; }
 .rp-view #rpTrainingsPanel .rp-training-detail strong { display: block; color: var(--color-text-primary); font-size: 13px; font-weight: 650; line-height: 1.45; overflow-wrap: anywhere; }
-.rp-view #rpTrainingsPanel .rp-training-detail strong { white-space: pre-line; }
 .rp-view #rpTrainingsPanel .rp-training-pagination { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 20px; color: var(--color-text-secondary); font-size: 12px; }
 .rp-view #rpTrainingsPanel .rp-training-pagination-top { margin: 0 0 20px; }
 .rp-view #rpTrainingsPanel .rp-training-page-size { display: flex; align-items: center; gap: 9px; }
@@ -230,21 +229,18 @@
 .rp-edit-page .rp-edit-section h3 { display: flex; align-items: center; gap: 9px; margin: 0 0 18px; color: var(--color-text-primary); font-size: 15px; font-weight: 750; }
 .rp-edit-page .rp-edit-section h3 i { color: var(--color-primary); font-size: 16px; }
 .rp-edit-page .rp-edit-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 17px; }
-.rp-edit-page .rp-edit-affiliation-fields { row-gap: 12px; }
-.rp-edit-page .rp-edit-affiliation-fields > div:first-child { grid-column: 1 / -1; }
 .rp-edit-page .rp-edit-field-wide { grid-column: 1 / -1; }
 .rp-edit-page .rp-edit-fields label { display: block; margin-bottom: 7px; color: var(--color-text-primary); font-size: 12px; font-weight: 700; }
 .rp-edit-page .rp-edit-fields label span { color: var(--color-primary); }
 .rp-edit-page .rp-edit-remarks label small { color: var(--color-text-secondary); font-size: 11px; font-weight: 500; }
-.rp-edit-page .rp-edit-list-label { display: block; margin-bottom: 9px; color: var(--color-text-primary); font-size: 12px; font-weight: 700; }
-.rp-edit-page .rp-edit-bullet-list { display: grid; gap: 9px; margin: 0 0 10px; padding-left: 22px; }
-.rp-edit-page .rp-edit-bullet-list li { padding-left: 3px; color: var(--color-primary); }
-.rp-edit-page .rp-edit-bullet-list li::marker { color: var(--color-primary); font-size: 16px; }
-.rp-edit-page .rp-edit-bullet-list li { display: list-item; }
-.rp-edit-page .rp-edit-bullet-list li input { width: calc(100% - 44px); }
-.rp-edit-page .rp-edit-remove-item { display: inline-grid; width: 34px; height: 38px; margin-left: 8px; place-items: center; border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text-secondary); background: var(--color-surface); vertical-align: top; }
+.rp-edit-page .rp-edit-credential-field { min-width: 0; padding: 14px; border: 1px solid var(--color-border); border-radius: 12px; background: color-mix(in srgb,var(--color-bg) 55%,var(--color-surface)); }
+.rp-edit-page .rp-edit-list-label { display: block; margin-bottom: 10px; color: var(--color-text-primary); font-size: 13px; font-weight: 750; }
+.rp-edit-page .rp-edit-bullet-list { display: grid; gap: 8px; margin: 0 0 11px; padding: 0; list-style: none; }
+.rp-edit-page .rp-edit-bullet-list li { display: grid; grid-template-columns: minmax(0,1fr) 38px; align-items: center; gap: 8px; min-width: 0; padding: 0; color: var(--color-text-primary); }
+.rp-edit-page .rp-edit-bullet-list li input { width: 100%; min-width: 0; }
+.rp-edit-page .rp-edit-remove-item { display: inline-grid; width: 38px; height: 40px; margin: 0; place-items: center; border: 1px solid var(--color-border); border-radius: 9px; color: var(--color-text-secondary); background: var(--color-surface); }
 .rp-edit-page .rp-edit-remove-item:hover { border-color: var(--color-primary); color: var(--color-primary); }
-.rp-edit-page .rp-edit-add-item { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-primary-dark); background: var(--color-primary-surface); font-size: 12px; font-weight: 700; }
+.rp-edit-page .rp-edit-add-item { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; padding: 7px 11px; border: 1px solid color-mix(in srgb,var(--color-primary) 35%,var(--color-border)); border-radius: 9px; color: var(--color-primary-dark); background: var(--color-primary-surface); font-size: 12px; font-weight: 700; }
 .rp-edit-page .rp-edit-add-item:hover { border-color: var(--color-primary); }
 .rp-edit-page .rp-edit-add-item:focus-visible,.rp-edit-page .rp-edit-remove-item:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 .rp-edit-page .rp-edit-fields input,.rp-edit-page .rp-edit-fields select,.rp-edit-page .rp-edit-fields textarea { width: 100%; min-height: 40px; padding: 9px 11px; border: 1px solid var(--color-border); border-radius: 9px; color: var(--color-text-primary); background: var(--color-surface); font-size: 13px; }
@@ -277,4 +273,27 @@
   .rp-view #rpOverviewPanel .rp-profile-main { padding: 3px 22px 18px; }
   .rp-view #rpOverviewPanel .rp-credential-grid { grid-template-columns: 1fr; gap: 20px; }
   .rp-view #rpOverviewPanel .rp-bullet-section + .rp-bullet-section { padding: 20px 0 0; border-top: 1px solid var(--color-border); border-left: 0; }
+}
+.rp-view { font-size: 14px; line-height: 1.55; }
+.rp-view .training-page-header h1 { font-size: clamp(24px, 2vw, 30px); line-height: 1.2; }
+.rp-view .training-page-header p,.rp-view #rpEvaluationPanel .rp-evaluation-heading p { font-size: 13px; line-height: 1.6; }
+.rp-view .training-tab { font-size: 13px; }
+.rp-view .rp-card,.rp-view #rpEvaluationPanel .rp-evaluation-table-wrap,.rp-view #rpLogsPanel .rp-log-panel { box-shadow: 0 4px 16px rgba(25,52,30,.04); }
+.rp-view #rpEvaluationPanel .rp-evaluation-heading h2 { font-size: 20px; line-height: 1.3; }
+.rp-view #rpEvaluationPanel .rp-evaluation-overall { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 18px 0 10px; }
+.rp-view #rpEvaluationPanel .rp-evaluation-overall article { display: grid; align-content: start; gap: 5px; min-width: 0; padding: 17px 19px; border: 1px solid var(--color-border); border-radius: 13px; background: linear-gradient(140deg,var(--color-primary-surface),var(--color-surface) 75%); }
+.rp-view #rpEvaluationPanel .rp-evaluation-overall article > span { color: var(--color-text-secondary); font-size: 11px; font-weight: 700; letter-spacing: .025em; }
+.rp-view #rpEvaluationPanel .rp-evaluation-overall article > strong { color: var(--color-text-primary); font-size: clamp(19px,2vw,24px); font-weight: 760; line-height: 1.25; overflow-wrap: anywhere; }
+.rp-view #rpEvaluationPanel .rp-evaluation-overall article:first-child > strong { color: var(--color-primary-dark); }
+.rp-view #rpEvaluationPanel .rp-evaluation-overall article > small { color: var(--color-text-secondary); font-size: 11px; line-height: 1.45; }
+.rp-view #rpEvaluationPanel .rp-evaluation-calculation { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 18px; color: var(--color-text-secondary); font-size: 12px; line-height: 1.5; }
+.rp-view #rpEvaluationPanel .rp-evaluation-calculation i { flex: 0 0 auto; margin-top: 2px; color: var(--color-primary); }
+.rp-view #rpEvaluationPanel .rp-evaluation-table { font-size: 13px; }
+.rp-view #rpEvaluationPanel .rp-evaluation-table th { padding: 13px 16px; font-size: 11px; }
+.rp-view #rpEvaluationPanel .rp-evaluation-table td { padding: 14px 16px; line-height: 1.5; }
+.rp-view #rpEvaluationPanel .rp-evaluation-rating { font-size: 13px; }
+[data-theme='dark'] .rp-view #rpEvaluationPanel .rp-evaluation-overall article:first-child > strong { color: var(--color-primary); }
+@media (max-width: 680px) {
+  .rp-view #rpEvaluationPanel .rp-evaluation-overall { grid-template-columns: 1fr; gap: 9px; }
+  .rp-view #rpEvaluationPanel .rp-evaluation-overall article { padding: 14px 16px; }
 }

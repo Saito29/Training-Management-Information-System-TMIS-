@@ -60,6 +60,14 @@ class LoginController
             throw ValidationException::withMessages(['email' => 'Unable to sign in. Please check your details and try again.']);
         }
 
+        if ($user->hasActiveRole() && ! $user->hasValidRoleCredential()) {
+            AuditTrail::record($request, 'login_denied_missing_role_credential', $user, outcome: 'failure', category: 'security');
+            $request->session()->flash('toast_type', 'info');
+            throw ValidationException::withMessages([
+                'email' => 'Your account has a role but no active role credential is assigned. Sign-in is unavailable until a System Administrator assigns the required access profile. Please contact your administrator.',
+            ]);
+        }
+
         if (! $user->isEligibleForLogin()) {
             AuditTrail::record($request, 'login_denied', $user, outcome: 'failure', category: 'security');
             $request->session()->flash('toast_type', 'warning');

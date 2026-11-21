@@ -51,14 +51,6 @@ class="layout-fixed"
 
     />
 
-    <link
-
-      href="https://db.onlinewebfonts.com/c/07e0cde7ae44d7e3cdc61a55fe9af110?family=Blanka"
-
-      rel="stylesheet"
-
-    />
-
     <!-- Box icons -->
 
     <!-- Basic Icons -->
@@ -465,7 +457,7 @@ class="layout-fixed"
 
     <!-- nav -->
 
-    <script src="{{ asset('src/js/shared/nav.js?v=single-active-collapse-2') }}"></script>
+    <script src="{{ asset('src/js/shared/nav.js?v=notification-bell-ready-1') }}"></script>
     <script src="{{ asset('src/js/administration/details/deleted-accounts.js') }}"></script>
 
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>

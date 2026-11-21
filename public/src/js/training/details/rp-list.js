@@ -48,7 +48,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const load = () => {
     try {
       const saved = JSON.parse(window.TmisStore.getItem(storageKey) || '[]');
-      records = Array.isArray(saved) ? saved.filter((record) => !inactiveOnly || record.status === 'Inactive') : [];
+      records = Array.isArray(saved) ? saved.filter((record) => {
+        const status = String(record.status || 'Active').toLowerCase();
+        return inactiveOnly ? status === 'inactive' : status === 'active';
+      }) : [];
     } catch { records = []; }
     const office = byId('rpOfficeFilter');
     const selected = office.value;
@@ -187,20 +190,35 @@ document.addEventListener('DOMContentLoaded', () => {
   ['rpStatusFilter', 'rpOfficeFilter', 'rpSearch'].forEach((id) => byId(id).addEventListener(id === 'rpSearch' ? 'input' : 'change', () => { page = 1; render(); }));
   byId('rpPageLength').addEventListener('change', () => { pageSize = byId('rpPageLength').value === 'all' ? 'all' : Number(byId('rpPageLength').value); page = 1; render(); });
   byId('rpClear').addEventListener('click', () => {
-    byId('rpStatusFilter').value = inactiveOnly ? 'Inactive' : ''; byId('rpOfficeFilter').value = ''; byId('rpSearch').value = '';
+    byId('rpStatusFilter').value = inactiveOnly ? 'Inactive' : 'Active'; byId('rpOfficeFilter').value = ''; byId('rpSearch').value = '';
     columnSearch.clear(); byId('rpColumnFilters').querySelectorAll('input').forEach((input) => { input.value = ''; });
     page = 1; render();
   });
   byId('rpRefresh').addEventListener('click', async (event) => {
     const button = event.currentTarget;
+    const originalTitle = button.title;
     button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.title = 'Refreshing resource persons';
     try {
-      if (window.TMIS_PAGE) await window.TmisStore.refresh();
+      if (!window.TMIS_PAGE || !window.TmisStore?.refresh) {
+        throw new Error('Resource-person refresh is unavailable. Reload the page and try again.');
+      }
+      await window.TmisStore.refresh();
+      page = 1;
       load();
+      const matchingRecords = filtered().length;
+      const totalRecords = records.length;
+      window.TmisToast?.show(
+        `Resource-person records refreshed. ${totalRecords} total record${totalRecords === 1 ? '' : 's'} loaded; ${matchingRecords} match the current filters.`,
+        'success',
+      );
     } catch (error) {
-      window.alert(error.message || 'Resource-person records could not be refreshed.');
+      window.TmisToast?.show(error.message || 'Resource-person records could not be refreshed. Try again.', 'error');
     } finally {
       button.disabled = false;
+      button.removeAttribute('aria-busy');
+      button.title = originalTitle;
     }
   });
   const clearUndo = () => {
@@ -248,14 +266,12 @@ document.addEventListener('DOMContentLoaded', () => {
     clearUndo(); load();
   });
   byId('rpExport').addEventListener('click', () => {
-    if (!window.XLSX) { window.alert('Excel export is unavailable. Check your connection and try again.'); return; }
     const fields = columns.filter(([key]) => key !== 'actions');
-    const rows = filtered().map(record => Object.fromEntries(fields.map(([key, label]) => [label, valueOf(record, key)])));
-    const sheet = XLSX.utils.json_to_sheet(rows, { header: fields.map(([, label]) => label) });
-    sheet['!cols'] = fields.map(([, label]) => ({ wch: Math.max(14, label.length + 4) }));
-    const book = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(book, sheet, inactiveOnly ? 'Inactive Resource Persons' : 'Resource Persons');
-    XLSX.writeFile(book, `${inactiveOnly ? 'inactive_' : ''}resource_persons_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    const quote = (value) => `"${String(value).replaceAll('"', '""')}"`;
+    const rows = [fields.map(([, label]) => quote(label)).join(','), ...filtered().map((record) => fields.map(([key]) => quote(valueOf(record, key))).join(','))];
+    const url = URL.createObjectURL(new Blob(['\uFEFF', rows.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a'); link.href = url; link.download = 'resource-persons.csv'; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
   window.addEventListener('storage', (event) => { if (event.key === storageKey) load(); });
   window.addEventListener('tmis:data-updated', load);

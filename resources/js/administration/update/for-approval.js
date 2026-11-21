@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   const display = (user, field) => field === 'status' ? statusLabel(user) : ['createdAt', 'dateOfBirth'].includes(field) ? date(user[field]) : String(user[field] || '—');
   function feedback(message, type = 'success') {
-    const settings = { success: ['Success', 'bi-check-circle-fill'], error: ['Error', 'bi-x-circle-fill'], warning: ['Warning', 'bi-exclamation-triangle-fill'] }[type];
+    const settings = { success: ['Success', 'bi-check-circle-fill'], error: ['Error', 'bi-x-circle-fill'], warning: ['Warning', 'bi-exclamation-triangle-fill'], info: ['Information', 'bi-info-circle-fill'] }[type];
     $('reviewToast').dataset.type = type;
     $('reviewToast').setAttribute('role', type === 'error' ? 'alert' : 'status');
     $('reviewToast').setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
@@ -47,7 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) { feedback(error.message || 'User registrations could not be loaded.', 'error'); }
   }
   function details(container, user, compact = false) {
-    const entries = compact ? [['User ID', user.id], ['Requested role', user.role], ['Office / organization', user.office], ['Registered date', date(user.createdAt)]]
+    const roleCredential = user.role === 'System Administrator' ? 'Not required for System Administrator' : (user.credentialType || 'Not assigned');
+    const entries = compact ? [['User ID', user.id], ['Requested role', user.role], ['Role credential', roleCredential], ['Office / organization', user.office], ['Registered date', date(user.createdAt)]]
       : [['User ID', user.id], ['Status', statusLabel(user)], ...fields.map((field, i) => [labels[i], display(user, field)])];
     const field = ([label, value]) => {
       const row = document.createElement('div'), term = document.createElement('dt'), description = document.createElement('dd');
@@ -69,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const groups = [
       ['Registration', 'bi-clock-history', entries.slice(0, 2).concat(entries.slice(-1))],
       ['Personal information', 'bi-person-vcard', entries.slice(2, 9)],
-      ['Requested access & office', 'bi-shield-lock', entries.slice(9, 13)],
+      ['Requested access & office', 'bi-shield-lock', entries.slice(9, 13).concat([['Role credential', roleCredential]])],
     ];
     $(container).replaceChildren(...groups.map(([title, icon, values]) => {
       const section = document.createElement('section'); section.className = 'account-detail-group';
@@ -121,6 +122,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   async function decide(status) {
+    const selectedUser = records.find(user => user.id === selectedId);
+    if (status === 'Approved' && selectedUser && selectedUser.role !== 'System Administrator' && !selectedUser.credentialType) {
+      feedback('Approval is blocked because this role has no active credential assigned. Assign a role credential, then approve the account.', 'info');
+      return;
+    }
     $('approveUser').disabled = $('rejectUser').disabled = true;
     try {
       const response = await fetch(`${window.accountApprovalUrl}/${encodeURIComponent(selectedId)}`, {
@@ -130,7 +136,12 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       if (response.redirected) throw new Error('Your session expired. Sign in again.');
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'The access decision could not be saved.');
+      if (!response.ok) {
+        const validationMessage = Object.values(data.errors || {}).flat().find(Boolean);
+        const credentialIssue = Object.keys(data.errors || {}).some(field => ['credentialTypeId', 'role_credential_id'].includes(field));
+        feedback(validationMessage || data.message || 'The access decision could not be saved.', credentialIssue ? 'info' : 'error');
+        return;
+      }
       reviewModal.hide(); feedback(data.message); await refresh();
     } catch (error) { feedback(error.message, 'error'); }
     finally { $('approveUser').disabled = $('rejectUser').disabled = false; }

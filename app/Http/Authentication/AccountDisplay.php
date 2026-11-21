@@ -31,6 +31,12 @@ class AccountDisplay
         foreach (['id' => 'user_id', 'firstName' => 'first_name', 'middleName' => 'middle_name', 'lastName' => 'last_name', 'suffix' => 'extension_name', 'dateOfBirth' => 'date_of_birth', 'email' => 'email', 'phone' => 'mobile_number', 'role' => 'role_name', 'region' => 'region_name', 'office' => 'office_name', 'position' => 'position', 'status' => 'status', 'activeStatus' => 'active_status', 'createdAt' => 'is_created_at', 'updatedAt' => 'is_updated_at'] as $key => $column) {
             $profile[$key] = $details?->{$column};
         }
+        $regionName = trim((string) ($profile['region'] ?? ''));
+        $regionName = preg_replace('/^Region\s+/i', '', $regionName) ?? $regionName;
+        $profile['officeWithRegion'] = implode(', ', array_filter([
+            trim((string) ($profile['office'] ?? '')),
+            $regionName,
+        ]));
         $profile['credential'] = $details?->credential_name;
         $profile['name'] = trim(implode(' ', array_filter([$profile['firstName'], $profile['middleName'], $profile['lastName'], $profile['suffix']]))) ?: 'Account';
         $profile['navigationName'] = $this->formatName(

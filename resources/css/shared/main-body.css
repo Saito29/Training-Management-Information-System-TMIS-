@@ -163,7 +163,7 @@ body::-webkit-scrollbar-thumb:hover,
 }
 
 .app-wrapper .app-header .app-header-left .app-logo .app-logo-text .app-name {
-  font-family: 'blanka';
+  font-family: 'Blanka', sans-serif;
   color: #185e20;
   line-height: 1;
 }
@@ -975,7 +975,7 @@ body::-webkit-scrollbar-thumb:hover,
   .offcanvas-brand
   .title-wrapper
   .offcanvas-title {
-  font-family: 'blanka';
+  font-family: 'Blanka', sans-serif;
   margin: 0;
   font-weight: 700;
   color: #185e20;

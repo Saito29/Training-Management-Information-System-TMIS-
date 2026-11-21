@@ -133,6 +133,7 @@
 #reviewToast.account-toast { --toast-accent: #287a42; --toast-tint: #eaf5ee; width: 380px; max-width: calc(100vw - 2rem); margin: 0; background: var(--color-surface, #fff); color: var(--color-text-primary, #202b25); border: 1px solid var(--color-border, #dfe6e1); border-left: 3px solid var(--toast-accent); border-radius: .9rem; box-shadow: 0 .5rem 2rem #14251c1f; pointer-events: auto; overflow: hidden; font-family: 'Inter', sans-serif; }
 #reviewToast[data-type='warning'] { --toast-accent: #946000; --toast-tint: #fff5df; }
 #reviewToast[data-type='error'] { --toast-accent: #b33434; --toast-tint: #ffeded; }
+#reviewToast[data-type='info'] { --toast-accent: #176c9b; --toast-tint: #eaf5fc; }
 .account-toast-layout { display: flex; align-items: flex-start; gap: .75rem; padding: 1rem; }
 .account-toast-symbol { display: grid; place-items: center; flex: 0 0 2.15rem; height: 2.15rem; border-radius: .65rem; color: var(--toast-accent); background: var(--toast-tint); font-size: 1.05rem; }
 .account-toast-content { flex: 1; min-width: 0; }
@@ -146,6 +147,7 @@
 [data-theme='dark'] #reviewToast.account-toast { --toast-accent: #8dd9a4; --toast-tint: #213c2c; box-shadow: 0 .5rem 2rem #0005; }
 [data-theme='dark'] #reviewToast[data-type='warning'] { --toast-accent: #f2c568; --toast-tint: #43351c; }
 [data-theme='dark'] #reviewToast[data-type='error'] { --toast-accent: #ffa4a4; --toast-tint: #462828; }
+[data-theme='dark'] #reviewToast[data-type='info'] { --toast-accent: #82c8f0; --toast-tint: #193849; }
 @media (max-width: 575.98px) { .account-toast-layout { gap: .6rem; padding: .85rem; } }
 
 /* Leave page controls clickable around the notification, including themed layouts. */

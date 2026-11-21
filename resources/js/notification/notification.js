@@ -131,9 +131,9 @@ function init(){
    await window.TmisStore.setItem('tmis-notifications',JSON.stringify([...existing,...items]));
    window.dispatchEvent(new Event('tmis:notifications-updated'));
    // The inbox write has completed; draft cleanup must not misreport a successful create.
-   let draftCleared=true;try{await window.TmisStore.removeItem(draftKey(actor));}catch{draftCleared=false;}
+   try{await window.TmisStore.removeItem(draftKey(actor));}catch(cleanupError){console.error('The notification was created, but its saved draft could not be removed.',cleanupError);}
    const batchId=items[0].batchId;await reset(false);$('notificationDraftStatus').textContent='Notification saved';
-   $('confirmNotificationDialog').close();feedback(`Created ${items.length} user inbox ${items.length===1?'notification':'notifications'}. No email or push was sent.${draftCleared?'':' The old draft could not be cleared.'}`,draftCleared?'success':'warning');
+   $('confirmNotificationDialog').close();feedback(`Notification${items.length===1?'':'s'} created successfully. This browser preview did not send an email.`,'success');
    window.TmisActivity?.record({action:'create',module:'users',title:'Notification created',description:`A notification was saved for ${items.length} recipients.`,reference:batchId});
   }catch(error){$('confirmNotificationDialog').close();feedback(error.message||'The notification could not be created.',true);}
   finally{busy=false;$('confirmNotificationCreate').disabled=false;}

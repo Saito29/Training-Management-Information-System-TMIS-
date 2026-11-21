@@ -423,6 +423,12 @@ class ModuleAccess
         abort_unless(self::withinRegistrationScope($user, $regionId, $officeId), 403, $message);
     }
 
+    public static function authorizeRegistrationRegion(User $user, int $regionId, string $message): void
+    {
+        $scope = self::registrationScope($user);
+        abort_unless($scope['regionIds'] === null || in_array($regionId, $scope['regionIds'], true), 403, $message);
+    }
+
     public static function withinRegistrationScope(User $user, int $regionId, int $officeId): bool
     {
         $scope = self::registrationScope($user);
@@ -431,13 +437,18 @@ class ModuleAccess
             && ($scope['officeIds'] === null || in_array($officeId, $scope['officeIds'], true));
     }
 
-    /** Apply ownership before lookup so other offices cannot enumerate records. */
+    /** Apply module ownership before lookup; resource-person records are shared within their region. */
     public static function scope(Builder $query, User $user, bool $preferences = true): Builder
     {
         $isParticipants = $query->from === 'participants';
+        $isResourcePersons = $query->from === 'resource_persons';
         if (! self::isAdministrator($user)) {
             if ($isParticipants) {
                 return self::scopeParticipants($query, [$user->region_id], [$user->org_id]);
+            }
+
+            if ($isResourcePersons) {
+                return $query->where('region_id', $user->region_id);
             }
 
             return $query->where('region_id', $user->region_id)->where('org_id', $user->org_id);
@@ -456,6 +467,10 @@ class ModuleAccess
         }
 
         foreach (['region_ids' => 'region_id', 'office_ids' => 'org_id'] as $field => $column) {
+            if ($isResourcePersons && $field === 'office_ids') {
+                continue;
+            }
+
             if ($scope && $scope->{$field} !== null) {
                 $query->whereIn($column, json_decode($scope->{$field}, true, 512, JSON_THROW_ON_ERROR));
             }

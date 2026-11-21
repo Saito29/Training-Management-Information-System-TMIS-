@@ -258,6 +258,27 @@
 .visibility-list-card .settings-selection-heading { align-items:flex-start; }.visibility-list-card .settings-selection-heading legend { display:flex; align-items:center; gap:.45rem; }.visibility-list-card .settings-selection-heading legend>i { color:var(--color-primary-dark); }.visibility-list-card .settings-selection-heading>div>small { display:block; margin-top:.2rem; color:var(--color-text-secondary); font-size:.66rem; }
 .visibility-list-actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:.15rem; }.visibility-list-actions .settings-text-button { white-space:nowrap; }.visibility-list-actions .settings-text-button i { margin-right:.2rem; }
 .visibility-list-card .settings-check-list { height:340px; background:var(--color-surface); }.visibility-list-card .settings-check-option { min-height:2.8rem; }.visibility-option-check { margin-left:auto; color:var(--color-primary); font-size:.9rem; opacity:0; }.visibility-list-card .settings-check-option:has(input:checked) .visibility-option-check { opacity:1; }
+.intervention-type-modal{overflow:hidden;border:1px solid var(--color-border);border-radius:1rem;background:var(--color-surface);color:var(--color-text-primary);box-shadow:0 1.2rem 3rem #10251a26}
+.intervention-type-dialog{width:calc(100% - 2rem);max-width:640px}
+.intervention-type-modal .modal-header,.intervention-type-modal .modal-footer{flex:0 0 auto;padding:1rem 1.25rem;border-color:var(--color-border);background:var(--color-surface)}
+.intervention-type-modal>form{display:flex;flex:1 1 auto;flex-direction:column;min-height:0;overflow:hidden}
+.intervention-type-modal .modal-title{margin:0;color:var(--color-text-primary);font-size:1rem;font-weight:700}
+.intervention-type-modal .modal-header p{margin:.3rem 0 0;color:var(--color-text-secondary);font-size:.73rem}
+.intervention-type-modal .modal-body{flex:1 1 auto;min-height:0;padding:1.15rem 1.25rem;overflow-y:auto;background:var(--color-surface)}
+.intervention-type-modal .form-label{margin-bottom:.4rem;color:var(--color-text-primary);font-size:.75rem;font-weight:650}
+.intervention-type-modal .form-control{min-height:2.6rem;border-color:var(--color-border);color:var(--color-text-primary);background:var(--color-bg);font-size:.78rem}
+.intervention-type-modal .form-text{display:block;margin-top:.35rem;color:var(--color-text-secondary);font-size:.68rem}
+.intervention-type-eyebrow{display:block;margin-bottom:.3rem;color:var(--color-primary-dark);font-size:.61rem;font-weight:750;letter-spacing:.1em}
+.intervention-type-context{display:flex;align-items:flex-start;gap:.6rem;padding:.75rem;margin-top:1rem;border:1px solid color-mix(in srgb,var(--color-primary) 24%,var(--color-border));border-radius:.65rem;background:var(--color-primary-surface);color:var(--color-text-secondary)}
+.intervention-type-context>i{margin-top:.1rem;color:var(--color-primary-dark)}
+.intervention-type-context p{margin:0;font-size:.7rem;line-height:1.5}
+.intervention-type-modal .modal-footer{justify-content:flex-end;gap:.55rem}
+.intervention-type-modal .modal-footer .btn{min-width:7.5rem;font-size:.74rem;font-weight:650}
+.intervention-type-delete-modal .modal-header{padding-bottom:.65rem}
+.intervention-type-delete-modal .modal-body{padding-top:.5rem}
+.intervention-type-delete-modal .modal-footer{border-top:0}
+[data-theme='dark'] .intervention-type-modal .form-control{color-scheme:dark}
+@media(max-width:575.98px){.intervention-type-dialog{width:calc(100vw - 1rem);margin:.5rem auto}.intervention-type-modal .modal-header,.intervention-type-modal .modal-body,.intervention-type-modal .modal-footer{padding:.9rem}.intervention-type-modal .modal-footer{align-items:stretch;flex-direction:column-reverse}.intervention-type-modal .modal-footer .btn{width:100%}}
 .settings-delete-modal { overflow:hidden; border:1px solid var(--color-border); border-radius:1rem; background:var(--color-surface); color:var(--color-text-primary); }.settings-delete-modal .modal-header { padding:1.25rem 1.35rem 0; border:0; }.settings-delete-icon { display:grid; width:2.7rem; height:2.7rem; place-items:center; border-radius:.8rem; background:color-mix(in srgb,var(--color-danger) 10%,var(--color-surface)); color:var(--color-danger); font-size:1.15rem; }.settings-delete-modal .modal-body { padding:.8rem 1.35rem 1rem; }.settings-delete-modal h2 { margin:0 0 .55rem; font-size:1.05rem; font-weight:700; }.settings-delete-modal p { font-size:.76rem; }.settings-delete-record { margin:0 0 .45rem; color:var(--color-text-primary); font-weight:600; overflow-wrap:anywhere; }.settings-delete-note { margin:0; color:var(--color-text-secondary); }.settings-delete-modal .modal-footer { gap:.55rem; padding:.9rem 1.35rem 1.2rem; border:0; }.settings-delete-modal .btn { font-size:.75rem; font-weight:600; border-radius:.55rem; }
 @media(max-width:575.98px) { .visibility-intro { align-items:flex-start; flex-wrap:wrap; }.visibility-account-badge { margin-left:3.4rem; }.visibility-list-card { padding:.85rem; }.settings-delete-modal .modal-footer { align-items:stretch; flex-direction:column-reverse; }.settings-delete-modal .modal-footer .btn { width:100%; } }
 /* Keep the master switch compact so each permission category remains scannable in both themes. */

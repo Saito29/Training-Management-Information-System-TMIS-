@@ -3,6 +3,9 @@
 <head>
     <link id="tmis-favicon" rel="icon" type="image/png" href="{{ $systemBranding['faviconUrl'] ?? asset('assets/logo/DA Logo/DA logo_120519.png') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="tmis-login-url" content="{{ route('login') }}">
+    <script src="{{ asset('src/js/shared/session-expiry.js?v=expired-session-logout-1') }}"></script>
+    <link rel="stylesheet" href="{{ asset('src/css/shared/blanka-font.css?v=brave-local-font-1') }}">
     <script>window.TMIS_BRANDING = {{ Illuminate\Support\Js::from($systemBranding ?? ['name' => 'TMIS', 'logoUrl' => asset('assets/logo/DA Logo/DA logo_120519.png'), 'faviconUrl' => asset('assets/logo/DA Logo/DA logo_120519.png')]) }};</script>
     <script>window.TMIS_ACCOUNT_NAV = {{ Illuminate\Support\Js::from(['profile' => route('admin.users.profile'), 'logs' => route('admin.users.logs'), 'visibility' => (bool) ($navigationAccess['administrator'] ?? false)]) }};</script>
     @if(request()->routeIs('admin.users.profile'))
@@ -17,10 +20,11 @@
     @if(isset($originalInterfaceData))
         <script>window.TMIS_PAGE = {{ Illuminate\Support\Js::from($originalInterfaceData) }};</script>
         <script src="{{ asset('src/js/shared/date-time.js') }}"></script>
-        <script src="{{ asset('src/js/shared/original-interface.js?v=association-assessment-breakdown-1') }}"></script>
+        <script src="{{ asset('src/js/shared/original-interface.js?v=notification-draft-cleanup-1') }}"></script>
     @endif
     @yield('head')
     <link rel="stylesheet" href="{{ asset('src/css/shared/account-avatar.css') }}">
+    <link rel="stylesheet" href="{{ asset('src/css/shared/notification-content.css?v=notification-bell-ready-1') }}">
     <script>window.TMIS_NAV_ACCESS = {{ Illuminate\Support\Js::from($navigationAccess) }};</script>
     <script src="{{ asset('src/js/shared/navigation-access.js?v=admin-profile-navigation-5') }}" defer></script>
     @if($navigationAccess['administrator'] ?? false)
@@ -30,7 +34,7 @@
     <script src="{{ asset('src/js/shared/account-avatar.js') }}" defer></script>
     <script src="{{ asset('src/js/shared/system-branding.js') }}" defer></script>
     <link rel="stylesheet" href="{{ asset('src/css/shared/searchable-combobox.css?v=detailed-association-options-1') }}">
-    <script src="{{ asset('src/js/shared/searchable-combobox.js?v=detailed-association-options-1') }}" defer></script>
+    <script src="{{ asset('src/js/shared/searchable-combobox.js?v=detailed-association-options-3') }}" defer></script>
 </head>
 <body @yield('body-attributes')>
     <form id="logout-form" method="POST" action="{{ route('logout') }}" hidden>

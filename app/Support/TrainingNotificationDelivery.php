@@ -16,7 +16,7 @@ class TrainingNotificationDelivery
     {
         return DB::transaction(function () use ($id): bool {
             $entry = DB::table('training_notifications')->where('id', $id)->lockForUpdate()->first();
-            if (! $entry || $entry->sent_at || $entry->cancelled_at || ($entry->retry_at && now()->lt($entry->retry_at))) {
+            if (! $entry || ! $entry->email_enabled || $entry->sent_at || $entry->cancelled_at || ($entry->retry_at && now()->lt($entry->retry_at))) {
                 return true;
             }
             $change = DB::table('training_status_changes')->where('id', $entry->status_change_id)->first();
@@ -30,15 +30,17 @@ class TrainingNotificationDelivery
                 ->where('users.user_id', $change->actor_user_id)
                 ->select('users.first_name', 'users.middle_name', 'users.last_name', 'users.extension_name', 'actor_office.name as office_name')
                 ->first();
-            $ruleIds = DB::table('training_notification_rules')
+            $emailRules = DB::table('training_email_notification_rules')
                 ->where('is_enabled', true)
                 ->where(function ($query) use ($change): void {
                     $query->where(fn ($exact) => $exact->where('from_status', $change->from_status)->where('to_status', $change->to_status))
                         ->orWhere(fn ($all) => $all->where('from_status', '*')->where('to_status', '*'));
                 })
-                ->pluck('id');
-            $roleIds = $ruleIds->isNotEmpty()
-                ? DB::table('training_notification_rule_roles')->whereIn('rule_id', $ruleIds)->where('is_enabled', true)->pluck('role_id')->unique()
+                ->orderByRaw('CASE WHEN from_status = ? AND to_status = ? THEN 0 ELSE 1 END', [$change->from_status, $change->to_status])
+                ->get();
+            $emailRuleIds = $emailRules->pluck('id');
+            $roleIds = $emailRuleIds->isNotEmpty()
+                ? DB::table('training_email_notification_rule_roles')->whereIn('rule_id', $emailRuleIds)->where('is_enabled', true)->pluck('role_id')->unique()
                 : collect();
             $eligible = $roleIds->isNotEmpty()
                 && DB::table('users')
@@ -78,6 +80,8 @@ class TrainingNotificationDelivery
                     (string) ($actor?->office_name ?: 'Office not recorded'),
                     (string) ($training->training_office_name ?: 'Office not recorded'),
                     $changedAt,
+                    $emailRules->first()?->subject_template,
+                    $emailRules->first()?->message_template,
                 ));
                 DB::table('training_notifications')->where('id', $id)->update(['sent_at' => now(), 'attempts' => $entry->attempts + 1, 'retry_at' => null]);
                 $this->audit($entry->user_id, $id, 'training_email_sent', 'success');

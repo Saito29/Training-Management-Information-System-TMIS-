@@ -20,6 +20,99 @@ document.addEventListener('DOMContentLoaded', () => {
     if (selectedType && attachmentTypes.includes(selectedType)) editAttachmentType.value = selectedType;
   }
   const clean = value => value === undefined || value === null ? '' : String(value);
+  const officeRegionNames = new Map((window.TMIS_PAGE?.regions || []).map(region => [String(region.region_id), region.name]));
+  const normalizeOfficeKey = value => String(value ?? '').trim().toLocaleLowerCase();
+  const interventionOfficeNames = new Map();
+  [...(window.TMIS_PAGE?.offices || []), ...(window.TMIS_PAGE?.registration?.offices || [])].forEach(office => {
+    const regionName = office.region_name || officeRegionNames.get(String(office.region_id)) || '';
+    const officeName = [office.name || office.office_name, regionName].filter(Boolean).join(' — ');
+    [office.org_id, office.office_id, office.id, office.name, office.office_name].filter(Boolean).forEach(key => {
+      interventionOfficeNames.set(normalizeOfficeKey(key), officeName || String(key));
+    });
+  });
+  document.querySelectorAll('#interventionOffice option').forEach(option => {
+    if (option.value) interventionOfficeNames.set(normalizeOfficeKey(option.value), option.textContent.trim() || option.value);
+  });
+  const canEditInterventions = Boolean(document.querySelector('#fa-intervention .intervention-add-button:not(:disabled)'));
+  const firstInterventionValue = (record, keys) => {
+    for (const key of keys) {
+      const value = record[key];
+      if (value !== undefined && value !== null && String(value).trim() !== '') return value;
+    }
+    return '';
+  };
+  const normalizeIntervention = record => {
+    const officeValue = firstInterventionValue(record, ['office', 'officeName', 'office_name', 'organization', 'implementingOffice', 'org_id', 'office_id']);
+    const officeObject = officeValue && typeof officeValue === 'object' ? officeValue : null;
+    const officeId = record.org_id ?? record.office_id ?? (typeof officeValue === 'number' || /^\d+$/.test(String(officeValue)) ? officeValue : null);
+    const officeName = officeObject?.name || officeObject?.officeName
+      || interventionOfficeNames.get(normalizeOfficeKey(officeId))
+      || interventionOfficeNames.get(normalizeOfficeKey(officeValue))
+      || officeValue;
+    const officeRegion = officeObject?.region_name || record.officeRegion || record.office_region || '';
+    const formattedOffice = officeName && officeRegion && !String(officeName).includes(String(officeRegion))
+      ? `${officeName} — ${officeRegion}`
+      : officeName;
+
+    return {
+      ...record,
+      title: firstInterventionValue(record, ['title', 'interventionTitle', 'intervention_title', 'intervention', 'name']),
+      office: formattedOffice,
+      yearCovered: firstInterventionValue(record, ['yearCovered', 'year_covered', 'year']),
+      action: firstInterventionValue(record, ['action', 'deliveryAction', 'delivery_action', 'deliveryStatus', 'delivery_status', 'status']),
+      type: firstInterventionValue(record, ['type', 'interventionType', 'intervention_type', 'category']),
+      unit: firstInterventionValue(record, ['unit', 'unitName', 'unit_name', 'measurementUnit', 'measurement_unit']),
+      qty: firstInterventionValue(record, ['qty', 'quantity', 'quantityProvided', 'quantity_provided']),
+      remarks: firstInterventionValue(record, ['remarks', 'notes', 'note', 'description']),
+    };
+  };
+  const renderInterventionRow = record => {
+    const row = make('tr');
+    if (canEditInterventions) {
+      const actionCell = make('td', 'intervention-row-action-cell');
+      const editButton = make('button', 'btn intervention-row-edit-button');
+      editButton.type = 'button';
+      editButton.dataset.editIntervention = String(record._sourceIndex);
+      editButton.setAttribute('aria-label', `Edit ${clean(record.title) || 'intervention'} details`);
+      editButton.title = 'Edit intervention';
+      editButton.innerHTML = '<i class="bi bi-pencil-square" aria-hidden="true"></i>';
+      actionCell.append(editButton);
+      row.append(actionCell);
+    }
+    ['title', 'office', 'yearCovered', 'action', 'type', 'unit', 'qty', 'remarks'].forEach(key => {
+      const value = record[key];
+      const displayValue = value === undefined || value === null || String(value).trim() === '' ? '—' : value;
+      const cell = make('td', `intervention-cell intervention-cell-${key}`);
+      if (key === 'title') {
+        cell.append(make('strong', 'intervention-record-title', displayValue));
+      } else if (key === 'office') {
+        const [officeName, ...regionParts] = clean(displayValue).split(' — ');
+        cell.append(make('strong', 'intervention-office-name', officeName));
+        if (regionParts.length) cell.append(make('span', 'intervention-cell-detail', regionParts.join(' — ')));
+        if (record.officeFromAssociation) {
+          cell.append(make('span', 'intervention-cell-origin', 'Association office'));
+          cell.title = 'Using the association’s registered office because this intervention has no office recorded.';
+        }
+      } else if (key === 'yearCovered') {
+        cell.append(make('span', 'intervention-year-pill', displayValue));
+      } else if (key === 'action') {
+        const statusClass = clean(displayValue).toLocaleLowerCase() === 'delivered'
+          ? 'intervention-status-delivered'
+          : 'intervention-status-not-delivered';
+        cell.append(make('span', `intervention-status ${statusClass}`, displayValue));
+      } else if (key === 'type') {
+        cell.append(make('span', 'intervention-type-pill', displayValue));
+      } else if (key === 'qty') {
+        cell.append(make('strong', 'intervention-quantity', displayValue));
+      } else if (key === 'remarks') {
+        cell.append(make('span', 'intervention-record-remarks', displayValue));
+      } else {
+        cell.textContent = clean(displayValue);
+      }
+      row.append(cell);
+    });
+    return row;
+  };
   const make = (tag, className, value) => {
     const element = document.createElement(tag);
     if (className) element.className = className;
@@ -28,11 +121,128 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   const exportRows = (records, keys, labels, filename) => {
     if (!window.XLSX) { alert('Excel export is unavailable. Check your connection and try again.'); return; }
-    const rows = records.map(record => Object.fromEntries(keys.map((key, index) => [labels[index], clean(record[key])])));
-    const sheet = window.XLSX.utils.json_to_sheet(rows, { header: labels });
+    let sheet;
+    if (filename === 'association_interventions') {
+      const association = readAssociation();
+      const fallbackRegion = clean(association?.region || association?.regionName || association?.region_name);
+      const headers = ['Intervention', 'Region', 'Office', 'Year Covered', 'Actions', 'Type', 'Unit', 'Qty', 'Remarks'];
+      const dataRows = records.map(record => {
+        let office = clean(record.office);
+        let region = clean(record.officeRegion || record.office_region);
+        const officeParts = office.split(/\s+\u2014\s+/);
+        if (officeParts.length > 1) {
+          office = officeParts.shift();
+          region = officeParts.join(' — ') || region;
+        }
+        region = (region || fallbackRegion).replace(/^Region\s+/i, '').replace(/\s*\([^)]*\)\s*$/, '');
+
+        return [clean(record.title), region, office, clean(record.yearCovered), clean(record.action), clean(record.type), clean(record.unit), clean(record.qty), clean(record.remarks)];
+      });
+      sheet = window.XLSX.utils.aoa_to_sheet([['Farmer Association Intervention'], ['Export'], headers, ...dataRows]);
+      sheet['!cols'] = [{ wch: 30 }, { wch: 14 }, { wch: 22 }, { wch: 15 }, { wch: 14 }, { wch: 24 }, { wch: 12 }, { wch: 10 }, { wch: 32 }];
+    } else {
+      const rows = records.map(record => Object.fromEntries(keys.map((key, index) => [labels[index], clean(record[key])])));
+      sheet = window.XLSX.utils.json_to_sheet(rows, { header: labels });
+    }
     const book = window.XLSX.utils.book_new();
     window.XLSX.utils.book_append_sheet(book, sheet, labels[0] === 'Training Name' ? 'Trainings' : 'Interventions');
     window.XLSX.writeFile(book, `${filename}_${associationId}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+  const normalizeLocationValue = value => String(value ?? '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
+  const associationMetricsCache = new Map();
+  const farmerMatchesTrainingLocation = (farmer, training) => {
+    const offices = Array.isArray(farmer.beneficiaryOffices) ? farmer.beneficiaryOffices : [];
+    const primaryOffice = offices.find(office => office.isPrimary) || offices[0] || {};
+    const farmerRegion = farmer.region || primaryOffice.region || '';
+    const farmerRegionId = farmer.region_id || primaryOffice.region_id || '';
+    const locations = Array.isArray(training.trainingLocations) && training.trainingLocations.length
+      ? training.trainingLocations
+      : [training];
+
+    return locations.some(location => {
+      const trainingRegion = location.region || training.region || '';
+      const trainingRegionId = location.region_id || training.region_id || '';
+      const sameRegion = farmerRegionId && trainingRegionId
+        ? String(farmerRegionId) === String(trainingRegionId)
+        : normalizeLocationValue(farmerRegion) !== '' && normalizeLocationValue(farmerRegion) === normalizeLocationValue(trainingRegion);
+      const sameProvince = normalizeLocationValue(farmer.province) !== ''
+        && normalizeLocationValue(farmer.province) === normalizeLocationValue(location.province || training.province);
+      const sameMunicipality = normalizeLocationValue(farmer.municipality) !== ''
+        && normalizeLocationValue(farmer.municipality) === normalizeLocationValue(location.municipality || training.municipality);
+      const sameBarangay = normalizeLocationValue(farmer.barangay) !== ''
+        && normalizeLocationValue(farmer.barangay) === normalizeLocationValue(location.barangay || training.barangay);
+
+      return sameRegion && sameProvince && sameMunicipality && sameBarangay;
+    });
+  };
+  const associationTrainingResults = (training, association) => {
+    const cacheKey = `${associationId}:${training._db_id || training.id}`;
+    if (associationMetricsCache.has(cacheKey)) return associationMetricsCache.get(cacheKey);
+
+    const associationIds = new Set([associationId, association?._db_id].filter(Boolean).map(String));
+    const farmers = window.TmisStore.records('tmis-farmers');
+    const eligibleFarmerIds = new Set();
+
+    farmers.forEach(farmer => {
+      const membershipIds = [
+        farmer.association_id,
+        farmer.association_db_id,
+        ...(farmer.associationMemberships || []).flatMap(membership => [membership.id, membership.databaseId]),
+      ].filter(value => value !== undefined && value !== null).map(String);
+      const isMember = membershipIds.some(id => associationIds.has(id));
+
+      if (isMember || farmerMatchesTrainingLocation(farmer, training)) {
+        [farmer.id, farmer._db_id].filter(value => value !== undefined && value !== null).forEach(id => eligibleFarmerIds.add(String(id)));
+      }
+    });
+
+    const belongsToTraining = result => {
+      const resultDatabaseId = String(result.trainingDatabaseId || '');
+      const trainingDatabaseId = String(training._db_id || '');
+      if (resultDatabaseId && trainingDatabaseId) return resultDatabaseId === trainingDatabaseId;
+
+      return [training.id, trainingDatabaseId].filter(Boolean).some(id => String(result.trainingId || '') === String(id));
+    };
+    const resultsFor = kind => window.TmisStore.records(`tmis-${kind}-encoded`).filter(result =>
+      result.status === 'complete'
+      && eligibleFarmerIds.has(String(result.farmerId || ''))
+      && belongsToTraining(result)
+    );
+    const summarizeTests = kind => {
+      const results = resultsFor(kind);
+      if (!results.length) return 'No results';
+
+      const questionnaires = window.TmisStore.records(`tmis-${kind}-questionnaires`);
+      let earnedPoints = 0;
+      let possiblePoints = 0;
+      for (const result of results) {
+        const questionnaire = questionnaires.find(item => String(item.id) === String(result.questionnaireId));
+        const possible = Number(result.totalItems || result.total_items || result.totalQuestions || questionnaire?.totalItems || questionnaire?.questions?.length);
+        const earned = Number(result.score);
+        if (result.score === null || result.score === undefined || result.score === '' || !Number.isFinite(earned) || !Number.isFinite(possible) || possible <= 0) {
+          return 'No results';
+        }
+        earnedPoints += earned;
+        possiblePoints += possible;
+      }
+
+      return possiblePoints ? `${earnedPoints} / ${possiblePoints} · ${(earnedPoints / possiblePoints * 100).toFixed(2)}%` : 'No results';
+    };
+    const ratingValues = resultsFor('training-evaluation')
+      .flatMap(result => Array.isArray(result.ratings) ? result.ratings : [])
+      .map(item => item?.rating)
+      .filter(value => value !== null && value !== undefined && value !== '')
+      .map(Number)
+      .filter(Number.isFinite);
+
+    const summary = {
+      preTest: summarizeTests('pre-test'),
+      postTest: summarizeTests('post-test'),
+      rating: ratingValues.length ? `${(ratingValues.reduce((total, value) => total + value, 0) / ratingValues.length).toFixed(2)} / 5` : 'No results',
+    };
+    associationMetricsCache.set(cacheKey, summary);
+
+    return summary;
   };
 
   function setupTable(config) {
@@ -46,8 +256,57 @@ document.addEventListener('DOMContentLoaded', () => {
     const pagers = config.pagers.map(id => document.getElementById(id));
     const state = { page: 1, size: 8, sort: null, direction: 1 };
     const data = () => {
-      const records = readAssociation()?.[config.source];
-      return Array.isArray(records) ? records : [];
+      const association = readAssociation();
+      const records = association?.[config.source] ?? (config.source === 'interventions' ? association?.interventionRecords ?? association?.intervention : undefined);
+      if (config.source !== 'trainings') {
+        if (!Array.isArray(records)) return [];
+        return config.source === 'interventions' ? records.map((record, index) => {
+          const normalized = normalizeIntervention(record);
+          const associationOffice = firstInterventionValue(association, ['office', 'officeName', 'office_name', 'organization']);
+          const associationRegion = firstInterventionValue(association, ['region', 'regionName', 'region_name']);
+          const fallbackOffice = [associationOffice, associationRegion].filter(Boolean).join(' — ');
+
+          return {
+            ...normalized,
+            office: normalized.office || fallbackOffice,
+            officeFromAssociation: !normalized.office && Boolean(fallbackOffice),
+            _sourceIndex: index,
+          };
+        }) : records;
+      }
+
+      const linkedRecords = Array.isArray(records) ? records : [];
+      const associationKeys = new Set([associationId, association?._db_id].filter(Boolean).map(String));
+      const databaseTrainings = window.TmisStore.records('tmis-trainings');
+      const associationTrainings = databaseTrainings.filter(training =>
+        (training.associationIds || []).some(id => associationKeys.has(String(id)))
+      );
+      const byTrainingId = new Map(associationTrainings.map(training => [String(training.id), training]));
+      const merged = linkedRecords.map(linked => ({ ...(byTrainingId.get(String(linked.id)) || {}), ...linked }));
+      const presentIds = new Set(merged.map(training => String(training.id)));
+
+      associationTrainings.forEach(training => {
+        if (!presentIds.has(String(training.id))) merged.push(training);
+      });
+
+      return merged.map(training => {
+        const date = training.date || [training.startDate || training.start_date, training.endDate || training.end_date].filter(Boolean).join(' – ');
+        const assessmentSummary = associationTrainingResults(training, association);
+        return {
+          ...training,
+          id: String(training.id || ''),
+          title: training.title || training.name || 'Untitled training',
+          category: training.category || training.type || training.training_type || 'Training',
+          year: training.year || training.yearCovered || training.year_covered || String(training.startDate || training.start_date || '').slice(0, 4),
+          date: date || 'Not recorded',
+          region: training.region || 'Not recorded',
+          location: training.location || training.venue || training.venue_location || 'Not recorded',
+          organizer: training.organizer || training.office || 'Not recorded',
+          preTest: assessmentSummary.preTest,
+          postTest: assessmentSummary.postTest,
+          rating: assessmentSummary.rating,
+        };
+      });
     };
     const filtered = () => {
       const query = search.value.trim().toLocaleLowerCase();
@@ -66,14 +325,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const visible = rows.slice(start, start + state.size);
       body.replaceChildren();
       visible.forEach(record => {
+        if (config.renderRow) {
+          body.append(config.renderRow(record));
+          return;
+        }
         const row = make('tr');
-        config.keys.forEach(key => row.append(make('td', '', record[key] || '—')));
+        config.keys.forEach(key => {
+          const value = record[key];
+          row.append(make('td', '', value === undefined || value === null || String(value).trim() === '' ? '—' : value));
+        });
         body.append(row);
       });
       if (!visible.length && !empty) {
         const row = make('tr');
         const cell = make('td', 'intervention-empty-cell', 'No association intervention records available.');
-        cell.colSpan = config.keys.length;
+        cell.colSpan = config.source === 'interventions' ? config.keys.length + Number(canEditInterventions) : config.keys.length;
         row.append(cell);
         body.append(row);
       }
@@ -114,14 +380,63 @@ document.addEventListener('DOMContentLoaded', () => {
       header.addEventListener('click', sort);
       header.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); sort(); } });
     });
-    document.getElementById(config.export).addEventListener('click', () => exportRows(filtered(), config.keys, config.labels, config.filename));
+    document.getElementById(config.export).addEventListener('click', () => {
+      const rows = config.source === 'interventions' ? data() : filtered();
+      exportRows(rows, config.keys, config.labels, config.filename);
+    });
     if (config.refresh) document.getElementById(config.refresh).addEventListener('click', render);
     window.addEventListener('storage', event => { if (event.key === 'tmis-farmer-associations') render(); });
+    window.addEventListener('tmis:data-updated', () => { associationMetricsCache.clear(); render(); });
     render();
   }
 
-  setupTable({ source: 'trainings', table: 'trainingDataTable', body: 'trainings-table-body', search: 'trainingGlobalSearch', clear: 'clearTrainingFilters', export: 'exportTrainingTable', empty: 'trainingTableEmpty', filterSelector: '.training-column-filter', sortSelector: '.training-sortable', pagers: ['trainingPaginationTop', 'trainingPaginationBottom'], keys: ['title', 'category', 'date', 'location', 'organizer'], labels: ['Training Name', 'Category', 'Dates', 'Location', 'Organizer'], filename: 'association_trainings' });
-  setupTable({ source: 'interventions', table: 'interventionDataTable', body: 'interventionTableBody', search: 'interventionGlobalSearch', clear: 'clearInterventionFilters', export: 'exportInterventions', refresh: 'refreshInterventions', count: 'interventionRecordCount', filterSelector: '.intervention-column-filter', sortSelector: '.intervention-sortable', pagers: ['interventionPaginationTop', 'interventionPaginationBottom'], keys: ['title', 'office', 'yearCovered', 'action', 'type', 'unit', 'qty', 'remarks'], labels: ['Intervention', 'Office', 'Year Covered', 'Actions', 'Type', 'Unit', 'Qty', 'Remarks'], filename: 'association_interventions' });
+  const trainingTitleSegment = title => String(title || 'training').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'training';
+  const trainingViewUrl = training => (document.getElementById('trainingDataTable').dataset.trainingViewRoute || '/app/admin/training/id/view-training/__title__/__id__')
+    .replace('__title__', trainingTitleSegment(training.title))
+    .replace('__id__', encodeURIComponent(training.id));
+  const renderAssociationTraining = training => {
+    const row = make('tr');
+    const action = make('td', 'training-action-cell');
+    const link = make('a', 'training-row-action');
+    link.href = trainingViewUrl(training);
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.title = 'View training information';
+    link.setAttribute('aria-label', `View ${training.title}`);
+    link.append(make('i', 'bi bi-eye-fill'));
+    action.append(link);
+    row.append(action);
+
+    [
+      training.title,
+      training.category,
+      training.year,
+      training.date,
+      training.region,
+      training.location,
+      training.organizer,
+      training.preTest,
+      training.postTest,
+      training.rating,
+    ].forEach((value, index) => {
+      const cell = make('td');
+      if (index === 0) {
+        cell.append(make('strong', 'training-table-title-text', value));
+      } else if (index === 2) {
+        cell.append(make('span', 'training-year-value', value));
+      } else if (index === 6) {
+        cell.append(make('span', 'training-office-value', value));
+      } else {
+        cell.textContent = clean(value) || 'Not recorded';
+      }
+      row.append(cell);
+    });
+
+    return row;
+  };
+
+  setupTable({ source: 'trainings', table: 'trainingDataTable', body: 'trainings-table-body', search: 'trainingGlobalSearch', clear: 'clearTrainingFilters', export: 'exportTrainingTable', empty: 'trainingTableEmpty', filterSelector: '.training-column-filter', sortSelector: '.training-sortable', pagers: ['trainingPaginationTop', 'trainingPaginationBottom'], keys: ['title', 'category', 'year', 'date', 'region', 'location', 'organizer', 'preTest', 'postTest', 'rating'], labels: ['Training Name', 'Category', 'Year', 'Dates', 'Region', 'Location', 'Office', 'Pre-Test', 'Post-Test', 'Rating'], filename: 'association_trainings', renderRow: renderAssociationTraining });
+  setupTable({ source: 'interventions', table: 'interventionDataTable', body: 'interventionTableBody', search: 'interventionGlobalSearch', clear: 'clearInterventionFilters', export: 'exportInterventions', refresh: 'refreshInterventions', count: 'interventionRecordCount', filterSelector: '.intervention-column-filter', sortSelector: '.intervention-sortable', pagers: ['interventionPaginationTop', 'interventionPaginationBottom'], keys: ['title', 'office', 'yearCovered', 'action', 'type', 'unit', 'qty', 'remarks'], labels: ['Intervention', 'Office', 'Year Covered', 'Actions', 'Type', 'Unit', 'Qty', 'Remarks'], filename: 'association_interventions', renderRow: renderInterventionRow });
 
   const documentList = document.getElementById('attachmentList');
   let documentPage = 0;

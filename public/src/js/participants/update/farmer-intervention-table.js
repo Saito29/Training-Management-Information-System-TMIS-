@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const storageKey = 'tmis-farmer-271901-interventions';
+  const farmerRecord = window.TmisStore.selected('tmis-farmers');
+  const farmerId = farmerRecord?.id || window.TmisStore.selectedId() || 'unknown';
+  const storageKey = `tmis-farmer-${farmerId}-interventions`;
   const seedRecords = [
     {
       title: 'Certified Rice Seeds Distribution',
@@ -44,6 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('addInterventionForm');
   const modalElement = document.getElementById('addInterventionModal');
   const formError = document.getElementById('interventionFormError');
+  const modalTitle = document.getElementById('addInterventionModalLabel');
+  const submitButton = form?.querySelector('[type="submit"]');
 
   if (
     !body ||
@@ -60,13 +64,19 @@ document.addEventListener('DOMContentLoaded', () => {
   ) {
     return;
   }
+  const canEditInterventions = table.classList.contains('intervention-editable-table');
+  const canViewInterventions = table.classList.contains('intervention-readable-table');
+  const hasInterventionActionColumn = canEditInterventions || canViewInterventions;
+  const viewInterventionModal = document.getElementById('viewInterventionModal');
+  const viewInterventionDetails = document.getElementById('viewInterventionDetails');
 
   let records = [];
+  let editingIndex = null;
   const state = {
     global: '',
     columns: {},
     page: 1,
-    pageSize: 10,
+    pageSize: 8,
     sort: null,
   };
 
@@ -209,40 +219,50 @@ document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById(id);
     if (!container) return;
 
-    const allRows = state.pageSize === 'all';
-    const start = total ? (allRows ? 1 : (state.page - 1) * state.pageSize + 1) : 0;
-    const end = allRows ? total : Math.min(state.page * state.pageSize, total);
-    const pageNumbers = Array.from({ length: pages }, (_, index) => index + 1).filter(
-      (page) =>
-        pages <= 7 || page === 1 || page === pages || Math.abs(page - state.page) <= 1
-    );
-    const pageButtons = allRows
-      ? ''
-      : `<button type="button" data-page="prev" aria-label="Previous page" ${state.page === 1 ? 'disabled' : ''}><i class="bi bi-chevron-left" aria-hidden="true"></i></button>${pageNumbers
-          .map(
-            (page, index) =>
-              `${index && page - pageNumbers[index - 1] > 1 ? '<span aria-hidden="true">…</span>' : ''}<button type="button" data-page="${page}" class="${page === state.page ? 'active' : ''}" aria-label="Page ${page}" ${page === state.page ? 'aria-current="page"' : ''}>${page}</button>`
-          )
-          .join('')}<button type="button" data-page="next" aria-label="Next page" ${state.page === pages ? 'disabled' : ''}><i class="bi bi-chevron-right" aria-hidden="true"></i></button>`;
+    const start = total ? (state.page - 1) * state.pageSize + 1 : 0;
+    const end = total ? Math.min(state.page * state.pageSize, total) : 0;
+    container.replaceChildren();
+    const summary = document.createElement('span');
+    summary.textContent = `Showing ${start}–${end} of ${total} records`;
+    const controls = document.createElement('div');
+    controls.className = 'pagination-controls';
+    const sizeLabel = document.createElement('label');
+    sizeLabel.className = 'visually-hidden';
+    sizeLabel.htmlFor = `${id}PageSize`;
+    sizeLabel.textContent = 'Rows per page';
+    const size = document.createElement('select');
+    size.id = `${id}PageSize`;
+    size.setAttribute('aria-label', 'Rows per page');
+    [8, 16, 32, 100].forEach((value) => size.add(new Option(String(value), String(value))));
+    size.value = String(state.pageSize);
+    controls.append(sizeLabel, size);
 
-    container.innerHTML = `<span>Showing ${start}–${end} of ${total} interventions</span><div class="pagination-controls"><label class="visually-hidden" for="${id}PageSize">Rows per page</label><select id="${id}PageSize" data-page-size aria-label="Rows per page"><option value="10">10</option><option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="500">500</option><option value="1000">1000</option><option value="all">All</option></select>${pageButtons}</div>`;
-    container.querySelector('[data-page-size]').value = state.pageSize;
+    const previous = document.createElement('button');
+    previous.type = 'button';
+    previous.dataset.page = 'prev';
+    previous.setAttribute('aria-label', 'Previous page');
+    previous.disabled = state.page === 1;
+    previous.textContent = '‹';
+    const pageLabel = document.createElement('span');
+    pageLabel.textContent = `Page ${state.page} of ${pages}`;
+    const next = document.createElement('button');
+    next.type = 'button';
+    next.dataset.page = 'next';
+    next.setAttribute('aria-label', 'Next page');
+    next.disabled = state.page === pages;
+    next.textContent = '›';
+    controls.append(previous, pageLabel, next);
+    container.append(summary, controls);
   };
 
   const render = () => {
     const matchingRecords = sortedRecords();
-    const pages =
-      state.pageSize === 'all'
-        ? 1
-        : Math.max(1, Math.ceil(matchingRecords.length / state.pageSize));
+    const pages = Math.max(1, Math.ceil(matchingRecords.length / state.pageSize));
     if (state.page > pages) state.page = pages;
-    const pageRecords =
-      state.pageSize === 'all'
-        ? matchingRecords
-        : matchingRecords.slice(
-            (state.page - 1) * state.pageSize,
-            state.page * state.pageSize
-          );
+    const pageRecords = matchingRecords.slice(
+      (state.page - 1) * state.pageSize,
+      state.page * state.pageSize
+    );
 
     body.replaceChildren();
     count.textContent = `${matchingRecords.length} ${matchingRecords.length === 1 ? 'record' : 'records'}`;
@@ -254,24 +274,98 @@ document.addEventListener('DOMContentLoaded', () => {
 
     pageRecords.forEach((record) => {
       const row = document.createElement('tr');
+      if (hasInterventionActionColumn) {
+        const recordIndex = records.indexOf(record);
+        const manageCell = document.createElement('td');
+        manageCell.className = 'intervention-row-action-cell';
+        const editButton = document.createElement('button');
+        editButton.type = 'button';
+        editButton.className = `btn ${canEditInterventions ? 'intervention-row-edit-button' : 'intervention-row-view-button'}`;
+        if (canEditInterventions) {
+          editButton.dataset.editIntervention = String(recordIndex);
+          editButton.title = 'Edit intervention';
+          editButton.setAttribute('aria-label', `Edit ${record.title} intervention`);
+          editButton.innerHTML = '<i class="bi bi-pencil-square" aria-hidden="true"></i>';
+        } else {
+          editButton.dataset.viewIntervention = String(recordIndex);
+          editButton.title = 'View intervention details';
+          editButton.setAttribute('aria-label', `View ${record.title} intervention details`);
+          editButton.innerHTML = '<i class="bi bi-eye-fill" aria-hidden="true"></i>';
+        }
+        manageCell.append(editButton);
+        row.append(manageCell);
+      }
+
       const titleCell = document.createElement('td');
       const title = document.createElement('strong');
       title.className = 'intervention-record-title';
       title.textContent = record.title;
       titleCell.append(title);
+
+      const officeCell = document.createElement('td');
+      officeCell.className = 'intervention-cell-office';
+      const officeParts = String(record.office || '—').split(/\s+[\u2014\u2013]\s+/);
+      const storedOfficeName = officeParts[0];
+      const beneficiaryOffices = Array.isArray(farmerRecord?.beneficiaryOffices) ? farmerRecord.beneficiaryOffices : [];
+      const normalizeOfficeName = (value) => String(value || '').replace(/\s+/g, '').toLocaleLowerCase();
+      const matchingBeneficiaryOffice = beneficiaryOffices.find((office) =>
+        [office.office, office.name].filter(Boolean).some((name) =>
+          normalizeOfficeName(name) === normalizeOfficeName(storedOfficeName)
+        )
+      );
+      const officeRegion = officeParts.slice(1).join(' — ')
+        || record.officeRegion
+        || matchingBeneficiaryOffice?.region
+        || '';
+      const officeName = document.createElement('strong');
+      officeName.className = 'intervention-office-name';
+      officeName.textContent = storedOfficeName;
+      officeCell.append(officeName);
+      if (officeRegion) {
+        const regionDetail = document.createElement('span');
+        regionDetail.className = 'intervention-cell-detail';
+        regionDetail.textContent = officeRegion;
+        officeCell.append(regionDetail);
+      }
+      if (matchingBeneficiaryOffice) {
+        const officeBadge = document.createElement('span');
+        officeBadge.className = 'intervention-cell-origin';
+        officeBadge.textContent = matchingBeneficiaryOffice.isPrimary ? 'Primary office' : 'Beneficiary office';
+        officeCell.append(officeBadge);
+      }
+
+      const yearCell = document.createElement('td');
+      const yearPill = document.createElement('span');
+      yearPill.className = 'intervention-year-pill';
+      yearPill.textContent = record.yearCovered;
+      yearCell.append(yearPill);
+
       const actionCell = document.createElement('td');
       const actionBadge = document.createElement('span');
       actionBadge.className = `intervention-status ${actionClasses[record.action] || ''}`;
       actionBadge.textContent = record.action;
       actionCell.append(actionBadge);
+
+      const typeCell = document.createElement('td');
+      const typePill = document.createElement('span');
+      typePill.className = 'intervention-type-pill';
+      typePill.textContent = record.type;
+      typeCell.append(typePill);
+
+      const qtyCell = document.createElement('td');
+      const quantity = document.createElement('strong');
+      quantity.className = 'intervention-quantity';
+      quantity.textContent = record.qty === 0 || record.qty === '0' ? '0' : record.qty || '—';
+      qtyCell.append(quantity);
+
       row.append(
         titleCell,
-        createCell(record.office),
-        createCell(record.yearCovered),
+        officeCell,
+        yearCell,
         actionCell,
-        createCell(record.type),
+        typeCell,
         createCell(record.unit || '—'),
-        createCell(record.qty || '—'),
+        qtyCell,
         createCell(record.remarks || '—', 'intervention-record-remarks')
       );
       body.append(row);
@@ -285,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
           : 'No interventions recorded yet. Select “Add Intervention” to get started.',
         'intervention-empty-cell'
       );
-      cell.colSpan = 8;
+      cell.colSpan = 8 + Number(hasInterventionActionColumn);
       row.append(cell);
       body.append(row);
     }
@@ -317,6 +411,87 @@ document.addEventListener('DOMContentLoaded', () => {
 
   records = loadRecords();
   render();
+
+  body.addEventListener('click', (event) => {
+    const viewButton = event.target.closest('[data-view-intervention]');
+    if (viewButton && canViewInterventions && viewInterventionModal && viewInterventionDetails) {
+      const record = records[Number(viewButton.dataset.viewIntervention)];
+      if (!record) {
+        feedback.textContent = 'This intervention could not be loaded. Refresh the table and try again.';
+        return;
+      }
+      const details = [
+        ['Intervention', record.title],
+        ['Region', record.officeRegion || farmerRecord?.region || farmerRecord?.regionName || 'Not recorded'],
+        ['Office', record.office],
+        ['Year covered', record.yearCovered],
+        ['Action', record.action],
+        ['Type', record.type],
+        ['Unit', record.unit || 'Not recorded'],
+        ['Quantity', record.qty || 'Not recorded'],
+        ['Remarks', record.remarks || 'Not recorded'],
+      ];
+      viewInterventionDetails.replaceChildren();
+      details.forEach(([label, value]) => {
+        const item = document.createElement('div');
+        item.className = 'intervention-detail-item';
+        const term = document.createElement('dt');
+        term.textContent = label;
+        const description = document.createElement('dd');
+        description.textContent = value;
+        item.append(term, description);
+        viewInterventionDetails.append(item);
+      });
+      bootstrap.Modal.getOrCreateInstance(viewInterventionModal).show();
+      return;
+    }
+    if (!canEditInterventions) return;
+    const editButton = event.target.closest('[data-edit-intervention]');
+    if (!editButton) return;
+    const index = Number(editButton.dataset.editIntervention);
+    const record = records[index];
+    if (!record) {
+      feedback.textContent = 'This intervention could not be loaded. Refresh the table and try again.';
+      return;
+    }
+
+    editingIndex = index;
+    form.elements.title.value = record.title;
+    form.elements.yearCovered.value = record.yearCovered;
+    form.elements.action.value = record.action;
+    form.elements.type.value = record.type;
+    form.elements.unit.value = record.unit;
+    form.elements.qty.value = record.qty;
+    form.elements.remarks.value = record.remarks;
+
+    const officeField = form.elements.office;
+    const storedOffice = String(record.office || '');
+    const storedOfficeName = storedOffice.split(/\s+[\u2014\u2013-]\s+/)[0].trim();
+    const normalizeOfficeName = (value) => String(value || '').replace(/\s+/g, '').toLocaleLowerCase();
+    const officeOption = [...officeField.options].find((option) => {
+      const candidates = [option.value, option.textContent, option.dataset.officeName].filter(Boolean);
+      return candidates.some((candidate) =>
+        normalizeOfficeName(candidate) === normalizeOfficeName(storedOffice)
+        || normalizeOfficeName(candidate) === normalizeOfficeName(storedOfficeName)
+      );
+    });
+    officeField.value = officeOption?.value || '';
+    [officeField, form.elements.yearCovered, form.elements.action, form.elements.type]
+      .forEach((field) => field.dispatchEvent(new Event('change', { bubbles: true })));
+
+    modalTitle.textContent = 'Edit intervention';
+    submitButton.innerHTML = '<i class="bi bi-check2 me-1" aria-hidden="true"></i>Save changes';
+    formError.textContent = '';
+    bootstrap.Modal.getOrCreateInstance(modalElement).show();
+  });
+
+  modalElement.addEventListener('hidden.bs.modal', () => {
+    editingIndex = null;
+    form.reset();
+    modalTitle.textContent = 'Add intervention';
+    submitButton.innerHTML = '<i class="bi bi-check2 me-1" aria-hidden="true"></i>Save intervention';
+    formError.textContent = '';
+  });
 
   globalSearch.addEventListener('input', () => {
     state.global = globalSearch.value.trim().toLowerCase();
@@ -357,10 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
     container?.addEventListener('click', (event) => {
       const button = event.target.closest('[data-page]');
       if (!button || button.disabled) return;
-      const pages =
-        state.pageSize === 'all'
-          ? 1
-          : Math.max(1, Math.ceil(filteredRecords().length / state.pageSize));
+      const pages = Math.max(1, Math.ceil(filteredRecords().length / state.pageSize));
       state.page =
         button.dataset.page === 'prev'
           ? Math.max(1, state.page - 1)
@@ -371,8 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     container?.addEventListener('change', (event) => {
       if (!event.target.matches('[data-page-size]')) return;
-      state.pageSize =
-        event.target.value === 'all' ? 'all' : Number(event.target.value);
+      state.pageSize = Number(event.target.value);
       refreshView();
     });
   });
@@ -402,20 +573,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
-      const exportRows = sortedRecords().map((record) => ({
-        Intervention: record.title,
-        Office: record.office,
-        'Year Covered': record.yearCovered,
-        Actions: record.action,
-        Type: record.type,
-        Unit: record.unit,
-        Qty: record.qty,
-        Remarks: record.remarks,
-      }));
+      const beneficiaryOffices = Array.isArray(farmerRecord?.beneficiaryOffices) ? farmerRecord.beneficiaryOffices : [];
+      const primaryOffice = beneficiaryOffices.find((office) => office.isPrimary) || beneficiaryOffices[0] || {};
+      const fallbackRegion = String(primaryOffice.region || farmerRecord?.region || farmerRecord?.regionName || '');
+      const headers = ['Intervention', 'Region', 'Office', 'Year Covered', 'Actions', 'Type', 'Unit', 'Qty', 'Remarks'];
+      const exportRows = records.map((record) => {
+        let office = String(record.office || '');
+        let region = String(record.officeRegion || record.office_region || '');
+        const officeParts = office.split(/\s+\u2014\s+/);
+        if (officeParts.length > 1) {
+          office = officeParts.shift();
+          region = officeParts.join(' — ') || region;
+        }
+        region = (region || fallbackRegion).replace(/^Region\s+/i, '').replace(/\s*\([^)]*\)\s*$/, '');
+
+        return [record.title, region, office, record.yearCovered, record.action, record.type, record.unit, record.qty, record.remarks];
+      });
       const workbook = window.XLSX.utils.book_new();
-      const worksheet = window.XLSX.utils.json_to_sheet(exportRows);
+      const worksheet = window.XLSX.utils.aoa_to_sheet([['Farmer Intervention'], ['Export'], headers, ...exportRows]);
+      worksheet['!cols'] = [{ wch: 30 }, { wch: 14 }, { wch: 22 }, { wch: 15 }, { wch: 14 }, { wch: 24 }, { wch: 12 }, { wch: 10 }, { wch: 32 }];
       window.XLSX.utils.book_append_sheet(workbook, worksheet, 'Interventions');
-      window.XLSX.writeFile(workbook, 'farmer-interventions.xlsx');
+      const exportDate = new Date().toISOString().slice(0, 10);
+      window.XLSX.writeFile(workbook, `farmer_interventions_${farmerId}_${exportDate}.xlsx`);
       feedback.textContent = 'Intervention records exported successfully.';
     } catch (error) {
       feedback.textContent =
@@ -447,6 +626,9 @@ document.addEventListener('DOMContentLoaded', () => {
       qty: String(formData.get('qty')).trim(),
       remarks: String(formData.get('remarks')).trim(),
     };
+    record.office = officeOption?.dataset.officeName
+      ? [officeOption.dataset.officeName, officeOption.dataset.regionName].filter(Boolean).join(' — ')
+      : officeOption?.textContent.trim() || officeOption?.value || '';
 
     if (!isRecord(record)) {
       formError.textContent =
@@ -454,7 +636,10 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const updatedRecords = [record, ...records];
+    const updatedRecords = editingIndex === null
+      ? [record, ...records]
+      : records.map((savedRecord, index) => index === editingIndex ? { ...savedRecord, ...record } : savedRecord);
+    const wasEditing = editingIndex !== null;
     try {
       await window.TmisStore.setItem(storageKey, JSON.stringify(updatedRecords));
     } catch (error) {
@@ -466,7 +651,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     records = updatedRecords;
     refreshView();
-    feedback.textContent = 'Intervention added successfully.';
+    feedback.textContent = wasEditing
+      ? 'Intervention updated successfully.'
+      : 'Intervention added successfully.';
     form.reset();
     bootstrap.Modal.getOrCreateInstance(modalElement).hide();
   });

@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function createDashboardChart(element,options){
     const data=window.TmisDashboard;
     const fundKey={totalAllocatedDistrictChart:'allocatedBudgetByDistrict',allocatedProvinceChart:'allocatedBudgetByProvince',allocatedMunicipalityChart:'municipalityAllocation',allocatedMunicipalityChartLegacy:'municipalityAllocation'}[element.id];
-    if(fundKey&&data){const rows=data[fundKey];options.series=[{name:String(currentYear),data:rows.map(item=>item.current)},{name:String(previousYear),data:rows.map(item=>item.previous)}];options.xaxis={...options.xaxis,categories:rows.map(item=>item.district||item.municipality&&[item.municipality,item.province].filter(Boolean).join(', ')||item.province)};options.colors=['#2e7d32','#1976d2'];options.legend={...options.legend,show:true,position:'bottom'};options.plotOptions.bar.distributed=false;options.tooltip={...options.tooltip,y:{...options.tooltip?.y,title:{formatter:name=>name}}};}
+    if(fundKey&&data){const rows=data[fundKey];options.series=[{name:String(currentYear),data:rows.map(item=>item.current)},{name:String(previousYear),data:rows.map(item=>item.previous)}];options.xaxis={...options.xaxis,categories:rows.map(item=>item.district?[item.province,item.district].filter(Boolean).join(' · '):item.municipality&&[item.municipality,item.province].filter(Boolean).join(', ')||item.province)};options.colors=['#2e7d32','#1976d2'];options.legend={...options.legend,show:true,position:'bottom'};options.plotOptions.bar.distributed=false;options.tooltip={...options.tooltip,y:{...options.tooltip?.y,title:{formatter:name=>name}}};}
     if(element.id==='beneficiaryGroupChart'&&data){options.series=data.groupLabels.map((name,index)=>({name,data:data.groups.map((value,offset)=>offset===index?value:null)}));options.xaxis.categories=data.groupLabels;options.colors=['#1565c0','#2e7d32','#ef6c00','#8e24aa','#00838f'];options.chart.width='100%';options.chart.parentWidthOffset=0;options.plotOptions.bar.columnWidth='85%';}
     if(element.id==='beneficiaryAgeSexChart'&&data)options.xaxis.categories=data.ageLabels;
     const values=(options.series||[]).flatMap(item=>typeof item==='number'?item:item.data||[]).map(value=>Number(value?.y??value));
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
     upcoming: {
       title: 'Upcoming Capacity-Building Activities',
       exportName: 'Upcoming-Capacity-Building-Activities',
-      description: 'Capacity-building activities scheduled today through the next three days.',
+      description: 'Upcoming activities starting within the next seven days, plus in-progress activities that have not ended.',
       icon: 'bi-calendar-event',
       total: '0 trainings',
       headers: ['Training ID', 'Training', 'Type', 'District', 'Province', 'Municipality', 'Start Date', 'End Date', 'Venue', 'Participants', 'Status'],
@@ -144,12 +144,12 @@ document.addEventListener('DOMContentLoaded', function () {
       ],
     },
     budget: {
-      title: 'Allocated Budget by District',
-      exportName: 'Allocated-Budget-by-District',
-      description: 'Total training funds allocated to each beneficiary district.',
+      title: 'Allocated Budget by Province and District',
+      exportName: 'Allocated-Budget-by-Province-and-District',
+      description: 'Total training funds allocated to each district, grouped within its province.',
       icon: 'bi-cash-coin',
       total: '₱950,000 allocated',
-      headers: ['District', 'Allocated Budget', 'Released', 'Balance', 'Activities', 'Utilization'],
+      headers: ['Province', 'District', 'Allocated Budget', 'Released', 'Balance', 'Activities', 'Utilization'],
       rows: [
         ['District I', '₱180,000', '₱125,000', '₱55,000', '5', '69%'],
         ['District II', '₱155,000', '₱110,000', '₱45,000', '4', '71%'],
@@ -277,12 +277,12 @@ document.addEventListener('DOMContentLoaded', function () {
       ],
     },
     budget: {
-      title: 'Allocated Budget by District',
-      exportName: 'Allocated-Budget-by-District',
-      description: 'Total training funds allocated to each beneficiary district.',
+      title: 'Allocated Budget by Province and District',
+      exportName: 'Allocated-Budget-by-Province-and-District',
+      description: 'Total training funds allocated to each district, grouped within its province.',
       icon: 'bi-cash-coin',
       total: '₱950,000 allocated',
-      headers: ['District', 'Allocated Budget', 'Released', 'Balance', 'Activities', 'Utilization'],
+      headers: ['Province', 'District', 'Allocated Budget', 'Released', 'Balance', 'Activities', 'Utilization'],
       rows: [
         ['District I', '₱180,000', '₱125,000', '₱55,000', '5', '69%'],
         ['District II', '₱155,000', '₱110,000', '₱45,000', '4', '71%'],
@@ -756,7 +756,7 @@ document.addEventListener('DOMContentLoaded', function () {
           padding: { top: -4, right: 36, bottom: -4, left: 4 },
         },
         xaxis: {
-          categories: allocatedBudgetByDistrict.map(({ district }) => district),
+          categories: allocatedBudgetByDistrict.map(({ district, province }) => [province, district].filter(Boolean).join(' · ')),
           labels: {
             formatter: (value) => formatCompactPeso(Number(value)),
             style: { colors: '#607088', fontSize: '10px' },
@@ -765,7 +765,7 @@ document.addEventListener('DOMContentLoaded', function () {
           axisTicks: { color: '#e0e0e0' },
         },
         yaxis: {
-          labels: { style: { colors: '#263238', fontSize: '11px' } },
+          labels: { maxWidth: 190, style: { colors: '#263238', fontSize: '11px' } },
         },
         legend: { show: false },
         tooltip: {

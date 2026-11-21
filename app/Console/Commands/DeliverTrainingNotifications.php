@@ -14,7 +14,7 @@ class DeliverTrainingNotifications extends Command
 
     public function handle(TrainingNotificationDelivery $delivery): int
     {
-        $ids = DB::table('training_notifications')->whereNull('sent_at')->whereNull('cancelled_at')
+        $ids = DB::table('training_notifications')->where('email_enabled', true)->whereNull('sent_at')->whereNull('cancelled_at')
             ->where(fn ($query) => $query->whereNull('retry_at')->orWhere('retry_at', '<=', now()))->orderBy('id')->limit(100)->pluck('id');
         $failed = 0;
         foreach ($ids as $id) {

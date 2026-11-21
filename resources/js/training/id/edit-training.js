@@ -190,7 +190,6 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'Engr. Carlo Mendoza', name: 'Engr. Carlo Mendoza', office: 'Agricultural Training Division (ATD)' },
   ]).filter(resource =>
     (!selectedTraining?.region_id || String(resource.region_id) === String(selectedTraining.region_id)) &&
-    (!selectedTraining?.org_id || String(resource.org_id) === String(selectedTraining.org_id)) &&
     resource.status !== 'Inactive');
   const addressNames = ['region_id', 'province_id', 'district_id', 'municipality_id', 'barangay_id'];
   const addressKinds = [

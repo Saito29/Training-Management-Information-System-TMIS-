@@ -95,9 +95,30 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const notificationDetailModal = document.getElementById('notificationDetailModal');
-  if (profileScript) import(new URL('../notification/header.js', profileScript.src).href);
+  if (profileScript) import(new URL('../notification/header.js?v=notification-bell-ready-1', profileScript.src).href);
   let notificationFullContent = '';
   let notificationMetadata = '';
+  const removeRepeatedNotificationTitle = (content, title) => {
+    const text = String(content ?? '').replace(/\r\n?/g, '\n').trim();
+    const heading = String(title ?? '').trim();
+    if (!text || !heading) return text;
+    const lines = text.split('\n');
+    const firstLine = lines[0].trim().replace(/^#{1,6}\s*/, '');
+    if (firstLine.toLocaleLowerCase() === heading.toLocaleLowerCase()) {
+      lines.shift();
+      return lines.join('\n').trim();
+    }
+    if (text.toLocaleLowerCase().startsWith(heading.toLocaleLowerCase())) {
+      const remainder = text.slice(heading.length);
+      if (/^[\s:–—-]/.test(remainder)) return remainder.replace(/^[\s:–—-]+/, '').trim();
+    }
+    return text;
+  };
+  const notificationExcerpt = (title, summary, message) => {
+    const cleanSummary = removeRepeatedNotificationTitle(summary, title);
+    const excerpt = cleanSummary || removeRepeatedNotificationTitle(message, title);
+    return excerpt.length > 240 ? `${excerpt.slice(0, 237).trimEnd()}…` : excerpt;
+  };
   if (notificationDetailModal) {
     notificationDetailModal.tabIndex = -1;
     const body = notificationDetailModal.querySelector('.modal-body');
@@ -140,11 +161,13 @@ document.addEventListener('DOMContentLoaded', () => {
         fullModal.querySelector('#notificationFull' + suffix).textContent =
           document.getElementById('notificationDetail' + suffix).textContent;
       });
-      fullModal.querySelector('#notificationFullDescription').textContent = notificationFullContent ||
+      const fullTitle = document.getElementById('notificationDetailModalLabel').textContent;
+      const fullContent = removeRepeatedNotificationTitle(notificationFullContent, fullTitle);
+      fullModal.querySelector('#notificationFullDescription').textContent = fullContent ||
         document.getElementById('notificationDetailDescription').textContent;
       metadata.textContent = notificationMetadata;
       if (profileScript) {
-        const content = notificationFullContent;
+        const content = fullContent;
         import(new URL('../notification/message-editor.js', profileScript.src).href).then(({ renderMessage }) => {
           renderMessage(fullModal.querySelector('#notificationFullDescription'), content);
         });
@@ -162,9 +185,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     window.addEventListener('tmis:notification-preview', ({ detail }) => {
-      notificationFullContent = String(detail.message || '');
+      notificationFullContent = removeRepeatedNotificationTitle(detail.message, detail.title);
       notificationMetadata = [detail.priority === 'critical' ? 'Critical' : detail.priority === 'high' ? 'Important' : '', detail.reference ? `Reference: ${detail.reference}` : ''].filter(Boolean).join(' · ');
-      for (const [suffix, value] of Object.entries({ Type: detail.type || 'Notification', Time: detail.time || '', ModalLabel: detail.title || 'Notification', Description: detail.summary || notificationFullContent.slice(0,240), Action: 'View full details' })) {
+      for (const [suffix, value] of Object.entries({ Type: detail.type || 'Notification', Time: detail.time || '', ModalLabel: detail.title || 'Notification', Description: notificationExcerpt(detail.title, detail.summary, detail.message), Action: 'View full details' })) {
         document.getElementById('notificationDetail' + suffix).textContent = value;
       }
       if (typeof bootstrap !== 'undefined') bootstrap.Modal.getOrCreateInstance(notificationDetailModal).show();
@@ -184,13 +207,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.notification-menu-item').forEach((item) => {
     item.addEventListener('click', () => {
       const { notificationType, notificationTime, notificationTitle, notificationDescription, notificationAction } = item.dataset;
-      notificationFullContent = item.dataset.notificationContent || notificationDescription || '';
+      notificationFullContent = removeRepeatedNotificationTitle(item.dataset.notificationContent || notificationDescription || '', notificationTitle);
       notificationMetadata = '';
       const detailFields = {
         notificationDetailType: notificationType,
         notificationDetailTime: notificationTime,
         notificationDetailModalLabel: notificationTitle,
-        notificationDetailDescription: notificationDescription,
+        notificationDetailDescription: notificationExcerpt(notificationTitle, item.dataset.notificationSummary, item.dataset.notificationContent || notificationDescription),
         notificationDetailAction: notificationAction,
       };
       Object.entries(detailFields).forEach(([id, value]) => {

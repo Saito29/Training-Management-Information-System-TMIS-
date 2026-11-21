@@ -211,6 +211,11 @@ document.addEventListener('DOMContentLoaded', () => {
     event.preventDefault();
     load();
   });
+  document.getElementById('auditTraining').addEventListener('change', event => {
+    if (event.currentTarget.value) {
+      document.getElementById('auditCategory').value = 'trainings';
+    }
+  });
   document.getElementById('profileAuditClear').addEventListener('click', () => {
     form.reset();
     load();
