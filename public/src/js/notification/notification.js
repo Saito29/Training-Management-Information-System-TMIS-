@@ -250,7 +250,7 @@ function init(){
     else if(delivery.failed>0){deliveryMessage=` Email accepted for ${delivery.accepted} recipient${delivery.accepted===1?'':'s'}; ${delivery.failed} failed.`;deliveryWarning=true;}
     else{deliveryMessage=` Email accepted for delivery to ${delivery.accepted} recipient${delivery.accepted===1?'':'s'}.`;}
    }
-   feedback(`Notification${items.length===1?'':'s'} created successfully.${deliveryMessage}`,deliveryWarning?'warning':'success');
+   if(deliveryWarning)feedback(`Notification created, but${deliveryMessage}`,'warning');
    window.TmisActivity?.record({action:'create',module:'users',title:'Notification created',description:`A notification was saved for ${items.length} recipients.`,reference:batchId});
   }catch(error){$('confirmNotificationDialog').close();feedback(error.message||'The notification could not be created.',true);}
   finally{busy=false;$('confirmNotificationCreate').disabled=false;}

@@ -69,7 +69,7 @@ class="layout-fixed"
       <script type="module" src="{{ asset('src/js/users/profile-sessions.js') }}"></script>
       <script type="module" src="{{ asset('src/js/shared/activity-log.js') }}"></script>
       <link rel="stylesheet" href="{{ asset('src/css/notification/notification.css?v=admin-notification-drafts-4') }}">
-      <script type="module" src="{{ asset('src/js/notification/notification.js?v=notification-draft-cleanup-2') }}"></script>
+      <script type="module" src="{{ asset('src/js/notification/notification.js?v=notification-draft-cleanup-3') }}"></script>
   <link rel="stylesheet" href="{{ asset('src/css/shared/toast.css') }}">
     <script src="{{ asset('src/js/shared/toast.js') }}" defer></script>
 @endsection

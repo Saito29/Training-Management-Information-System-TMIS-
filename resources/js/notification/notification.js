@@ -133,7 +133,7 @@ function init(){
    // The inbox write has completed; draft cleanup must not misreport a successful create.
    try{await window.TmisStore.removeItem(draftKey(actor));}catch(cleanupError){console.error('The notification was created, but its saved draft could not be removed.',cleanupError);}
    const batchId=items[0].batchId;await reset(false);$('notificationDraftStatus').textContent='Notification saved';
-   $('confirmNotificationDialog').close();feedback(`Notification${items.length===1?'':'s'} created successfully. This browser preview did not send an email.`,'success');
+   $('confirmNotificationDialog').close();
    window.TmisActivity?.record({action:'create',module:'users',title:'Notification created',description:`A notification was saved for ${items.length} recipients.`,reference:batchId});
   }catch(error){$('confirmNotificationDialog').close();feedback(error.message||'The notification could not be created.',true);}
   finally{busy=false;$('confirmNotificationCreate').disabled=false;}
