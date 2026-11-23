@@ -41,11 +41,11 @@ document.addEventListener('DOMContentLoaded', () => {
     return window.TMIS_PAGE ? stored : stored.length ? stored : sampleFarmers;
   };
   let farmers = loadFarmers();
-  const questionnaires = read('tmis-post-test-questionnaires').filter(r => r.id && r.trainingQuestionnaire && String(r.status || 'Active').toLowerCase() === 'active');
+  const questionnaires = read('tmis-post-test-questionnaires').filter(r => r.id && r.trainingQuestionnaire && ['active', 'draft'].includes(String(r.status || 'Active').toLowerCase()));
   if (existingRecord) {
     const index = questionnaires.findIndex(r => r.id === existingRecord.questionnaireId);
     const snapshot = { ...(questionnaires[index] || {}), id: existingRecord.questionnaireId, trainingQuestionnaire: existingRecord.questionnaireName, implementingOffice: existingRecord.implementingOffice, totalItems: existingRecord.totalItems };
-    if (index >= 0) questionnaires[index] = snapshot;
+    if (index >= 0) questionnaires[index] = snapshot; else questionnaires.push(snapshot);
   }
   let selectedFarmer = null;
   const draftId = new URLSearchParams(location.search).get('draft');
@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const visible = matches.slice(start, start + pageSize);
     const body = $('farmerTableBody'); body.replaceChildren();
     visible.forEach(r => { const row = document.createElement('tr'); row.tabIndex = 0; row.setAttribute('aria-label', `Select farmer ${r.name}`); if (r.id === selectedFarmer?.id) row.classList.add('is-selected'); [r.name, r.location || '—', r.association || '—', age(r.birthday), dateLabel(r.birthday), r.sex || '—'].forEach(value => { const cell = document.createElement('td'); cell.textContent = value; row.append(cell); }); const cell = document.createElement('td'), button = document.createElement('button'); button.type = 'button'; button.className = 'select-farmer'; button.textContent = r.id === selectedFarmer?.id ? 'Selected' : 'Select'; button.setAttribute('aria-label', `Select ${r.name}`); button.addEventListener('click', () => selectFarmer(r)); cell.append(button); row.append(cell); row.addEventListener('click', event => { if (!event.target.closest('button,a,input,select,textarea,label')) selectFarmer(r); }); row.addEventListener('keydown', event => { if (event.target === row && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); selectFarmer(r); } }); body.append(row); });
-    if (!matches.length) { const row = document.createElement('tr'), cell = document.createElement('td'); cell.colSpan = 7; cell.className = 'table-empty'; cell.textContent = farmers.length ? 'No farmers match the current filters.' : window.TMIS_TRAINING_PICKER?.selectedTraining() ? 'No enrolled farmers match this training. Add eligible farmers through the training information page’s Participants tab before encoding.' : 'Select a training to see its enrolled farmers.'; row.append(cell); body.append(row); }
+    if (!matches.length) { const row = document.createElement('tr'), cell = document.createElement('td'); cell.colSpan = 7; cell.className = 'table-empty'; cell.textContent = 'No farmers match the current filters.'; row.append(cell); body.append(row); }
     $('farmerTableStatus').textContent = `${matches.length} farmer${matches.length === 1 ? '' : 's'} shown`;
     const range = matches.length ? `Showing ${start + 1}–${start + visible.length} of ${matches.length} farmers` : 'Showing 0 of 0 farmers';
     $('farmerTableRange').textContent = range; $('farmerTableRangeTop').textContent = range;
@@ -78,25 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
       addButton('Next', currentPage + 1, currentPage === pageCount);
     });
   }
-  function selectFarmer(r) {
-    if (selectedFarmer?.id === r.id) {
-      selectedFarmer = null;
-      ['farmerId', 'farmerName', 'farmerAssociation', 'farmerLocation', 'farmerBirthday'].forEach(id => { $(id).value = ''; });
-      renderFarmers();
-      updateSummary();
-      return;
-    }
-
-    selectedFarmer = r;
-    $('farmerId').value = r.id;
-    $('farmerName').value = r.name;
-    $('farmerAssociation').value = r.association;
-    $('farmerLocation').value = r.location;
-    $('farmerBirthday').value = dateLabel(r.birthday);
-    if (questionnaires.length) $('encodeStatus').textContent = 'Fields marked * are required.';
-    renderFarmers();
-    updateSummary();
-  }
+  function selectFarmer(r) { selectedFarmer = r; $('farmerId').value = r.id; $('farmerName').value = r.name; $('farmerAssociation').value = r.association; $('farmerLocation').value = r.location; $('farmerBirthday').value = dateLabel(r.birthday); if (questionnaires.length) $('encodeStatus').textContent = 'Fields marked * are required.'; renderFarmers(); updateSummary(); }
   function updateOrganizations() { const control = $('organizationFilter'), chosen = control.value; control.replaceChildren(new Option('All organizations', '')); [...new Set(farmers.map(r => r.association).filter(Boolean))].sort().forEach(name => control.add(new Option(name, name))); control.value = [...control.options].some(option => option.value === chosen) ? chosen : ''; }
   function refreshFarmersForTraining() {
     const training = window.TMIS_TRAINING_PICKER?.selectedTraining() || null;
@@ -104,20 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
       notify('Training participant filtering is unavailable. Refresh the page and try again.', 'error');
       return;
     }
-    if (!training) {
-      farmers = [];
-      if (selectedFarmer) {
-        selectedFarmer = null;
-        ['farmerId', 'farmerName', 'farmerAssociation', 'farmerLocation', 'farmerBirthday'].forEach(id => { $(id).value = ''; });
-      }
-      updateOrganizations();
-      currentPage = 1;
-      renderFarmers();
-      $('farmerTableStatus').textContent = 'Select a training to show farmers matched by association or training location.';
-      updateSummary();
-      return;
-    }
-    const eligible = window.TmisTrainingData.participantsForEncoding(training, 'post-test', existingRecord?.id || '', '', selectedQuestionnaire()?.id || '');
+    const eligible = window.TmisTrainingData.participantsForEncoding(training, 'post-test', existingRecord?.id || '');
     const eligibleIds = new Set(eligible.map(record => String(record.id)));
     farmers = loadFarmers().filter(farmer => eligibleIds.has(farmer.id));
     if (selectedFarmer && !farmers.some(farmer => farmer.id === selectedFarmer.id)) {
@@ -134,14 +103,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedId = select.value || resumedDraft?.questionnaireId || '';
     const training = window.TMIS_TRAINING_PICKER?.selectedTraining();
     const assignedIds = training ? new Set((training.posttest || []).map(String)) : null;
-    const choices = training ? questionnaires.filter(questionnaire => assignedIds.has(String(questionnaire.id))) : [];
-    select.replaceChildren(new Option(training ? 'Select a questionnaire' : 'Select a training first', ''), ...choices.map(questionnaire => new Option(questionnaire.trainingQuestionnaire, questionnaire.id)));
+    const choices = assignedIds ? questionnaires.filter(questionnaire => assignedIds.has(String(questionnaire.id))) : questionnaires;
+    select.replaceChildren(new Option('Select a questionnaire', ''), ...choices.map(questionnaire => new Option(`${questionnaire.trainingQuestionnaire}${String(questionnaire.status).toLowerCase() === 'draft' ? ' (Draft)' : ''}`, questionnaire.id)));
     select.value = choices.some(questionnaire => questionnaire.id === selectedId) ? selectedId : '';
     updateQuestionnaire();
     refreshFarmersForTraining();
   }
   updateOrganizations();
-  questionnaires.forEach(r => $('questionnaireSelect').add(new Option(r.trainingQuestionnaire, r.id)));
+  questionnaires.forEach(r => $('questionnaireSelect').add(new Option(`${r.trainingQuestionnaire}${String(r.status).toLowerCase() === 'draft' ? ' (Draft)' : ''}`, r.id)));
   if (!questionnaires.length) $('encodeStatus').textContent = 'No post-test questionnaires found. Register a questionnaire before encoding a result.';
   function updateQuestionnaire() { const r = selectedQuestionnaire(), maximum = questionnaireMaximum(r); $('implementingOffice').value = r?.implementingOffice || ''; $('totalItems').value = r ? maximum : ''; $('questionnaireDescription').value = r?.description || ''; $('score').max = r ? String(maximum) : ''; $('scoreHint').textContent = r ? `Maximum score: ${maximum}. Enter a whole number from 0 to ${maximum}.` : 'Select a questionnaire to see the maximum score.'; updateSummary(); }
   function updateSummary() { const r = selectedQuestionnaire(); $('summaryQuestionnaire').textContent = r?.trainingQuestionnaire || 'Not selected'; $('summaryFarmer').textContent = selectedFarmer?.name || 'Not selected'; $('summaryCommodity').textContent = $('commodity').value.trim() || 'Not entered'; $('summaryDate').textContent = $('testDate').value ? dateLabel($('testDate').value) : 'Not selected'; $('summaryScore').textContent = $('score').value === '' ? 'Not entered' : `${$('score').value}${r ? ` / ${questionnaireMaximum(r)}` : ''}`; }
@@ -172,10 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (index >= 0) records[index] = record; else records.push(record);
       await window.TmisStore.setItem('tmis-post-test-encoded', JSON.stringify(records));
       if (draft) { activeDraftId = record.id; $('summaryStatus').textContent = 'Draft saved'; }
-      else if (recordMode !== 'edit') {
-        clearEntry();
-        window.TMIS_TRAINING_PICKER?.select('');
-      }
+      else if (recordMode !== 'edit') clearEntry();
       notify(recordMode === 'edit' ? 'Post-test result updated.' : draft ? 'Draft saved to the database.' : 'Post-test result saved to the database.');
     } catch { notify('Unable to save this result. Refresh and try again.', 'error'); }
   }

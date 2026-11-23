@@ -30,6 +30,7 @@ class AccountRegistrationTest extends TestCase
     private function signInAccountManager(array $permissions): User
     {
         $roleId = (int) DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id');
+        $credentialId = (int) DB::table('role_credentials')->where('role_id', $roleId)->where('name', 'Encoder (default)')->value('role_credential_id');
         DB::table('role_permissions')->where('role_id', $roleId)->delete();
         if ($permissions !== []) {
             DB::table('role_permissions')->insert(array_map(
@@ -38,7 +39,7 @@ class AccountRegistrationTest extends TestCase
             ));
         }
 
-        $user = User::factory()->create(['role_id' => $roleId, 'region_id' => 4, 'org_id' => 1]);
+        $user = User::factory()->create(['role_id' => $roleId, 'role_credential_id' => $credentialId, 'region_id' => 4, 'org_id' => 1]);
         $hash = Hash::make('Account-manager-password-123!');
         DB::table('user_auth')->insert(['user_id' => $user->user_id, 'password_hash' => $hash]);
         $this->actingAs($user)->withSession(['auth.verified_user_id' => $user->user_id, 'auth.password_fingerprint' => hash('sha256', $hash)]);
@@ -64,7 +65,10 @@ class AccountRegistrationTest extends TestCase
 
     private function registration(): array
     {
-        return ['firstName' => 'New', 'lastName' => 'Account', 'email' => 'new@example.com', 'role' => 'Data Encoder', 'region' => 'Region IV-A', 'office' => 'DA - SAAD', 'position' => 'Officer'];
+        $roleId = DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id');
+        $credentialId = DB::table('role_credentials')->where('role_id', $roleId)->where('name', 'Encoder (default)')->value('role_credential_id');
+
+        return ['firstName' => 'New', 'lastName' => 'Account', 'email' => 'new@gmail.com', 'role' => 'Data Encoder', 'credentialTypeId' => $credentialId, 'region' => 'Region IV-A', 'office' => 'DA - SAAD', 'position' => 'Officer'];
     }
 
     public function test_new_account_can_set_password_but_cannot_login_until_approved(): void
@@ -72,7 +76,7 @@ class AccountRegistrationTest extends TestCase
         Mail::fake();
         $admin = $this->signInAdministrator();
         $this->postJson(route('accounts.store'), $this->registration() + ['active_status' => 1, 'status' => 'approved & accepted'])->assertCreated()->assertJsonPath('mailSent', true);
-        $user = User::where('email', 'new@example.com')->firstOrFail();
+        $user = User::where('email', 'new@gmail.com')->firstOrFail();
         $this->assertSame($admin->user_id + 1, $user->user_id);
         $this->assertSame('Pending approval', $user->status);
         $this->assertSame(0, (int) $user->active_status);
@@ -98,14 +102,16 @@ class AccountRegistrationTest extends TestCase
     public function test_rejection_keeps_account_inactive_and_other_roles_cannot_manage_accounts(): void
     {
         $admin = $this->signInAdministrator();
+        $encoderRoleId = DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id');
         $user = User::factory()->create([
-            'role_id' => DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id'),
+            'role_id' => $encoderRoleId,
             'status' => 'Pending approval',
             'active_status' => 0,
         ]);
         $this->patchJson(route('accounts.update', $user), ['decision' => 'Rejected'])->assertOk();
         $this->assertDatabaseHas('users', ['user_id' => $user->user_id, 'status' => 'Rejected', 'active_status' => 0]);
-        $admin->role_id = DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id');
+        $admin->role_id = $encoderRoleId;
+        $admin->role_credential_id = DB::table('role_credentials')->where('role_id', $encoderRoleId)->where('name', 'Encoder (default)')->value('role_credential_id');
         $admin->save();
         $this->getJson(route('accounts.index'))->assertForbidden();
         $this->postJson(route('accounts.store'), $this->registration())->assertForbidden();
@@ -116,10 +122,10 @@ class AccountRegistrationTest extends TestCase
     {
         Mail::fake();
         $this->signInAdministrator();
-        User::factory()->create(['email' => 'new@example.com']);
+        User::factory()->create(['email' => 'new@gmail.com']);
         $this->postJson(route('accounts.store'), $this->registration())->assertUnprocessable()->assertJsonValidationErrors('email');
         $data = $this->registration();
-        $data['email'] = 'different@example.com';
+        $data['email'] = 'different@gmail.com';
         $data['office'] = 'Nonexistent office';
         $this->postJson(route('accounts.store'), $data)->assertUnprocessable()->assertJsonValidationErrors('office');
         Mail::assertNothingSent();
@@ -138,10 +144,12 @@ class AccountRegistrationTest extends TestCase
             ->where('role_id', DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id'))
             ->where('name', 'Evaluator')
             ->value('role_credential_id');
-        $this->postJson(route('accounts.store'), $this->registration() + ['credentialTypeId' => $credentialId])
+        $registration = $this->registration();
+        $registration['credentialTypeId'] = $credentialId;
+        $this->postJson(route('accounts.store'), $registration)
             ->assertCreated();
 
-        $user = User::where('email', 'new@example.com')->firstOrFail();
+        $user = User::where('email', 'new@gmail.com')->firstOrFail();
         $this->assertDatabaseHas('users', [
             'user_id' => $user->user_id,
             'role_id' => $user->role_id,
@@ -151,15 +159,17 @@ class AccountRegistrationTest extends TestCase
 
         $headCredentialId = DB::table('role_credentials')->where('name', 'Data Encoder - Head')->value('role_credential_id');
         $data = $this->registration();
-        $data['email'] = 'mismatched@example.com';
+        $data['email'] = 'mismatched@gmail.com';
         $data['credentialTypeId'] = $headCredentialId;
         $this->postJson(route('accounts.store'), $data)->assertUnprocessable()->assertJsonValidationErrors('credentialTypeId');
-        $this->assertDatabaseMissing('users', ['email' => 'mismatched@example.com']);
+        $this->assertDatabaseMissing('users', ['email' => 'mismatched@gmail.com']);
     }
 
-    public function test_system_administrator_accounts_are_visible_without_becoming_assignable_roles(): void
+    public function test_super_administrator_can_assign_system_administrator_role_without_granting_super_admin_access(): void
     {
-        $this->signInAdministrator();
+        Mail::fake();
+        $administrator = $this->signInAdministrator();
+        DB::table('system_super_admins')->insert(['user_id' => $administrator->user_id, 'created_at' => now(), 'updated_at' => now()]);
         $administratorRoleId = DB::table('user_roles')->where('name', 'System Administrator')->value('role_id');
         $encoderRoleId = DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id');
         $pendingAdministrator = User::factory()->create([
@@ -193,7 +203,8 @@ class AccountRegistrationTest extends TestCase
             ->assertJsonFragment(['email' => 'pending-admin@example.com', 'role' => 'System Administrator'])
             ->assertJsonFragment(['email' => 'pending-encoder@example.com', 'role' => 'Data Encoder']);
         $options = $this->getJson(route('accounts.options'))->assertOk();
-        $this->assertSame(false, in_array('System Administrator', $options->json('roles'), true));
+        $this->assertSame(true, in_array('System Administrator', $options->json('roles'), true));
+        $this->assertSame(false, in_array('Super Admin', $options->json('roles'), true));
         $this->assertSame(false, array_key_exists('System Administrator', $options->json('credentialTypes')));
 
         $managementData = $this->getJson('/ui/data', ['X-TMIS-PAGE' => '/app/admin/administration/details/all-status'])
@@ -203,20 +214,27 @@ class AccountRegistrationTest extends TestCase
         $managementAccounts = $managementData->json('stores.tmis-users');
         $this->assertSame(true, in_array($pendingAdministrator->email, array_column($managementAccounts, 'email'), true));
         $this->assertSame(true, in_array('Inactive', array_column($managementAccounts, 'status'), true));
-        $this->patchJson(route('accounts.update', $pendingAdministrator), ['decision' => 'Approved'])->assertNotFound();
+        $this->patchJson(route('accounts.update', $pendingAdministrator), ['decision' => 'Approved'])->assertOk();
         $this->assertDatabaseHas('users', [
             'user_id' => $pendingAdministrator->user_id,
-            'status' => 'Pending approval',
-            'active_status' => 0,
+            'status' => 'Approved & Accepted',
+            'active_status' => 1,
         ]);
 
         $registration = $this->registration();
-        $registration['email'] = 'admin-role@example.com';
+        $registration['email'] = 'admin-role@gmail.com';
         $registration['role'] = 'System Administrator';
+        $registration['credentialTypeId'] = null;
         $this->postJson(route('accounts.store'), $registration)
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('role');
-        $this->assertDatabaseMissing('users', ['email' => 'admin-role@example.com']);
+            ->assertCreated();
+        $createdAdministrator = User::where('email', 'admin-role@gmail.com')->firstOrFail();
+        $this->assertDatabaseHas('users', [
+            'user_id' => $createdAdministrator->user_id,
+            'role_id' => $administratorRoleId,
+            'role_credential_id' => null,
+            'status' => 'Pending approval',
+        ]);
+        $this->assertDatabaseMissing('system_super_admins', ['user_id' => $createdAdministrator->user_id]);
     }
 
     public function test_registration_options_include_credential_permission_grants_and_blocks(): void
@@ -251,9 +269,9 @@ class AccountRegistrationTest extends TestCase
         $this->signInAdministrator();
         $pending = \Mockery::mock(PendingMail::class);
         $pending->shouldReceive('send')->once()->andThrow(new TransportException('Mail unavailable'));
-        Mail::shouldReceive('to')->once()->with('new@example.com')->andReturn($pending);
+        Mail::shouldReceive('to')->once()->with('new@gmail.com')->andReturn($pending);
         $this->postJson(route('accounts.store'), $this->registration())->assertCreated()->assertJsonPath('mailSent', false);
-        $this->assertDatabaseHas('users', ['email' => 'new@example.com', 'status' => 'Pending approval', 'active_status' => 0]);
+        $this->assertDatabaseHas('users', ['email' => 'new@gmail.com', 'status' => 'Pending approval', 'active_status' => 0]);
     }
 
     public function test_account_permissions_allow_scoped_registration_but_require_approval_permission(): void
@@ -266,7 +284,7 @@ class AccountRegistrationTest extends TestCase
         $this->getJson(route('accounts.options'))->assertOk();
 
         $this->postJson(route('accounts.store'), $this->registration())->assertCreated();
-        $pendingAccount = User::where('email', 'new@example.com')->firstOrFail();
+        $pendingAccount = User::where('email', 'new@gmail.com')->firstOrFail();
         $this->patchJson(route('accounts.update', $pendingAccount), ['decision' => 'Approved'])->assertForbidden();
         $this->assertDatabaseHas('users', ['user_id' => $pendingAccount->user_id, 'status' => 'Pending approval']);
 
@@ -280,11 +298,11 @@ class AccountRegistrationTest extends TestCase
 
         $otherOffice = DB::table('organization')->where('org_id', 2)->value('name');
         $outOfScopeRegistration = $this->registration();
-        $outOfScopeRegistration['email'] = 'out-of-scope@example.com';
+        $outOfScopeRegistration['email'] = 'out-of-scope@gmail.com';
         $outOfScopeRegistration['office'] = $otherOffice;
 
         $this->postJson(route('accounts.store'), $outOfScopeRegistration)->assertForbidden();
-        $this->assertDatabaseMissing('users', ['email' => 'out-of-scope@example.com']);
+        $this->assertDatabaseMissing('users', ['email' => 'out-of-scope@gmail.com']);
     }
 
     public function test_account_edit_permission_cannot_approve_a_pending_account(): void

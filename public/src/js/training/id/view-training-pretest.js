@@ -19,9 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
   const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const trainingTitle = (window.TMIS_PAGE ? window.TmisStore.selected('tmis-trainings')?.title||'Training' : document.querySelector('#overview-panel .training-title-row h2')?.textContent.trim() || 'Training');
-  const trainingRecord = window.TMIS_PAGE ? window.TmisStore.selected('tmis-trainings') : null;
-  const configuredTarget = Number(trainingRecord?.target_participants ?? trainingRecord?.targetParticipants);
-  const participantTarget = configuredTarget > 0 ? configuredTarget : window.TMIS_PAGE ? window.TmisTrainingData.participantCount() : null;
   // Example participant scores. The questionnaire metadata has no individual scores yet.
   const scoreRows = (window.TMIS_PAGE ? items.map(item=>window.TmisTrainingData.scores('pre-test',item.id)) : items.map(item => {
     if (!item.itemCount || item.averageCorrect === null) return [];
@@ -49,48 +46,25 @@ document.addEventListener('DOMContentLoaded', () => {
   panel.innerHTML = `<section class="pretest-results-card training-card" aria-labelledby="pretestResultsTitle"><header class="training-evaluation-header"><div class="training-evaluation-heading"><span class="training-evaluation-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span><div><span class="training-evaluation-eyebrow">Knowledge assessment</span><h2 id="pretestResultsTitle">Pre-Test Questionnaires</h2><p>View participant scores for the selected pre-test.</p></div></div><div class="pretest-select-wrap"><label for="pretestQuestionnaireSelect">Pre-test questionnaire</label><select id="pretestQuestionnaireSelect" class="form-select">${items.map((item, index) => `<option value="${index}">${escape(item.name)}</option>`).join('')}</select></div></header>${items.length ? `<div class="pretest-selected-heading"><span class="pretest-selected-icon"><i class="bi bi-journal-check" aria-hidden="true"></i></span><div><strong id="pretestSelectedTitle"></strong><small id="pretestSelectedMeta"></small></div><span class="training-evaluation-sample">Saved participant scores</span></div><div class="training-evaluation-summary"><div><span>Participants scored</span><strong id="pretestParticipantCount"></strong></div><div><span>Questionnaire items</span><strong id="pretestItemCount"></strong></div><div><span>Average score</span><strong id="pretestAverageScore"></strong></div></div><div class="pretest-table-toolbar"><div><h3>Participant results</h3><p>Scores are shown for the selected questionnaire only.</p></div><label class="pretest-search"><i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden">Search participants</span><input id="pretestParticipantSearch" class="form-control" type="search" placeholder="Search participant" autocomplete="off"></label></div><div class="training-evaluation-table-wrap table-responsive"><table class="table pretest-results-table"><thead><tr><th scope="col">Participant full name</th><th scope="col">Training title</th><th scope="col">Pre-test score</th><th scope="col">Percentage</th></tr></thead><tbody id="pretestResultsBody"></tbody></table></div><p id="pretestResultsCount" class="pretest-results-count" role="status" aria-live="polite"></p>` : '<div class="pretest-empty">No pre-test questionnaires are linked to this training.</div>'}</section>`;
   if (!items.length) return;
   panel.querySelector('.training-evaluation-summary > div:first-child > span').textContent = 'Total participants';
-  panel.querySelector('.training-evaluation-summary').insertAdjacentHTML('afterend', '<section class="association-score-breakdown" aria-labelledby="pretestAssociationSummaryTitle"><header><div><span>Association results</span><h3 id="pretestAssociationSummaryTitle">Average score by farmer association</h3><p>Average participant score and percentage of the selected questionnaire total.</p></div></header><div class="table-responsive"><table class="table"><thead><tr><th scope="col">Farmer association</th><th scope="col">Participants</th><th scope="col">Average score</th><th scope="col">Average percentage</th></tr></thead><tbody id="pretestAssociationSummaryRows"></tbody></table></div></section>');
   panel.querySelector('.pretest-search').insertAdjacentHTML('beforebegin', '<label class="pretest-date-filter"><span>Answer date</span><select id="pretestAnswerDateFilter" class="form-select" aria-label="Filter by pre-test answer date"></select></label>');
   panel.querySelector('.pretest-search').insertAdjacentHTML('beforebegin', '<label class="pretest-association-filter"><span>Farmer association</span><select id="pretestAssociationFilter" class="form-select" aria-label="Filter by farmer association"></select></label>');
   panel.querySelector('.pretest-results-table thead th:nth-child(3)').insertAdjacentHTML('beforebegin', '<th scope="col">Date answered</th>');
   panel.querySelector('.pretest-results-table thead th:nth-child(3)').insertAdjacentHTML('beforebegin', '<th scope="col">Farmer association</th>');
   const $ = selector => panel.querySelector(selector);
-  function renderAssociationSummary(item, rows) {
-    const groups = new Map();
-    rows.filter(row => !answerDate || row.answeredAt === answerDate).forEach(row => {
-      const names = association
-        ? (window.trainingFeedbackFilters.matchesAssociation(row, association) ? [association] : [])
-        : (row.associationNames?.length ? row.associationNames : [row.association || 'No association linked']);
-      names.forEach(name => {
-        if (!groups.has(name)) groups.set(name, {score: 0, responses: 0, participants: new Set()});
-        const group = groups.get(name);
-        group.score += Number(row.score) || 0;
-        group.responses++;
-        group.participants.add(String(row.farmerId || row.id || row.name));
-      });
-    });
-    const entries = [...groups.entries()].sort(([first], [second]) => first.localeCompare(second));
-    $('#pretestAssociationSummaryRows').innerHTML = entries.length ? entries.map(([name, group]) => {
-      const averageScore = group.responses ? group.score / group.responses : null;
-      const percentage = averageScore !== null && item.itemCount ? averageScore / item.itemCount * 100 : null;
-      return `<tr><th scope="row">${escape(name)}</th><td>${group.participants.size}</td><td>${averageScore === null ? '—' : averageScore.toFixed(2)}${item.itemCount ? ` / ${item.itemCount}` : ''}</td><td>${percentage === null ? 'No results' : `${percentage.toFixed(2)}%`}</td></tr>`;
-    }).join('') : '<tr><td colspan="4" class="association-score-empty">No association scores found for this questionnaire and date.</td></tr>';
-  }
   function render() {
     const item = items[selectedIndex];
     const rows = scoreRows[selectedIndex];
-    const scopedRows = rows.filter(row => (!answerDate || row.answeredAt === answerDate) && window.trainingFeedbackFilters.matchesAssociation(row, association));
+    const scopedRows = rows.filter(row => (!answerDate || row.answeredAt === answerDate) && (!association || row.association === association));
     const average = scopedRows.length ? scopedRows.reduce((sum, row) => sum + row.score, 0) / scopedRows.length : null;
     const shown = scopedRows.filter(row => `${row.name} ${row.id} ${row.association}`.toLowerCase().includes(search));
     $('#pretestQuestionnaireSelect').value = String(selectedIndex);
     $('#pretestSelectedTitle').textContent = item.name;
     $('#pretestSelectedMeta').textContent = `${item.id} · ${trainingTitle}${answerDate ? ` · ${new Date(`${answerDate}T00:00:00`).toLocaleDateString('en-PH', {year:'numeric', month:'short', day:'numeric'})}` : ''}${association ? ` · ${association}` : ''}`;
     const totalForScope = new Set(scoreRows.flat().filter(row => (!answerDate || row.answeredAt === answerDate) && (!association || row.association === association)).map(row => row.id)).size;
-    $('#pretestParticipantCount').textContent = participantTarget ? `${totalForScope}/${participantTarget}` : String(totalForScope);
+    $('#pretestParticipantCount').textContent = totalForScope;
     $('#pretestItemCount').textContent = item.itemCount ?? '—';
-    $('#pretestAverageScore').textContent = average === null ? 'No scores yet' : average.toFixed(2);
-    renderAssociationSummary(item, rows);
-    $('#pretestResultsBody').innerHTML = shown.length ? shown.map((row, index) => `<tr><th scope="row"><span class="pretest-row-number">${String(index + 1).padStart(2,'0')}</span><span><strong>${escape(row.name)}</strong><small>${escape(row.id)}</small></span></th><td>${escape(trainingTitle)}</td><td>${escape((row.associationNames || [row.association]).filter(Boolean).join(', ') || 'No association linked')}</td><td>${new Date(`${row.answeredAt}T00:00:00`).toLocaleDateString('en-PH', {year:'numeric', month:'short', day:'numeric'})}</td><td><span class="pretest-score">${row.score} <small>/ ${item.itemCount ?? '—'}</small></span></td><td>${item.itemCount ? `${(row.score / item.itemCount * 100).toFixed(1)}%` : 'No item count'}</td></tr>`).join('') : `<tr><td colspan="6" class="pretest-empty">${scopedRows.length ? 'No participants match your search.' : 'No participant scores are available for these filters.'}</td></tr>`;
+    $('#pretestAverageScore').innerHTML = average === null ? 'No scores yet' : `${average.toFixed(2)} <small>/ ${window.TmisStore.escape(item.itemCount)} (${(average / item.itemCount * 100).toFixed(1)}%)</small>`;
+    $('#pretestResultsBody').innerHTML = shown.length ? shown.map((row, index) => `<tr><th scope="row"><span class="pretest-row-number">${String(index + 1).padStart(2,'0')}</span><span><strong>${escape(row.name)}</strong><small>${escape(row.id)}</small></span></th><td>${escape(trainingTitle)}</td><td>${escape(row.association)}</td><td>${new Date(`${row.answeredAt}T00:00:00`).toLocaleDateString('en-PH', {year:'numeric', month:'short', day:'numeric'})}</td><td><span class="pretest-score">${row.score} <small>/ ${window.TmisStore.escape(item.itemCount)}</small></span></td><td>${(row.score / item.itemCount * 100).toFixed(1)}%</td></tr>`).join('') : `<tr><td colspan="6" class="pretest-empty">${scopedRows.length ? 'No participants match your search.' : 'No participant scores are available for these filters.'}</td></tr>`;
     $('#pretestResultsCount').textContent = `Showing ${shown.length} of ${scopedRows.length} scored participants${answerDate || association ? ' for the selected filters' : ''}`;
   }
   $('#pretestQuestionnaireSelect').addEventListener('change', event => { selectedIndex = Number(event.target.value); search = ''; $('#pretestParticipantSearch').value = ''; render(); });

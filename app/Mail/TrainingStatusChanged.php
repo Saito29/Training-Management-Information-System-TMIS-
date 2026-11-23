@@ -50,7 +50,7 @@ class TrainingStatusChanged extends Mailable
                 'actorOffice' => $this->actorOffice,
                 'trainingOffice' => $this->trainingOffice,
                 'changedAt' => $this->changedAt,
-                'messageTemplate' => filled($this->messageTemplate) ? $this->renderTemplate($this->messageTemplate) : null,
+                'customMessage' => filled($this->messageTemplate) ? $this->renderTemplate($this->messageTemplate) : null,
                 'isRevert' => $this->isReturn(),
                 'isSubmitted' => $this->fromStatus === 'For review' && $this->status === 'For approval',
                 'isForwarded' => $this->fromStatus === 'For approval' && $this->status === 'For acceptance',

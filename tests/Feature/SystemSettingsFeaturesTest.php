@@ -2,13 +2,19 @@
 
 namespace Tests\Feature;
 
+use App\Mail\Authentication\LoginVerificationCode;
+use App\Mail\Authentication\PasswordResetLink;
+use App\Mail\TrainingStatusChanged;
 use App\Models\User;
 use App\Support\ModuleAccess;
+use App\Support\SystemBranding;
+use App\Support\TrainingNotificationDelivery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -17,12 +23,16 @@ class SystemSettingsFeaturesTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function account(int $role = 1): User
+    private function account(int $role = 1, bool $withCredential = false): User
     {
         $user = User::factory()->create(['role_id' => $role]);
         DB::table('user_auth')->insert(['user_id' => $user->user_id, 'password_hash' => Hash::make('Valid-password-123!')]);
         if ($role === 1) {
             DB::table('system_super_admins')->insert(['user_id' => $user->user_id, 'created_at' => now(), 'updated_at' => now()]);
+        }
+        if ($withCredential && $role !== 1) {
+            $this->assignRoleCredential($user);
+            $user->refresh();
         }
 
         return $user;
@@ -30,8 +40,39 @@ class SystemSettingsFeaturesTest extends TestCase
 
     private function signIn(User $user): void
     {
+        if ((int) $user->role_id !== (int) DB::table('user_roles')->where('name', 'System Administrator')->value('role_id')) {
+            $this->assignRoleCredential($user);
+            $user->refresh();
+        }
         $hash = DB::table('user_auth')->where('user_id', $user->user_id)->value('password_hash');
         $this->actingAs($user)->withSession(['auth.verified_user_id' => $user->user_id, 'auth.password_fingerprint' => hash('sha256', $hash)]);
+    }
+
+    private function assignRoleCredential(User $user): void
+    {
+        $credentialId = $user->role_credential_id;
+        $isValid = $credentialId !== null && DB::table('role_credentials')
+            ->where('role_credential_id', $credentialId)
+            ->where('role_id', $user->role_id)
+            ->where('is_active', true)
+            ->exists();
+        if ($isValid) {
+            return;
+        }
+
+        $credentialId = DB::table('role_credentials')
+            ->where('role_id', $user->role_id)
+            ->where('is_active', true)
+            ->value('role_credential_id');
+        if ($credentialId === null) {
+            $credentialId = DB::table('role_credentials')->insertGetId([
+                'role_id' => $user->role_id,
+                'name' => 'Feature test access profile '.$user->role_id,
+                'created_at' => now(),
+            ], 'role_credential_id');
+        }
+
+        DB::table('users')->where('user_id', $user->user_id)->update(['role_credential_id' => $credentialId]);
     }
 
     public function test_administrator_can_manage_system_settings_but_cannot_grant_maintenance_login(): void
@@ -127,7 +168,7 @@ class SystemSettingsFeaturesTest extends TestCase
         $this->get(route('system.settings'))->assertOk()
             ->assertSee('https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js', false)
             ->assertSee('https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css', false)
-            ->assertSee(asset('src/css/shared/system-settings.css?v=role-access-actions-1'), false)
+            ->assertSee(asset('src/css/shared/system-settings.css?v=intervention-type-modals-1'), false)
             ->assertSee(asset('src/js/shared/system-settings.js?v=visibility-scope-select-all-refresh-1'), false)
             ->assertSee('modal-xl modal-dialog-centered modal-dialog-scrollable', false)
             ->assertSee('class="modal-dialog modal-dialog-centered modal-dialog-scrollable"', false)
@@ -137,6 +178,9 @@ class SystemSettingsFeaturesTest extends TestCase
             ->assertSee(asset('src/js/shared/maintenance-schedule.js?v=auto-expire-1'), false)
             ->assertDontSee('bootstrap@6.0.0-alpha.1', false)
             ->assertSee('id="notificationDetailModal"', false)
+            ->assertSee('id="email-notification-control"', false)
+            ->assertSee('id="trainingEmailNotificationRuleForm"', false)
+            ->assertSee(asset('src/js/shared/system-email-notification-settings.js?v=notification-modal-previews-1'), false)
             ->assertSee('id="roles-tab"', false)
             ->assertSee('id="credentials-tab"', false)
             ->assertSee('id="database-tab"', false)
@@ -350,7 +394,7 @@ class SystemSettingsFeaturesTest extends TestCase
     public function test_deleted_accounts_page_shows_detailed_actions_and_restores_accounts_as_inactive(): void
     {
         $administrator = $this->account();
-        $deletedAccount = $this->account(2);
+        $deletedAccount = $this->account(2, true);
         $activeAccount = $this->account(2);
         $protectedAdministrator = $this->account();
         $this->signIn($administrator);
@@ -430,6 +474,8 @@ class SystemSettingsFeaturesTest extends TestCase
 
         $this->get(route('system.settings'))->assertOk()
             ->assertSee('id="branding-tab"', false)
+            ->assertSee('id="systemBrandingForm"', false)
+            ->assertSee(asset('src/js/shared/system-branding.js?v=live-branding-1'), false)
             ->assertDontSee('id="availability-tab"', false)
             ->assertDontSee('id="roles-tab"', false)
             ->assertDontSee('id="credentials-tab"', false)
@@ -877,9 +923,11 @@ class SystemSettingsFeaturesTest extends TestCase
 
         $payload['role_id'] = 3;
         $payload['role_credential_id'] = null;
-        $this->patchJson(route('system.accounts.update', $user->user_id), $payload)->assertOk();
-        $this->assertDatabaseHas('users', ['user_id' => $user->user_id, 'role_id' => 3, 'role_credential_id' => null]);
-        $this->assertFalse(ModuleAccess::allows(User::findOrFail($user->user_id), 'questionnaires.read'));
+        $this->patchJson(route('system.accounts.update', $user->user_id), $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('role_credential_id');
+        $this->assertDatabaseHas('users', ['user_id' => $user->user_id, 'role_id' => 3, 'role_credential_id' => $credentialId]);
+        $this->assertTrue(ModuleAccess::allows(User::findOrFail($user->user_id), 'questionnaires.read'));
     }
 
     public function test_super_administrator_can_remove_their_own_final_access(): void
@@ -923,17 +971,296 @@ class SystemSettingsFeaturesTest extends TestCase
             'system_name' => 'Field Operations',
             'logo' => UploadedFile::fake()->createWithContent('logo.png', $png),
             'favicon' => UploadedFile::fake()->createWithContent('favicon.png', $png),
-        ])->assertOk();
+        ])->assertOk()
+            ->assertJsonPath('message', 'Branding settings saved and applied.')
+            ->assertJsonPath('branding.name', 'Field Operations')
+            ->assertJsonPath('branding.faviconMimeType', 'image/png');
 
         $settings = DB::table('system_settings')->where('id', 1)->first();
         $this->assertSame('Field Operations', $settings->system_name);
         Storage::disk('local')->assertExists($settings->logo_path);
         Storage::disk('local')->assertExists($settings->favicon_path);
         $this->get(route('system-branding.asset', ['kind' => 'logo']))->assertOk();
-        $this->get(route('system-branding.asset', ['kind' => 'favicon']))->assertOk();
+        $this->get(route('system-branding.asset', ['kind' => 'favicon']))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/png');
         $this->assertDatabaseHas('users_log', [
             'event' => 'system_branding_updated',
             'actor_user_id' => $administrator->user_id,
         ]);
+    }
+
+    public function test_branding_rejects_mismatched_image_extension_without_replacing_saved_asset(): void
+    {
+        Storage::fake('local');
+        $administrator = $this->account();
+        $this->signIn($administrator);
+        $existingLogoPath = 'system-branding/existing-logo.png';
+        Storage::disk('local')->put($existingLogoPath, 'existing logo bytes');
+        DB::table('system_settings')->where('id', 1)->update([
+            'system_name' => 'Existing name',
+            'logo_path' => $existingLogoPath,
+        ]);
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j6H0AAAAASUVORK5CYII=');
+
+        $this->postJson(route('system.branding.update'), [
+            'system_name' => 'Attempted name',
+            'logo' => UploadedFile::fake()->createWithContent('logo.gif', $png),
+        ])->assertUnprocessable()->assertJsonValidationErrors('logo');
+
+        $this->assertDatabaseHas('system_settings', [
+            'id' => 1,
+            'system_name' => 'Existing name',
+            'logo_path' => $existingLogoPath,
+        ]);
+        Storage::disk('local')->assertExists($existingLogoPath);
+        $this->assertSame([$existingLogoPath], Storage::disk('local')->allFiles('system-branding'));
+    }
+
+    public function test_branding_reports_the_stored_jpeg_favicon_mime_type(): void
+    {
+        Storage::fake('local');
+        $administrator = $this->account();
+        $this->signIn($administrator);
+        $faviconPath = 'system-branding/existing-favicon.jpg';
+        Storage::disk('local')->put($faviconPath, file_get_contents(base_path('assets/user_profile/user_profile.jpg')));
+        DB::table('system_settings')->where('id', 1)->update(['favicon_path' => $faviconPath]);
+
+        $branding = app(SystemBranding::class)->forDisplay();
+
+        $this->assertSame('image/jpeg', $branding['faviconMimeType']);
+        $this->get(route('system-branding.asset', ['kind' => 'favicon']))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/jpeg');
+        $this->get(route('system.settings'))->assertOk()->assertSee('type="image/jpeg"', false);
+    }
+
+    public function test_authentication_emails_embed_the_current_system_logo_and_name(): void
+    {
+        Storage::fake('local');
+        $logoPath = 'system-branding/authentication-logo.png';
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j6H0AAAAASUVORK5CYII=');
+        Storage::disk('local')->put($logoPath, $png);
+        DB::table('system_settings')->where('id', 1)->update([
+            'system_name' => 'Field Operations',
+            'logo_path' => $logoPath,
+        ]);
+
+        $messages = [
+            new LoginVerificationCode('123456'),
+            new PasswordResetLink('https://example.test/reset', true),
+        ];
+
+        foreach ($messages as $message) {
+            $html = $message->render();
+            $this->assertStringContainsString('Field Operations', $html);
+            $this->assertStringContainsString('Field Operations logo', $html);
+            $this->assertTrue(str_contains($html, 'src="cid:') || str_contains($html, 'src="data:image/png;base64,'));
+            $this->assertStringNotContainsString('DA logo_120519.png', $html);
+        }
+    }
+
+    public function test_administrator_can_create_update_and_delete_email_notification_rules(): void
+    {
+        $administrator = $this->account();
+        $this->signIn($administrator);
+        DB::table('training_email_notification_rule_roles')->delete();
+        DB::table('training_email_notification_rules')->delete();
+        $roles = DB::table('user_roles')->whereIn('name', ['Data Encoder', 'Program Administrator'])->pluck('role_id', 'name');
+        $encoderRoleId = (int) $roles['Data Encoder'];
+        $programAdministratorRoleId = (int) $roles['Program Administrator'];
+
+        $created = $this->postJson(route('system.training-email-notification-rules.store'), [
+            'from_status' => 'For review',
+            'to_status' => 'For approval',
+            'is_enabled' => true,
+            'subject_template' => 'Review: {training_title}',
+            'message_template' => 'Training {training_id} is ready for review.',
+            'role_ids' => [$encoderRoleId, $programAdministratorRoleId],
+        ])->assertCreated()
+            ->assertJsonPath('message', 'Training email notification rule created.');
+        $ruleId = $created->json('id');
+
+        $this->assertDatabaseHas('training_email_notification_rules', [
+            'id' => $ruleId,
+            'from_status' => 'For review',
+            'to_status' => 'For approval',
+            'is_enabled' => true,
+            'subject_template' => 'Review: {training_title}',
+        ]);
+        $this->assertDatabaseHas('training_email_notification_rule_roles', ['rule_id' => $ruleId, 'role_id' => $encoderRoleId, 'is_enabled' => true]);
+        $this->assertDatabaseHas('training_email_notification_rule_roles', ['rule_id' => $ruleId, 'role_id' => $programAdministratorRoleId, 'is_enabled' => true]);
+        $this->assertDatabaseHas('users_log', ['actor_user_id' => $administrator->user_id, 'event' => 'training_email_notification_rule_created_'.$ruleId]);
+
+        $this->patchJson(route('system.training-email-notification-rules.update', $ruleId), [
+            'from_status' => 'For approval',
+            'to_status' => 'For acceptance',
+            'is_enabled' => false,
+            'subject_template' => 'Acceptance: {training_title}',
+            'message_template' => 'Please accept training {training_id}.',
+            'role_ids' => [$programAdministratorRoleId],
+        ])->assertOk()->assertJsonPath('message', 'Training email notification rule updated.');
+
+        $this->assertDatabaseHas('training_email_notification_rules', [
+            'id' => $ruleId,
+            'from_status' => 'For approval',
+            'to_status' => 'For acceptance',
+            'is_enabled' => false,
+            'subject_template' => 'Acceptance: {training_title}',
+        ]);
+        $this->assertDatabaseMissing('training_email_notification_rule_roles', ['rule_id' => $ruleId, 'role_id' => $encoderRoleId]);
+        $this->assertDatabaseHas('training_email_notification_rule_roles', ['rule_id' => $ruleId, 'role_id' => $programAdministratorRoleId, 'is_enabled' => true]);
+        $this->assertDatabaseHas('users_log', ['actor_user_id' => $administrator->user_id, 'event' => 'training_email_notification_rule_updated_'.$ruleId]);
+
+        $this->deleteJson(route('system.training-email-notification-rules.destroy', $ruleId))
+            ->assertOk()
+            ->assertJsonPath('message', 'Training email notification rule deleted.');
+        $this->assertDatabaseMissing('training_email_notification_rules', ['id' => $ruleId]);
+        $this->assertDatabaseMissing('training_email_notification_rule_roles', ['rule_id' => $ruleId]);
+        $this->assertDatabaseHas('users_log', ['actor_user_id' => $administrator->user_id, 'event' => 'training_email_notification_rule_deleted_'.$ruleId]);
+    }
+
+    public function test_saved_email_notification_rule_controls_delivery_and_template_rendering(): void
+    {
+        Mail::fake();
+        $administrator = $this->account();
+        $this->signIn($administrator);
+        DB::table('training_email_notification_rule_roles')->delete();
+        DB::table('training_email_notification_rules')->delete();
+        $administratorRoleId = (int) DB::table('user_roles')->where('name', 'System Administrator')->value('role_id');
+        $subjectTemplate = 'Action needed: {training_title}';
+        $messageTemplate = 'Training {training_id} changed to {to_status}. Reason: {reason}';
+
+        $createdRule = $this->postJson(route('system.training-email-notification-rules.store'), [
+            'from_status' => 'For acceptance',
+            'to_status' => 'Approved & Accepted',
+            'is_enabled' => true,
+            'subject_template' => $subjectTemplate,
+            'message_template' => $messageTemplate,
+            'role_ids' => [$administratorRoleId],
+        ])->assertCreated();
+        $ruleId = $createdRule->json('id');
+
+        $trainingId = DB::table('trainings')->insertGetId([
+            'name' => 'Email-controlled training',
+            'region_id' => $administrator->region_id,
+            'org_id' => $administrator->org_id,
+            'created_by' => $administrator->user_id,
+            'status' => 'Approved & Accepted',
+            'start_date' => '2026-12-01',
+            'end_date' => '2026-12-02',
+            'venue' => 'Training hall',
+            'budget' => 1000,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $statusChangeId = DB::table('training_status_changes')->insertGetId([
+            'training_id' => $trainingId,
+            'actor_user_id' => $administrator->user_id,
+            'from_status' => 'For acceptance',
+            'to_status' => 'Approved & Accepted',
+            'reason' => 'Final review complete.',
+            'created_at' => now(),
+        ]);
+        $notificationId = DB::table('training_notifications')->insertGetId([
+            'status_change_id' => $statusChangeId,
+            'user_id' => $administrator->user_id,
+            'email' => $administrator->email,
+            'created_at' => now(),
+        ]);
+
+        $this->assertTrue(app(TrainingNotificationDelivery::class)->deliver($notificationId));
+        Mail::assertSent(TrainingStatusChanged::class, fn (TrainingStatusChanged $mail): bool => $mail->hasTo($administrator->email)
+            && $mail->subjectTemplate === $subjectTemplate
+            && $mail->messageTemplate === $messageTemplate);
+        $sent = Mail::sent(TrainingStatusChanged::class)->sole();
+        $this->assertSame('Action needed: Email-controlled training', $sent->envelope()->subject);
+        $this->assertStringContainsString('Training '.$trainingId.' changed to Approved &amp; Accepted. Reason: Final review complete.', $sent->render());
+        $this->assertNotNull(DB::table('training_notifications')->where('id', $notificationId)->value('sent_at'));
+
+        $this->patchJson(route('system.training-email-notification-rules.update', $ruleId), [
+            'from_status' => 'For acceptance',
+            'to_status' => 'Approved & Accepted',
+            'is_enabled' => false,
+            'subject_template' => $subjectTemplate,
+            'message_template' => $messageTemplate,
+            'role_ids' => [$administratorRoleId],
+        ])->assertOk();
+        $disabledStatusChangeId = DB::table('training_status_changes')->insertGetId([
+            'training_id' => $trainingId,
+            'actor_user_id' => $administrator->user_id,
+            'from_status' => 'For acceptance',
+            'to_status' => 'Approved & Accepted',
+            'reason' => 'Second review complete.',
+            'created_at' => now(),
+        ]);
+        $disabledNotificationId = DB::table('training_notifications')->insertGetId([
+            'status_change_id' => $disabledStatusChangeId,
+            'user_id' => $administrator->user_id,
+            'email' => $administrator->email,
+            'created_at' => now(),
+        ]);
+
+        $this->assertTrue(app(TrainingNotificationDelivery::class)->deliver($disabledNotificationId));
+        Mail::assertSentCount(1);
+        $this->assertNotNull(DB::table('training_notifications')->where('id', $disabledNotificationId)->value('cancelled_at'));
+    }
+
+    public function test_email_notification_rules_reject_duplicate_transitions_invalid_pairs_and_inactive_roles(): void
+    {
+        $administrator = $this->account();
+        $this->signIn($administrator);
+        DB::table('training_email_notification_rule_roles')->delete();
+        DB::table('training_email_notification_rules')->delete();
+        $encoderRoleId = (int) DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id');
+        $payload = [
+            'from_status' => 'For review',
+            'to_status' => 'For approval',
+            'is_enabled' => true,
+            'role_ids' => [$encoderRoleId],
+        ];
+
+        $ruleId = $this->postJson(route('system.training-email-notification-rules.store'), $payload)->assertCreated()->json('id');
+        $this->postJson(route('system.training-email-notification-rules.store'), $payload)->assertConflict();
+        $this->assertDatabaseCount('training_email_notification_rules', 1);
+
+        $invalidTransition = $payload;
+        $invalidTransition['to_status'] = 'Approved & Accepted';
+        $this->postJson(route('system.training-email-notification-rules.store'), $invalidTransition)->assertUnprocessable();
+        $this->assertDatabaseMissing('training_email_notification_rules', ['to_status' => 'Approved & Accepted']);
+
+        DB::table('user_roles')->where('role_id', $encoderRoleId)->update(['is_active' => false]);
+        $this->patchJson(route('system.training-email-notification-rules.update', $ruleId), $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('role_ids.0');
+        $this->assertDatabaseHas('training_email_notification_rule_roles', ['rule_id' => $ruleId, 'role_id' => $encoderRoleId]);
+    }
+
+    public function test_non_administrators_cannot_manage_email_notification_rules(): void
+    {
+        $administrator = $this->account();
+        $this->signIn($administrator);
+        DB::table('training_email_notification_rule_roles')->delete();
+        DB::table('training_email_notification_rules')->delete();
+        $roleId = (int) DB::table('user_roles')->where('name', 'Data Encoder')->value('role_id');
+        $ruleId = $this->postJson(route('system.training-email-notification-rules.store'), [
+            'from_status' => 'For review',
+            'to_status' => 'For approval',
+            'is_enabled' => true,
+            'role_ids' => [$roleId],
+        ])->assertCreated()->json('id');
+
+        $encoder = $this->account(2);
+        $this->signIn($encoder);
+        $payload = [
+            'from_status' => 'For review',
+            'to_status' => 'For approval',
+            'is_enabled' => false,
+            'role_ids' => [$roleId],
+        ];
+        $this->postJson(route('system.training-email-notification-rules.store'), $payload)->assertForbidden();
+        $this->patchJson(route('system.training-email-notification-rules.update', $ruleId), $payload)->assertForbidden();
+        $this->deleteJson(route('system.training-email-notification-rules.destroy', $ruleId))->assertForbidden();
+        $this->assertDatabaseHas('training_email_notification_rules', ['id' => $ruleId, 'is_enabled' => true]);
     }
 }

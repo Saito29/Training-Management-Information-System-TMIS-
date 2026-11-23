@@ -2,6 +2,7 @@
 
 namespace App\Mail\Authentication;
 
+use App\Support\SystemBranding;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
@@ -33,12 +34,18 @@ class PasswordResetLink extends Mailable
      */
     public function content(): Content
     {
+        $branding = app(SystemBranding::class)->forEmail();
+
         return new Content(
             view: 'mail.authentication.reset-password',
             text: 'mail.authentication.reset-password-text',
             with: [
                 'expiresInMinutes' => config('auth.passwords.users.expire'),
                 'forgotPasswordUrl' => rtrim(config('app.url'), '/').route('password.request', [], false),
+                'brandName' => $branding['name'],
+                'brandLogoPath' => $branding['logoPath'],
+                'brandLogoWidth' => $branding['logoWidth'],
+                'brandLogoHeight' => $branding['logoHeight'],
             ],
         );
     }

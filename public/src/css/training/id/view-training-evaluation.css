@@ -31,18 +31,6 @@
 .training-evaluation-count:hover,.training-evaluation-count:focus-visible,.training-evaluation-count.is-active { border-color:color-mix(in srgb,var(--color-primary) 35%,var(--color-border)); color:var(--color-primary-dark); background:var(--color-primary-surface); }
 .training-evaluation-total { font-weight:700; }
 .training-evaluation-average { display:inline-block; min-width:47px; padding:6px 8px; border-radius:8px; color:var(--color-primary-dark); background:var(--color-primary-surface); font-weight:750; }
-.association-score-breakdown { margin:16px 24px 22px; overflow:hidden; border:1px solid var(--color-border); border-radius:12px; background:var(--color-surface); }
-.association-score-breakdown > header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px; border-bottom:1px solid var(--color-border); background:linear-gradient(120deg,color-mix(in srgb,var(--color-primary-surface) 45%,var(--color-surface)),var(--color-surface) 70%); }
-.association-score-breakdown > header span { color:var(--color-primary-dark); font-size:9px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
-.association-score-breakdown h3 { margin:3px 0; color:var(--color-text-primary); font-size:14px; font-weight:750; }
-.association-score-breakdown p { margin:0; color:var(--color-text-secondary); font-size:11px; }
-.association-score-breakdown .table { min-width:620px; margin:0; color:var(--color-text-primary); font-size:12px; }
-.association-score-breakdown .table thead th { padding:10px 14px; border-bottom:1px solid var(--color-border); color:var(--color-text-secondary); background:var(--color-bg); font-size:10px; font-weight:750; white-space:nowrap; }
-.association-score-breakdown .table tbody th,.association-score-breakdown .table tbody td { padding:11px 14px; border-bottom:1px solid var(--color-border); vertical-align:middle; }
-.association-score-breakdown .table tbody tr:last-child th,.association-score-breakdown .table tbody tr:last-child td { border-bottom:0; }
-.association-score-breakdown .table tbody th { color:var(--color-text-primary); font-weight:650; }
-.association-score-breakdown .table tbody td:not(:first-child) { white-space:nowrap; }
-.association-score-empty { padding:20px!important; color:var(--color-text-secondary)!important; text-align:center; }
 .training-evaluation-hint { margin:0; padding:12px 24px 17px; color:var(--color-text-secondary); font-size:11px; }
 .training-evaluation-hint i { margin-right:5px; color:var(--color-primary); }
 .training-evaluation-detail-body { padding:18px 24px 22px; }
@@ -58,4 +46,4 @@
 .training-evaluation-avatar { display:inline-grid; place-items:center; width:29px; height:29px; margin-right:9px; border-radius:50%; color:var(--color-primary-dark); background:var(--color-primary-surface); font-size:10px; font-weight:700; }
 .training-evaluation-participant-score { display:inline-flex; align-items:center; gap:4px; padding:5px 9px; border-radius:999px; background:var(--color-bg); font-weight:700; }
 .training-evaluation-empty { padding:22px!important; color:var(--color-text-secondary); text-align:center!important; }
-@media (max-width:700px) { .training-evaluation-header,.training-evaluation-detail-header,.training-evaluation-detail-body { padding:16px; } .evaluation-scope-filters { padding:16px 16px 0; } .evaluation-scope-filters label { width:100%; } .training-evaluation-summary { padding:16px; grid-template-columns:1fr; } .training-evaluation-table-wrap { padding:0 16px; } .association-score-breakdown { margin:12px 16px 18px; } .association-score-breakdown > header { padding:13px 14px; } .training-evaluation-hint { padding:12px 16px; } }
+@media (max-width:700px) { .training-evaluation-header,.training-evaluation-detail-header,.training-evaluation-detail-body { padding:16px; } .evaluation-scope-filters { padding:16px 16px 0; } .evaluation-scope-filters label { width:100%; } .training-evaluation-summary { padding:16px; grid-template-columns:1fr; } .training-evaluation-table-wrap { padding:0 16px; } .training-evaluation-hint { padding:12px 16px; } }

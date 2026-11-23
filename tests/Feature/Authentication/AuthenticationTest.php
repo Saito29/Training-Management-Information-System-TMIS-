@@ -265,7 +265,7 @@ class AuthenticationTest extends TestCase
         $mail->assertSeeInText('827491');
         $mail->assertSeeInHtml('Forgot password? Request a reset link');
         $mail->assertSeeInText(rtrim(config('app.url'), '/').'/forgot-password');
-        $mail->assertSeeInHtml('alt="Department of Agriculture"', false);
+        $mail->assertSeeInHtml('alt="TMIS logo"', false);
         $mail->assertSeeInHtml('data:image/png;base64,', false);
         $mail->assertSeeInText('5 minutes');
     }

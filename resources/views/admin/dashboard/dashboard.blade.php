@@ -811,7 +811,7 @@ class="layout-fixed"
           <div class="row first-row g-4" id="summary-report">
             <!-- App left main content first row -->
             <div class="col-12 col-lg-4">
-              <div class="app-left-main-content-body h-100" style="--dashboard-welcome-image: url('{{ $systemBranding['dashboardImageUrl'] }}');">
+              <div class="app-left-main-content-body h-100" data-dashboard-welcome-image style="--dashboard-welcome-image: url('{{ $systemBranding['dashboardImageUrl'] }}');">
                 <!-- User intro left -->
                 <div class="app-left-main-content-user-intro">
                   <h5 class="app-left-main-content-user-hello">Hello,</h5>

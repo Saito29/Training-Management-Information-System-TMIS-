@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setValue('description', record.description);
     form.querySelector('[type="submit"]')?.closest('.col-12')?.remove();
     const tips = document.querySelector('.card-tips');
-    if (tips) tips.innerHTML = `<div class="card-body"><h5 class="card-tips-title">Record Overview</h5><dl class="view-meta-list"><div><dt>Questionnaire ID</dt><dd>${esc(id)}</dd></div><div><dt>Status</dt><dd>${esc(record.status || 'Active')}</dd></div><div><dt>Date Created</dt><dd>${date ? esc(new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(new Date(date))) : '—'}</dd></div></dl></div>`;
+    if (tips) tips.innerHTML = `<div class="card-body"><h5 class="card-tips-title">Record Overview</h5><dl class="view-meta-list"><div><dt>Questionnaire ID</dt><dd>${esc(id)}</dd></div><div><dt>Status</dt><dd>${esc(record.status || 'Active')}</dd></div><div><dt>Date Created</dt><dd>${date ? esc(new Date(date).toLocaleString()) : '—'}</dd></div></dl></div>`;
   } else {
     setValue('questionnaireName', title);
     setSelect('region', record.region);
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     guide.innerHTML = ratings.map((rating) => `<li><label class="rp-rating-label"><strong>${esc(rating?.score ?? '')}</strong><input class="form-control" type="text" value="${esc(rating?.label || '')}" readonly aria-label="Rating ${esc(rating?.score ?? '')} label"></label><textarea class="form-control rp-rating-description" rows="2" readonly aria-label="Rating ${esc(rating?.score ?? '')} description">${esc(rating?.description || '')}</textarea></li>`).join('') || '<li>No rating scale was saved.</li>';
     document.querySelectorAll('[data-add-question], .rp-form-actions').forEach((element) => element.remove());
     const tips = document.querySelector('.rp-tips');
-    if (tips) tips.innerHTML = `<h2><i class="bi bi-info-circle" aria-hidden="true"></i> Record Overview</h2><dl class="view-meta-list"><div><dt>Questionnaire ID</dt><dd>${esc(id)}</dd></div><div><dt>Status</dt><dd>${esc(record.status || 'Active')}</dd></div><div><dt>Date Created</dt><dd>${date ? esc(new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(new Date(date))) : '—'}</dd></div></dl>`;
+    if (tips) tips.innerHTML = `<h2><i class="bi bi-info-circle" aria-hidden="true"></i> Record Overview</h2><dl class="view-meta-list"><div><dt>Questionnaire ID</dt><dd>${esc(id)}</dd></div><div><dt>Status</dt><dd>${esc(record.status || 'Active')}</dd></div><div><dt>Date Created</dt><dd>${date ? esc(new Date(date).toLocaleString()) : '—'}</dd></div></dl>`;
   }
 
   form.querySelectorAll('input:not([type="hidden"]), textarea').forEach((control) => {

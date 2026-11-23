@@ -3,35 +3,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const body = byId('trainingPickerBody');
   const form = document.querySelector('#preTestEncodeForm, #postTestEncodeForm, #trainingEvaluationEncodeForm, #rpEvaluationEncodeForm');
   if (!body || !form) return;
-  const allowsNonInactiveTrainings = ['preTestEncodeForm', 'postTestEncodeForm', 'trainingEvaluationEncodeForm', 'rpEvaluationEncodeForm'].includes(form.id);
 
   const filters = {
-    year: byId('trainingFilterYear'), region: byId('trainingFilterRegion'), province: byId('trainingFilterProvince'),
+    region: byId('trainingFilterRegion'), province: byId('trainingFilterProvince'),
     district: byId('trainingFilterDistrict'), municipality: byId('trainingFilterMunicipality'),
     barangay: byId('trainingFilterBarangay'), office: byId('trainingFilterOffice'),
   };
   const values = (record, ...keys) => keys.map(key => record?.[key]).find(value => value !== undefined && value !== null && String(value).trim() !== '') || '';
-  const trainingLocations = record => {
-    const storedLocations = Array.isArray(record?.trainingLocations) ? record.trainingLocations.filter(location => location && typeof location === 'object') : [];
-    const locations = storedLocations.length ? storedLocations : [record || {}];
-    const seen = new Set();
-
-    return locations.map((location, index) => {
-      const venue = String(values(location, 'venue') || (index === 0 ? values(record, 'venue', 'venue_location') : '')).trim();
-      const barangay = String(values(location, 'barangay') || (index === 0 ? values(record, 'barangay') : '')).trim();
-      const municipality = String(values(location, 'municipality') || (index === 0 ? values(record, 'municipality') : '')).trim();
-      const province = String(values(location, 'province') || (index === 0 ? values(record, 'province') : '')).trim();
-      const region = String(values(location, 'region') || (index === 0 ? values(record, 'region') : '')).trim();
-      const address = [barangay ? `Brgy. ${barangay}` : '', municipality, province].filter(Boolean).join(', ');
-      const identity = `${venue}|${address}|${region}`.toLocaleLowerCase();
-
-      if (seen.has(identity) || (!venue && !address && !region)) return null;
-      seen.add(identity);
-
-      return { venue, address: address || venue || 'Location not set', region };
-    }).filter(Boolean);
-  };
-  const trainingLocation = record => trainingLocations(record).map(location => [location.address, location.region].filter(Boolean).join(' · ')).join(' | ');
+  const trainingLocation = record => values(record, 'location') || [values(record, 'barangay'), values(record, 'municipality'), values(record, 'province')].filter(Boolean).join(', ');
   const dateLabel = value => {
     if (!value) return '—';
     const date = new Date(`${value}T00:00:00`);
@@ -40,30 +19,18 @@ document.addEventListener('DOMContentLoaded', () => {
   let trainings = [];
   let selectedId = '';
   let page = 1;
-  let sort = {key: 'year', direction: 'desc'};
-  const registrationScope = window.TMIS_PAGE?.registration || {};
-  const isVisible = (ids, id) => !Array.isArray(ids) || ids.some(value => String(value) === String(id));
-  const isTrainingActive = record => record.is_active === true || record.is_active === 1 || record.is_active === '1';
 
-  const availableTrainings = records => records
-    .filter(record => isVisible(registrationScope.regionIds, record.region_id) && isVisible(registrationScope.officeIds, record.org_id))
-    .filter(record => {
-      const status = String(record.status || record.workflowStatus || '').trim().toLowerCase();
-      if (allowsNonInactiveTrainings) return status !== 'inactive' && isTrainingActive(record);
-      return status === 'approved & accepted';
-    })
+  const approvedTrainings = records => records
+    .filter(record => record.is_active !== false && String(record.status || record.workflowStatus || '').trim().toLowerCase() === 'approved & accepted')
     .map(record => ({
       ...record,
       id: String(record.id || ''),
       title: String(values(record, 'title', 'training_title', 'name') || 'Untitled training'),
-      year: String(values(record, 'yearCovered', 'year_covered') || String(values(record, 'startDate', 'start_date')).slice(0, 4) || ''),
-      type: String(values(record, 'training_type', 'type') || 'Training'),
       office: String(values(record, 'office', 'implementingOffice', 'implementing_office') || ''),
       region: String(values(record, 'region') || ''), province: String(values(record, 'province') || ''),
       district: String(values(record, 'district') || ''), municipality: String(values(record, 'municipality') || ''),
       barangay: String(values(record, 'barangay') || ''), venue: String(values(record, 'venue', 'venue_location') || ''),
       startDate: String(values(record, 'startDate', 'start_date') || ''), endDate: String(values(record, 'endDate', 'end_date') || ''),
-      trainingLocations: trainingLocations(record),
       location: String(trainingLocation(record)),
     })).filter(record => record.id);
 
@@ -73,7 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
     select.value = [...select.options].some(option => option.value === selected) ? selected : '';
   };
   const hydrateFilters = () => {
-    fillOptions(filters.year, 'years', trainings.map(record => record.year));
     fillOptions(filters.region, 'regions', trainings.map(record => record.region));
     fillOptions(filters.province, 'provinces', trainings.map(record => record.province));
     fillOptions(filters.district, 'districts', trainings.map(record => record.district));
@@ -90,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
     byId('trainingOrganizationValue').value = record?.office || '';
     byId('trainingStartDateValue').value = record ? dateLabel(record.startDate) : '';
     byId('trainingEndDateValue').value = record ? dateLabel(record.endDate) : '';
-    if (!record && byId('testDate')) byId('testDate').value = '';
     byId('selectedTrainingLabel').textContent = record ? `${record.id} · ${record.title}` : 'No training selected';
     byId('selectedTrainingLabel').classList.toggle('training-picker-selected', Boolean(record));
     if (record && useDate && byId('testDate')) byId('testDate').value = record.startDate;
@@ -100,12 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return trainings.filter(record => Object.entries(filters).every(([key, input]) => !input.value || record[key] === input.value)
       && (!query || `${record.id} ${record.title} ${record.office} ${record.region} ${record.province} ${record.district} ${record.municipality} ${record.barangay} ${record.location} ${record.venue}`.toLocaleLowerCase().includes(query)));
   };
-  const sortedRows = rows => [...rows].sort((left, right) => {
-    const comparison = String(left[sort.key] ?? '').localeCompare(String(right[sort.key] ?? ''), undefined, {numeric:true, sensitivity:'base'});
-    return sort.direction === 'asc' ? comparison : -comparison;
-  });
   const render = () => {
-    const rows = sortedRows(matches());
+    const rows = matches();
     const pageSize = byId('trainingPickerPageSize').value === 'all' ? Math.max(rows.length, 1) : Number(byId('trainingPickerPageSize').value);
     const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
     page = Math.min(page, pageCount);
@@ -115,80 +76,27 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!visible.length) {
       const row = document.createElement('tr');
       const cell = document.createElement('td');
-      cell.colSpan = 8; cell.className = 'training-picker-empty';
-      cell.textContent = trainings.length ? 'No non-inactive trainings match these filters.' : 'No non-inactive trainings are available in your region and office visibility.';
+      cell.colSpan = 7; cell.className = 'training-picker-empty';
+      cell.textContent = trainings.length ? 'No approved trainings match these filters.' : 'No active approved and accepted trainings are available to link.';
       row.append(cell); body.append(row);
     }
     visible.forEach(record => {
       const row = document.createElement('tr');
       const selected = record.id === selectedId;
-      const trainingStatus = String(record.status || record.workflowStatus || '').trim();
-      const canEncode = allowsNonInactiveTrainings
-        ? trainingStatus.toLowerCase() !== 'inactive' && isTrainingActive(record)
-        : trainingStatus.toLowerCase() === 'approved & accepted' && isTrainingActive(record);
       if (selected) row.classList.add('is-selected');
-      const actionCell = document.createElement('td');
-      actionCell.className = 'training-picker-action-cell';
+      const radioCell = document.createElement('td');
       const radio = document.createElement('input');
-      radio.type = 'checkbox';
-      radio.name = 'trainingPickerSelection';
-      radio.value = record.id;
-      radio.checked = selected;
-      radio.className = 'training-picker-select';
-      radio.disabled = !canEncode;
+      radio.type = 'radio'; radio.name = 'trainingPickerSelection'; radio.value = record.id; radio.checked = selected;
       radio.setAttribute('aria-label', `Select training ${record.id}`);
-      if (!canEncode) radio.title = 'Only active trainings can be used for encoding.';
-      radio.addEventListener('change', () => select(radio.checked ? record.id : ''));
-      actionCell.append(radio);
-      row.append(actionCell);
-      const cells = [
-        {value:record.id},
-        {value:record.year || '—', kind:'year'},
-        {value:record.title, kind:'training'},
-        {value:record.office || '—', kind:'office'},
-        {value:record.location || '—', kind:'location'},
-        {value:record.venue || '—'},
-        {value:`${dateLabel(record.startDate)}${record.endDate && record.endDate !== record.startDate ? ` – ${dateLabel(record.endDate)}` : ''}`},
-      ];
-      cells.forEach((item, index) => {
+      radio.addEventListener('change', () => select(record.id));
+      radioCell.append(radio); row.append(radioCell);
+      [record.id, record.title, record.office || '—', record.location || '—', record.venue || '—', `${dateLabel(record.startDate)}${record.endDate && record.endDate !== record.startDate ? ` – ${dateLabel(record.endDate)}` : ''}`].forEach((value, index) => {
         const cell = document.createElement('td');
-        if (item.kind === 'year') {
-          const badge = document.createElement('span');
-          badge.className = 'training-picker-year';
-          badge.textContent = item.value;
-          cell.append(badge);
-        } else if (item.kind === 'training') {
-          cell.className = 'training-picker-training';
-          const title = document.createElement('strong');
-          title.textContent = item.value;
-          const details = document.createElement('small');
-          details.textContent = `${record.type} · ${trainingStatus || 'Status unavailable'}${!canEncode ? ' · Not available for encoding' : ''}`;
-          cell.append(title, details);
-        } else if (item.kind === 'office') {
-          const office = document.createElement('span');
-          office.className = 'training-picker-office';
-          office.textContent = item.value;
-          cell.append(office);
-        } else if (item.kind === 'location') {
-          cell.className = 'training-picker-location';
-          const location = document.createElement('strong');
-          const locationList = record.trainingLocations;
-          location.textContent = locationList[0]?.address || item.value;
-          const details = document.createElement('small');
-          details.textContent = locationList[0]?.region || record.region || 'Region not set';
-          cell.append(location, details);
-          locationList.slice(1).forEach((secondaryLocation, index) => {
-            const secondary = document.createElement('small');
-            secondary.className = 'training-picker-secondary-location';
-            secondary.textContent = `Additional location ${index + 1}: ${secondaryLocation.address}${secondaryLocation.region ? ` · ${secondaryLocation.region}` : ''}${secondaryLocation.venue && secondaryLocation.venue !== record.venue ? ` · ${secondaryLocation.venue}` : ''}`;
-            cell.append(secondary);
-          });
-        } else {
-          cell.textContent = item.value;
-        }
+        if (index === 1) { cell.className = 'training-picker-training'; const title = document.createElement('strong'); title.textContent = value; const details = document.createElement('small'); details.textContent = `${record.region || 'Region not set'}${record.district ? ` · ${record.district}` : ''}`; cell.append(title, details); }
+        else cell.textContent = value;
         row.append(cell);
       });
-      row.addEventListener('click', event => { if (canEncode && !event.target.closest('input,button,a,label,select,textarea')) select(record.id); });
+      row.addEventListener('click', event => { if (event.target !== radio) select(record.id); });
       body.append(row);
     });
     byId('trainingPickerRange').textContent = rows.length ? `Showing ${offset + 1}–${offset + visible.length} of ${rows.length} trainings` : 'Showing 0 of 0 trainings';
@@ -197,22 +105,16 @@ document.addEventListener('DOMContentLoaded', () => {
     button('‹', page - 1, page === 1);
     for (let number = 1; number <= pageCount; number += 1) if (pageCount <= 5 || number === 1 || number === pageCount || Math.abs(number - page) <= 1) button(String(number), number, false, number === page);
     button('›', page + 1, page === pageCount);
-    body.closest('table').querySelectorAll('[data-sort]').forEach(header => {
-      const active = sort.key === header.dataset.sort;
-      header.setAttribute('aria-sort', active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none');
-      const icon = header.querySelector('i');
-      if (icon) icon.className = active ? `bi ${sort.direction === 'asc' ? 'bi-sort-up' : 'bi-sort-down'}` : 'bi bi-arrow-down-up';
-    });
   };
   const select = id => {
-    selectedId = id && selectedId === id ? '' : id;
+    selectedId = id;
     const record = selectedTraining();
     populateForm(record);
     render();
     window.dispatchEvent(new CustomEvent('tmis:training-selected', { detail: record }));
   };
   const refresh = () => {
-    trainings = availableTrainings(window.TmisStore.records('tmis-trainings'));
+    trainings = approvedTrainings(window.TmisStore.records('tmis-trainings'));
     hydrateFilters();
     const record = selectedTraining();
     if (selectedId && !record) {
@@ -227,15 +129,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   form.insertAdjacentHTML('afterbegin', '<input type="hidden" id="trainingId" name="trainingId">');
   Object.values(filters).forEach(select => select.addEventListener('change', () => { page = 1; render(); }));
-  body.closest('table').querySelectorAll('[data-sort]').forEach(header => {
-    const sortByHeader = () => {
-      sort = sort.key === header.dataset.sort ? {key: sort.key, direction: sort.direction === 'asc' ? 'desc' : 'asc'} : {key: header.dataset.sort, direction: 'asc'};
-      page = 1;
-      render();
-    };
-    header.addEventListener('click', sortByHeader);
-    header.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); sortByHeader(); } });
-  });
   byId('trainingPickerSearch').addEventListener('input', () => { page = 1; render(); });
   byId('trainingPickerPageSize').addEventListener('change', () => { page = 1; render(); });
   byId('refreshTrainingPicker').addEventListener('click', async event => {
@@ -251,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   window.addEventListener('tmis:data-updated', refresh);
-  trainings = availableTrainings(window.TmisStore.records('tmis-trainings'));
+  trainings = approvedTrainings(window.TmisStore.records('tmis-trainings'));
   hydrateFilters();
   const params = new URLSearchParams(location.search);
   const resultKey = location.pathname.includes('/pre-test') ? 'tmis-pre-test-encoded'
@@ -271,6 +164,6 @@ document.addEventListener('DOMContentLoaded', () => {
     populateForm({ id: String(saved.trainingId || ''), title: saved.trainingTitle, office: saved.trainingOrganization || '', location: saved.trainingLocation || '', venue: saved.trainingVenue || '', startDate: saved.trainingStartDate || '', endDate: saved.trainingEndDate || '' }, { useDate: !saved?.date });
   }
   render();
-  window.TMIS_TRAINING_PICKER = { select, refresh, selectedTraining };
   window.dispatchEvent(new CustomEvent('tmis:training-selected', { detail: selectedTraining() }));
+  window.TMIS_TRAINING_PICKER = { select, refresh, selectedTraining };
 });

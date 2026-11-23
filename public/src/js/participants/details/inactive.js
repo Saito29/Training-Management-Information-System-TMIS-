@@ -272,9 +272,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const farmerNumber = encodeURIComponent(r.farmerNumber || r.id);
     return `<tr>
       <td data-column="actions"><div class="table-row-actions">
-        ${window.TmisStore.can('participants.read') ? `<a class="btn table-action-button view-action" href="../id/view-farmer/${farmerNumber}" target="_blank" rel="noopener" title="View farmer profile" aria-label="View farmer profile"><i class="bi bi-eye-fill"></i></a>` : ''}
-        ${window.TmisStore.can('participants.edit') ? `<a class="btn table-action-button edit-action" href="../id/edit-farmer/${farmerNumber}" target="_blank" rel="noopener" title="Edit farmer profile" aria-label="Edit farmer profile"><i class="bi bi-pencil-fill"></i></a>` : ''}
-        ${window.TmisStore.can('participants.delete') ? `<button type="button" class="btn table-action-button delete-action" data-delete="${esc(r.id)}" title="Delete farmer profile" aria-label="Delete farmer profile"><i class="bi bi-trash-fill"></i></button>` : ''}
+        <a class="btn table-action-button view-action" href="../id/view-farmer/${farmerNumber}" target="_blank" rel="noopener" title="View farmer profile" aria-label="View farmer profile"><i class="bi bi-eye-fill"></i></a>
+        <a class="btn table-action-button edit-action" href="../id/edit-farmer/${farmerNumber}" target="_blank" rel="noopener" title="Edit farmer profile" aria-label="Edit farmer profile"><i class="bi bi-pencil-fill"></i></a>
+        <button type="button" class="btn table-action-button delete-action" data-delete="${esc(r.id)}" title="Delete farmer profile" aria-label="Delete farmer profile"><i class="bi bi-trash-fill"></i></button>
       </div></td>
       <td data-column="inactiveReason">${reasonBadge(r)}</td>
       <td data-column="id">${esc(r.farmerNumber || r.id)}</td>
@@ -485,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ['Year Covered', 'yearCovered'],
       ['Registration Date', 'registered'],
     ];
-    const rows = records.map((r) => Object.fromEntries(exportColumns.map(([label, key]) => [label, key === 'id' ? (r.farmerNumber || r.id) : r[key]])));
+    const rows = records.map((r) => Object.fromEntries(exportColumns.map(([label, key]) => [label, r[key]])));
     const sheet = XLSX.utils.json_to_sheet(rows, { header: exportColumns.map(([label]) => label) });
     sheet['!cols'] = exportColumns.map(([label]) => ({ wch: Math.max(14, label.length + 4) }));
     const book = XLSX.utils.book_new();
@@ -569,7 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const farmer = records.find((r) => r.id === button.dataset.delete);
     if (!farmer) return;
     pendingDeleteId = farmer.id;
-    $('#deleteFarmerId').textContent = farmer.farmerNumber || 'Not assigned';
+    $('#deleteFarmerId').textContent = farmer.id;
     $('#deleteFarmerName').textContent = [`${farmer.lastName},`, farmer.firstName, farmer.middleName, farmer.suffix]
       .filter(Boolean)
       .join(' ');

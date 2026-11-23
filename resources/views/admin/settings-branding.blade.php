@@ -7,7 +7,7 @@
         <span class="settings-count-badge">System Administrator only</span>
     </div>
     <article class="settings-card">
-        <form method="post" action="{{ route('system.branding.update') }}" enctype="multipart/form-data" data-settings-form>
+        <form id="systemBrandingForm" method="post" action="{{ route('system.branding.update') }}" enctype="multipart/form-data" data-branding-form>
             @csrf
             <div class="settings-card-body">
                 <div class="mb-4">
@@ -38,7 +38,7 @@
                 </div>
             </div>
             <footer class="settings-card-footer">
-                <span><i class="bi bi-shield-lock" aria-hidden="true"></i> Branding changes are recorded in the system audit history.</span>
+                <span data-branding-status role="status" aria-live="polite"><i class="bi bi-shield-lock" aria-hidden="true"></i> <span data-branding-status-text>Branding changes are recorded in the system audit history.</span></span>
                 <button class="btn btn-success" type="submit"><i class="bi bi-check2" aria-hidden="true"></i> Save branding</button>
             </footer>
         </form>

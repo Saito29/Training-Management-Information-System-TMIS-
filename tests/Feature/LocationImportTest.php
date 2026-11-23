@@ -23,6 +23,18 @@ class LocationImportTest extends TestCase
             'user_id' => $user->user_id,
             'password_hash' => $passwordHash,
         ]);
+        if ($role !== 1) {
+            $credentialId = DB::table('role_credentials')->where('role_id', $role)->where('is_active', true)->value('role_credential_id');
+            if ($credentialId === null) {
+                $credentialId = DB::table('role_credentials')->insertGetId([
+                    'role_id' => $role,
+                    'name' => 'Location import test profile',
+                    'created_at' => now(),
+                ], 'role_credential_id');
+            }
+            DB::table('users')->where('user_id', $user->user_id)->update(['role_credential_id' => $credentialId]);
+            $user->refresh();
+        }
         $this->actingAs($user)->withSession([
             'auth.verified_user_id' => $user->user_id,
             'auth.password_fingerprint' => hash('sha256', $passwordHash),

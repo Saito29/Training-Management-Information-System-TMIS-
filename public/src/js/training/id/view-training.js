@@ -86,11 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
   text('location', location);
   text('partner', training.partner_organization);
   text('target', target ? `${target} participants` : '');
-  const formattedBudget = Number.isFinite(budget)
+  text('budget', Number.isFinite(budget)
     ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(budget)
-    : '';
-  text('budget', formattedBudget);
-  text('budgetStat', formattedBudget, 'Not recorded');
+    : '');
   text('resources', resources.map(resource => resource.name).filter(Boolean).join(', '), 'No resource persons recorded');
   text('description', training.training_description || training.description, 'No training description has been recorded.');
   text('genderSummary', `${maleCount} male · ${femaleCount} female`, 'No participant demographics recorded');
@@ -220,9 +218,6 @@ document.addEventListener('DOMContentLoaded', () => {
       muted: css.getPropertyValue('--color-text-secondary').trim() || '#607080',
       border: css.getPropertyValue('--color-border').trim() || '#e0e0e0',
       surface: css.getPropertyValue('--color-surface').trim() || '#fff',
-      info: css.getPropertyValue('--color-info').trim() || '#1976d2',
-      success: css.getPropertyValue('--color-primary-dark').trim() || '#1b5e20',
-      chartLabel: document.documentElement.dataset.theme === 'dark' ? '#102318' : '#fff',
     };
   };
 
@@ -258,12 +253,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } : {
       chart: { type: 'bar', height: 275, fontFamily: 'Inter, sans-serif', toolbar: { show: false }, redrawOnParentResize: true },
       series: [{ name: 'Average score', data: exams.map(exam => exam.percentage) }],
-      colors: exams.map(exam => exam.type === 'pretest' ? colors.info : colors.success),
-      plotOptions: { bar: { distributed: true, columnWidth: '54%', borderRadius: 4, dataLabels: { position: 'center' } } },
-      dataLabels: { enabled: true, offsetY: 0, formatter: (value, options) => {
-        const score = exams[options.dataPointIndex]?.percentage;
-        return Number.isFinite(score) ? `${Math.round(score)}%` : '';
-      }, style: { colors: [colors.chartLabel], fontSize: '13px', fontWeight: 700 } },
+      colors: exams.map(exam => exam.type === 'pretest' ? '#68a7f8' : '#42c77d'),
+      plotOptions: { bar: { distributed: true, columnWidth: '54%', borderRadius: 4, dataLabels: { position: 'top' } } },
+      dataLabels: { enabled: true, offsetY: -17, formatter: chartPercent,
+        style: { colors: [colors.text], fontSize: '11px', fontWeight: 600 } },
       xaxis: { categories: exams.map(examLabel), labels: { style: { colors: exams.map(() => colors.muted), fontSize: '11px' } },
         axisBorder: { color: colors.border }, axisTicks: { show: false } },
       yaxis: { min: 0, max: 100, tickAmount: 5, labels: { formatter: chartPercent,
@@ -290,8 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
         plotOptions: { pie: { donut: { labels: { total: { color: colors.muted } } } } },
         tooltip: { theme: colors.dark ? 'dark' : 'light' },
       } : {
-        colors: exams.map(exam => exam.type === 'pretest' ? colors.info : colors.success),
-        dataLabels: { style: { colors: [colors.chartLabel] } },
+        dataLabels: { style: { colors: [colors.text] } },
         xaxis: { labels: { style: { colors: exams.map(() => colors.muted) } }, axisBorder: { color: colors.border } },
         yaxis: { labels: { style: { colors: [colors.muted] } } },
         grid: { borderColor: colors.border },

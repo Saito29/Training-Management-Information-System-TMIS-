@@ -20,6 +20,17 @@ class MaintenanceAccessTest extends TestCase
         DB::table('user_auth')->insert(['user_id' => $user->user_id, 'password_hash' => Hash::make('Valid-password-123!')]);
         if ($role === 1) {
             DB::table('system_super_admins')->insert(['user_id' => $user->user_id, 'created_at' => now(), 'updated_at' => now()]);
+        } else {
+            $credentialId = DB::table('role_credentials')->where('role_id', $role)->where('is_active', true)->value('role_credential_id');
+            if ($credentialId === null) {
+                $credentialId = DB::table('role_credentials')->insertGetId([
+                    'role_id' => $role,
+                    'name' => 'Maintenance access test profile',
+                    'created_at' => now(),
+                ], 'role_credential_id');
+            }
+            DB::table('users')->where('user_id', $user->user_id)->update(['role_credential_id' => $credentialId]);
+            $user->refresh();
         }
 
         return $user;

@@ -837,10 +837,6 @@
 .table-row-actions { min-width: 160px; }
 .reject-action { color: #e53935; background: rgba(229,57,53,.10); }
 .reject-action:hover, .reject-action:focus-visible { color: #ffffff; background: #e53935; }
-.restore-action { color: #2e7d32; background: rgba(46,125,50,.10); }
-.restore-action:hover, .restore-action:focus-visible { color: #ffffff; background: #2e7d32; }
-.delete-action { color: #b3261e; background: rgba(179,38,30,.10); }
-.delete-action:hover, .delete-action:focus-visible { color: #ffffff; background: #b3261e; }
 .for-review-table-header { padding-right: 170px; }
 .table-columns-button { color: #8e24aa; background: rgba(142,36,170,.10); border-color: rgba(142,36,170,.35); }
 .table-columns-button:hover, .table-columns-button:focus, .table-columns-button.show { color: #ffffff; background: #8e24aa; }
@@ -868,25 +864,3 @@
 /* Edit link inside the submit-for-approval modal. */
 .review-modal-edit { display: inline-flex; align-items: center; color: #8e24aa; background: rgba(142,36,170,.10); border: 1px solid rgba(142,36,170,.35); text-decoration: none; }
 .review-modal-edit:hover, .review-modal-edit:focus-visible { color: #ffffff; background: #8e24aa; border-color: #8e24aa; }
-
-.requirements-intro{margin:0 0 10px;color:#607d8b;font-size:12px;line-height:1.45}
-.requirements-panel .workflow-requirements-list{display:grid;gap:7px;margin:0;padding:0;list-style:none}
-.requirements-panel .workflow-requirements-list li{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:9px;margin:0;padding:9px 10px;border:1px solid #e0e0e0;border-radius:8px;background:#fff}
-.workflow-requirements-list li>i{font-size:15px;color:#2e7d32}
-.workflow-requirements-list li.is-missing>i{color:#c47b12}
-.workflow-requirement-copy{display:grid;min-width:0;gap:2px}
-.workflow-requirement-copy strong{color:#263238;font-size:12px;font-weight:650}
-.workflow-requirement-copy small{color:#607d8b;font-size:11px;line-height:1.4}
-.requirements-panel .workflow-requirements-list li>span{margin:0;padding:3px 8px;color:#1b5e20;background:#e8f5e9;border-radius:999px;font-size:10px;font-weight:700;white-space:nowrap}
-.requirements-panel .workflow-requirements-list li.is-missing>span{color:#8a5700;background:#fff3d9}
-.workflow-selected-trainings{display:grid;gap:6px;margin:0;padding:0;list-style:none}
-.workflow-selected-trainings li{display:grid;gap:3px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;background:#f7f9f7}
-.workflow-selected-trainings strong{font-size:12px}
-.workflow-selected-trainings span{color:#607d8b;font-size:11px}
-.review-modal-footer .forward-confirm-button{min-height:36px;padding:7px 12px;font-size:12px;line-height:1.3;white-space:normal}
-.review-modal-footer>div{align-items:center;flex-wrap:wrap}
-[data-theme='dark'] .requirements-intro,[data-theme='dark'] .workflow-requirement-copy small,[data-theme='dark'] .workflow-selected-trainings span{color:#b0bec5}
-[data-theme='dark'] .requirements-panel .workflow-requirements-list li,[data-theme='dark'] .workflow-selected-trainings li{border-color:#455a64;background:#263238}
-[data-theme='dark'] .workflow-requirement-copy strong,[data-theme='dark'] .workflow-selected-trainings strong{color:#edf3f5}
-[data-theme='dark'] .requirements-panel .workflow-requirements-list li.is-missing>span{color:#f4d18b;background:#453718}
-@media(max-width:575.98px){.review-modal-footer>div{width:100%;justify-content:flex-end}.review-modal-footer .forward-confirm-button{max-width:190px}}

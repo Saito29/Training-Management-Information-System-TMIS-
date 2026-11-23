@@ -126,7 +126,12 @@ class OperationsController
         $districts = (clone $scopedParticipants)->whereNotNull('district')->where('district', '!=', '')->distinct()->orderBy('district')->pluck('district');
         $municipalities = (clone $scopedParticipants)->whereNotNull('municipality')->where('municipality', '!=', '')->distinct()->orderBy('municipality')->pluck('municipality');
         $barangays = (clone $scopedParticipants)->whereNotNull('barangay')->where('barangay', '!=', '')->distinct()->orderBy('barangay')->pluck('barangay');
-        $years = (clone $scopedParticipants)->whereNotNull('created_at')->selectRaw('DISTINCT EXTRACT(YEAR FROM created_at)::integer AS year')->orderByDesc('year')->pluck('year');
+        $yearExpression = match (DB::connection()->getDriverName()) {
+            'sqlite' => "CAST(strftime('%Y', created_at) AS INTEGER)",
+            'mysql', 'mariadb' => 'YEAR(created_at)',
+            default => 'EXTRACT(YEAR FROM created_at)::integer',
+        };
+        $years = (clone $scopedParticipants)->whereNotNull('created_at')->selectRaw('DISTINCT '.$yearExpression.' AS year')->orderByDesc('year')->pluck('year');
 
         return view('admin.participants.details.trash', [
             'participants' => $participants,

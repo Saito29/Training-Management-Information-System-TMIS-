@@ -40,7 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return {
       ...record,
       region: trainingBeneficiary?.region || primaryBeneficiary?.region || record.region || '',
-      trainingOffice: trainingBeneficiary?.office || record.office || '',
       name: record.name || [record.firstName, record.middleName, record.lastName].filter(Boolean).join(' '),
     };
   });
@@ -75,7 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   const escapeHtml = value => String(value).replace(/[&<>"']/g, char =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
-  const farmerProfileUrl = record => `/app/admin/participants/id/view-farmer/${encodeURIComponent(record.farmerNumber || record.id)}`;
 
   function loadRoster() {
     const roster = window.TMIS_PAGE
@@ -142,32 +140,15 @@ document.addEventListener('DOMContentLoaded', () => {
       match(record, $('#editAvailableSearch').value));
   }
   function rowCells(record) {
-    const id = record.farmerNumber || record.id;
-    const date = record.birthDate ? new Date(`${String(record.birthDate).slice(0, 10)}T00:00:00`) : null;
-    const memberDetail = [record.sex, date && !Number.isNaN(date.getTime()) ? new Intl.DateTimeFormat('en-PH', {dateStyle: 'medium', timeZone: 'Asia/Manila'}).format(date) : ''].filter(Boolean).join(' · ');
-    const location = [record.municipality, record.province].filter(Boolean).join(', ');
-    const locationDetail = [record.region, record.barangay].filter(Boolean).join(' · ');
-    return {
-      id: `<td><a class="edit-participant-farmer-link" href="${farmerProfileUrl(record)}" aria-label="Open farmer profile for ${escapeHtml(id)}">${escapeHtml(id)}</a></td>`,
-      year: `<td><span class="edit-participant-year">${escapeHtml(record.yearCovered || '—')}</span></td>`,
-      member: `<td><div class="edit-participant-member"><strong>${escapeHtml(record.name)}</strong>${memberDetail ? `<small>${escapeHtml(memberDetail)}</small>` : ''}</div></td>`,
-      location: `<td><div class="edit-participant-location"><span>${escapeHtml(location || '—')}</span>${locationDetail ? `<small>${escapeHtml(locationDetail)}</small>` : ''}</div></td>`,
-      office: `<td><span class="edit-participant-office">${escapeHtml(record.trainingOffice || '—')}</span></td>`,
-    };
+    return `<td>${escapeHtml(record.farmerNumber || record.id)}</td><td><strong>${escapeHtml(record.name)}</strong></td><td>${escapeHtml(record.region || '—')}</td><td>${escapeHtml(record.province || '—')}</td><td>${escapeHtml(record.municipality || '—')}</td><td>${escapeHtml(record.barangay || '—')}</td>`;
   }
   function render() {
     const current = currentFiltered();
     const available = availableFiltered();
     [...selectedIds].forEach(id => { if (currentIds.has(id)) selectedIds.delete(id); });
-    $('#editCurrentRows').innerHTML = pageRows(current, 'current').map(record => {
-      const cells = rowCells(record);
-      const remove = `<button class="edit-participant-remove-action" type="button" data-remove-participant="${escapeHtml(record.id)}" aria-label="Remove ${escapeHtml(record.name)} from this training" title="Remove from training"><i class="bi bi-person-dash-fill" aria-hidden="true"></i></button>`;
-      return `<tr><td>${remove}</td>${cells.id}${cells.year}${cells.member}${cells.location}${cells.office}</tr>`;
-    }).join('');
-    $('#editAvailableRows').innerHTML = pageRows(available, 'available').map(record => {
-      const cells = rowCells(record);
-      return `<tr data-selectable-participant="${escapeHtml(record.id)}"><td><input type="checkbox" data-participant-id="${escapeHtml(record.id)}" aria-label="Select ${escapeHtml(record.name)}" ${selectedIds.has(record.id) ? 'checked' : ''}></td>${cells.id}${cells.year}${cells.member}${cells.location}${cells.office}</tr>`;
-    }).join('');
+    $('#editCurrentRows').innerHTML = pageRows(current, 'current').map(record => `<tr>${rowCells(record)}<td><button class="edit-participants-remove" type="button" data-remove-participant="${escapeHtml(record.id)}" aria-label="Remove ${escapeHtml(record.name)} from this training"><i class="bi bi-person-dash" aria-hidden="true"></i> Remove</button></td></tr>`).join('');
+    $('#editAvailableRows').innerHTML = pageRows(available, 'available').map(record =>
+      `<tr data-selectable-participant="${escapeHtml(record.id)}"><td><input type="checkbox" data-participant-id="${escapeHtml(record.id)}" aria-label="Select ${escapeHtml(record.name)}" ${selectedIds.has(record.id) ? 'checked' : ''}></td>${rowCells(record)}</tr>`).join('');
     $('#editCurrentEmpty').hidden = current.length > 0;
     $('#editAvailableEmpty').hidden = available.length > 0;
     $('#editCurrentCount').textContent = `${current.length} matching of ${currentIds.size} current participants`;
@@ -231,46 +212,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     render();
   });
-  const removeModal = document.getElementById('removeTrainingParticipantModal');
-  const removeModalInstance = bootstrap.Modal.getOrCreateInstance(removeModal);
-  let pendingRemoval = null;
-  $('#editCurrentRows').addEventListener('click', event => {
+  $('#editCurrentRows').addEventListener('click', async event => {
     const button = event.target.closest('[data-remove-participant]');
     if (!button) return;
     const record = directory.find(item => item.id === button.dataset.removeParticipant);
     if (!record || !currentIds.has(record.id)) return;
-    pendingRemoval = record;
-    document.getElementById('removeTrainingParticipantId').textContent = record.farmerNumber || record.id;
-    document.getElementById('removeTrainingParticipantName').textContent = record.name;
-    document.getElementById('removeTrainingParticipantCourse').textContent = training?.title || training?.name || 'Selected training';
-    document.getElementById('removeTrainingParticipantError').hidden = true;
-    removeModalInstance.show();
-  });
-  document.getElementById('confirmRemoveTrainingParticipant').addEventListener('click', async event => {
-    const button = event.currentTarget;
-    if (!pendingRemoval || !currentIds.has(pendingRemoval.id)) return;
-    const record = pendingRemoval;
-    button.disabled = true;
-    const originalText = button.innerHTML;
-    button.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Removing…';
+    if (!window.confirm(`Remove ${record.name} (${record.farmerNumber || record.id}) from this training?`)) return;
     currentIds.delete(record.id);
     try {
       await window.TmisStore.setItem(storageKey, JSON.stringify([...currentIds]));
     } catch (error) {
       currentIds.add(record.id);
-      const errorBox = document.getElementById('removeTrainingParticipantError');
-      errorBox.textContent = error.message || 'Unable to save the training roster.';
-      errorBox.hidden = false;
-      window.TmisToast?.show(error.message || 'The participant could not be removed from this training.', 'error');
-    } finally {
-      button.disabled = false;
-      button.innerHTML = originalText;
+      feedback = error.message || 'Unable to save the training roster.';
+      render();
+      return;
     }
-    if (currentIds.has(record.id)) return;
     feedback = `${record.name} removed from this training.`;
-    window.TmisToast?.show('Participant removed from this training.', 'success');
-    pendingRemoval = null;
-    removeModalInstance.hide();
     render();
   });
   $('#editAddSelected').addEventListener('click', async () => {
@@ -288,6 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
     selectedIds.clear();
     feedback = `${count} participant${count === 1 ? '' : 's'} added to this training.`;
     $('#editCurrentSearch').value = '';
+    locationKeys.forEach(key => { $(`#editCurrent${key[0].toUpperCase()}${key.slice(1)}`).value = ''; });
     showTab('current');
     render();
   });
@@ -325,23 +283,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
-      const headers = ['Farmer ID', 'Last Name', 'First Name', 'Middle Name', 'Year', 'Sex', 'Date of Birth', 'Region', 'Province', 'Municipality / City', 'Barangay', 'Office'];
+      const headers = ['Farmer ID', 'Full Name', 'Region', 'Province', 'Municipality / City', 'Barangay'];
       const rows = records.map(record => [
         record.farmerNumber || record.id,
-        record.lastName || '',
-        record.firstName || '',
-        record.middleName || '',
-        record.yearCovered || '',
-        record.sex || '',
-        record.birthDate || '',
+        record.name,
         record.region || '',
         record.province || '',
         record.municipality || '',
         record.barangay || '',
-        record.trainingOffice || record.office || '',
       ]);
       const sheet = window.XLSX.utils.aoa_to_sheet([headers, ...rows]);
-      sheet['!cols'] = [16, 22, 20, 22, 12, 12, 16, 20, 20, 24, 24, 24].map(wch => ({ wch }));
+      sheet['!cols'] = [16, 28, 20, 20, 24, 22].map(wch => ({ wch }));
       const workbook = window.XLSX.utils.book_new();
       window.XLSX.utils.book_append_sheet(workbook, sheet, sheetName);
       const trainingId = String(training?.id || 'sample').replace(/[^a-zA-Z0-9_-]/g, '-');
@@ -357,6 +309,10 @@ document.addEventListener('DOMContentLoaded', () => {
   panel.querySelectorAll('[data-export-participants]').forEach(button => {
     button.addEventListener('click', () => exportParticipants(button.dataset.exportParticipants));
   });
+  const actionHeading = document.createElement('th');
+  actionHeading.scope = 'col';
+  actionHeading.textContent = 'Action';
+  $('#editCurrentPanel thead tr').append(actionHeading);
   installTableControls('current');
   installTableControls('available');
   $('#editSelectAll').setAttribute('aria-label', 'Select all eligible farmers matching the search across all pages');

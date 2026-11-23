@@ -8,6 +8,7 @@ use App\Http\Requests\Authentication\LoginRequest;
 use App\Models\User;
 use App\Support\DeviceSessions;
 use App\Support\SystemMaintenance;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,15 +22,23 @@ use Illuminate\Validation\ValidationException;
 
 class LoginController
 {
-    public function store(LoginRequest $request, LoginChallenge $challenge, SystemMaintenance $maintenance): RedirectResponse
+    public function store(LoginRequest $request, LoginChallenge $challenge, SystemMaintenance $maintenance): RedirectResponse|JsonResponse
     {
         $challenge->forget($request);
         $attemptKey = $this->failedAttemptKey($request);
 
         if (RateLimiter::tooManyAttempts($attemptKey, 5)) {
+            $message = 'Too many failed sign-in attempts. Please wait 10 minutes before trying again.';
             $request->session()->flash('toast_type', 'warning');
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $message,
+                    'errors' => ['authentication' => [$message]],
+                ], 429, ['Retry-After' => (string) RateLimiter::availableIn($attemptKey)]);
+            }
+
             throw ValidationException::withMessages([
-                'authentication' => 'Too many failed sign-in attempts. Please wait 10 minutes before trying again.',
+                'authentication' => $message,
             ]);
         }
 

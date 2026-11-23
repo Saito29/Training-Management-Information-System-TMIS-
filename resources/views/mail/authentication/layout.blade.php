@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light">
-    <title>@yield('title') | TMIS</title>
+    <title>@yield('title') | {{ $brandName }}</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f8faf8;color:#1d3029;font-family:'Segoe UI',Arial,sans-serif;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">@yield('preheader')</div>
@@ -17,11 +17,11 @@
                         <td bgcolor="#123e32" style="padding:28px 28px 24px;border-radius:20px 20px 0 0;">
                             <table role="presentation" cellpadding="0" cellspacing="0">
                                 <tr>
-                                    <td width="60" valign="middle">
-                                        <img src="{{ $message->embed(public_path('assets/logo/DA Logo/DA logo_120519.png')) }}" alt="Department of Agriculture" width="48" height="48" style="display:block;border:0;">
+                                    <td width="{{ $brandLogoWidth + 12 }}" valign="middle">
+                                        <img src="{{ $message->embed($brandLogoPath) }}" alt="{{ $brandName }} logo" width="{{ $brandLogoWidth }}" height="{{ $brandLogoHeight }}" style="display:block;width:{{ $brandLogoWidth }}px;height:{{ $brandLogoHeight }}px;max-width:160px;max-height:56px;object-fit:contain;border:0;">
                                     </td>
                                     <td valign="middle">
-                                        <p style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:3px;">TMIS</p>
+                                        <p style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:3px;">{{ $brandName }}</p>
                                         <p style="margin:5px 0 0;color:#d5e8a5;font-size:10px;line-height:16px;letter-spacing:1.5px;">TRAINING MANAGEMENT INFORMATION SYSTEM</p>
                                     </td>
                                 </tr>
@@ -45,7 +45,7 @@
                     </tr>
                 </table>
                 <!--[if mso]></td></tr></table><![endif]-->
-                <p style="margin:20px 0 0;color:#68756e;font-size:11px;line-height:18px;text-align:center;">TMIS &middot; Account security<br>This is an automated message. Please do not reply.</p>
+                <p style="margin:20px 0 0;color:#68756e;font-size:11px;line-height:18px;text-align:center;">{{ $brandName }} &middot; Account security<br>This is an automated message. Please do not reply.</p>
             </td>
         </tr>
     </table>

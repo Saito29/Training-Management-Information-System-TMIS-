@@ -1,5 +1,5 @@
-@if($messageTemplate !== null)
-{{ $messageTemplate }}
+@if($customMessage !== null)
+{{ $customMessage }}
 @elseif($isRevert)
 This training assigned to your office was returned for changes.
 @elseif($isSubmitted)

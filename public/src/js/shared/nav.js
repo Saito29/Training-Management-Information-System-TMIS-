@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const notificationDetailModal = document.getElementById('notificationDetailModal');
-  if (profileScript) import(new URL('../notification/header.js?v=notification-read-state-1', profileScript.src).href);
+  if (profileScript) import(new URL('../notification/header.js?v=notification-bell-ready-1', profileScript.src).href);
   let notificationFullContent = '';
   let notificationMetadata = '';
   const removeRepeatedNotificationTitle = (content, title) => {
@@ -246,8 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const hideCollapse = (element) => {
-    if (!element || typeof bootstrap === 'undefined') return;
-    if (!element.classList.contains('show')) return;
+    if (!element?.classList.contains('show') || typeof bootstrap === 'undefined') return;
     bootstrap.Collapse.getOrCreateInstance(element, { toggle: false }).hide();
   };
   const bindCollapseGroup = (groups) => {
@@ -263,10 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
           hideCollapse(document.getElementById(otherId));
           otherNestedIds.forEach((id) => hideCollapse(document.getElementById(id)));
         });
-      });
-      main?.addEventListener('hide.bs.collapse', (event) => {
-        if (event.target !== main) return;
-        nestedIds.forEach((id) => hideCollapse(document.getElementById(id)));
       });
       main?.addEventListener('shown.bs.collapse', (event) => {
         if (event.target === main && activeMainId !== mainId) hideCollapse(main);
@@ -375,9 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
     offcanvas.addEventListener('hidden.bs.offcanvas', () => {
-      Object.entries(mobileMainCollapses).forEach(([mainId, nestedIds]) => {
-        [mainId, ...nestedIds].forEach((id) => hideCollapse(document.getElementById(id)));
-      });
+      Object.values(mobileMainCollapses).flat().forEach((id) => hideCollapse(document.getElementById(id)));
     });
   });
 

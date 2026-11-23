@@ -15,10 +15,10 @@ document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{
     if(summary[1]){summary[1].querySelector('span').textContent=data.previousYear+' allocated';summary[1].querySelector('strong').textContent=money(data.funds.previous);}
     if(summary[2]){summary[2].querySelector('span').textContent='Areas covered';summary[2].querySelector('strong').textContent=rows.length;}
     const period=card.querySelector('.card-chart-period');if(period)period.textContent=data.currentYear+' vs '+data.previousYear;
-    const footer=card.querySelector('.card-footer-context');if(footer)footer.textContent='Training budgets for every status except inactive, comparing '+data.currentYear+' with '+data.previousYear+'.';
+    const footer=card.querySelector('.card-footer-context');if(footer)footer.textContent='Approved training budgets for '+data.currentYear+' compared with '+data.previousYear+'.';
     const helper=card.querySelector('.card-chart-helper span');if(helper)helper.textContent='Recorded training budgets by year. Hover for amounts.';
   }
   const age=document.getElementById('beneficiaryAgeSexChart');if(age){const note=document.createElement('p');note.className='dashboard-data-note';note.textContent='Age as of '+data.humanDate+'. Youth: 15-30 / Adults: 31-59 / Seniors: 60+.'+(data.excludedAgeCount?' '+data.excludedAgeCount+' records outside these bands or without a valid birthdate/sex are excluded.':'');age.after(note);}
   const groups=document.getElementById('beneficiaryGroupChart');if(groups){const description=groups.closest('.card').querySelector('.card-beneficiary-description');if(description)description.textContent='PWD, 4Ps, IP, TUPAD, and solo-parent beneficiaries. Membership can overlap.';}
-  if(!data.upcoming.length){const slot=document.querySelector('.card-upcoming-training .card-slot');if(slot)slot.hidden=true;const date=document.querySelector('.card-upcoming-training .card-range-date');if(date)date.textContent='Training dates that have ended are hidden';}
+  if(!data.upcoming.length){const slot=document.querySelector('.card-upcoming-training .card-slot');if(slot)slot.hidden=true;const date=document.querySelector('.card-upcoming-training .card-range-date');if(date)date.textContent='No upcoming date';}
 },0));

@@ -8,6 +8,7 @@ use App\Support\AccountUpdateNotifier;
 use App\Support\AttachmentTypeCatalog;
 use App\Support\ModuleAccess;
 use App\Support\OriginalInterfaceData;
+use App\Support\SystemBranding;
 use App\Support\SystemMaintenance;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -967,19 +968,26 @@ class SystemSettingsController
         abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
         $data = $request->validate([
             'system_name' => ['required', 'string', 'max:120'],
-            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:20480', 'dimensions:max_width=4000,max_height=2000'],
-            'favicon' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:20480', 'dimensions:max_width=512,max_height=512'],
-            'dashboard_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:20480', 'dimensions:max_width=6000,max_height=4000'],
+            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:20480', 'dimensions:max_width=4000,max_height=2000'],
+            'favicon' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:20480', 'dimensions:max_width=512,max_height=512'],
+            'dashboard_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:20480', 'dimensions:max_width=6000,max_height=4000'],
         ]);
         $data['system_name'] = trim($data['system_name']);
         $newPaths = [];
-        foreach (['logo', 'favicon', 'dashboard_image'] as $field) {
-            if ($request->hasFile($field)) {
-                $newPaths[$field.'_path'] = $request->file($field)->store('system-branding', 'local');
-            }
-        }
-
         try {
+            foreach (['logo', 'favicon', 'dashboard_image'] as $field) {
+                if (! $request->hasFile($field)) {
+                    continue;
+                }
+
+                $path = $request->file($field)->store('system-branding', 'local');
+                if (! is_string($path) || $path === '') {
+                    throw new \RuntimeException('An uploaded branding image could not be stored.');
+                }
+
+                $newPaths[$field.'_path'] = $path;
+            }
+
             $oldPaths = DB::transaction(function () use ($request, $data, $newPaths): array {
                 $before = DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
                 $changes = ['system_name' => $data['system_name'], 'updated_at' => now()] + $newPaths;
@@ -1000,9 +1008,7 @@ class SystemSettingsController
                 ]);
             });
         } catch (\Throwable $error) {
-            foreach ($newPaths as $path) {
-                Storage::disk('local')->delete($path);
-            }
+            Storage::disk('local')->delete(array_values($newPaths));
             throw $error;
         }
 
@@ -1013,7 +1019,10 @@ class SystemSettingsController
         }
 
         return $request->expectsJson()
-            ? response()->json(['message' => 'System branding saved.'])
+            ? response()->json([
+                'message' => 'Branding settings saved and applied.',
+                'branding' => app(SystemBranding::class)->forDisplay(),
+            ])
             : back()->with('operation_message', 'System branding saved.');
     }
 

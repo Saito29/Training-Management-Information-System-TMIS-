@@ -1,5 +1,5 @@
-@if($messageTemplate !== null)
-<p>{!! nl2br(e($messageTemplate)) !!}</p>
+@if($customMessage !== null)
+<p>{!! nl2br(e($customMessage)) !!}</p>
 @elseif($isRevert)
 <p>A training assigned to your office has been returned for changes.</p>
 @elseif($isSubmitted)

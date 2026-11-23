@@ -24,6 +24,58 @@ document.addEventListener('DOMContentLoaded', function () {
   new MutationObserver(()=>{const nextTheme=chartTheme().dark;if(nextTheme===appliedChartTheme)return;appliedChartTheme=nextTheme;for(const{chart,options}of chartInstances){const next=themeOptions(options);if(options.plotOptions?.pie)next.plotOptions={pie:{donut:{labels:{name:{color:chartTheme().text},value:{color:chartTheme().text},total:{color:chartTheme().text}}}}};chart.updateOptions(next,false,false);}}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','data-bs-theme']});
 
   // ============================================================
+  // MOBILE NAVIGATION CONFIGURATION
+  // ============================================================
+  const mobileMainCollapses = {
+    participantMobile: [
+      'createParticipantMobile',
+      'updateParticipantMobile',
+      'detailsParticipantMobile',
+    ],
+    trainingMobile: [
+      'createTrainingMobile',
+      'updateTrainingMobile',
+      'detailsTrainingMobile',
+    ],
+    evaluationMobile: [
+      'createEvaluationMobile',
+      'encodeEvaluationMobile',
+      'detailsEvaluationMobile',
+    ],
+    administrationMobile: [
+      'createAdministrationMobile',
+      'updateAdministrationMobile',
+      'detailsAdministrationMobile',
+    ],
+  };
+
+  // ============================================================
+  // DESKTOP HEADER NAVIGATION CONFIGURATION
+  // ============================================================
+  const headerMainCollapses = {
+    participantHeaderCollapse: [
+      'createParticipantHeaderCollapse',
+      'updateParticipantHeaderCollapse',
+      'detailsParticipantHeaderCollapse',
+    ],
+    trainingHeaderCollapse: [
+      'createTrainingHeaderCollapse',
+      'updateTrainingHeaderCollapse',
+      'detailsTrainingHeaderCollapse',
+    ],
+    evaluationHeaderCollapse: [
+      'createEvaluationHeaderCollapse',
+      'encodeEvaluationHeaderCollapse',
+      'detailsEvaluationHeaderCollapse',
+    ],
+    administrationHeaderCollapse: [
+      'createAdministrationHeaderCollapse',
+      'updateAdministrationHeaderCollapse',
+      'detailsAdministrationHeaderCollapse',
+    ],
+  };
+
+  // ============================================================
   // NOTIFICATION DROPDOWN AND DETAIL MODAL
   // Each dropdown item supplies its own content through data attributes.
   // ============================================================
@@ -94,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function () {
     budget: {
       title: 'Allocated Budget by Province and District',
       exportName: 'Allocated-Budget-by-Province-and-District',
-      description: 'Training funds for every status except inactive, grouped by province and district.',
+      description: 'Total training funds allocated to each district, grouped within its province.',
       icon: 'bi-cash-coin',
       total: '₱950,000 allocated',
       headers: ['Province', 'District', 'Allocated Budget', 'Released', 'Balance', 'Activities', 'Utilization'],
@@ -227,7 +279,7 @@ document.addEventListener('DOMContentLoaded', function () {
     budget: {
       title: 'Allocated Budget by Province and District',
       exportName: 'Allocated-Budget-by-Province-and-District',
-      description: 'Training funds for every status except inactive, grouped by province and district.',
+      description: 'Total training funds allocated to each district, grouped within its province.',
       icon: 'bi-cash-coin',
       total: '₱950,000 allocated',
       headers: ['Province', 'District', 'Allocated Budget', 'Released', 'Balance', 'Activities', 'Utilization'],
@@ -1483,6 +1535,116 @@ document.addEventListener('DOMContentLoaded', function () {
 
     groupChart.render();
   }
+
+  // ============================================================
+  // SHARED NAVIGATION COLLAPSE HELPER
+  // ============================================================
+  // Closes nested menu items when another menu is opened.
+  function closeAllNestedCollapses(nestedIds) {
+    nestedIds.forEach((id) => {
+      const element = document.getElementById(id);
+      if (element && element.classList.contains('show')) {
+        const bsCollapse = new bootstrap.Collapse(element, {
+          toggle: false,
+        });
+        bsCollapse.hide();
+      }
+    });
+  }
+
+  // ============================================================
+  // MOBILE NAVIGATION EVENTS
+  // ============================================================
+  Object.entries(mobileMainCollapses).forEach(([mainId, nestedIds]) => {
+    const mainElement = document.getElementById(mainId);
+    if (mainElement) {
+      mainElement.addEventListener('show.bs.collapse', function () {
+        // Close all other main collapses and their nested items
+        Object.entries(mobileMainCollapses).forEach(
+          ([otherId, otherNestedIds]) => {
+            if (otherId !== mainId) {
+              const otherElement = document.getElementById(otherId);
+              if (otherElement && otherElement.classList.contains('show')) {
+                const bsCollapse = new bootstrap.Collapse(otherElement, {
+                  toggle: false,
+                });
+                bsCollapse.hide();
+              }
+              closeAllNestedCollapses(otherNestedIds);
+            }
+          }
+        );
+      });
+    }
+
+    // Close sibling mobile submenu items when one submenu opens.
+    nestedIds.forEach((nestedId) => {
+      const nestedElement = document.getElementById(nestedId);
+      if (nestedElement) {
+        nestedElement.addEventListener('show.bs.collapse', function () {
+          // Close all sibling nested collapses
+          nestedIds.forEach((otherId) => {
+            if (otherId !== nestedId) {
+              const otherElement = document.getElementById(otherId);
+              if (otherElement && otherElement.classList.contains('show')) {
+                const bsCollapse = new bootstrap.Collapse(otherElement, {
+                  toggle: false,
+                });
+                bsCollapse.hide();
+              }
+            }
+          });
+        });
+      }
+    });
+  });
+
+  // ============================================================
+  // DESKTOP HEADER NAVIGATION EVENTS
+  // ============================================================
+  Object.entries(headerMainCollapses).forEach(([mainId, nestedIds]) => {
+    const mainElement = document.getElementById(mainId);
+    if (mainElement) {
+      mainElement.addEventListener('show.bs.collapse', function () {
+        // Close all other main collapses and their nested items
+        Object.entries(headerMainCollapses).forEach(
+          ([otherId, otherNestedIds]) => {
+            if (otherId !== mainId) {
+              const otherElement = document.getElementById(otherId);
+              if (otherElement && otherElement.classList.contains('show')) {
+                const bsCollapse = new bootstrap.Collapse(otherElement, {
+                  toggle: false,
+                });
+                bsCollapse.hide();
+              }
+              closeAllNestedCollapses(otherNestedIds);
+            }
+          }
+        );
+      });
+    }
+
+    // Close sibling header submenu items when one submenu opens.
+    nestedIds.forEach((nestedId) => {
+      const nestedElement = document.getElementById(nestedId);
+      if (nestedElement) {
+        nestedElement.addEventListener('show.bs.collapse', function () {
+          // Close all sibling nested collapses
+          nestedIds.forEach((otherId) => {
+            if (otherId !== nestedId) {
+              const otherElement = document.getElementById(otherId);
+              if (otherElement && otherElement.classList.contains('show')) {
+                const bsCollapse = new bootstrap.Collapse(otherElement, {
+                  toggle: false,
+                });
+                bsCollapse.hide();
+              }
+            }
+          });
+        });
+      }
+    });
+  });
 
   // ======================================================
   // Tooltip for information in card

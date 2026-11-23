@@ -2,6 +2,7 @@
 
 namespace App\Mail\Authentication;
 
+use App\Support\SystemBranding;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
@@ -33,11 +34,17 @@ class LoginVerificationCode extends Mailable
      */
     public function content(): Content
     {
+        $branding = app(SystemBranding::class)->forEmail();
+
         return new Content(
             view: 'mail.authentication.login-code',
             text: 'mail.authentication.login-code-text',
             with: [
                 'forgotPasswordUrl' => rtrim(config('app.url'), '/').route('password.request', [], false),
+                'brandName' => $branding['name'],
+                'brandLogoPath' => $branding['logoPath'],
+                'brandLogoWidth' => $branding['logoWidth'],
+                'brandLogoHeight' => $branding['logoHeight'],
             ],
         );
     }

@@ -40,19 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }).filter(r => r.id && r.name);
     return window.TMIS_PAGE ? stored : stored.length ? stored : sampleFarmers;
   };
-  const resourcePersons = read('tmis-resource-persons').filter(r => r?.id && String(r.status || 'Active').toLowerCase() === 'active').map(r => {
-    const name = [r.first_name, r.middle_name, r.last_name, r.suffix].filter(Boolean).join(' ').trim() || String(r.fullName || '');
-    const location = [r.municipality, r.province, r.region].filter(Boolean).join(', ');
-    return {
-      id: String(r.id),
-      name,
-      office: String(r.office || r.organization_name || ''),
-      details: [r.id, r.title, r.qualification, r.expertise, location].filter(Boolean).join(' · '),
-    };
-  }).filter(r => r.name);
+  const resourcePersons = read('tmis-resource-persons').filter(r => r?.id && String(r.status || 'Active').toLowerCase() === 'active').map(r => ({ id: String(r.id), name: [r.first_name, r.middle_name, r.last_name, r.suffix].filter(Boolean).join(' ').trim() || String(r.fullName || ''), office: String(r.office || '') })).filter(r => r.name);
   if (existingRecord?.resourcePersonId) {
     const index = resourcePersons.findIndex(r => r.id === existingRecord.resourcePersonId);
-    const snapshot = { id: existingRecord.resourcePersonId, name: existingRecord.resourcePersonName || 'Resource person', office: existingRecord.resourcePersonOffice || '', details: existingRecord.resourcePersonId };
+    const snapshot = { id: existingRecord.resourcePersonId, name: existingRecord.resourcePersonName || 'Resource person', office: existingRecord.resourcePersonOffice || '' };
     if (index >= 0) resourcePersons[index] = snapshot; else resourcePersons.push(snapshot);
   }
   let farmers = loadFarmers();
@@ -64,21 +55,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   let selectedFarmer = null;
   const selectedResourcePerson = () => resourcePersons.find(r => r.id === $('resourcePersonSelect').value);
-  const resourcePersonOption = person => {
-    const option = new Option(person.name, person.id);
-    option.dataset.title = person.name;
-    option.dataset.details = person.details || person.id;
-    option.dataset.office = person.office || '';
-    return option;
-  };
   function updateResourcePerson() { const person = selectedResourcePerson(); $('resourcePersonName').value = person?.name || ''; $('resourcePersonOffice').value = person?.office || ''; updateSummary(); }
   function updateResourcePersonChoices() {
     const select = $('resourcePersonSelect');
     const selectedId = select.value || resumedDraft?.resourcePersonId || '';
     const training = window.TMIS_TRAINING_PICKER?.selectedTraining();
-    const assignedIds = training ? new Set((training.trainers || []).map(resource => String(resource.id))) : new Set();
-    const choices = resourcePersons.filter(resource => assignedIds.has(resource.id));
-    select.replaceChildren(new Option('Select a resource person', ''), ...choices.map(resourcePersonOption));
+    const assignedIds = training ? new Set((training.trainers || []).map(resource => String(resource.id))) : null;
+    const choices = assignedIds ? resourcePersons.filter(resource => assignedIds.has(resource.id)) : resourcePersons;
+    select.replaceChildren(new Option('Select a resource person', ''), ...choices.map(resource => new Option(`${resource.name} — ${resource.office || 'No office'}`, resource.id)));
     select.value = choices.some(resource => resource.id === selectedId) ? selectedId : '';
     $('resourcePersonHelp').hidden = choices.length > 0;
     updateResourcePerson();
@@ -93,16 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const dateLabel = value => { if (!value) return '?'; const d = new Date(`${value}T00:00:00`); return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); };
   const age = birthday => { const d = new Date(`${birthday}T00:00:00`); if (Number.isNaN(d.getTime())) return '?'; const now = new Date(); return String(now.getFullYear() - d.getFullYear() - (now.getMonth() < d.getMonth() || (now.getMonth() === d.getMonth() && now.getDate() < d.getDate()) ? 1 : 0)); };
   const selectedQuestionnaire = () => questionnaires.find(r => r.id === $('questionnaireSelect').value);
-  function updateQuestionnaireChoices() {
-    const select = $('questionnaireSelect');
-    const selectedId = select.value || resumedDraft?.questionnaireId || '';
-    const training = window.TMIS_TRAINING_PICKER?.selectedTraining();
-    const assignedIds = training ? new Set((training.rpEvaluation || []).map(String)) : new Set();
-    const choices = questionnaires.filter(questionnaire => assignedIds.has(String(questionnaire.id)));
-    select.replaceChildren(new Option(training ? 'Select a questionnaire assigned to this training' : 'Select a training first', ''), ...choices.map(questionnaire => new Option(`${questionnaire.questionnaireName || 'Untitled questionnaire'}${String(questionnaire.status).toLowerCase() === 'draft' ? ' (Draft)' : ''}`, questionnaire.id)));
-    select.value = choices.some(questionnaire => questionnaire.id === selectedId) ? selectedId : '';
-    updateQuestionnaire(true);
-  }
   function showLoadingRow(body, message) {
     const row = document.createElement('tr'), cell = document.createElement('td'), spinner = document.createElement('span'), label = document.createElement('span');
     cell.colSpan = 7; cell.className = 'table-loading'; spinner.className = 'table-loading-spinner'; spinner.setAttribute('aria-hidden', 'true'); label.textContent = message;
@@ -124,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const visible = matches.slice(start, start + pageSize);
     const body = $('farmerTableBody'); body.replaceChildren();
     visible.forEach(r => { const row = document.createElement('tr'); row.tabIndex = 0; row.setAttribute('aria-label', `Select farmer ${r.name}`); if (r.id === selectedFarmer?.id) row.classList.add('is-selected'); [r.name, r.location || '—', r.association || '—', age(r.birthday), dateLabel(r.birthday), r.sex || '—'].forEach(value => { const cell = document.createElement('td'); cell.textContent = value; row.append(cell); }); const cell = document.createElement('td'), button = document.createElement('button'); button.type = 'button'; button.className = 'select-farmer'; button.textContent = r.id === selectedFarmer?.id ? 'Selected' : 'Select'; button.setAttribute('aria-label', `Select ${r.name}`); button.addEventListener('click', () => selectFarmer(r)); cell.append(button); row.append(cell); row.addEventListener('click', event => { if (!event.target.closest('button,a,input,select,textarea,label')) selectFarmer(r); }); row.addEventListener('keydown', event => { if (event.target === row && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); selectFarmer(r); } }); body.append(row); });
-    if (!matches.length) { const row = document.createElement('tr'), cell = document.createElement('td'); cell.colSpan = 7; cell.className = 'table-empty'; cell.textContent = farmers.length ? 'No farmers match the current filters.' : window.TMIS_TRAINING_PICKER?.selectedTraining() ? 'No enrolled farmers match this training. Add eligible farmers through the training information page’s Participants tab before encoding.' : 'Select a training to see its enrolled farmers.'; row.append(cell); body.append(row); }
+    if (!matches.length) { const row = document.createElement('tr'), cell = document.createElement('td'); cell.colSpan = 7; cell.className = 'table-empty'; cell.textContent = 'No farmers match the current filters.'; row.append(cell); body.append(row); }
     $('farmerTableStatus').textContent = `${matches.length} farmer${matches.length === 1 ? '' : 's'} shown`;
     const range = matches.length ? `Showing ${start + 1}–${start + visible.length} of ${matches.length} farmers` : 'Showing 0 of 0 farmers';
     $('farmerTableRange').textContent = range; $('farmerTableRangeTop').textContent = range;
@@ -146,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
       notify('Training participant filtering is unavailable. Refresh the page and try again.', 'error');
       return;
     }
-    const eligible = window.TmisTrainingData.participantsForEncoding(training, 'rp-evaluation', existingRecord?.id || '', selectedResourcePerson()?.id || '');
+    const eligible = window.TmisTrainingData.participantsForEncoding(training, 'rp-evaluation', existingRecord?.id || '');
     const eligibleIds = new Set(eligible.map(record => String(record.id)));
     farmers = loadFarmers().filter(farmer => eligibleIds.has(farmer.id));
     if (selectedFarmer && !farmers.some(farmer => farmer.id === selectedFarmer.id)) {
@@ -159,7 +133,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateSummary();
   }
   updateOrganizations();
-  resourcePersons.forEach(resource => $('resourcePersonSelect').add(resourcePersonOption(resource)));
+  questionnaires.forEach(r => $('questionnaireSelect').add(new Option(`${r.questionnaireName || 'Untitled questionnaire'}${String(r.status).toLowerCase() === 'draft' ? ' (Draft)' : ''}`, r.id)));
+  resourcePersons.forEach(r => $('resourcePersonSelect').add(new Option(`${r.name} — ${r.office || 'No office'}`, r.id)));
   $('resourcePersonHelp').hidden = resourcePersons.length > 0;
   if (!questionnaires.length) $('encodeStatus').textContent = 'No saved resource person evaluation questionnaires found. Create one before encoding.';
   const scale = q => [5, 4, 3, 2, 1].map(score => q?.ratingScale?.find(item => Number(item.score) === score) || ({ score, label: ({ 5: 'Very Good', 4: 'Good', 3: 'Neutral', 2: 'Not Good', 1: 'Very Not Good' })[score], description: '' }));
@@ -202,8 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (recordMode && !existingRecord) return;
     if (recordMode === 'edit') draft = false;
     const q = selectedQuestionnaire();
-    const training = window.TMIS_TRAINING_PICKER?.selectedTraining();
-    if (!training || !q) { notify('Select a training and one of its assigned questionnaires before saving.', 'error'); return; }
     if (!draft && String(q?.status).toLowerCase() === 'draft') { notify('Activate this questionnaire before completing an assessment.', 'error'); return; }
     if (ratingsLoading) { notify('Wait for the questionnaire ratings to finish loading.', 'error'); return; }
     if (!draft && (!selectedFarmer || !q || !selectedResourcePerson())) { notify('Select a farmer, resource person, and evaluation questionnaire before saving.', 'error'); return; }
@@ -211,6 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!draft && !form.reportValidity()) return;
     const ratings = (q?.questions || []).map((question, index) => ({ question: typeof question === 'string' ? question : String(question.text || ''), rating: Number(form.querySelector(`input[name="rating_${index}"]:checked`)?.value) || null }));
     const person = selectedResourcePerson();
+    const training = window.TMIS_TRAINING_PICKER?.selectedTraining();
     const record = { id: activeDraftId || crypto.randomUUID(), trainingId: training?.id || resumedDraft?.trainingId || '', questionnaireId: q?.id || '', questionnaireName: q?.questionnaireName || '', implementingOffice: q?.office || '', resourcePersonId: person?.id || '', resourcePersonName: person?.name || '', resourcePersonOffice: person?.office || '', farmerId: selectedFarmer?.id || '', farmerName: selectedFarmer?.name || '', farmerAssociation: selectedFarmer?.association || '', farmerLocation: selectedFarmer?.location || '', farmerBirthday: selectedFarmer?.birthday || '', farmerSex: selectedFarmer?.sex || '', date: $('testDate').value, ratings, comments: $('comments').value.trim(), status: draft ? 'draft' : 'complete', savedAt: existingRecord?.savedAt || new Date().toISOString(), updatedAt: recordMode === 'edit' ? new Date().toISOString() : undefined };
     try { const records = read('tmis-rp-evaluation-encoded'), index = records.findIndex(item => item.id === record.id); if (index >= 0) records[index] = record; else records.push(record); await window.TmisStore.setItem('tmis-rp-evaluation-encoded', JSON.stringify(records)); if (draft) { activeDraftId = record.id; $('summaryStatus').textContent = 'Draft saved'; } else if (recordMode !== 'edit') clearEntry(); notify(recordMode === 'edit' ? 'Resource person evaluation updated.' : draft ? 'Resource person evaluation draft saved.' : 'Resource person evaluation saved.'); }
     catch { notify('Unable to save this resource person evaluation. Refresh and try again.', 'error'); }
@@ -232,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   $('questionnaireSelect').addEventListener('change', () => { updateQuestionnaire(); refreshFarmersForTraining(); });
   $('resourcePersonSelect').addEventListener('change', () => { updateResourcePerson(); refreshFarmersForTraining(); });
-  window.addEventListener('tmis:training-selected', () => { updateQuestionnaireChoices(); updateResourcePersonChoices(); refreshFarmersForTraining(); });
+  window.addEventListener('tmis:training-selected', () => { updateResourcePersonChoices(); refreshFarmersForTraining(); });
   window.addEventListener('tmis:data-updated', refreshFarmersForTraining);
   form.addEventListener('input', updateSummary); form.addEventListener('change', updateSummary);
   form.addEventListener('invalid', () => { notify('Select a resource person, enter the date, and rate every question before saving.', 'error'); }, true);

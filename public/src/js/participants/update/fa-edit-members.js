@@ -50,23 +50,12 @@ document.addEventListener('DOMContentLoaded', () => {
   let page = 1;
   let available = [];
   const locationKeys = ['province', 'district', 'municipality', 'barangay'];
-  const columnKeys = ['farmer_id', 'yearCovered', 'name', 'location', 'office'];
-  const farmerProfileUrlTemplate = $('#faAvailableRows').dataset.farmerProfileUrlTemplate;
+  const columnKeys = ['farmer_id', 'name', 'barangay', 'municipality', 'province'];
   const tabs = [$('#faCurrentMembersTab'), $('#faAddMembersTab')];
   $('#faCurrentMembersPanel').append($('.fa-members-card'));
   const memberCount = $('#faMemberCount');
   const headerCount = $('#faRosterHeaderCount');
   const updateCount = () => { headerCount.textContent = memberCount.textContent; };
-  function ageFromDate(value) {
-    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value || ''));
-    if (!match) return null;
-    const [, yearText, monthText, dayText] = match;
-    const year = Number(yearText), month = Number(monthText), day = Number(dayText);
-    const birthDate = new Date(year, month - 1, day);
-    if (birthDate.getFullYear() !== year || birthDate.getMonth() !== month - 1 || birthDate.getDate() !== day) return null;
-    const today = new Date();
-    return today.getFullYear() - year - (today.getMonth() < month - 1 || (today.getMonth() === month - 1 && today.getDate() < day) ? 1 : 0);
-  }
   new MutationObserver(updateCount).observe(memberCount, { childList: true, characterData: true, subtree: true });
   updateCount();
   function showTab(index) {
@@ -110,21 +99,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const term = $('#faAvailableSearch').value.trim().toLowerCase();
     const columns = Object.fromEntries([...panel.querySelectorAll('[data-fa-column]')].map(input => [input.dataset.faColumn, input.value.trim().toLowerCase()]));
     return available.filter(member => {
-      const name = [member.fname, member.mname, member.lname, member.suffix].filter(Boolean).join(' ');
-      const location = [member.region, member.municipality, member.province, member.district, member.barangay].filter(Boolean).join(' ');
-      const office = member.office || member.beneficiaryOffices?.find(item => item.isPrimary)?.office || member.beneficiaryOffices?.[0]?.office || '';
-      const values = {
-        ...member,
-        farmer_id: member.farmerNumber || member.farmer_id,
-        yearCovered: member.yearCovered || member.year_covered || '',
-        name,
-        location,
-        office,
-      };
+      const name = [member.fname, member.mname, member.lname].filter(Boolean).join(' ');
+      const values = { ...member, farmer_id: member.farmerNumber || member.farmer_id, name };
       return locationKeys.every(key => {
         const selected = $(`#faAvailable${key[0].toUpperCase()}${key.slice(1)}`).value;
         return !selected || member[key] === selected;
-      }) && (!term || [values.farmer_id, values.yearCovered, name, location, office].some(value => String(value || '').toLowerCase().includes(term)))
+      }) && (!term || [member.farmerNumber, member.farmer_id, name, member.barangay, member.municipality, member.district, member.province].some(value => String(value || '').toLowerCase().includes(term)))
         && columnKeys.every(key => !columns[key] || String(values[key] || '').toLowerCase().includes(columns[key]));
     });
   }
@@ -144,33 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pages = Math.max(1, Math.ceil(filtered.length / size));
     page = Math.min(page, pages);
     const start = (page - 1) * size;
-    $('#faAvailableRows').innerHTML = filtered.slice(start, start + size).map(member => {
-      const farmerId = String(member.farmer_id);
-      const farmerNumber = member.farmerNumber || farmerId;
-      const farmerNumberText = String(farmerNumber);
-      const profileUrl = /^\d{8,}$/.test(farmerNumberText)
-        ? farmerProfileUrlTemplate.replace('__FARMER_ID__', encodeURIComponent(farmerNumberText))
-        : null;
-      const farmerNumberCell = profileUrl
-        ? `<a class="fa-farmer-profile-link" href="${escape(profileUrl)}" aria-label="View farmer profile for ${escape(farmerNumberText)}">${escape(farmerNumberText)}</a>`
-        : escape(farmerNumberText);
-      const isSelected = selected.has(farmerId);
-      const selectionAction = isSelected ? 'Deselect' : 'Select';
-      const farmerName = [member.fname, member.mname, member.lname, member.suffix].filter(Boolean).join(' ');
-      const gender = String(member.gender || member.sex || '').toLowerCase();
-      const genderLabel = gender.startsWith('f') ? 'F' : gender.startsWith('m') ? 'M' : '—';
-      const genderClass = genderLabel === 'F' ? 'is-female' : genderLabel === 'M' ? 'is-male' : 'is-unknown';
-      const birthDate = String(member.birthDate || member.dob || member.date_of_birth || '').slice(0, 10);
-      const age = ageFromDate(birthDate);
-      const birthDateLabel = birthDate ? `${birthDate}${age === null ? '' : ` · ${age} yrs`}` : 'Birth date not recorded';
-      const region = String(member.region || '').trim();
-      const regionLabel = region.replace(/^region\s*/i, '').replace(/[\s-]+/g, '') || '—';
-      const municipalityProvince = [member.municipality, member.province].filter(Boolean).join(', ') || 'Location not recorded';
-      const barangay = member.barangay ? `Brgy. ${member.barangay}` : 'Barangay not recorded';
-      const office = member.office || member.beneficiaryOffices?.find(item => item.isPrimary)?.office || member.beneficiaryOffices?.[0]?.office || 'Office not recorded';
-      const yearCovered = member.yearCovered || member.year_covered || '—';
-      return `<tr data-selectable-farmer data-farmer-id="${escape(farmerId)}" class="${isSelected ? 'is-selected' : ''}"><td class="fa-available-checkbox-cell"><input type="checkbox" data-farmer-id="${escape(farmerId)}" aria-label="${selectionAction} ${escape(farmerName)}" ${isSelected ? 'checked' : ''}></td><td class="fa-available-id-cell">${farmerNumberCell}</td><td><span class="fa-year-badge">${escape(yearCovered)}</span></td><td><div class="fa-farmer-member"><strong>${escape(farmerName || 'Name not recorded')}</strong><span class="fa-farmer-demographics"><span class="fa-gender-badge ${genderClass}">${genderLabel}</span><span>${escape(birthDateLabel)}</span></span></div></td><td><div class="fa-farmer-location"><span class="fa-location-primary"><span class="fa-region-badge" title="${escape(region || 'Region not recorded')}">${escape(regionLabel)}</span><span>${escape(municipalityProvince)}</span></span><span class="fa-location-secondary">${escape(barangay)}</span></div></td><td><span class="fa-office-badge">${escape(office)}</span></td></tr>`;
-    }).join('');
+    $('#faAvailableRows').innerHTML = filtered.slice(start, start + size).map(member => `<tr><td><input type="checkbox" data-farmer-id="${escape(member.farmer_id)}" aria-label="Select ${escape([member.fname, member.lname].filter(Boolean).join(' '))}" ${selected.has(member.farmer_id) ? 'checked' : ''}></td><td>${escape(member.farmerNumber || member.farmer_id)}</td><td><strong>${escape([member.fname, member.mname, member.lname].filter(Boolean).join(' '))}</strong></td><td>${escape(member.barangay)}</td><td>${escape(member.municipality)}</td><td>${escape(member.province)}</td></tr>`).join('');
     $('#faAvailableEmpty').hidden = filtered.length > 0;
     $('#faAvailableCount').textContent = `${filtered.length} matching available`;
     $('#faSelectedCount').textContent = `${selected.size} selected`;
@@ -182,23 +136,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const all = $('#faAvailableSelectAll');
     all.checked = filtered.length > 0 && filtered.every(member => selected.has(member.farmer_id));
     all.indeterminate = !all.checked && filtered.some(member => selected.has(member.farmer_id));
-    $('#faAvailableSelectAllLabel').textContent = all.checked ? 'Deselect all' : 'Select all';
-    all.setAttribute('aria-label', `${all.checked ? 'Deselect' : 'Select'} all farmers matching current filters across all pages`);
     all.disabled = filtered.length === 0;
   }
   $('#faAvailableRows').addEventListener('change', event => {
-    const input = event.target.closest('input[type="checkbox"][data-farmer-id]');
+    const input = event.target.closest('[data-farmer-id]');
     if (!input) return;
     if (input.checked) selected.add(input.dataset.farmerId); else selected.delete(input.dataset.farmerId);
     render();
-  });
-  $('#faAvailableRows').addEventListener('click', event => {
-    if (event.target.closest('a, button, input, label')) return;
-    const row = event.target.closest('tr[data-selectable-farmer]');
-    const checkbox = row?.querySelector('input[type="checkbox"][data-farmer-id]');
-    if (!checkbox) return;
-    checkbox.checked = !checkbox.checked;
-    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
   });
   $('#faAvailableSelectAll').addEventListener('change', event => {
     matchingFarmers().forEach(member => { if (event.target.checked) selected.add(member.farmer_id); else selected.delete(member.farmer_id); });

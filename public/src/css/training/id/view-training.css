@@ -93,8 +93,8 @@
 .assessment-chart-legend { display: grid; gap: 5px; margin-top: 4px; }
 .assessment-chart-key { display: flex; align-items: baseline; gap: 7px; min-width: 0; color: var(--color-text-secondary); font-size: 11px; line-height: 1.35; }
 .assessment-chart-key span:last-child { overflow-wrap: anywhere; }
-.assessment-chart-dot { flex: 0 0 9px; width: 9px; height: 9px; border-radius: 50%; background: var(--color-info); }
-.assessment-chart-key.posttest .assessment-chart-dot { background: var(--color-primary-dark); }
+.assessment-chart-dot { flex: 0 0 9px; width: 9px; height: 9px; border-radius: 50%; background: #68a7f8; }
+.assessment-chart-key.posttest .assessment-chart-dot { background: #42c77d; }
 .training-evaluation-card { display: flex; flex-direction: column; }
 .evaluation-score { display: flex; align-items: center; justify-content: center; flex: 1; gap: 17px; padding: 12px 0; }
 .evaluation-score-ring { display: grid; place-items: center; flex: 0 0 112px; width: 112px; height: 112px; border-radius: 50%; background: conic-gradient(#8a35d5 0 91.2%, var(--color-border) 91.2% 100%); }
@@ -157,7 +157,7 @@
 .training-reference-label { margin-top: 5px; color: var(--color-text-muted); font-size: 10px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
 .training-overview-reference > strong { color: var(--color-text-primary); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; overflow-wrap: anywhere; }
 .training-reference-format { color: var(--color-text-muted); font-size: 10px; }
-.training-overview-stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); padding: 14px 28px; border-bottom: 1px solid var(--color-border); }
+.training-overview-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); padding: 14px 28px; border-bottom: 1px solid var(--color-border); }
 .training-overview-stats > div { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 5px 18px; }
 .training-overview-stats > div:first-child { padding-left: 0; }
 .training-overview-stats > div + div { border-left: 1px solid var(--color-border); }
@@ -187,9 +187,6 @@
 [data-theme='dark'] .training-status-pill[data-status='for-review'], [data-theme='dark'] .training-status-pill[data-status='for-approval'], [data-theme='dark'] .training-status-pill[data-status='for-acceptance'] { color: #f4d18b; border-color: #6a5120; background: #382d17; }
 [data-theme='dark'] .training-status-pill[data-status='inactive'] { color: #f0afb3; border-color: #71343a; background: #3d2024; }
 @media (max-width: 900px) { .training-overview-details { grid-template-columns: 1fr; }
-  .training-overview-stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .training-overview-stats > div:nth-child(3) { padding-left:0; border-top:1px solid var(--color-border); border-left:0; }
-  .training-overview-stats > div:nth-child(4) { border-top:1px solid var(--color-border); }
 }
 @media (max-width: 650px) {
   .training-overview-banner { flex-direction: column; padding: 20px; }

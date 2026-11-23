@@ -133,6 +133,14 @@ class AccountRegistrationController
         if (! $officeId) {
             throw ValidationException::withMessages(['office' => 'Select an active organization belonging to the selected region.']);
         }
+        if (! ModuleAccess::isAdministrator($request->user())) {
+            ModuleAccess::authorizeRegistrationScope(
+                $request->user(),
+                (int) $regionId,
+                (int) $officeId,
+                'Select an office within your account scope.',
+            );
+        }
         $user = DB::transaction(function () use ($request, $data, $regionId, $officeId): User {
             $user = new User;
             foreach (['firstName' => 'first_name', 'middleName' => 'middle_name', 'lastName' => 'last_name', 'suffix' => 'extension_name', 'dateOfBirth' => 'date_of_birth', 'sex' => 'sex', 'email' => 'email', 'phone' => 'mobile_number', 'position' => 'position'] as $field => $column) {

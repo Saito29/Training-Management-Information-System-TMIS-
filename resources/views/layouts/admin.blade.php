@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <link id="tmis-favicon" rel="icon" type="image/png" href="{{ $systemBranding['faviconUrl'] ?? asset('assets/logo/DA Logo/DA logo_120519.png') }}">
+    <link id="tmis-favicon" rel="icon" type="{{ $systemBranding['faviconMimeType'] ?? 'image/png' }}" href="{{ $systemBranding['faviconUrl'] ?? asset('assets/logo/DA Logo/DA logo_120519.png') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="tmis-login-url" content="{{ route('login') }}">
     <script src="{{ asset('src/js/shared/session-expiry.js?v=expired-session-logout-1') }}"></script>
@@ -24,7 +24,7 @@
     @endif
     @yield('head')
     <link rel="stylesheet" href="{{ asset('src/css/shared/account-avatar.css') }}">
-    <link rel="stylesheet" href="{{ asset('src/css/shared/notification-content.css?v=notification-read-state-1') }}">
+    <link rel="stylesheet" href="{{ asset('src/css/shared/notification-content.css?v=notification-bell-ready-1') }}">
     <script>window.TMIS_NAV_ACCESS = {{ Illuminate\Support\Js::from($navigationAccess) }};</script>
     <script src="{{ asset('src/js/shared/navigation-access.js?v=admin-profile-navigation-5') }}" defer></script>
     @if($navigationAccess['administrator'] ?? false)
@@ -32,7 +32,7 @@
         <script src="{{ asset('src/js/shared/profile-visibility.js?v=dropdown-entry-2') }}" defer></script>
     @endif
     <script src="{{ asset('src/js/shared/account-avatar.js') }}" defer></script>
-    <script src="{{ asset('src/js/shared/system-branding.js') }}" defer></script>
+    <script src="{{ asset('src/js/shared/system-branding.js?v=live-branding-1') }}" defer></script>
     <link rel="stylesheet" href="{{ asset('src/css/shared/searchable-combobox.css?v=detailed-association-options-1') }}">
     <script src="{{ asset('src/js/shared/searchable-combobox.js?v=detailed-association-options-3') }}" defer></script>
 </head>

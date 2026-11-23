@@ -327,9 +327,6 @@
 
 .review-data-table tbody tr { transition: background-color 0.18s ease; }
 .review-data-table tbody td { vertical-align: middle; }
-.review-data-table thead th { background: color-mix(in srgb, var(--color-primary-surface) 54%, var(--color-surface)); }
-.review-data-table tbody tr:nth-child(even) td { background-color: color-mix(in srgb, var(--color-primary-surface) 24%, var(--color-surface)); }
-.review-data-table tbody tr:hover td { background-color: color-mix(in srgb, var(--color-primary-surface) 68%, var(--color-surface)); }
 
 .review-data-table tfoot th {
   position: static;
@@ -390,73 +387,6 @@
 .delete-action:hover { color: var(--color-danger); }
 .table-row-actions { min-width: 156px; }
 .pending-delete { opacity: 0.58; }
-
-/* Keep the row actions distinct and readable in both TMIS themes. */
-body.training-all-status-page .app-main .app-main-body .table-row-actions .view-action {
-  color: #155ca8;
-  background-color: #eaf3ff;
-  border: 1px solid #c6dcf5;
-}
-body.training-all-status-page .app-main .app-main-body .table-row-actions .edit-action {
-  color: #713a91;
-  background-color: #f5edfa;
-  border: 1px solid #dfcbea;
-}
-body.training-all-status-page .app-main .app-main-body .table-row-actions .delete-action {
-  color: #a12a2a;
-  background-color: #fff0ef;
-  border: 1px solid #f0cbc8;
-}
-body.training-all-status-page .app-main .app-main-body .table-row-actions .view-action:is(:hover, :focus-visible) {
-  color: #0f4e91;
-  background-color: #d8eaff;
-  border-color: #91b9e5;
-}
-body.training-all-status-page .app-main .app-main-body .table-row-actions .edit-action:is(:hover, :focus-visible) {
-  color: #5b2b76;
-  background-color: #eddef5;
-  border-color: #cba9df;
-}
-body.training-all-status-page .app-main .app-main-body .table-row-actions .delete-action:is(:hover, :focus-visible) {
-  color: #84201e;
-  background-color: #ffe1df;
-  border-color: #e5a5a0;
-}
-body.training-all-status-page .app-main .app-main-body .table-row-actions .table-action-button:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
-[data-theme='dark'] body.training-all-status-page .app-main .app-main-body .table-row-actions .view-action {
-  color: #b8d8ff;
-  background-color: #1d3043;
-  border-color: #385875;
-}
-[data-theme='dark'] body.training-all-status-page .app-main .app-main-body .table-row-actions .edit-action {
-  color: #e2c1f5;
-  background-color: #34273d;
-  border-color: #5b426a;
-}
-[data-theme='dark'] body.training-all-status-page .app-main .app-main-body .table-row-actions .delete-action {
-  color: #ffb8b2;
-  background-color: #452728;
-  border-color: #754447;
-}
-[data-theme='dark'] body.training-all-status-page .app-main .app-main-body .table-row-actions .view-action:is(:hover, :focus-visible) {
-  color: #e7f2ff;
-  background-color: #285071;
-  border-color: #6da5d5;
-}
-[data-theme='dark'] body.training-all-status-page .app-main .app-main-body .table-row-actions .edit-action:is(:hover, :focus-visible) {
-  color: #fff2ff;
-  background-color: #533966;
-  border-color: #a77abb;
-}
-[data-theme='dark'] body.training-all-status-page .app-main .app-main-body .table-row-actions .delete-action:is(:hover, :focus-visible) {
-  color: #fff1f0;
-  background-color: #663432;
-  border-color: #c26a62;
-}
 .delete-training-details { display: grid; grid-template-columns: 120px 1fr; gap: 8px 12px; margin: 16px 0 0; font-size: 13px; }
 .delete-training-details dt { color: var(--color-text-secondary); }
 .delete-training-details dd { margin: 0; color: var(--color-text-primary); overflow-wrap: anywhere; }

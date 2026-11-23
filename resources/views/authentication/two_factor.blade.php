@@ -1,11 +1,13 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <link rel="icon" type="image/png" href="{{ $systemBranding['faviconUrl'] ?? asset('assets/logo/DA Logo/DA logo_120519.png') }}">
+    <link rel="icon" type="{{ $systemBranding['faviconMimeType'] ?? 'image/png' }}" href="{{ $systemBranding['faviconUrl'] ?? asset('assets/logo/DA Logo/DA logo_120519.png') }}">
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#123e32" />
+    <script>window.TMIS_BRANDING = {{ Illuminate\Support\Js::from($systemBranding ?? ['name' => 'TMIS', 'logoUrl' => asset('assets/logo/DA Logo/DA logo_120519.png'), 'faviconUrl' => asset('assets/logo/DA Logo/DA logo_120519.png'), 'faviconMimeType' => 'image/png', 'dashboardImageUrl' => asset('assets/img/ricefield_with_farmer-Picsart-AiImageEnhancer.png')]) }};</script>
     @vite('resources/js/authentication/page.js')
+    <script src="{{ asset('src/js/shared/system-branding.js?v=live-branding-1') }}" defer></script>
     <title>Verify your email | {{ $systemBranding['name'] ?? 'TMIS' }}</title>
   </head>
   <body>

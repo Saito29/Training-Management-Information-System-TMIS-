@@ -124,7 +124,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateEmailPreview() {
     const fromStatus = byId('emailNotificationRuleFromStatus').value;
     const toStatus = byId('emailNotificationRuleToStatus').value;
-    const statusAction = fromStatus === 'For review' && toStatus === 'For approval'
+    const anyTransition = fromStatus === '*' && toStatus === '*';
+    const statusAction = anyTransition
+      ? 'updated'
+      : fromStatus === 'For review' && toStatus === 'For approval'
       ? 'submitted for approval'
       : fromStatus === 'For approval' && toStatus === 'For acceptance'
         ? 'forwarded for acceptance'
@@ -140,8 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const samples = {
       training_title: 'Sample training',
       training_id: '12345',
-      from_status: fromStatus || 'Current status',
-      to_status: toStatus || 'New status',
+      from_status: fromStatus === '*' ? 'Any status change' : fromStatus || 'Current status',
+      to_status: toStatus === '*' ? 'Status update' : toStatus || 'New status',
       reason: 'Sample reason',
       changed_by: 'Sample reviewer',
       actor_office: 'DA-SAAD - Region IV-A',
@@ -150,7 +153,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const renderTemplate = template => template.replace(/\{([^}]+)\}/g, (placeholder, key) => samples[key] ?? placeholder);
     const subjectTemplate = byId('emailNotificationRuleSubject').value.trim();
-    const defaultSubject = fromStatus === 'For review' && toStatus === 'For approval'
+    const defaultSubject = anyTransition
+      ? 'TMIS training status update: Sample training'
+      : fromStatus === 'For review' && toStatus === 'For approval'
       ? 'TMIS training submitted for approval: Sample training'
       : fromStatus === 'For approval' && toStatus === 'For acceptance'
         ? 'TMIS training forwarded for acceptance: Sample training'
@@ -161,10 +166,12 @@ document.addEventListener('DOMContentLoaded', () => {
           : `TMIS training status: ${toStatus || 'Status update'}`;
     const customMessage = byId('emailNotificationRuleMessage').value.trim();
     const defaultMessage = [
-      `A training assigned to your office has been ${statusAction}.`,
+      anyTransition
+        ? 'A training assigned to your office has had a status update.'
+        : `A training assigned to your office has been ${statusAction}.`,
       'Sample training (ID 12345)',
-      `Previous status: ${fromStatus || 'Current status'}`,
-      `New status: ${toStatus || 'New status'}`,
+      ...(anyTransition ? [] : [`Previous status: ${statusLabel(fromStatus || 'Current status')}`]),
+      ...(anyTransition ? [] : [`New status: ${statusLabel(toStatus || 'New status')}`]),
       ...(isReturn ? ['Reason for return: Sample reason'] : []),
       'Status changed by Sample reviewer (DA-SAAD - Region IV-A) on Nov 21, 2026, 9:00 AM (Asia/Manila).',
       'Training office / organization: DA-SAAD - Region IV-A',

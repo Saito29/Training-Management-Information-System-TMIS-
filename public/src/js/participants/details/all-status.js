@@ -239,26 +239,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const farmerNumber = encodeURIComponent(r.farmerNumber || r.id);
     return `<tr>
       <td data-column="actions"><div class="table-row-actions">
-        ${window.TmisStore.can('participants.read') ? `<a class="btn table-action-button view-action" href="../id/view-farmer/${farmerNumber}" target="_blank" rel="noopener" title="View farmer profile" aria-label="View farmer profile"><i class="bi bi-eye-fill"></i></a>` : ''}
-        ${window.TmisStore.can('participants.edit') ? `<a class="btn table-action-button edit-action" href="../id/edit-farmer/${farmerNumber}" target="_blank" rel="noopener" title="Edit farmer profile" aria-label="Edit farmer profile"><i class="bi bi-pencil-fill"></i></a>` : ''}
-        ${window.TmisStore.can('participants.delete') ? `<button type="button" class="btn table-action-button delete-action" data-delete="${esc(r.id)}" title="Delete farmer profile" aria-label="Delete farmer profile"><i class="bi bi-trash-fill"></i></button>` : ''}
+        <a class="btn table-action-button view-action" href="../id/view-farmer/${farmerNumber}" target="_blank" rel="noopener" title="View farmer profile" aria-label="View farmer profile"><i class="bi bi-eye-fill"></i></a>
+        <a class="btn table-action-button edit-action" href="../id/edit-farmer/${farmerNumber}" target="_blank" rel="noopener" title="Edit farmer profile" aria-label="Edit farmer profile"><i class="bi bi-pencil-fill"></i></a>
+        <button type="button" class="btn table-action-button delete-action" data-delete="${esc(r.id)}" title="Delete farmer profile" aria-label="Delete farmer profile"><i class="bi bi-trash-fill"></i></button>
       </div></td>
+      <td data-column="status"><span class="status-badge ${statusBadgeClass(r.status)}">${esc(r.status)}</span></td>
       <td data-column="id">${esc(r.farmerNumber || r.id)}</td>
-      <td data-column="yearCovered">${esc(r.yearCovered)}</td>
-      <td data-column="lastName">${esc(r.lastName)}</td>
-      <td data-column="firstName">${esc(r.firstName)}</td>
-      <td data-column="middleName">${esc(r.middleName)}</td>
       <td data-column="region">${esc(r.region)}</td>
       <td data-column="province">${esc(r.province)}</td>
       <td data-column="district">${esc(r.district)}</td>
       <td data-column="municipality">${esc(r.municipality)}</td>
       <td data-column="barangay">${esc(r.barangay)}</td>
-      <td data-column="organization">${esc(r.organization)}</td>
-      <td data-column="role">${esc(r.role)}</td>
-      <td data-column="status"><span class="status-badge ${statusBadgeClass(r.status)}">${esc(r.status)}</span></td>
+      <td data-column="lastName">${esc(r.lastName)}</td>
+      <td data-column="firstName">${esc(r.firstName)}</td>
+      <td data-column="middleName">${esc(r.middleName)}</td>
       <td data-column="suffix">${esc(r.suffix || '—')}</td>
       <td data-column="birthDate">${date(r.birthDate)}</td>
       <td data-column="sex">${esc(r.sex)}</td>
+      <td data-column="organization">${esc(r.organization)}</td>
+      <td data-column="role">${esc(r.role)}</td>
       <td data-column="civilStatus">${esc(r.civilStatus)}</td>
       <td data-column="nationality">${esc(r.nationality)}</td>
       <td data-column="placeOfBirth">${esc(r.placeOfBirth)}</td>
@@ -269,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <td data-column="tribeName">${esc(r.tribeName)}</td>
       <td data-column="dietaryRestriction">${esc(r.dietaryRestriction)}</td>
       <td data-column="seniorCitizen">${esc(r.seniorCitizen)}</td>
+      <td data-column="yearCovered">${esc(r.yearCovered)}</td>
       <td data-column="registered">${date(r.registrationDate || r.registered || r.createdAt)}</td>
     </tr>`;
   };
@@ -445,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ['Year Covered', 'yearCovered'],
       ['Registration Date', 'registered'],
     ];
-    const rows = records.map((r) => Object.fromEntries(exportColumns.map(([label, key]) => [label, key === 'id' ? (r.farmerNumber || r.id) : r[key]])));
+    const rows = records.map((r) => Object.fromEntries(exportColumns.map(([label, key]) => [label, r[key]])));
     const sheet = XLSX.utils.json_to_sheet(rows, { header: exportColumns.map(([label]) => label) });
     sheet['!cols'] = exportColumns.map(([label]) => ({ wch: Math.max(14, label.length + 4) }));
     const book = XLSX.utils.book_new();
@@ -464,8 +464,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const columnKeys = columnToggles.map((t) => t.dataset.column);
 
   const defaultColumns = [
-    'actions', 'id', 'yearCovered', 'lastName', 'firstName', 'middleName',
-    'region', 'province', 'municipality', 'barangay', 'organization', 'registered',
+    'actions', 'status', 'id', 'region', 'province', 'district', 'municipality',
+    'barangay', 'lastName', 'firstName', 'middleName', 'suffix', 'birthDate', 'sex',
   ];
   const visibleColumns = new Set(defaultColumns);
 
@@ -529,7 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const farmer = records.find((r) => r.id === button.dataset.delete);
     if (!farmer) return;
     pendingDeleteId = farmer.id;
-    $('#deleteFarmerId').textContent = farmer.farmerNumber || 'Not assigned';
+    $('#deleteFarmerId').textContent = farmer.id;
     $('#deleteFarmerName').textContent = [`${farmer.lastName},`, farmer.firstName, farmer.middleName, farmer.suffix]
       .filter(Boolean)
       .join(' ');

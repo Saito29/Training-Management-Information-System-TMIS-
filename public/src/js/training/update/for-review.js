@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
      Reference data (mock). Province → Municipality → Barangay hierarchy
      drives the synced location filters.
   ------------------------------------------------------------------ */
-  const SAMPLE_LOCATIONS = [
+  const LOCATIONS = [
     {
       region: 'Region IV-A (CALABARZON)',
       province: 'Quezon',
@@ -82,37 +82,17 @@ document.addEventListener('DOMContentLoaded', () => {
       ],
     },
   ];
-  const registrationData = window.TMIS_PAGE?.registration;
-  const databaseLocations = Array.isArray(registrationData?.locations) ? registrationData.locations : [];
-  const databaseRegions = Array.isArray(window.TMIS_PAGE?.regions) ? window.TMIS_PAGE.regions : (registrationData?.regions || []);
-  const regionNames = new Map(databaseRegions.map(region => [String(region.region_id ?? region.id), region.name]));
-  const locationById = new Map(databaseLocations.map(location => [String(location.id), location]));
-  const ancestorName = (location, kind) => {
-    let parent = locationById.get(String(location.parent_id ?? ''));
-    while (parent) {
-      if (String(parent.kind).toLowerCase() === kind) return parent.name;
-      parent = locationById.get(String(parent.parent_id ?? ''));
-    }
-    return '';
-  };
-  const databasePlaces = databaseLocations.filter(location => String(location.kind).toLowerCase() === 'barangay').map(location => ({
-    region: regionNames.get(String(location.region_id)) || '',
-    regionId: String(location.region_id ?? ''),
-    province: ancestorName(location, 'province'),
-    district: ancestorName(location, 'district'),
-    municipality: ancestorName(location, 'municipality'),
-    barangay: location.name,
-  })).filter(location => location.province && location.municipality && location.barangay);
-  const places = window.TMIS_PAGE
-    ? databasePlaces
-    : SAMPLE_LOCATIONS.flatMap(region => region.municipalities.flatMap(municipality => municipality.barangays.map(barangay => ({
-      region: region.region,
-      regionId: '',
-      province: region.province,
-      district: municipality.district,
-      municipality: municipality.name,
-      barangay,
-    }))));
+  const places = LOCATIONS.flatMap((p) =>
+    p.municipalities.flatMap((m) =>
+      m.barangays.map((b) => ({
+        region: p.region,
+        province: p.province,
+        district: m.district,
+        municipality: m.name,
+        barangay: b,
+      }))
+    )
+  );
   const TYPES = {
     'Farmer Field School': [
       'Rice Farmer Field School',
@@ -138,10 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
       'Agri-Entrepreneurship Workshop',
     ],
   };
-  const databaseTrainingTypes = Array.isArray(registrationData?.options?.training_type)
-    ? registrationData.options.training_type.map(option => String(option.value || '')).filter(Boolean)
-    : [];
-  const typeNames = window.TMIS_PAGE ? [...new Set(databaseTrainingTypes)] : Object.keys(TYPES);
+  const typeNames = Object.keys(TYPES);
   // This page only lists trainings still in review or sent back (rejected).
   const REVIEW_STATUSES = ['For Review', 'Rejected'];
   const OFFICES = [
@@ -172,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return d.toISOString().slice(0, 10);
   };
 
-  let records = (window.TMIS_PAGE ? window.TmisStore.records('tmis-trainings').filter(item => REVIEW_STATUSES.includes(item.status)) : []);
+  let records = (window.TMIS_PAGE ? window.TmisStore.records('tmis-trainings').filter(item => item.status === 'For Review') : []);
   for (let n = 1; !window.TMIS_PAGE && n <= 48; n++) {
     const year = 2024 + (n % 3),
       id = `TRN-${year}-${pad(n, 3)}`,
@@ -267,15 +244,13 @@ document.addEventListener('DOMContentLoaded', () => {
     table = $('#forReviewDataTable'),
     toast = new bootstrap.Toast($('#reviewToast')),
     approveModal = new bootstrap.Modal($('#reviewForwardModal')),
-    rejectModal = new bootstrap.Modal($('#rejectTrainingModal')),
-    permanentlyDeleteModal = new bootstrap.Modal($('#permanentlyDeleteTrainingModal'));
+    rejectModal = new bootstrap.Modal($('#rejectTrainingModal'));
   const state = {
     page: 1,
     perPage: 10,
     global: '',
     status: 'For Review',
     type: '',
-    region: '',
     province: '',
     municipality: '',
     barangay: '',
@@ -303,40 +278,18 @@ document.addEventListener('DOMContentLoaded', () => {
           year: 'numeric',
         }).format(d);
   };
-  const notify = (title, message, type = 'success') => {
-    const toastType = typeof type === 'boolean' ? (type ? 'warning' : 'success') : type;
+  const notify = (title, message, warn = false) => {
     $('#reviewToastTitle').textContent = title;
     $('#reviewToastMessage').textContent = message;
-    $('#reviewToastTime').textContent = new Intl.DateTimeFormat('en-PH', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-      timeZone: 'Asia/Manila',
+    $('#reviewToastTime').textContent = new Intl.DateTimeFormat('en-PH', {timeZone: 'Asia/Manila', 
+      hour: 'numeric',
+      minute: '2-digit',
     }).format(new Date());
-    $('#reviewToast').dataset.type = toastType;
-    $('#reviewToastIcon').className = `bi me-2 ${({ success: 'bi-check-circle-fill', warning: 'bi-exclamation-triangle-fill', error: 'bi-x-circle-fill', info: 'bi-info-circle-fill' })[toastType] || 'bi-check-circle-fill'}`;
-    $('#reviewToast').classList.toggle('review-toast-blocked', toastType === 'warning' || toastType === 'error');
+    $('#reviewToastIcon').className =
+      `bi me-2 ${warn ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill'}`;
+    $('#reviewToast').classList.toggle('review-toast-blocked', warn);
     toast.show();
   };
-  const statusToastStorageKey = 'tmis-training-status-transition-toast';
-  const showStoredStatusToast = () => {
-    try {
-      const saved = sessionStorage.getItem(statusToastStorageKey);
-      if (!saved) return;
-      sessionStorage.removeItem(statusToastStorageKey);
-      const notice = JSON.parse(saved);
-      notify(notice.title, notice.message, notice.type || 'success');
-    } catch (_) { /* Storage may be disabled by the browser. */ }
-  };
-  const reloadWithStatusToast = (title, message, type = 'success') => {
-    try { sessionStorage.setItem(statusToastStorageKey, JSON.stringify({ title, message, type })); }
-    catch (_) {
-      notify(title, message, type);
-      window.setTimeout(() => location.reload(), 3200);
-      return;
-    }
-    location.reload();
-  };
-  showStoredStatusToast();
 
   /* ------------------------------------------------------------------
      Header / footer / column toggle (built once; columns hide via class)
@@ -393,10 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
     el.value = items.includes(value) ? value : '';
   };
   const syncLocationFilters = () => {
-    const inRegion = places.filter(
-      (place) => !state.region || place.region === state.region
-    );
-    const inProvince = inRegion.filter(
+    const inProvince = places.filter(
       (p) => !state.province || p.province === state.province
     );
     const inMunicipality = inProvince.filter(
@@ -405,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setOptions(
       '#provinceFilter',
       'All provinces',
-      uniq(inRegion.map((p) => p.province)),
+      uniq(places.map((p) => p.province)),
       state.province
     );
     setOptions(
@@ -428,9 +378,6 @@ document.addEventListener('DOMContentLoaded', () => {
     state.status
   );
   setOptions('#trainingTypeFilter', 'All training types', typeNames, '');
-  const canFilterByRegion = window.TMIS_PAGE?.administrator === true;
-  $('#regionFilterGroup').hidden = !canFilterByRegion;
-  setOptions('#regionFilter', 'All regions', uniq(databaseRegions.map(region => region.name).filter(Boolean)), state.region);
   setOptions(
     '#yearCoveredFilter',
     'All years',
@@ -439,21 +386,6 @@ document.addEventListener('DOMContentLoaded', () => {
   );
   syncLocationFilters();
 
-  const matchesLocationFilters = (record) => {
-    const selected = state.region || state.province || state.municipality || state.barangay;
-    if (!selected) return true;
-    const locationRecords = [
-      { region: record.region, province: record.province, municipality: record.municipality, barangay: record.barangay },
-      ...(Array.isArray(record.trainingLocations) ? record.trainingLocations : []),
-    ];
-
-    return locationRecords.some(location =>
-      (!state.region || location.region === state.region)
-      && (!state.province || location.province === state.province)
-      && (!state.municipality || location.municipality === state.municipality)
-      && (!state.barangay || location.barangay === state.barangay)
-    );
-  };
   const filtered = () =>
     records.filter(
       (r) =>
@@ -462,7 +394,9 @@ document.addEventListener('DOMContentLoaded', () => {
         (!state.global ||
           Object.values(r).join(' ').toLowerCase().includes(state.global)) &&
         (!state.type || r.type === state.type) &&
-        matchesLocationFilters(r) &&
+        (!state.province || r.province === state.province) &&
+        (!state.municipality || r.municipality === state.municipality) &&
+        (!state.barangay || r.barangay === state.barangay) &&
         (!state.year || String(r.yearCovered) === state.year) &&
         Object.entries(state.columns).every(
           ([k, v]) => !v || String(r[k]).toLowerCase().includes(v.toLowerCase())
@@ -510,10 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const id = esc(r.id),
       q = encodeURIComponent(r.id);
     const inReview = r.status === 'For Review';
-    const isRejected = r.status === 'Rejected';
-    const canRestore = !window.TMIS_PAGE || window.TmisStore.can('trainings.submit');
-    const canDeletePermanently = !window.TMIS_PAGE || window.TMIS_PAGE.administrator === true;
-    return `<td><div class="table-row-actions">${inReview ? `<button type="button" class="btn table-action-button forward-action" data-approve="${id}" title="Review and submit for approval" aria-label="Submit ${id} for approval"><i class="bi bi-send-fill"></i></button>` : ''}<a class="btn table-action-button view-action" href="../id/view-training/${trainingTitleSegment(r.title || r.training_title)}/${q}" target="_blank" rel="noopener" title="View training (opens in a new tab)" aria-label="View ${id}"><i class="bi bi-eye-fill"></i></a>${inReview ? `<a class="btn table-action-button edit-action" href="../id/edit-training/${q}" target="_blank" rel="noopener" title="Edit training (opens in a new tab)" aria-label="Edit ${id}"><i class="bi bi-pencil-fill"></i></a><button type="button" class="btn table-action-button reject-action" data-reject="${id}" title="Reject training" aria-label="Reject ${id}"><i class="bi bi-x-circle-fill"></i></button>` : ''}${isRejected && canRestore ? `<button type="button" class="btn table-action-button restore-action" data-restore-rejected="${id}" title="Restore to For Review" aria-label="Restore ${id} to For Review"><i class="bi bi-arrow-counterclockwise"></i></button>` : ''}${isRejected && canDeletePermanently ? `<button type="button" class="btn table-action-button delete-action" data-permanently-delete="${id}" title="Delete training permanently" aria-label="Delete ${id} permanently"><i class="bi bi-trash3-fill"></i></button>` : ''}</div></td>`;
+    return `<td><div class="table-row-actions">${inReview ? `<button type="button" class="btn table-action-button forward-action" data-approve="${id}" title="Review and submit for approval" aria-label="Submit ${id} for approval"><i class="bi bi-send-fill"></i></button>` : ''}<a class="btn table-action-button view-action" href="../id/view-training/${trainingTitleSegment(r.title || r.training_title)}/${q}" target="_blank" rel="noopener" title="View training (opens in a new tab)" aria-label="View ${id}"><i class="bi bi-eye-fill"></i></a><a class="btn table-action-button edit-action" href="../id/edit-training/${q}" target="_blank" rel="noopener" title="Edit training (opens in a new tab)" aria-label="Edit ${id}"><i class="bi bi-pencil-fill"></i></a>${inReview ? `<button type="button" class="btn table-action-button reject-action" data-reject="${id}" title="Reject training" aria-label="Reject ${id}"><i class="bi bi-x-circle-fill"></i></button>` : ''}</div></td>`;
   };
   const render = () => {
     const all = sorted(),
@@ -569,12 +500,6 @@ document.addEventListener('DOMContentLoaded', () => {
     state.type = e.target.value;
     refresh();
   });
-  $('#regionFilter').addEventListener('change', (e) => {
-    state.region = e.target.value;
-    state.province = state.municipality = state.barangay = '';
-    syncLocationFilters();
-    refresh();
-  });
   $('#yearCoveredFilter').addEventListener('change', (e) => {
     state.year = e.target.value;
     refresh();
@@ -588,15 +513,10 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#municipalityFilter').addEventListener('change', (e) => {
     state.municipality = e.target.value;
     state.barangay = '';
-    if (state.municipality && !state.province) {
-      const match = places.find(
+    if (state.municipality && !state.province)
+      state.province = places.find(
         (p) => p.municipality === state.municipality
-      );
-      if (match) {
-        state.province = match.province;
-        if (canFilterByRegion) state.region = match.region;
-      }
-    }
+      ).province;
     syncLocationFilters();
     refresh();
   });
@@ -607,13 +527,11 @@ document.addEventListener('DOMContentLoaded', () => {
         (p) =>
           p.barangay === state.barangay &&
           (!state.municipality || p.municipality === state.municipality) &&
-          (!state.province || p.province === state.province) &&
-          (!state.region || p.region === state.region)
+          (!state.province || p.province === state.province)
       );
       if (match) {
         state.municipality = match.municipality;
         state.province = match.province;
-        if (canFilterByRegion) state.region = match.region;
       }
     }
     syncLocationFilters();
@@ -626,8 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
     refresh();
   });
   $('#clearReviewFilters').addEventListener('click', () => {
-    state.global = state.type = state.region = state.province = state.municipality = '';
-    $('#regionFilter').value = '';
+    state.global = state.type = state.province = state.municipality = '';
     state.status = 'For Review';
     $('#statusFilter').value = 'For Review';
     state.barangay = state.year = '';
@@ -677,74 +594,38 @@ document.addEventListener('DOMContentLoaded', () => {
      Submit for approval (blocked unless a training design is on file)
   ------------------------------------------------------------------ */
   const confirmApprove = $('#confirmForwardButton');
-  const renderApprovalRequirements = (items) => {
-    const checks = items.flatMap(training => window.TmisWorkflowReadiness.approvalRequirements(training).map(check => ({
-      ...check,
-      label: items.length > 1 ? `${training.id} · ${check.label}` : check.label,
-    })));
-    window.TmisWorkflowReadiness.renderRequirements($('#designRequirement'), checks);
-    const isReady = checks.length > 0 && checks.every(check => check.passed);
-    confirmApprove.disabled = !isReady;
-
-    return isReady;
+  const renderDesignCheck = (r) => {
+    const ok = Boolean(r.designFile);
+    $('#designRequirement').innerHTML =
+      `<ul><li><i class="bi ${ok ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'}"></i>Training Design (PDF or DOCX)${ok ? ` — ${esc(r.designFile)}` : ''}<span>${ok ? 'Attached' : 'Missing'}</span></li></ul>` +
+      (ok
+        ? ''
+        : '<p class="submission-blocked">Submission blocked: the training design is missing. Attach it by editing the training first.</p>');
+    confirmApprove.disabled = !ok;
   };
 
   const detailRows = (pairs) =>
     pairs.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('');
   const findRecord = (id) => records.find((r) => r.id === id);
-  const trainingSummary = (record) => {
-    const location = [record.office || record.implementingOffice, record.region].filter(Boolean).join(' · ');
-    return `${record.id} · ${record.title || record.training_title || 'Untitled training'}${location ? ` · ${location}` : ''}`;
-  };
-  let pendingPermanentDelete = null;
 
-  body.addEventListener('click', async (e) => {
+  body.addEventListener('click', (e) => {
     const a = e.target.closest('[data-approve]'),
-      rj = e.target.closest('[data-reject]'),
-      restore = e.target.closest('[data-restore-rejected]'),
-      permanentlyDelete = e.target.closest('[data-permanently-delete]');
-    if (restore) {
-      const record = findRecord(restore.dataset.restoreRejected);
-      if (!record) {
-        notify('Training unavailable', 'Refresh the list and select a rejected training to restore.', 'warning');
-        return;
-      }
-      restore.disabled = true;
-      notify('Restoring training', `${trainingSummary(record)}. Requested status change: Rejected → For Review.`, 'info');
-      try {
-        if (window.TMIS_PAGE) {
-          await window.TmisStore.request(`/operations/trainings/${Number(record._db_id)}/restore-rejected`, { version: Number(record.version) });
-          reloadWithStatusToast('Training restored', `${trainingSummary(record)}. Status changed: Rejected → For Review.`);
-          return;
-        }
-        const latest = window.TmisStore.records('tmis-trainings');
-        await window.TmisStore.setItem('tmis-trainings', JSON.stringify(latest.map(item => item.id === record.id ? { ...item, status: 'For Review', statusRemarks: '' } : item)));
-        record.status = 'For Review';
-        refresh();
-        notify('Training restored', `${trainingSummary(record)}. Status changed: Rejected → For Review.`, 'success');
-      } catch (error) {
-        notify('Restore failed', `${trainingSummary(record)}. No status change was saved. ${error.message || 'The rejected training could not be restored.'}`, 'error');
-      } finally { restore.disabled = false; }
-      return;
-    }
-    if (permanentlyDelete) {
-      pendingPermanentDelete = findRecord(permanentlyDelete.dataset.permanentlyDelete);
-      if (!pendingPermanentDelete) return;
-      $('#permanentlyDeleteTrainingDetails').innerHTML = detailRows([
-        ['Training ID', esc(pendingPermanentDelete.id)],
-        ['Training Title', esc(pendingPermanentDelete.title || pendingPermanentDelete.training_title)],
-        ['Status', '<span class="status-badge status-inactive">Rejected</span>'],
-      ]);
-      permanentlyDeleteModal.show();
-      return;
-    }
+      rj = e.target.closest('[data-reject]');
     if (a) {
       const r = (state.selected = findRecord(a.dataset.approve));
-      $('#reviewForwardDetails').innerHTML = detailRows(window.TmisWorkflowReadiness.trainingDetails(r)
-        .map(([label, value]) => [label, esc(value)]));
+      $('#reviewForwardDetails').innerHTML = detailRows([
+        ['Training ID', esc(r.id)],
+        ['Training Title', esc(r.title)],
+        ['Training Type', esc(r.type)],
+        [
+          'Training Status',
+          `<span class="status-badge ${statusBadgeClass(r.status)}">${esc(r.status)}</span>`,
+        ],
+        ['Location and Venue', esc(`${r.venue}, ${r.location}`)],
+      ]);
       $('#editTrainingLink').href =
         `../id/edit-training/${encodeURIComponent(r.id)}`;
-      renderApprovalRequirements([r]);
+      renderDesignCheck(r);
       approveModal.show();
     } else if (rj) {
       const r = (state.selected = findRecord(rj.dataset.reject));
@@ -755,110 +636,41 @@ document.addEventListener('DOMContentLoaded', () => {
         ['Implementing Office', esc(r.office)],
       ]);
       $('#rejectRemarks').value = '';
-      $('#confirmRejectButton').disabled = true;
       rejectModal.show();
     }
   });
 
-  $('#rejectRemarks').addEventListener('input', () => {
-    $('#confirmRejectButton').disabled = !$('#rejectRemarks').value.trim();
-  });
-
   confirmApprove.addEventListener('click', async () => {
     const r = state.selected;
-    if (!r) {
-      notify('No training selected', 'Select a training before submitting it for approval.', 'warning');
+    if (!r) return;
+    if (!r.designFile) {
+      notify('Submission Blocked', 'The training design is missing.', true);
       return;
     }
-    if (!renderApprovalRequirements([r])) {
-      const missing = window.TmisWorkflowReadiness.approvalRequirements(r)
-        .filter(requirement => !requirement.passed)
-        .map(requirement => `${requirement.label}: ${requirement.detail}`);
-      notify('Submission blocked', `${trainingSummary(r)}. Missing requirements: ${missing.join(' ')}`, 'warning');
-      return;
-    }
-    notify('Submitting for approval', `${trainingSummary(r)}. Status change requested: For Review → For Approval.`, 'info');
     try {
-      if (window.TMIS_PAGE) {
-        await window.TmisStore.request(`/operations/trainings/${Number(r._db_id)}/status`, {
-          status: 'For approval',
-          version: Number(r.version),
-        });
-        reloadWithStatusToast('Training submitted', `${trainingSummary(r)}. Status changed: For Review → For Approval.`);
-        return;
-      }
       const latest = window.TmisStore.records('tmis-trainings');
-      await window.TmisStore.setItem('tmis-trainings', JSON.stringify(latest.map(item=>item.id===r.id?{...item,status:'For Approval'}:item)));
-    } catch(error) { notify('Submission failed', `${trainingSummary(r)}. No status change was saved. ${error.message || 'The training could not be submitted.'}`, 'error'); return; }
+      const remarks = document.querySelector('#rejectRemarks')?.value.trim() || '';
+      await window.TmisStore.setItem('tmis-trainings', JSON.stringify(latest.map(item=>item.id===r.id?{...item,status:'For Approval',remarks}:item)));
+    } catch(error) { notify('Status update blocked', error.message, true); return; }
     r.status = 'For Approval';
     approveModal.hide();
     refresh();
-    notify('Training submitted', `${trainingSummary(r)}. Status changed: For Review → For Approval.`, 'success');
+    notify('Training Submitted', `${r.id} submitted for approval.`);
   });
 
   $('#confirmRejectButton').addEventListener('click', async () => {
     const r = state.selected;
-    if (!r) {
-      notify('No training selected', 'Select a training before rejecting it.', 'warning');
-      return;
-    }
-    const reason = $('#rejectRemarks').value.trim();
-    if (!reason) {
-      notify('Remarks required', 'Add a reason before rejecting this training.', 'warning');
-      return;
-    }
-    notify('Rejecting training', `${trainingSummary(r)}. Status change requested: For Review → Rejected. Reason: ${reason.slice(0, 180)}${reason.length > 180 ? '…' : ''}`, 'info');
+    if (!r) return;
     try {
-      if (window.TMIS_PAGE) {
-        await window.TmisStore.request(`/operations/trainings/${Number(r._db_id)}/status`, {
-          status: 'Rejected',
-          version: Number(r.version),
-          reason,
-        });
-      }
-      else {
-        const latest = window.TmisStore.records('tmis-trainings');
-        await window.TmisStore.setItem('tmis-trainings', JSON.stringify(latest.map(item=>item.id===r.id?{...item,status:'Rejected',remarks:reason}:item)));
-      }
-    } catch(error) { notify('Rejection failed', `${trainingSummary(r)}. Status remains For Review. ${error.message || 'The training could not be rejected.'}`, 'error'); return; }
-    r.status = 'Rejected';
-    r.remarks = reason;
-    if (window.TMIS_PAGE) r.version = Number(r.version) + 1;
-    state.status = 'Rejected';
-    $('#statusFilter').value = 'Rejected';
+      const latest = window.TmisStore.records('tmis-trainings');
+      const remarks = document.querySelector('#rejectRemarks')?.value.trim() || '';
+      await window.TmisStore.setItem('tmis-trainings', JSON.stringify(latest.map(item=>item.id===r.id?{...item,status:'For Review',remarks}:item)));
+    } catch(error) { notify('Status update blocked', error.message, true); return; }
+    r.status = 'For Review';
+    r.remarks = $('#rejectRemarks').value.trim();
     rejectModal.hide();
     refresh();
-    notify('Training rejected', `${trainingSummary(r)}. Status changed: For Review → Rejected. Reason: ${reason.slice(0, 180)}${reason.length > 180 ? '…' : ''}`, 'success');
-  });
-
-  $('#confirmPermanentlyDeleteTrainingButton').addEventListener('click', async (event) => {
-    const button = event.currentTarget;
-    const record = pendingPermanentDelete;
-    if (!record || record.status !== 'Rejected') return;
-    button.disabled = true;
-    try {
-      if (window.TMIS_PAGE) {
-        const result = await window.TmisStore.request(`/operations/trainings/${Number(record._db_id)}/permanently-delete`, {
-          version: Number(record.version),
-        }, 'DELETE');
-        await window.TmisStore.refresh();
-        records = window.TmisStore.records('tmis-trainings').filter(item => REVIEW_STATUSES.includes(item.status));
-        pendingPermanentDelete = null;
-        permanentlyDeleteModal.hide();
-        refresh();
-        notify('Training permanently deleted', result.message || 'The rejected training and its linked records were removed.', 'success');
-        return;
-      }
-      const latest = window.TmisStore.records('tmis-trainings');
-      await window.TmisStore.setItem('tmis-trainings', JSON.stringify(latest.filter(item => item.id !== record.id)));
-      records = records.filter(item => item.id !== record.id);
-      pendingPermanentDelete = null;
-      permanentlyDeleteModal.hide();
-      refresh();
-      notify('Training permanently deleted', 'The rejected training was removed from the records.', 'success');
-    } catch (error) {
-      notify('Deletion failed', error.message || 'The rejected training could not be permanently deleted.', 'error');
-    } finally { button.disabled = false; }
+    notify('Training Rejected', `${r.id} was rejected and removed from review.`, true);
   });
 
   /* ------------------------------------------------------------------
@@ -870,7 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       if (window.TMIS_PAGE) {
         await window.TmisStore.refresh();
-        records = window.TmisStore.records('tmis-trainings').filter(item => REVIEW_STATUSES.includes(item.status));
+        records = window.TmisStore.records('tmis-trainings').filter(item => item.status === 'For Review');
         setOptions(
           '#yearCoveredFilter',
           'All years',

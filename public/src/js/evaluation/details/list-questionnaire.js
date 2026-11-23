@@ -19,8 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let records = [], page = 1, pageSize = 10, pendingDelete = null;
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
   const date = (value) => value && !Number.isNaN(Date.parse(value)) ? new Date(value).toLocaleDateString() : '-';
-  const statusLabel = (value) => ({ active: 'Approved & Accepted', draft: 'Unfinished' }[String(value || '').toLowerCase()] || value || 'Approved & Accepted');
-  const can = (permission) => window.TmisStore.can(permission);
   const sample = { id: 'QUE-SAMPLE-001', title: 'Good Agricultural Practices Pre-test', type: 'Pre-test', status: 'Sample', region: 'Region IV-A', office: 'DA Regional Field Office - Region IV-A', count: 20, createdAt: new Date().toISOString(), description: 'Example of a recently submitted questionnaire.', view: '../id/view-pre-test', sample: true };
 
   function updateOptions(select, values, label) {
@@ -35,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const saved = JSON.parse(window.TmisStore.getItem(key) || '[]');
         return (Array.isArray(saved) ? saved : []).filter((item) => item && typeof item === 'object').map((item) => ({
           id: String(item.id || ''), title: item.trainingQuestionnaire || item.questionnaireName || 'Untitled questionnaire', type,
-          status: item.status || 'Active', statusLabel: statusLabel(item.status || 'Active'), region: item.region || '', office: item.implementingOffice || item.office || '',
+          status: item.status || 'Active', region: item.region || '', office: item.implementingOffice || item.office || '',
           count: ['Pre-test', 'Post-test'].includes(type) ? Number(item.totalItems) || 0 : Array.isArray(item.questions) ? item.questions.length : 0,
           createdAt: item.createdAt || item.updatedAt || '', description: item.description || '',
           questions: Array.isArray(item.questions) ? item.questions : [],
@@ -69,23 +67,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const needle = search.value.trim().toLowerCase();
     return records.filter((item) => filters.every((select, index) => !select.value || item[['type', 'office', 'region'][index]] === select.value)
       && (!needle || `${item.id} ${item.title}`.toLowerCase().includes(needle))
-      && columns.every((input) => !input.value.trim() || String(input.dataset.columnFilter === 'createdAt' ? date(item.createdAt) : input.dataset.columnFilter === 'status' ? item.statusLabel : item[input.dataset.columnFilter] ?? '').toLowerCase().includes(input.value.trim().toLowerCase())));
+      && columns.every((input) => !input.value.trim() || String(input.dataset.columnFilter === 'createdAt' ? date(item.createdAt) : item[input.dataset.columnFilter] ?? '').toLowerCase().includes(input.value.trim().toLowerCase())));
   }
   function render() {
     const found = matching(), pages = pageSize === Infinity ? 1 : Math.max(1, Math.ceil(found.length / pageSize));
     page = Math.min(Math.max(1, page), pages);
     const start = pageSize === Infinity ? 0 : (page - 1) * pageSize;
     const shown = pageSize === Infinity ? found : found.slice(start, start + pageSize);
-    rows.innerHTML = shown.map((item) => {
-      const actions = [
-        can('questionnaires.read') ? `<a class="btn btn-sm btn-outline-success" href="${window.TmisStore.escape(item.view)}/${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="View ${item.sample ? 'sample' : esc(item.title)} in a new tab" title="View in new tab"><i class="bi bi-eye"></i></a>` : '',
-        !item.sample && can('questionnaires.edit') ? `<a class="btn btn-sm btn-outline-primary" href="${window.TmisStore.escape(item.edit)}/${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="Edit ${esc(item.title)} in new tab" title="Edit in new tab"><i class="bi bi-pencil-square"></i></a>` : '',
-        !item.sample && can('questionnaires.delete') ? `<button class="btn btn-sm btn-outline-danger" type="button" data-action="delete" data-id="${esc(item.id)}" data-type="${esc(item.type)}" aria-label="Delete ${esc(item.title)}" title="Delete"><i class="bi bi-trash"></i></button>` : '',
-      ].join('');
-      return `<tr><td><div class="questionnaire-actions">${actions}</div></td>
-      <td><span class="badge ${['draft', 'inactive'].includes(item.status.toLowerCase()) ? 'text-bg-secondary' : item.sample ? 'text-bg-info' : 'text-bg-success'}">${esc(item.statusLabel)}</span></td>
-      <td class="questionnaire-id" title="${esc(item.id)}">${esc(item.id)}</td><td>${esc(item.title)}</td><td>${esc(item.type)}</td><td>${esc(item.region || '-')}</td><td>${esc(item.office || '-')}</td><td>${window.TmisStore.escape(item.count)}</td><td>${date(item.createdAt)}</td></tr>`;
-    }).join('') || `<tr><td colspan="9" class="text-center py-4">No ${inactiveOnly ? 'inactive ' : ''}questionnaires found.</td></tr>`;
+    rows.innerHTML = shown.map((item) => `<tr><td><div class="questionnaire-actions">${item.sample ? `    <a class="btn btn-sm btn-outline-success" href="${window.TmisStore.escape(item.view)}/${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="View sample in new tab" title="View in new tab"><i class="bi bi-eye"></i></a>` : `
+    <a class="btn btn-sm btn-outline-success" href="${window.TmisStore.escape(item.view)}/${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="View ${esc(item.title)} in new tab" title="View in new tab"><i class="bi bi-eye"></i></a>
+    <a class="btn btn-sm btn-outline-primary" href="${window.TmisStore.escape(item.edit)}/${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="Edit ${esc(item.title)} in new tab" title="Edit in new tab"><i class="bi bi-pencil-square"></i></a>
+      <button class="btn btn-sm btn-outline-danger" type="button" data-action="delete" data-id="${esc(item.id)}" data-type="${esc(item.type)}" aria-label="Delete ${esc(item.title)}" title="Delete"><i class="bi bi-trash"></i></button>`}</div></td>
+      <td><span class="badge ${['draft', 'inactive'].includes(item.status.toLowerCase()) ? 'text-bg-secondary' : item.sample ? 'text-bg-info' : 'text-bg-success'}">${esc(item.status)}</span></td>
+      <td class="questionnaire-id" title="${esc(item.id)}">${esc(item.id)}</td><td>${esc(item.title)}</td><td>${esc(item.type)}</td><td>${esc(item.region || '-')}</td><td>${esc(item.office || '-')}</td><td>${window.TmisStore.escape(item.count)}</td><td>${date(item.createdAt)}</td></tr>`).join('') || `<tr><td colspan="9" class="text-center py-4">No ${inactiveOnly ? 'inactive ' : ''}questionnaires found.</td></tr>`;
     pagers.forEach((pager) => { pager.innerHTML = `<span>${found.length ? start + 1 : 0}-${Math.min(start + shown.length, found.length)} of ${found.length}</span><div class="d-flex gap-2 align-items-center"><button class="btn btn-sm btn-outline-secondary" data-page="first" ${page === 1 ? 'disabled' : ''} aria-label="First page">&laquo;</button><button class="btn btn-sm btn-outline-secondary" data-page="previous" ${page === 1 ? 'disabled' : ''}>Previous</button><span>Page ${page} of ${pages}</span><button class="btn btn-sm btn-outline-secondary" data-page="next" ${page === pages ? 'disabled' : ''}>Next</button><button class="btn btn-sm btn-outline-secondary" data-page="last" ${page === pages ? 'disabled' : ''} aria-label="Last page">&raquo;</button></div>`; });
     sizes.forEach((select) => { select.value = pageSize === Infinity ? 'all' : String(pageSize); });
   }
@@ -108,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }));
   refresh.addEventListener('click', () => loadTable(true));
   $('#exportQuestionnaires').addEventListener('click', () => {
-    const data = matching().filter((item) => !item.sample).map((item) => ({ Status: item.statusLabel, 'Questionnaire ID': item.id, 'Questionnaire Title': item.title, 'Questionnaire Type': item.type, Region: item.region, 'Implementing Office': item.office, 'Number of Items': item.count, 'Date Created': date(item.createdAt) }));
+    const data = matching().filter((item) => !item.sample).map((item) => ({ Status: item.status, 'Questionnaire ID': item.id, 'Questionnaire Title': item.title, 'Questionnaire Type': item.type, Region: item.region, 'Implementing Office': item.office, 'Number of Items': item.count, 'Date Created': date(item.createdAt) }));
     if (!data.length) return;
     const book = XLSX.utils.book_new(), sheet = XLSX.utils.json_to_sheet(data);
     sheet['!cols'] = [14, 38, 46, 23, 20, 38, 18, 18].map((wch) => ({ wch }));

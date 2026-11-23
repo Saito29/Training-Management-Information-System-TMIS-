@@ -8,47 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
       .filter(Boolean)
       .map(String));
 
-    const resultsForTraining = (kind, training) => window.TmisStore.records(`tmis-${kind}-encoded`).filter(result => {
-      const farmerMatches = [farmer.id, farmer._db_id].some(id => id !== undefined && id !== null && String(result.farmerId || '') === String(id));
-      if (result.status !== 'complete' || !farmerMatches) return false;
-
-      const trainingDatabaseId = String(training._db_id || '');
-      const resultDatabaseId = String(result.trainingDatabaseId || '');
-      if (trainingDatabaseId && resultDatabaseId) return trainingDatabaseId === resultDatabaseId;
-
-      return [training.id, trainingDatabaseId].filter(Boolean).some(id => String(result.trainingId || '') === String(id));
-    });
-    const averageTestScore = (kind, training) => {
-      const results = resultsForTraining(kind, training);
-      const questionnaires = window.TmisStore.records(`tmis-${kind}-questionnaires`);
-      let totalEarned = 0;
-      let totalPossible = 0;
-
-      for (const result of results) {
-        if (result.score === null || result.score === undefined || result.score === '') return null;
-
-        const questionnaire = questionnaires.find(item => String(item.id) === String(result.questionnaireId));
-        const possible = Number(result.totalItems || result.total_items || result.totalQuestions || questionnaire?.totalItems || questionnaire?.questions?.length);
-        const earned = Number(result.score);
-        if (!Number.isFinite(earned) || !Number.isFinite(possible) || possible <= 0) return null;
-
-        totalEarned += earned;
-        totalPossible += possible;
-      }
-
-      return totalPossible ? totalEarned / totalPossible * 100 : null;
-    };
-    const averageRating = training => {
-      const results = resultsForTraining('training-evaluation', training);
-      const ratings = results.flatMap(result => Array.isArray(result.ratings)
-        ? result.ratings.filter(item => item?.rating !== null && item?.rating !== undefined && item?.rating !== '').map(item => Number(item.rating)).filter(Number.isFinite)
-        : []);
-      if (ratings.length) return ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
-
-      const scores = results.filter(result => result.score !== null && result.score !== undefined && result.score !== '').map(result => Number(result.score)).filter(Number.isFinite);
-      return scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : null;
-    };
-
     return window.TmisStore.records('tmis-trainings')
       .filter(training =>
         (training.participants || []).includes(farmer.id)
@@ -57,15 +16,12 @@ document.addEventListener('DOMContentLoaded', () => {
       .map(item => ({
         ...item,
         category: item.type,
-        year: item.yearCovered || item.year_covered || '',
         date: item.startDate,
-        region: item.region || '',
         location: item.venue,
-        office: item.office || '',
-        organizer: item.office || '',
-        preTest: averageTestScore('pre-test', item),
-        postTest: averageTestScore('post-test', item),
-        rating: averageRating(item),
+        organizer: item.office,
+        preTest: null,
+        postTest: null,
+        rating: null,
       }));
   };
   let records = (window.TMIS_PAGE ? databaseRecords() : [
@@ -180,7 +136,6 @@ document.addEventListener('DOMContentLoaded', () => {
       rating: 4.4,
     },
   ]);
-  records = records.map(record => ({...record, region: record.region || 'Not recorded', office: record.office || record.organizer || 'Not recorded'}));
 
   const tableBody = document.getElementById('trainings-table-body');
   const table = document.getElementById('trainingDataTable');
@@ -188,15 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const globalSearch = document.getElementById('trainingGlobalSearch');
   const clearButton = document.getElementById('clearTrainingFilters');
   const exportButton = document.getElementById('exportTrainingTable');
-  const showFiltersButton = document.getElementById('showTrainingFilters');
-  const applyFiltersButton = document.getElementById('applyTrainingFilters');
-  const filterSearchRow = document.getElementById('trainingFilterSearchRow');
   const paginationIds = ['trainingPaginationTop', 'trainingPaginationBottom'];
-  const yearFilter = document.getElementById('trainingFilterYear');
-  const categoryFilter = document.getElementById('trainingFilterCategory');
-  const dateFilter = document.getElementById('trainingFilterDate');
-  const regionFilter = document.getElementById('trainingFilterRegion');
-  const officeFilter = document.getElementById('trainingFilterOffice');
 
   if (
     !tableBody ||
@@ -211,11 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const state = {
     global: '',
-    year: '',
-    category: '',
-    date: '',
-    region: '',
-    office: '',
+    columns: {},
     page: 1,
     pageSize: 8,
     sort: null,
@@ -239,21 +182,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return String(record[key]);
   };
 
-  const fillFilter = (select, values, placeholder, selected = select.value) => {
-    const options = [...new Set(values.filter(value => value && value !== 'Not recorded').map(String))]
-      .sort((left, right) => left.localeCompare(right, undefined, {numeric: true, sensitivity: 'base'}));
-    select.replaceChildren(new Option(placeholder, ''), ...options.map(value => new Option(value, value)));
-    select.value = options.includes(selected) ? selected : '';
-  };
-  const refreshOfficeOptions = () => {
-    const options = records.filter(record => !state.region || String(record.region) === state.region).map(record => record.office);
-    fillFilter(officeFilter, options, 'All offices', state.office);
-  };
-  fillFilter(yearFilter, records.map(record => record.year), 'All years', state.year);
-  fillFilter(categoryFilter, records.map(record => record.category), 'All categories', state.category);
-  fillFilter(regionFilter, records.map(record => record.region), 'All regions', state.region);
-  refreshOfficeOptions();
-
   const filteredRecords = () =>
     records.filter((record) => {
       const matchesGlobal =
@@ -265,13 +193,12 @@ document.addEventListener('DOMContentLoaded', () => {
               .toLowerCase()
               .includes(state.global)
           );
-      const matchesDate = !state.date || String(record.date || '').slice(0, 10) === state.date;
-      return matchesGlobal
-        && (!state.year || String(record.year) === state.year)
-        && (!state.category || String(record.category) === state.category)
-        && matchesDate
-        && (!state.region || String(record.region) === state.region)
-        && (!state.office || String(record.office) === state.office);
+      const matchesColumns = Object.entries(state.columns).every(
+        ([key, filter]) =>
+          !filter ||
+          searchableValue(record, key).toLowerCase().includes(filter)
+      );
+      return matchesGlobal && matchesColumns;
     });
 
   const sortedRecords = () => {
@@ -295,50 +222,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const createRow = (record) => {
     const row = document.createElement('tr');
-    const actionCell = document.createElement('td');
-    const actionLink = document.createElement('a');
-    actionLink.className = 'training-row-action';
-    actionLink.href = trainingViewUrl(record);
-    actionLink.target = '_blank';
-    actionLink.rel = 'noopener';
-    actionLink.setAttribute('aria-label', `Open ${record.title}`);
-    actionLink.title = 'Open training';
-    actionLink.innerHTML = '<i class="bi bi-eye-fill" aria-hidden="true"></i>';
-    actionCell.append(actionLink);
-    row.append(actionCell);
-
     const titleCell = document.createElement('td');
-    const titleText = document.createElement('strong');
-    titleText.className = 'training-table-title-text';
-    titleText.textContent = record.title;
-    titleCell.append(titleText);
+    const titleLink = document.createElement('a');
+    titleLink.className = 'training-table-title-link';
+    titleLink.href = trainingViewUrl(record);
+    titleLink.target = '_blank';
+    titleLink.rel = 'noopener';
+    titleLink.textContent = record.title;
+    titleCell.append(titleLink);
     row.append(titleCell);
 
     [
       record.category,
-      record.year || '',
       record.date,
-      record.region,
       record.location,
-      record.office,
+      record.organizer,
       formatScore(record.preTest),
       formatScore(record.postTest),
       formatRating(record.rating),
-    ].forEach((value, index) => {
+    ].forEach((value) => {
       const cell = document.createElement('td');
-      if (index === 1) {
-        const year = document.createElement('span');
-        year.className = 'training-year-value';
-        year.textContent = value || 'Not recorded';
-        cell.append(year);
-      } else if (index === 5) {
-        const office = document.createElement('span');
-        office.className = 'training-office-value';
-        office.textContent = value || 'Not recorded';
-        cell.append(office);
-      } else {
-        cell.textContent = value ?? '';
-      }
+      cell.textContent = value;
       row.append(cell);
     });
     return row;
@@ -390,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (emptyMessage) {
       emptyMessage.textContent = records.length
         ? 'No training records match the current filters.'
-        : 'No training attended found for this farmer/participant.';
+        : 'No training participated found yet.';
     }
     paginationIds.forEach((id) => renderPagination(id, sorted.length, pages));
 
@@ -421,24 +325,12 @@ document.addEventListener('DOMContentLoaded', () => {
     refresh();
   });
 
-  showFiltersButton?.addEventListener('click', () => {
-    if (!filterSearchRow) return;
-    const shouldShow = filterSearchRow.hidden;
-    filterSearchRow.hidden = !shouldShow;
-    showFiltersButton.setAttribute('aria-expanded', String(shouldShow));
-    showFiltersButton.innerHTML = `<i class="bi bi-sliders" aria-hidden="true"></i> ${shouldShow ? 'Hide' : 'Show'}`;
+  table.querySelectorAll('.training-column-filter').forEach((input) => {
+    input.addEventListener('input', () => {
+      state.columns[input.dataset.column] = input.value.trim().toLowerCase();
+      refresh();
+    });
   });
-  applyFiltersButton?.addEventListener('click', refresh);
-  yearFilter.addEventListener('change', () => { state.year = yearFilter.value; refresh(); });
-  categoryFilter.addEventListener('change', () => { state.category = categoryFilter.value; refresh(); });
-  dateFilter.addEventListener('change', () => { state.date = dateFilter.value; refresh(); });
-  regionFilter.addEventListener('change', () => {
-    state.region = regionFilter.value;
-    state.office = '';
-    refreshOfficeOptions();
-    refresh();
-  });
-  officeFilter.addEventListener('change', () => { state.office = officeFilter.value; refresh(); });
 
   table.querySelectorAll('.training-sortable').forEach((header) => {
     const sortByHeader = () => {
@@ -485,18 +377,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   clearButton.addEventListener('click', () => {
     state.global = '';
-    state.year = '';
-    state.category = '';
-    state.date = '';
-    state.region = '';
-    state.office = '';
+    state.columns = {};
     state.sort = null;
     globalSearch.value = '';
-    yearFilter.value = '';
-    categoryFilter.value = '';
-    dateFilter.value = '';
-    regionFilter.value = '';
-    refreshOfficeOptions();
+    table.querySelectorAll('.training-column-filter').forEach((input) => {
+      input.value = '';
+    });
     refresh();
   });
 
@@ -508,11 +394,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportRows = sortedRecords().map((record) => ({
       'Training Name': record.title,
       Category: record.category,
-      Year: record.year || '',
       Dates: record.date,
-      Region: record.region,
       Location: record.location,
-      Office: record.office,
+      Organizer: record.organizer,
       'Pre-Test': formatScore(record.preTest),
       'Post-Test': formatScore(record.postTest),
       Rating: formatRating(record.rating),

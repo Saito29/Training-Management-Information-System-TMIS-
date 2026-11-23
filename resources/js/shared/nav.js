@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const notificationDetailModal = document.getElementById('notificationDetailModal');
-  if (profileScript) import(new URL('../notification/header.js?v=notification-read-state-1', profileScript.src).href);
+  if (profileScript) import(new URL('../notification/header.js?v=notification-bell-ready-1', profileScript.src).href);
   let notificationFullContent = '';
   let notificationMetadata = '';
   const removeRepeatedNotificationTitle = (content, title) => {

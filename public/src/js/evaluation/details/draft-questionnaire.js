@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-  const date = (value) => value && !Number.isNaN(Date.parse(value)) ? new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(new Date(value)) : '—';
+  const date = (value) => value && !Number.isNaN(Date.parse(value)) ? new Date(value).toLocaleString() : '—';
   const questionnaireSources = [
     { key: 'tmis-pre-test-questionnaires', type: 'Pre-test', path: '../id/edit-pre-test' },
     { key: 'tmis-post-test-questionnaires', type: 'Post-test', path: '../id/edit-post-test' },
