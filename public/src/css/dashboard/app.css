@@ -1034,6 +1034,16 @@
   transform: translateY(-2px);
 }
 
+.app-main .app-main-body .card-upcoming-training > .card-header {
+  display: flex;
+  align-items: center;
+}
+
+.app-main .app-main-body .card-upcoming-training > .card-header > .btn-modal {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
 /* card header */
 .app-main
   .app-main-body
@@ -1974,7 +1984,7 @@
 }
 
 .dashboard-report-footer {
-  justify-content: space-between;
+  justify-content: flex-end;
   padding: 14px 28px;
   border: 0;
   border-top: 1px solid #e0e0e0;

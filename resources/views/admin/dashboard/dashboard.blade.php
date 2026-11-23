@@ -66,7 +66,7 @@ class="layout-fixed"
       href="https://cdn.datatables.net/buttons/3.2.5/css/buttons.dataTables.min.css"
     />
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
-    <link rel="stylesheet" href="{{ asset('src/css/dashboard/app.css?v=dashboard-highlight-layout-3') }}" />
+    <link rel="stylesheet" href="{{ asset('src/css/dashboard/app.css?v=dashboard-report-modal-actions-right-1') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <script src="{{ asset('src/js/shared/theme.js') }}" defer></script>
     <title>Dashboard | TMIS</title>
