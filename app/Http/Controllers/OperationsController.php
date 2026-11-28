@@ -811,7 +811,7 @@ class OperationsController
         $uploadedTypes = DB::table('training_attachments')
             ->where('training_id', $trainingId)
             ->get(['original_kind', 'kind', 'path'])
-            ->filter(fn ($attachment): bool => Storage::disk('local')->exists($attachment->path))
+            ->filter(fn ($attachment): bool => Storage::disk(config('filesystems.uploads_disk'))->exists($attachment->path))
             ->map(fn ($attachment): string => mb_strtolower(trim((string) ($attachment->original_kind ?: $attachment->kind))))
             ->unique()
             ->all();
@@ -980,7 +980,7 @@ class OperationsController
         });
 
         if ($attachmentPaths !== []) {
-            Storage::disk('local')->delete($attachmentPaths);
+            Storage::disk(config('filesystems.uploads_disk'))->delete($attachmentPaths);
         }
 
         return response()->json(['message' => 'Rejected training and its linked records were permanently deleted.']);
@@ -993,7 +993,8 @@ class OperationsController
         $data['kind'] = AttachmentTypeCatalog::resolve('training', $data['kind']);
         abort_unless($this->query($request, 'trainings')->where('id', $id)->exists(), 404);
         $file = $request->file('file');
-        $path = $file->store('training-attachments', 'local');
+        $disk = config('filesystems.uploads_disk');
+        $path = $file->store('training-attachments', $disk);
         try {
             DB::transaction(function () use ($request, $id, $data, $file, $path): void {
                 AttachmentTypeCatalog::lock('training', $data['kind']);
@@ -1004,7 +1005,7 @@ class OperationsController
                 $this->audit($request, 'trainings', $id, 'attachment_added');
             });
         } catch (\Throwable $exception) {
-            Storage::disk('local')->delete($path);
+            Storage::disk($disk)->delete($path);
             throw $exception;
         }
 
@@ -1016,9 +1017,9 @@ class OperationsController
         ModuleAccess::authorize($request, 'trainings.read');
         abort_unless($this->query($request, 'trainings')->where('id', $id)->exists(), 404);
         $file = DB::table('training_attachments')->where('id', $attachment)->where('training_id', $id)->first();
-        abort_unless($file && Storage::disk('local')->exists($file->path), 404);
+        abort_unless($file && Storage::disk(config('filesystems.uploads_disk'))->exists($file->path), 404);
 
-        return Storage::disk('local')->download($file->path, $file->original_name, ['X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'no-store, private']);
+        return Storage::disk(config('filesystems.uploads_disk'))->download($file->path, $file->original_name, ['X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'no-store, private']);
     }
 
     public function link(Request $request, int $id): JsonResponse|RedirectResponse

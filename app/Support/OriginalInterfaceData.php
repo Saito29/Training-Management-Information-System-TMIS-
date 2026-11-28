@@ -147,6 +147,22 @@ class OriginalInterfaceData
 
     }
 
+    /** @param list<array<string, mixed>> $interventions
+     * @return list<array<string, mixed>>
+     */
+    public static function interventionRecords(array $interventions): array
+    {
+        return collect($interventions)
+            ->filter(static fn (mixed $intervention): bool => is_array($intervention))
+            ->values()
+            ->map(static function (array $intervention, int $index): array {
+                $legacyIdentity = 'legacy-'.$index.'-'.substr(hash('sha256', json_encode($intervention, JSON_THROW_ON_ERROR)), 0, 16);
+
+                return array_merge($intervention, ['id' => (string) ($intervention['id'] ?? $legacyIdentity)]);
+            })
+            ->all();
+    }
+
     public static function farmerNumber(object $participant): string
     {
         $year = substr((string) ($participant->created_at ?? ''), 2, 2);
@@ -515,6 +531,14 @@ class OriginalInterfaceData
 
                 $item = self::unpack($record->ui_data);
 
+                if (in_array($module, ['participants', 'associations'], true)) {
+                    if (ModuleAccess::canViewInterventions($user, $module)) {
+                        $item['interventions'] = self::interventionRecords(is_array($item['interventions'] ?? null) ? $item['interventions'] : []);
+                    } else {
+                        unset($item['interventions'], $item['interventionRecords'], $item['intervention']);
+                    }
+                }
+
                 $id = $record->ui_id ?? (string) $record->id;
 
                 $recordStatusId = $module === 'participants' ? $record->record_status_id : null;
@@ -753,7 +777,6 @@ class OriginalInterfaceData
 
         $isAccountManagement = str_starts_with($normalizedPage, 'app/admin/administration/');
         $needsAccounts = $isAccountManagement
-            || str_starts_with($normalizedPage, 'app/admin/notification/notification')
             || $normalizedPage === 'app/admin/users/profile';
 
         $isAdministrator = ModuleAccess::isAdministrator($user);
@@ -835,7 +858,7 @@ class OriginalInterfaceData
                 'title' => $title,
                 'summary' => $summary,
                 'message' => $message,
-                'reference' => (string) ($notification->training_public_id ?? $notification->training_id),
+                'reference' => (string) ($notification->training_public_id ?: 'TMIS-'.strtoupper(substr(hash('sha256', 'training:'.$notification->training_id), 0, 12))),
                 'changedBy' => $actorName,
                 'actorOffice' => $actorOffice,
                 'actorRegion' => $actorRegion,
@@ -883,6 +906,12 @@ class OriginalInterfaceData
             'roles' => $isAdministrator ? DB::table('user_roles')->where('is_active', 1)->where('name', '<>', 'System Administrator')->pluck('name')->all() : [],
             'stores' => $stores,
             'attachmentTypes' => AttachmentTypeCatalog::namesByCategory(),
+            'interventionUnits' => DB::table('participant_options')
+                ->where('field', 'intervention_unit')
+                ->where('is_active', true)
+                ->orderBy('label')
+                ->get(['id', 'value', 'label'])
+                ->all(),
             'requiredAttachments' => [
                 'training' => DB::table('attachment_type_options')
                     ->where('category', 'training')

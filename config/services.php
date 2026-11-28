@@ -2,6 +2,8 @@
 
 return [
 
+    'tmis_bootstrap_data_key' => env('TMIS_BOOTSTRAP_DATA_KEY'),
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services

@@ -65,7 +65,9 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'UTC'),
+
+    'trusted_proxies' => env('TRUSTED_PROXIES'),
 
     // Store timestamps consistently; display and enter local times in the Philippines.
     'display_timezone' => 'Asia/Manila',

@@ -18,11 +18,11 @@ class BrandingAssetController
             is_string($path)
                 && str_starts_with($path, 'system-branding/')
                 && ! str_contains($path, '..')
-                && Storage::disk('local')->exists($path),
+                && Storage::disk(config('filesystems.uploads_disk'))->exists($path),
             404,
         );
 
-        return Storage::disk('local')->response($path, headers: [
+        return Storage::disk(config('filesystems.uploads_disk'))->response($path, headers: [
             'Cache-Control' => 'public, max-age=3600',
             'X-Content-Type-Options' => 'nosniff',
         ]);

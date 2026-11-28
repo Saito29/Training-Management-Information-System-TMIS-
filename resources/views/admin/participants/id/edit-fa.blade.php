@@ -52,7 +52,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/participants/update/view-farmer.css?v=association-intervention-detail-2') }}"
+      href="{{ asset('src/css/participants/update/view-farmer.css?v=association-intervention-detail-3') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/participants/update/fa-overview.css?v=member-removal-modal-1') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/training/id/edit-training-participants.css') }}" />
@@ -2003,7 +2003,7 @@ class="layout-fixed"
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionUnit">Unit</label>
-                  <input class="form-control" id="interventionUnit" name="unit" type="text" maxlength="40" placeholder="e.g. kg, bags, units" />
+                  <select class="form-select" id="interventionUnit" name="unit"><option value="">Select a unit</option></select>
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionQty">Quantity</label>
@@ -2230,6 +2230,9 @@ class="layout-fixed"
       </div>
     </div>
 
+    @include('admin.participants.id.intervention-view-modal')
+    @include('admin.participants.id.intervention-delete-modal')
+
     <!-- Scripts -->
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
@@ -2248,7 +2251,8 @@ class="layout-fixed"
     <script src="{{ asset('src/js/shared/nav.js?v=notification-read-state-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-overview.js?v=member-removal-modal-1') }}"></script>
-    <script src="{{ asset('src/js/participants/update/fa-sections.js?v=association-intervention-export-layout-3') }}"></script>
+    <script src="{{ asset('src/js/participants/update/fa-sections.js?v=association-intervention-export-layout-4') }}"></script>
+    <script src="{{ asset('src/js/participants/update/intervention-actions.js?v=intervention-toast-feedback-4') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-edit.js?v=association-reload-toast-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-edit-members.js?v=association-farmer-table-2') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-edit-actions.js?v=association-intervention-detail-1') }}"></script>

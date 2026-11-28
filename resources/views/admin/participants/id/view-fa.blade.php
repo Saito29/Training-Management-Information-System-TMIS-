@@ -52,7 +52,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/participants/update/view-farmer.css?v=association-intervention-detail-2') }}"
+      href="{{ asset('src/css/participants/update/view-farmer.css?v=association-intervention-detail-3') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/participants/update/fa-overview.css?v=member-details-remove-1') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
@@ -1078,10 +1078,11 @@ class="layout-fixed"
                   </div>
                   <div class="review-pagination intervention-pagination" id="interventionPaginationTop" aria-label="Top intervention table pagination"></div>
                   <div class="table-responsive intervention-table-scroll">
-                    <table class="table intervention-data-table align-middle" id="interventionDataTable">
+                    <table class="table intervention-data-table intervention-action-table align-middle" id="interventionDataTable">
                       <caption class="visually-hidden">Interventions provided to this association</caption>
                       <thead>
                         <tr>
+                          <th scope="col">Action</th>
                           <th scope="col" class="intervention-sortable" data-sort="title" tabindex="0">Intervention <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                           <th scope="col" class="intervention-sortable" data-sort="office" tabindex="0">Office <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                           <th scope="col" class="intervention-sortable" data-sort="yearCovered" tabindex="0">Year Covered <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
@@ -1092,6 +1093,7 @@ class="layout-fixed"
                           <th scope="col" class="intervention-sortable" data-sort="remarks" tabindex="0">Remarks <i class="bi bi-arrow-down-up" aria-hidden="true"></i></th>
                         </tr>
                         <tr class="intervention-filter-row">
+                          <th></th>
                           <th><label class="visually-hidden" for="filterInterventionTitle">Filter interventions</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionTitle" data-column="title" type="search" placeholder="Filter intervention" /></th>
                           <th><label class="visually-hidden" for="filterInterventionOffice">Filter office</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionOffice" data-column="office" type="search" placeholder="Filter office" /></th>
                           <th><label class="visually-hidden" for="filterInterventionYear">Filter year covered</label><input class="form-control form-control-sm intervention-column-filter" id="filterInterventionYear" data-column="yearCovered" type="search" placeholder="Filter year" /></th>
@@ -1932,7 +1934,7 @@ class="layout-fixed"
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionOffice">Office</label>
-                  <input class="form-control" id="interventionOffice" name="office" type="text" maxlength="120" placeholder="e.g. DA RFO IV-A" required />
+                  <select class="form-select" id="interventionOffice" name="office" required><option value="">Select an office</option></select>
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionYear">Year covered</label>
@@ -1951,7 +1953,7 @@ class="layout-fixed"
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionUnit">Unit</label>
-                  <input class="form-control" id="interventionUnit" name="unit" type="text" maxlength="40" placeholder="e.g. kg, bags, units" />
+                  <select class="form-select" id="interventionUnit" name="unit"><option value="">Select a unit</option></select>
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionQty">Quantity</label>
@@ -2138,6 +2140,9 @@ class="layout-fixed"
       <button type="button" class="btn btn-sm btn-light" id="cancelAttachmentDelete">Undo</button>
     </div>
 
+    @include('admin.participants.id.intervention-view-modal')
+    @include('admin.participants.id.intervention-delete-modal')
+
     <!-- Scripts -->
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
@@ -2156,5 +2161,6 @@ class="layout-fixed"
     <script src="{{ asset('src/js/shared/nav.js?v=notification-read-state-1') }}"></script>
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/fa-overview.js?v=member-details-remove-1') }}"></script>
-    <script src="{{ asset('src/js/participants/update/fa-sections.js?v=association-intervention-export-layout-3') }}"></script>
+    <script src="{{ asset('src/js/participants/update/fa-sections.js?v=association-intervention-export-layout-4') }}"></script>
+    <script src="{{ asset('src/js/participants/update/intervention-actions.js?v=intervention-toast-feedback-4') }}"></script>
 @endsection

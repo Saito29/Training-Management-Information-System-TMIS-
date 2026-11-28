@@ -19,6 +19,13 @@ class TrainingNotificationDelivery
             if (! $entry || ! $entry->email_enabled || $entry->sent_at || $entry->cancelled_at || ($entry->retry_at && now()->lt($entry->retry_at))) {
                 return true;
             }
+            if (! (bool) DB::table('system_settings')->where('id', 1)->value('email_notifications_enabled')) {
+                DB::table('training_notifications')->where('id', $id)->update([
+                    'cancelled_at' => now(),
+                ]);
+
+                return true;
+            }
             $change = DB::table('training_status_changes')->where('id', $entry->status_change_id)->first();
             $training = DB::table('trainings')
                 ->leftJoin('organization as training_office', 'trainings.org_id', '=', 'training_office.org_id')

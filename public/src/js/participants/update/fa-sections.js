@@ -33,7 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('#interventionOffice option').forEach(option => {
     if (option.value) interventionOfficeNames.set(normalizeOfficeKey(option.value), option.textContent.trim() || option.value);
   });
-  const canEditInterventions = Boolean(document.querySelector('#fa-intervention .intervention-add-button:not(:disabled)'));
+  const canReadInterventions = window.TmisStore.can('associations.interventions.read')
+    || window.TmisStore.can('associations.interventions.edit')
+    || window.TmisStore.can('associations.interventions.delete');
+  const canEditInterventions = window.TmisStore.can('associations.interventions.edit');
+  const canDeleteInterventions = window.TmisStore.can('associations.interventions.delete');
   const firstInterventionValue = (record, keys) => {
     for (const key of keys) {
       const value = record[key];
@@ -68,15 +72,22 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   const renderInterventionRow = record => {
     const row = make('tr');
-    if (canEditInterventions) {
+    if (canReadInterventions || canEditInterventions || canDeleteInterventions) {
       const actionCell = make('td', 'intervention-row-action-cell');
-      const editButton = make('button', 'btn intervention-row-edit-button');
-      editButton.type = 'button';
-      editButton.dataset.editIntervention = String(record._sourceIndex);
-      editButton.setAttribute('aria-label', `Edit ${clean(record.title) || 'intervention'} details`);
-      editButton.title = 'Edit intervention';
-      editButton.innerHTML = '<i class="bi bi-pencil-square" aria-hidden="true"></i>';
-      actionCell.append(editButton);
+      [
+        ['view', canReadInterventions, 'View intervention details', 'eye-fill', 'viewInterventionId'],
+        ['edit', canEditInterventions, 'Edit intervention', 'pencil-square', 'editInterventionId'],
+        ['delete', canDeleteInterventions, 'Permanently delete intervention', 'trash3', 'deleteInterventionId'],
+      ].forEach(([key, allowed, title, icon, dataset]) => {
+        if (!allowed) return;
+        const button = make('button', `btn intervention-row-${key}-button`);
+        button.type = 'button';
+        button.dataset[dataset] = String(record.id || '');
+        button.setAttribute('aria-label', `${title}: ${clean(record.title) || 'intervention'}`);
+        button.title = title;
+        button.innerHTML = `<i class="bi bi-${icon}" aria-hidden="true"></i>`;
+        actionCell.append(button);
+      });
       row.append(actionCell);
     }
     ['title', 'office', 'yearCovered', 'action', 'type', 'unit', 'qty', 'remarks'].forEach(key => {
@@ -254,13 +265,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const filters = [...table.querySelectorAll(config.filterSelector)];
     const headers = [...table.querySelectorAll(config.sortSelector)];
     const pagers = config.pagers.map(id => document.getElementById(id));
-    const state = { page: 1, size: 8, sort: null, direction: 1 };
+    const state = { page: 1, size: 20, sort: null, direction: 1 };
     const data = () => {
       const association = readAssociation();
       const records = association?.[config.source] ?? (config.source === 'interventions' ? association?.interventionRecords ?? association?.intervention : undefined);
       if (config.source !== 'trainings') {
         if (!Array.isArray(records)) return [];
-        return config.source === 'interventions' ? records.map((record, index) => {
+        return config.source === 'interventions' ? records.map(record => {
           const normalized = normalizeIntervention(record);
           const associationOffice = firstInterventionValue(association, ['office', 'officeName', 'office_name', 'organization']);
           const associationRegion = firstInterventionValue(association, ['region', 'regionName', 'region_name']);
@@ -270,7 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ...normalized,
             office: normalized.office || fallbackOffice,
             officeFromAssociation: !normalized.office && Boolean(fallbackOffice),
-            _sourceIndex: index,
           };
         }) : records;
       }
@@ -339,7 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!visible.length && !empty) {
         const row = make('tr');
         const cell = make('td', 'intervention-empty-cell', 'No association intervention records available.');
-        cell.colSpan = config.source === 'interventions' ? config.keys.length + Number(canEditInterventions) : config.keys.length;
+        cell.colSpan = config.source === 'interventions' ? config.keys.length + Number(canReadInterventions || canEditInterventions || canDeleteInterventions) : config.keys.length;
         row.append(cell);
         body.append(row);
       }
@@ -352,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const controls = make('div', 'pagination-controls');
         const size = make('select');
         size.setAttribute('aria-label', 'Rows per page');
-        [8, 16, 32, 100].forEach(value => size.add(new Option(String(value), String(value))));
+        [20, 50, 100, 500, 1000].forEach(value => size.add(new Option(String(value), String(value))));
         size.value = String(state.size);
         size.addEventListener('change', () => { state.size = Number(size.value); state.page = 1; render(); });
         controls.append(size);

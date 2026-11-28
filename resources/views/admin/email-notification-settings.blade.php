@@ -6,6 +6,11 @@
       @if($canManageEmailNotificationRules)<button class="btn btn-success ms-auto" id="addTrainingEmailNotificationRule" type="button"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add email rule</button>@endif
     </header>
     <div class="settings-card-body">
+      <div class="notification-rule-enabled-row global-email-notification-control">
+        <div><strong>System notification email delivery</strong><small>Turn training status and manually sent notification emails on or off. Login verification and password recovery emails are unaffected.</small></div>
+        <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="systemEmailNotificationsEnabled" @checked($settings->email_notifications_enabled) aria-label="Enable system notification emails"></div>
+      </div>
+      <p id="systemEmailNotificationsFeedback" class="notification-rules-feedback" role="status" aria-live="polite" hidden></p>
       <div class="notification-control-notice"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i><p><strong>System Administrator controls</strong><span>System Administrators can add, edit, and remove these email rules. Enabled rules send only to active accounts in the training’s region and office. Leave the subject or message blank to use the standard training update template.</span></p></div>
       <div class="table-responsive notification-rules-table-wrap">
         <table class="table align-middle notification-rules-table">
@@ -70,6 +75,7 @@
         'roles' => $notificationRoles,
         'transitions' => $notificationTransitions,
         'canEdit' => $canManageEmailNotificationRules,
+        'emailEnabled' => (bool) $settings->email_notifications_enabled,
     ]) }};
   </script>
 </section>

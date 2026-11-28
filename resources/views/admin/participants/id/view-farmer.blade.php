@@ -52,7 +52,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/participants/update/view-farmer.css?v=farmer-intervention-layout-3') }}"
+      href="{{ asset('src/css/participants/update/view-farmer.css?v=farmer-intervention-layout-4') }}"
     />
     @if(isset($deletedFarmerReview))
       <link rel="stylesheet" href="{{ asset('src/css/participants/details/deleted-farmers.css?v=deleted-farmer-profile-1') }}" />
@@ -2867,7 +2867,7 @@ class="layout-fixed"
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionOffice">Office</label>
-                  <input class="form-control" id="interventionOffice" name="office" type="text" maxlength="120" placeholder="e.g. DA RFO IV-A" required />
+                  <select class="form-select" id="interventionOffice" name="office" required><option value="">Select an office</option></select>
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionYear">Year covered</label>
@@ -2886,7 +2886,7 @@ class="layout-fixed"
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionUnit">Unit</label>
-                  <input class="form-control" id="interventionUnit" name="unit" type="text" maxlength="40" placeholder="e.g. kg, bags, units" />
+                  <select class="form-select" id="interventionUnit" name="unit"><option value="">Select a unit</option></select>
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionQty">Quantity</label>
@@ -3123,6 +3123,8 @@ class="layout-fixed"
       </dialog>
     @endif
 
+    @include('admin.participants.id.intervention-delete-modal')
+
     <!-- Scripts -->
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
@@ -3142,7 +3144,8 @@ class="layout-fixed"
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-profile-tabs.js?v=participated-training-history-2') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-training-table.js?v=farmer-training-metrics-12') }}"></script>
-    <script src="{{ asset('src/js/participants/update/farmer-intervention-table.js?v=farmer-intervention-export-layout-4') }}"></script>
+    <script src="{{ asset('src/js/participants/update/farmer-intervention-table.js?v=intervention-pagination-action-column-2') }}"></script>
+    <script src="{{ asset('src/js/participants/update/intervention-actions.js?v=intervention-toast-feedback-4') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-activity-logs.js?v=actor-role-omission-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/attachment-manager.js') }}"></script>
 @endsection

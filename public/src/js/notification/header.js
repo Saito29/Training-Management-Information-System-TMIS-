@@ -72,7 +72,7 @@ function refresh() {
       count.dataset.notificationsReady = 'true';
     }
     const subtitle = document.querySelector('.notification-menu-subtitle');
-    if (subtitle) subtitle.textContent = `${unread} unread update${unread === 1 ? '' : 's'}`;
+    if (subtitle) subtitle.textContent = `${unread} unread updates`;
     list.replaceChildren(...items.slice(0, 10).map(item => {
       const button = document.createElement('button');
       button.type = 'button';

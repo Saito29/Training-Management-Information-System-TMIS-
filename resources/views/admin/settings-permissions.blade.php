@@ -2,7 +2,9 @@
 @php($permissionInputName = $permissionInputName ?? 'permissions[]')
 @php($deniedPermissionEditor = $deniedPermissionEditor ?? false)
 @foreach(collect($permissions)->groupBy(fn ($permission) => explode('.', $permission)[0]) as $module => $modulePermissions)
-@php($modulePermissions = $modulePermissions->filter(fn ($permission) => substr_count($permission, '.') === 1 && !str_ends_with($permission, '.page_access') && !str_ends_with($permission, '.write')))
+@php($allModulePermissions = collect($modulePermissions))
+@php($interventionPermissions = $allModulePermissions->filter(fn ($permission) => str_starts_with($permission, $module.'.interventions.')))
+@php($modulePermissions = $allModulePermissions->filter(fn ($permission) => substr_count($permission, '.') === 1 && !str_ends_with($permission, '.page_access') && !str_ends_with($permission, '.write')))
 @php($pageAccessPermission = \App\Support\ModuleAccess::pageAccessPermission($module))
 @php($pageAccessEnabled = in_array($pageAccessPermission, $selectedPermissions, true))
 {{-- Keep a category-level master switch beside its title; it applies only to this grant or block group. --}}
@@ -13,6 +15,16 @@
 @php($permissionSelected = in_array($permission, $selectedPermissions, true) || ($legacyWritePermission !== null && in_array($legacyWritePermission, $selectedPermissions, true)))
 <div class="form-check form-switch"><input id="{{ $prefix }}-{{ str_replace('.', '-', $permission) }}" class="form-check-input" type="checkbox" role="switch" name="{{ $permissionInputName }}" value="{{ $permission }}" @checked($permissionSelected)><label class="form-check-label" for="{{ $prefix }}-{{ str_replace('.', '-', $permission) }}">{{ $module === 'administration' && $action === 'approve' ? 'Approve or reject accounts' : (['read' => 'View records', 'create' => 'Create records', 'edit' => 'Edit records', 'delete' => 'Delete records', 'submit' => 'Submit for approval', 'approve' => 'Move to acceptance & return to review', 'accept' => 'Manage acceptance queue (final approval is System Administrator-only)'][$action] ?? ucfirst($action)) }}</label></div>
 @endforeach
+@if($interventionPermissions->isNotEmpty())
+<div class="settings-permission-subgroup">
+<h5>{{ $module === 'associations' ? 'Farmer association interventions' : 'Farmer profile interventions' }}</h5>
+<p class="settings-field-help">Control intervention access independently from editing the rest of the farmer or association profile.</p>
+@foreach($interventionPermissions as $permission)
+@php($action = substr($permission, strrpos($permission, '.') + 1))
+<div class="form-check form-switch"><input id="{{ $prefix }}-{{ str_replace('.', '-', $permission) }}" class="form-check-input" type="checkbox" role="switch" name="{{ $permissionInputName }}" value="{{ $permission }}" @checked(in_array($permission, $selectedPermissions, true))><label class="form-check-label" for="{{ $prefix }}-{{ str_replace('.', '-', $permission) }}">{{ ['read' => 'View intervention records', 'create' => 'Create intervention records', 'edit' => 'Edit/update records (includes viewing)', 'delete' => 'Permanently delete records (includes viewing)'][$action] ?? ucfirst($action) }}</label></div>
+@endforeach
+</div>
+@endif
 <div class="settings-page-permissions">
 @if(!$deniedPermissionEditor)
 <div class="form-check form-switch"><input id="{{ $prefix }}-{{ $module }}-page-access" class="form-check-input" type="checkbox" role="switch" name="{{ $permissionInputName }}" value="{{ $pageAccessPermission }}" data-page-access-toggle data-page-access-module="{{ $module }}" @checked($pageAccessEnabled)><label class="form-check-label" for="{{ $prefix }}-{{ $module }}-page-access">Limit access to selected pages</label></div>

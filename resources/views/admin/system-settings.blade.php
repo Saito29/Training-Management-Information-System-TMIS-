@@ -7,11 +7,12 @@ class="layout-fixed"
 @endsection
 
 @section('head')
-<link rel="stylesheet" href="{{ asset('src/css/shared/system-settings.css?v=intervention-type-modals-1') }}">
+<link rel="stylesheet" href="{{ asset('src/css/shared/system-settings.css?v=unit-modals-modern-2') }}">
 <link rel="stylesheet" href="{{ asset('src/css/shared/system-notification-settings.css?v=notification-modal-previews-1') }}">
 <script src="{{ asset('src/js/shared/system-settings.js?v=visibility-scope-select-all-refresh-1') }}" defer></script>
 <script src="{{ asset('src/js/shared/system-notification-settings.js?v=notification-modal-previews-1') }}" defer></script>
 <script src="{{ asset('src/js/shared/system-email-notification-settings.js?v=notification-modal-previews-1') }}" defer></script>
+@if($isSuperAdministrator)<script src="{{ asset('src/js/shared/notification-email-type-settings.js?v=per-type-email-controls-1') }}" defer></script>@endif
 <script src="{{ asset('src/js/shared/maintenance-schedule.js?v=auto-expire-1') }}" defer></script>
 {{-- Load the toast API before the settings feedback script that displays flashed messages. --}}
 <script src="{{ asset('src/js/shared/toast.js?v=settings-feedback-toast-1') }}" defer></script>
@@ -1586,10 +1587,12 @@ class="layout-fixed"
 @if($isSuperAdministrator)<button class="nav-link" id="database-tab" data-bs-toggle="pill" data-bs-target="#database" type="button" role="tab" aria-controls="database" aria-selected="false"><i class="bi bi-database-gear" aria-hidden="true"></i><span>Database<small>Backup &amp; legacy import</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>@endif
 @if($isAdministrator)<button class="nav-link" id="notification-control-tab" data-bs-toggle="pill" data-bs-target="#notification-control" type="button" role="tab" aria-controls="notification-control" aria-selected="false"><i class="bi bi-bell" aria-hidden="true"></i><span>Notification control<small>{{ $notificationRules->count() }} in-app rules</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
 <button class="nav-link" id="email-notification-control-tab" data-bs-toggle="pill" data-bs-target="#email-notification-control" type="button" role="tab" aria-controls="email-notification-control" aria-selected="false"><i class="bi bi-envelope-at" aria-hidden="true"></i><span>Email notification control<small>{{ $emailNotificationRules->count() }} email rules</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>@endif
+@if($isSuperAdministrator)<button class="nav-link" id="notification-email-types-tab" data-bs-toggle="pill" data-bs-target="#notification-email-types" type="button" role="tab" aria-controls="notification-email-types" aria-selected="false"><i class="bi bi-envelope-check" aria-hidden="true"></i><span>Notification email delivery<small>Control email by notification type</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>@endif
 <button class="nav-link" id="locations-tab" data-bs-toggle="pill" data-bs-target="#locations" type="button" role="tab" aria-controls="locations" aria-selected="false"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>Locations<small>Register geographic records</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
 <button class="nav-link" id="training-types-tab" data-bs-toggle="pill" data-bs-target="#training-types" type="button" role="tab" aria-controls="training-types" aria-selected="false"><i class="bi bi-mortarboard" aria-hidden="true"></i><span>Training types<small>Training registration choices</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
 <button class="nav-link" id="nationalities-tab" data-bs-toggle="pill" data-bs-target="#nationalities" type="button" role="tab" aria-controls="nationalities" aria-selected="false"><i class="bi bi-flag" aria-hidden="true"></i><span>Nationalities<small>Participant registration choices</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
 <button class="nav-link" id="intervention-types-tab" data-bs-toggle="pill" data-bs-target="#intervention-types" type="button" role="tab" aria-controls="intervention-types" aria-selected="false"><i class="bi bi-box-seam" aria-hidden="true"></i><span>Intervention types<small>{{ $interventionTypeOptions->count() }} farmer support choices</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+<button class="nav-link" id="intervention-units-tab" data-bs-toggle="pill" data-bs-target="#intervention-units" type="button" role="tab" aria-controls="intervention-units" aria-selected="false"><i class="bi bi-rulers" aria-hidden="true"></i><span>Intervention units<small>{{ $interventionUnitOptions->count() }} unit choices</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
 <button class="nav-link" id="record-statuses-tab" data-bs-toggle="pill" data-bs-target="#record-statuses" type="button" role="tab" aria-controls="record-statuses" aria-selected="false"><i class="bi bi-tags" aria-hidden="true"></i><span>Farmer statuses<small>{{ $recordStatusOptions->count() }} farmer statuses</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
 <button class="nav-link" id="offices-tab" data-bs-toggle="pill" data-bs-target="#offices" type="button" role="tab" aria-controls="offices" aria-selected="false"><i class="bi bi-buildings" aria-hidden="true"></i><span>Offices<small>Register offices per region</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
 <button class="nav-link" id="attachment-types-tab" data-bs-toggle="pill" data-bs-target="#attachment-types" type="button" role="tab" aria-controls="attachment-types" aria-selected="false"><i class="bi bi-paperclip" aria-hidden="true"></i><span>Attachment types<small>Farmer, association &amp; training files</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
@@ -1600,11 +1603,15 @@ class="layout-fixed"
 @include('admin.office-settings')
 @include('admin.nationality-settings')
 @include('admin.intervention-type-settings')
+@include('admin.intervention-unit-settings')
 @include('admin.record-status-settings')
 @include('admin.attachment-type-settings')
 @if($isAdministrator)
 @include('admin.notification-settings')
 @include('admin.email-notification-settings')
+@endif
+@if($isSuperAdministrator)
+@include('admin.notification-email-type-settings')
 @endif
 <div class="modal fade" id="settingsDeleteModal" tabindex="-1" aria-labelledby="settingsDeleteTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

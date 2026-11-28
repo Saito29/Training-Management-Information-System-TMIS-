@@ -376,6 +376,164 @@ class OriginalInterfaceController
         return response()->json($response);
     }
 
+    /** Create, update, or permanently remove one farmer-profile intervention. */
+    public function intervention(Request $request, string $module, string $id, OriginalInterfaceData $interface): JsonResponse
+    {
+        abort_unless(in_array($module, ['participants', 'associations'], true), 404);
+        ModuleAccess::authorize($request, $module.'.read');
+
+        $actionData = $request->validate([
+            'operation' => ['required', Rule::in(['create', 'update', 'delete'])],
+            'intervention_id' => ['required_unless:operation,create', 'nullable', 'string', 'max:100'],
+            'version' => ['required', 'integer', 'min:0'],
+        ]);
+        $operation = $actionData['operation'];
+        ModuleAccess::authorize($request, $module.'.interventions.'.($operation === 'update' ? 'edit' : $operation));
+
+        $fields = [];
+        if ($operation !== 'delete') {
+            $fields = $request->validate([
+                'title' => ['required', 'string', 'max:255'],
+                'office_id' => ['required', 'integer', Rule::exists('organization', 'org_id')->where('is_active', true)],
+                'yearCovered' => ['required', 'integer', 'min:1990', 'max:2200'],
+                'action' => ['required', Rule::in(['Delivered', 'Not Delivered'])],
+                'type' => ['required', 'string', 'max:120'],
+                'unit' => ['nullable', 'string', 'max:100'],
+                'qty' => ['nullable', 'numeric', 'min:0'],
+                'remarks' => ['nullable', 'string', 'max:500'],
+            ]);
+        }
+
+        $message = DB::transaction(function () use ($request, $module, $id, $actionData, $operation, $fields): string {
+            $visibleOwner = OriginalInterfaceData::find($request->user(), $module, $id);
+            abort_unless($visibleOwner !== null, 404);
+
+            $owner = OriginalInterfaceData::query($request->user(), $module)
+                ->where('id', $visibleOwner->id)
+                ->lockForUpdate()
+                ->first();
+            abort_unless($owner !== null, 404);
+            abort_unless((int) $owner->ui_version === (int) $actionData['version'], 409, 'This profile changed. Refresh before editing interventions.');
+
+            $office = null;
+            if ($operation !== 'delete') {
+                $office = DB::table('organization')
+                    ->join('region', 'region.region_id', '=', 'organization.region_id')
+                    ->where('organization.org_id', $fields['office_id'])
+                    ->where('organization.is_active', true)
+                    ->where('region.is_active', true)
+                    ->first(['organization.org_id', 'organization.name', 'organization.region_id', 'region.name as region_name']);
+                abort_unless($office !== null, 422, 'Select an active office and region.');
+
+                $scope = ModuleAccess::registrationScope($request->user());
+                abort_unless(
+                    ($scope['regionIds'] === null || in_array((int) $office->region_id, $scope['regionIds'], true))
+                    && ($scope['officeIds'] === null || in_array((int) $office->org_id, $scope['officeIds'], true)),
+                    403,
+                    'The selected office is outside your data visibility settings.',
+                );
+            }
+
+            $metadata = OriginalInterfaceData::unpack($owner->ui_data);
+            $interventions = OriginalInterfaceData::interventionRecords(
+                is_array($metadata['interventions'] ?? null) ? $metadata['interventions'] : [],
+            );
+            $interventionIndex = $operation === 'create'
+                ? null
+                : collect($interventions)->search(fn (array $intervention): bool => hash_equals(
+                    (string) ($intervention['id'] ?? ''),
+                    (string) $actionData['intervention_id'],
+                ));
+
+            if ($operation === 'create') {
+                $this->validateInterventionUnit((string) ($fields['unit'] ?? ''), null);
+                $savedIntervention = $this->interventionRecord($fields, $office);
+                $savedIntervention['id'] = (string) Str::uuid();
+                $interventions[] = $savedIntervention;
+                $auditAction = 'created';
+                $before = [];
+                $after = ['intervention' => $savedIntervention['title'], 'office' => $savedIntervention['office']];
+                $message = 'Intervention added.';
+            } else {
+                abort_unless($interventionIndex !== false, 404);
+                $existingIntervention = $interventions[$interventionIndex];
+                $before = ['intervention' => $existingIntervention['title'] ?? '', 'office' => $existingIntervention['office'] ?? ''];
+
+                if ($operation === 'delete') {
+                    array_splice($interventions, $interventionIndex, 1);
+                    $auditAction = 'deleted';
+                    $after = [];
+                    $message = 'Intervention permanently deleted.';
+                } else {
+                    $this->validateInterventionUnit((string) ($fields['unit'] ?? ''), (string) ($existingIntervention['unit'] ?? ''));
+                    $savedIntervention = array_merge($existingIntervention, $this->interventionRecord($fields, $office));
+                    $savedIntervention['id'] = (string) $existingIntervention['id'];
+                    $interventions[$interventionIndex] = $savedIntervention;
+                    $auditAction = 'updated';
+                    $after = ['intervention' => $savedIntervention['title'], 'office' => $savedIntervention['office']];
+                    $message = 'Intervention updated.';
+                }
+            }
+
+            $metadata['interventions'] = array_values($interventions);
+            DB::table($module)->where('id', $owner->id)->update([
+                'ui_data' => Crypt::encryptString(json_encode($metadata, JSON_THROW_ON_ERROR)),
+                'ui_version' => DB::raw('ui_version + 1'),
+                'updated_at' => now(),
+            ]);
+            AuditTrail::record(
+                $request,
+                $module.'_intervention_'.$auditAction.'_'.$owner->id,
+                $request->user(),
+                before: $before,
+                after: $after,
+                category: $module,
+            );
+
+            return $message;
+        });
+
+        return response()->json($interface->bootstrap($request->user()) + ['message' => $message], $operation === 'create' ? 201 : 200);
+    }
+
+    /** @param array<string, mixed> $fields */
+    private function interventionRecord(array $fields, object $office): array
+    {
+        return [
+            'title' => trim($fields['title']),
+            'office_id' => (string) $office->org_id,
+            'org_id' => (int) $office->org_id,
+            'office' => $office->name.' — '.$office->region_name,
+            'officeRegion' => $office->region_name,
+            'yearCovered' => (string) $fields['yearCovered'],
+            'action' => $fields['action'],
+            'type' => trim($fields['type']),
+            'unit' => trim((string) ($fields['unit'] ?? '')),
+            'qty' => isset($fields['qty']) ? (string) $fields['qty'] : '',
+            'remarks' => trim((string) ($fields['remarks'] ?? '')),
+        ];
+    }
+
+    private function validateInterventionUnit(string $unit, ?string $savedUnit): void
+    {
+        $unit = trim($unit);
+        if ($unit === '' || ($savedUnit !== null && $unit === $savedUnit)) {
+            return;
+        }
+
+        $isActiveUnit = DB::table('participant_options')
+            ->where('field', 'intervention_unit')
+            ->where('is_active', true)
+            ->where(function ($query) use ($unit): void {
+                $query->whereRaw('LOWER(TRIM(value)) = ?', [mb_strtolower($unit)])
+                    ->orWhereRaw('LOWER(TRIM(label)) = ?', [mb_strtolower($unit)]);
+            })
+            ->exists();
+        if (! $isActiveUnit) {
+            throw ValidationException::withMessages(['unit' => 'Select an active intervention unit type.']);
+        }
+    }
+
     /** @return array{temporaryId: string, id: string}|null */
     private function upsert(Request $request, string $key, string $module, array $raw, OperationsController $operations): ?array
     {
@@ -434,6 +592,24 @@ class OriginalInterfaceController
             $locked = DB::table($module)->where('id', $existing->id)->lockForUpdate()->first();
             abort_unless(isset($record['_version']) && (int) $record['_version'] === (int) $locked->ui_version, 409, 'This record changed. Refresh before saving.');
             $existing = $locked;
+        }
+        $previousMetadata = $existing ? OriginalInterfaceData::unpack($existing->ui_data) : [];
+        if (in_array($module, ['participants', 'associations'], true)) {
+            $beforeInterventions = OriginalInterfaceData::interventionRecords(
+                is_array($previousMetadata['interventions'] ?? null) ? $previousMetadata['interventions'] : [],
+            );
+            abort_if(! $existing && ! empty($record['interventions']), 422, 'Save the profile before adding intervention records.');
+            if (array_key_exists('interventions', $record)) {
+                $submittedInterventions = OriginalInterfaceData::interventionRecords($record['interventions']);
+                abort_unless(
+                    $submittedInterventions === $beforeInterventions,
+                    422,
+                    'Use the intervention controls to change intervention records.',
+                );
+                $record['interventions'] = $submittedInterventions;
+            } elseif ($previousMetadata['interventions'] ?? null) {
+                $record['interventions'] = $previousMetadata['interventions'];
+            }
         }
         $temporaryId = null;
         if ($module === 'questionnaires' && ! $existing && preg_match('/^Q-TEMP-[A-Za-z0-9-]{1,80}$/i', $id) === 1) {
@@ -862,7 +1038,8 @@ class OriginalInterfaceController
         }
         $rules += ['pretest.*' => ['string', 'max:100'], 'posttest.*' => ['string', 'max:100'], 'trainingEvaluation.*' => ['string', 'max:100'], 'rpEvaluation.*' => ['string', 'max:100'], 'associationIds.*' => ['string', 'distinct', 'max:100'], 'trainingLocations.*' => ['array'], 'trainingLocations.*.venue' => ['required', 'string', 'max:255'], 'trainingLocations.*.region_id' => ['required', 'string', 'max:100'], 'trainingLocations.*.region' => ['required', 'string', 'max:255'], 'trainingLocations.*.province_id' => ['required', 'string', 'max:100'], 'trainingLocations.*.province' => ['required', 'string', 'max:255'], 'trainingLocations.*.district_id' => ['required', 'string', 'max:100'], 'trainingLocations.*.district' => ['required', 'string', 'max:255'], 'trainingLocations.*.municipality_id' => ['required', 'string', 'max:100'], 'trainingLocations.*.municipality' => ['required', 'string', 'max:255'], 'trainingLocations.*.barangay_id' => ['required', 'string', 'max:100'], 'trainingLocations.*.barangay' => ['required', 'string', 'max:255'], 'trainers.*' => ['array'], 'trainers.*.id' => ['sometimes', 'string', 'max:100'], 'trainers.*.name' => ['sometimes', 'string', 'max:255'], 'questions.*.text' => ['sometimes', 'string', 'max:1000'], 'questions.*.maxRating' => ['sometimes', 'integer', 'min:1', 'max:10'], 'ratingScale.*.score' => ['required', 'integer', 'min:1', 'max:10'], 'ratingScale.*.label' => ['nullable', 'string', 'max:100'], 'ratingScale.*.description' => ['nullable', 'string', 'max:1000'], 'members.*.farmer_id' => ['sometimes', 'string', 'max:100'], 'members.*.position' => ['sometimes', 'nullable', 'string', 'max:255'], 'members.*.associate_role' => ['sometimes', 'nullable', 'string', 'max:255'], 'members.*.role' => ['sometimes', 'nullable', 'string', 'max:255'], 'ratings.*.rating' => ['nullable', 'numeric', 'min:0', 'max:10'], 'interventions.*.qty' => ['nullable', 'numeric', 'min:0'], 'interventions.*.title' => ['nullable', 'string', 'max:255'], 'interventions.*.remarks' => ['nullable', 'string', 'max:1000'], 'bullets.*' => ['array', 'max:100'], 'bullets.*.*' => ['string', 'max:1000']];
         $rules += [
-            'interventions.*' => ['array'],
+            'interventions.*' => ['array:id,title,interventionTitle,intervention_title,intervention,name,office,officeName,office_name,organization,implementingOffice,officeRegion,office_region,office_id,org_id,yearCovered,year_covered,year,action,deliveryAction,delivery_action,deliveryStatus,delivery_status,type,interventionType,intervention_type,category,unit,unitName,unit_name,measurementUnit,measurement_unit,qty,quantity,quantityProvided,quantity_provided,remarks,notes,note,description'],
+            'interventions.*.id' => ['nullable', 'string', 'max:100'],
             'interventions.*.office' => ['nullable', 'string', 'max:255'],
             'interventions.*.officeName' => ['nullable', 'string', 'max:255'],
             'interventions.*.office_name' => ['nullable', 'string', 'max:255'],
@@ -902,7 +1079,8 @@ class OriginalInterfaceController
         ];
 
         $rules += [
-            'interventions.*' => ['array'],
+            'interventions.*' => ['array:id,title,interventionTitle,intervention_title,intervention,name,office,officeName,office_name,organization,implementingOffice,officeRegion,office_region,office_id,org_id,yearCovered,year_covered,year,action,deliveryAction,delivery_action,deliveryStatus,delivery_status,type,interventionType,intervention_type,category,unit,unitName,unit_name,measurementUnit,measurement_unit,qty,quantity,quantityProvided,quantity_provided,remarks,notes,note,description'],
+            'interventions.*.id' => ['nullable', 'string', 'max:100'],
             'interventions.*.office' => ['nullable', 'string', 'max:255'],
             'interventions.*.officeName' => ['nullable', 'string', 'max:255'],
             'interventions.*.office_name' => ['nullable', 'string', 'max:255'],
@@ -1309,13 +1487,17 @@ class OriginalInterfaceController
         foreach ($records as $raw) {
             $record = Validator::make($raw, ['id' => ['required', 'string', 'max:100', Rule::unique('user_notifications', 'ui_id')], 'batchId' => ['required', 'string', 'max:100'], 'recipientId' => ['required', 'integer', Rule::notIn([(string) $request->user()->user_id]), Rule::exists('users', 'user_id')->whereNull('deleted_at')->where('active_status', 1)->where('status', 'Approved & Accepted')], 'title' => ['required', 'string', 'max:100'], 'summary' => ['nullable', 'string', 'max:240'], 'message' => ['required', 'string', 'max:10000'], 'type' => ['required', Rule::in(['account', 'training', 'participants', 'evaluation', 'system'])], 'priority' => ['required', Rule::in(['normal', 'high', 'critical'])], 'reference' => ['nullable', 'string', 'max:80'], 'href' => ['nullable', Rule::in(['', 'users/profile', 'administration/update/for-approval', 'administration/details/all-status', 'training/details/all-status', 'participants/details/all-with-status', 'evaluation/details/list-questionnaire'])]])->validate();
             $batchId = $record['batchId'];
+            $reference = trim((string) ($record['reference'] ?? ''));
+            if ($reference === '') {
+                $reference = $batches[$batchId]['reference'] ?? 'TMIS-'.Str::upper(Str::random(12));
+            }
             $content = [
                 'title' => trim($record['title']),
                 'summary' => trim((string) ($record['summary'] ?? '')),
                 'message' => trim($record['message']),
                 'type' => $record['type'],
                 'priority' => $record['priority'],
-                'reference' => trim((string) ($record['reference'] ?? '')),
+                'reference' => $reference,
                 'href' => (string) ($record['href'] ?? ''),
             ];
             if (isset($batches[$batchId]) && Arr::only($batches[$batchId], array_keys($content)) !== $content) {
@@ -1336,7 +1518,7 @@ class OriginalInterfaceController
                 ]);
             }
             $batches[$batchId]['recipientIds'][] = $recipientId;
-            DB::table('user_notifications')->insert(['ui_id' => $record['id'], 'batch_id' => $record['batchId'], 'recipient_id' => $record['recipientId'], 'creator_id' => $request->user()->user_id, 'title' => $record['title'], 'summary' => $record['summary'] ?? null, 'message' => $record['message'], 'type' => $record['type'], 'priority' => $record['priority'], 'reference' => $record['reference'] ?? null, 'related_page' => $record['href'] ?? null, 'created_at' => now(), 'updated_at' => now()]);
+            DB::table('user_notifications')->insert(['ui_id' => $record['id'], 'batch_id' => $record['batchId'], 'recipient_id' => $record['recipientId'], 'creator_id' => $request->user()->user_id, 'title' => $record['title'], 'summary' => $record['summary'] ?? null, 'message' => $record['message'], 'type' => $record['type'], 'priority' => $record['priority'], 'reference' => $reference, 'related_page' => $record['href'] ?? null, 'created_at' => now(), 'updated_at' => now()]);
         }
         if ($records !== []) {
             $firstNotification = $records[0];
@@ -1378,12 +1560,25 @@ class OriginalInterfaceController
 
     /**
      * @param  array<int, array{batchId: string, title: string, summary: string, message: string, type: string, priority: string, reference: string, href: string, recipientIds: array<int, int>, emailAddresses: array<int, string>, invalidEmailCount: int}>  $batches
-     * @return array{attempted: int, accepted: int, failed: int}
+     * @return array{attempted: int, accepted: int, failed: int, disabled?: bool, disabledTypes?: array<int, string>}
      */
     private function sendNotificationEmails(array $batches): array
     {
         $delivery = ['attempted' => 0, 'accepted' => 0, 'failed' => 0];
+        if (! (bool) DB::table('system_settings')->where('id', 1)->value('email_notifications_enabled')) {
+            return $delivery + ['disabled' => true];
+        }
+
+        $emailEnabledByType = DB::table('notification_email_type_settings')->pluck('email_enabled', 'notification_type');
+        $disabledTypes = [];
+
         foreach ($batches as $batch) {
+            if (! (bool) $emailEnabledByType->get($batch['type'], true)) {
+                $disabledTypes[] = $batch['type'];
+
+                continue;
+            }
+
             $delivery['attempted'] += count($batch['recipientIds']);
             $delivery['failed'] += $batch['invalidEmailCount'];
             foreach (array_chunk($batch['emailAddresses'], 50) as $emailAddresses) {
@@ -1414,6 +1609,10 @@ class OriginalInterfaceController
                     'recipient_count' => $batch['invalidEmailCount'],
                 ]);
             }
+        }
+
+        if ($disabledTypes !== []) {
+            $delivery['disabledTypes'] = array_values(array_unique($disabledTypes));
         }
 
         return $delivery;

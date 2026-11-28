@@ -16,7 +16,8 @@ class ProfilePhotoController
     {
         $request->validate(['photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240', 'dimensions:max_width=8000,max_height=8000']]);
         $userId = $request->user()->user_id;
-        $path = $request->file('photo')->store('profile-photos/'.$userId, 'local');
+        $disk = config('filesystems.uploads_disk');
+        $path = $request->file('photo')->store('profile-photos/'.$userId, $disk);
         try {
             $old = DB::transaction(function () use ($request, $userId, $path): ?string {
                 $old = DB::table('users')->where('user_id', $userId)->lockForUpdate()->value('profile_photo_path');
@@ -26,7 +27,7 @@ class ProfilePhotoController
                 return $old;
             });
         } catch (\Throwable $error) {
-            Storage::disk('local')->delete($path);
+            Storage::disk($disk)->delete($path);
             throw $error;
         }
         $this->deleteOwned($old, $userId);
@@ -37,9 +38,9 @@ class ProfilePhotoController
     public function show(Request $request): Response
     {
         $path = DB::table('users')->where('user_id', $request->user()->user_id)->value('profile_photo_path');
-        abort_unless(is_string($path) && str_starts_with($path, 'profile-photos/'.$request->user()->user_id.'/') && ! str_contains($path, '..') && Storage::disk('local')->exists($path), 404);
+        abort_unless(is_string($path) && str_starts_with($path, 'profile-photos/'.$request->user()->user_id.'/') && ! str_contains($path, '..') && Storage::disk(config('filesystems.uploads_disk'))->exists($path), 404);
 
-        return Storage::disk('local')->response($path, headers: ['Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
+        return Storage::disk(config('filesystems.uploads_disk'))->response($path, headers: ['Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
     }
 
     public function destroy(Request $request, AccountDisplay $display): JsonResponse
@@ -59,7 +60,7 @@ class ProfilePhotoController
     private function deleteOwned(?string $path, int $userId): void
     {
         if ($path && str_starts_with($path, 'profile-photos/'.$userId.'/') && ! str_contains($path, '..')) {
-            Storage::disk('local')->delete($path);
+            Storage::disk(config('filesystems.uploads_disk'))->delete($path);
         }
     }
 }

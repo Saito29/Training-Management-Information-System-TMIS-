@@ -234,10 +234,27 @@
 
   }
 
+  async function interventionAction(module, id, operation, interventionId = null, fields = {}) {
+
+    const key = module === 'associations' ? 'tmis-farmer-associations' : 'tmis-farmers';
+    const owner = records(key).find(record => String(record.id) === String(id));
+    if (!owner) throw new Error('The selected profile is no longer available. Refresh and try again.');
+
+    const result = await request('/ui/interventions/'+module+'/'+encodeURIComponent(id), {
+      ...fields,
+      operation,
+      intervention_id: interventionId,
+      version: owner._version,
+    });
+    publish(result);
+    return result;
+
+  }
+
   const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[character]);
   const can = permission => Array.isArray(window.TMIS_PAGE?.permissions)
     && window.TMIS_PAGE.permissions.includes(permission);
-  window.TmisStore = {escape,getItem,setItem,removeItem,records,selected,request,publish,refresh,selectedId,saveRecord,upload,documentAction,can};
+  window.TmisStore = {escape,getItem,setItem,removeItem,records,selected,request,publish,refresh,selectedId,saveRecord,upload,documentAction,interventionAction,can};
 
   window.TMIS_SESSION = {source:'database',userId:String(window.TMIS_PAGE.actor.id),user:{...window.TMIS_PAGE.actor,id:String(window.TMIS_PAGE.actor.id)}};
 

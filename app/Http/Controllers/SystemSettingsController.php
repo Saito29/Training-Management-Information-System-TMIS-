@@ -483,6 +483,9 @@ class SystemSettingsController
             'emailNotificationRules' => $emailNotificationRules,
             'canManageNotificationRules' => $isAdministrator,
             'canManageEmailNotificationRules' => $isAdministrator,
+            'notificationEmailTypeSettings' => $isSuperAdministrator
+                ? DB::table('notification_email_type_settings')->pluck('email_enabled', 'notification_type')->map(fn ($enabled): bool => (bool) $enabled)->all()
+                : [],
             'notificationTransitions' => self::TRAINING_NOTIFICATION_TRANSITIONS,
             'roleAccountCounts' => $roleAccountCounts,
             'roleCredentialCounts' => $roleCredentialCounts,
@@ -507,6 +510,10 @@ class SystemSettingsController
                     ->where('duplicate.field', 'intervention_type')
                     ->whereColumn('duplicate.id', '<', 'participant_options.id')
                     ->whereRaw("LOWER(TRIM(COALESCE(NULLIF(duplicate.label, ''), duplicate.value))) = LOWER(TRIM(COALESCE(NULLIF(participant_options.label, ''), participant_options.value)))"))
+                ->orderBy('label')
+                ->get(),
+            'interventionUnitOptions' => DB::table('participant_options')
+                ->where('field', 'intervention_unit')
                 ->orderBy('label')
                 ->get(),
             'recordStatusOptions' => $this->recordStatusOptions(),
@@ -646,6 +653,80 @@ class SystemSettingsController
         });
 
         return response()->json(['message' => 'Training notification rule deleted.']);
+    }
+
+    public function updateEmailNotifications(Request $request): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $data = $request->validate(['enabled' => ['required', 'boolean']]);
+
+        $previous = DB::transaction(function () use ($request, $data): bool {
+            $settings = DB::table('system_settings')->where('id', 1)->lockForUpdate()->first();
+            abort_unless($settings, 404);
+            $previous = (bool) $settings->email_notifications_enabled;
+            $enabled = (bool) $data['enabled'];
+
+            if ($previous !== $enabled) {
+                DB::table('system_settings')->where('id', 1)->update([
+                    'email_notifications_enabled' => $enabled,
+                    'updated_at' => now(),
+                ]);
+                AuditTrail::record(
+                    $request,
+                    'system_email_notifications_'.($enabled ? 'enabled' : 'disabled'),
+                    $request->user(),
+                    before: ['enabled' => $previous],
+                    after: ['enabled' => $enabled],
+                    category: 'settings',
+                );
+            }
+
+            return $previous;
+        });
+
+        return response()->json([
+            'enabled' => (bool) $data['enabled'],
+            'previous' => $previous,
+            'message' => $data['enabled'] ? 'System notification emails are on.' : 'System notification emails are off.',
+        ]);
+    }
+
+    public function updateNotificationEmailType(Request $request, string $type): JsonResponse
+    {
+        abort_unless(ModuleAccess::isSuperAdministrator($request->user()), 403);
+        abort_unless(in_array($type, ['account', 'training', 'participants', 'evaluation', 'system'], true), 404);
+        $data = $request->validate(['enabled' => ['required', 'boolean']]);
+
+        $previous = DB::transaction(function () use ($request, $data, $type): bool {
+            $setting = DB::table('notification_email_type_settings')->where('notification_type', $type)->lockForUpdate()->first();
+            abort_unless($setting, 404);
+            $previous = (bool) $setting->email_enabled;
+            $enabled = (bool) $data['enabled'];
+
+            if ($previous !== $enabled) {
+                DB::table('notification_email_type_settings')->where('notification_type', $type)->update([
+                    'email_enabled' => $enabled,
+                    'updated_at' => now(),
+                ]);
+                AuditTrail::record(
+                    $request,
+                    'notification_email_type_'.$type.'_'.($enabled ? 'enabled' : 'disabled'),
+                    $request->user(),
+                    before: ['enabled' => $previous],
+                    after: ['enabled' => $enabled],
+                    category: 'settings',
+                );
+            }
+
+            return $previous;
+        });
+
+        return response()->json([
+            'type' => $type,
+            'enabled' => (bool) $data['enabled'],
+            'previous' => $previous,
+            'message' => ucfirst($type).' notification email delivery is '.($data['enabled'] ? 'on.' : 'off.'),
+        ]);
     }
 
     public function createTrainingEmailNotificationRule(Request $request): JsonResponse
@@ -980,7 +1061,7 @@ class SystemSettingsController
                     continue;
                 }
 
-                $path = $request->file($field)->store('system-branding', 'local');
+                $path = $request->file($field)->store('system-branding', config('filesystems.uploads_disk'));
                 if (! is_string($path) || $path === '') {
                     throw new \RuntimeException('An uploaded branding image could not be stored.');
                 }
@@ -1008,13 +1089,13 @@ class SystemSettingsController
                 ]);
             });
         } catch (\Throwable $error) {
-            Storage::disk('local')->delete(array_values($newPaths));
+            Storage::disk(config('filesystems.uploads_disk'))->delete(array_values($newPaths));
             throw $error;
         }
 
         foreach ($oldPaths as $path) {
             if (is_string($path) && str_starts_with($path, 'system-branding/') && ! str_contains($path, '..')) {
-                Storage::disk('local')->delete($path);
+                Storage::disk(config('filesystems.uploads_disk'))->delete($path);
             }
         }
 
@@ -1250,6 +1331,61 @@ class SystemSettingsController
         });
 
         return response()->json(['message' => 'Intervention type deleted.']);
+    }
+
+    public function storeInterventionUnit(Request $request): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $data = $request->validate(['name' => ['required', 'string', 'max:100']]);
+        $name = trim($data['name']);
+        if ($name === '' || DB::table('participant_options')->where('field', 'intervention_unit')->whereRaw('LOWER(TRIM(COALESCE(NULLIF(label, \'\'), value))) = ?', [mb_strtolower($name)])->exists()) {
+            throw ValidationException::withMessages(['name' => 'Enter a unique unit type.']);
+        }
+
+        $id = DB::table('participant_options')->insertGetId([
+            'field' => 'intervention_unit',
+            'value' => $name,
+            'label' => $name,
+            'is_active' => true,
+        ]);
+        AuditTrail::record($request, 'intervention_unit_created_'.$id, $request->user(), after: ['record_name' => $name], category: 'settings');
+
+        return response()->json(['option' => ['id' => $id, 'field' => 'intervention_unit', 'value' => $name, 'label' => $name, 'is_active' => true], 'message' => 'Unit type added.'], 201);
+    }
+
+    public function updateInterventionUnit(Request $request, int $option): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        $data = $request->validate(['name' => ['required', 'string', 'max:100']]);
+        $name = trim($data['name']);
+
+        $updated = DB::transaction(function () use ($request, $option, $name): array {
+            $existing = DB::table('participant_options')->where('id', $option)->where('field', 'intervention_unit')->lockForUpdate()->first();
+            abort_unless($existing, 404);
+            if ($name === '' || DB::table('participant_options')->where('field', 'intervention_unit')->where('id', '!=', $option)->whereRaw('LOWER(TRIM(COALESCE(NULLIF(label, \'\'), value))) = ?', [mb_strtolower($name)])->exists()) {
+                throw ValidationException::withMessages(['name' => 'Enter a unique unit type.']);
+            }
+
+            DB::table('participant_options')->where('id', $option)->update(['value' => $name, 'label' => $name]);
+            AuditTrail::record($request, 'intervention_unit_updated_'.$option, $request->user(), before: ['record_name' => $existing->label], after: ['record_name' => $name], category: 'settings');
+
+            return ['id' => $option, 'field' => 'intervention_unit', 'value' => $name, 'label' => $name, 'is_active' => (bool) $existing->is_active];
+        });
+
+        return response()->json(['option' => $updated, 'message' => 'Unit type updated.']);
+    }
+
+    public function deleteInterventionUnit(Request $request, int $option): JsonResponse
+    {
+        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
+        DB::transaction(function () use ($request, $option): void {
+            $existing = DB::table('participant_options')->where('id', $option)->where('field', 'intervention_unit')->lockForUpdate()->first();
+            abort_unless($existing, 404);
+            DB::table('participant_options')->where('id', $option)->delete();
+            AuditTrail::record($request, 'intervention_unit_deleted_'.$option, $request->user(), before: ['record_name' => $existing->label], category: 'settings');
+        });
+
+        return response()->json(['message' => 'Unit type deleted. Existing intervention entries keep their saved unit label.']);
     }
 
     public function attachmentTypes(Request $request, string $category): JsonResponse

@@ -34,6 +34,11 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::get('/system/locations/template', [LocationController::class, 'template'])->name('system.locations.template');
     Route::post('/system/locations/import', [LocationController::class, 'import'])->middleware('throttle:5,1')->name('system.locations.import');
     Route::post('/ui/training-enrollment', [OriginalInterfaceController::class, 'enrollment'])->name('ui.enrollment');
+    Route::post('/ui/interventions/{module}/{id}', [OriginalInterfaceController::class, 'intervention'])
+        ->whereIn('module', ['participants', 'associations'])
+        ->where('id', '[A-Za-z0-9:_-]+')
+        ->middleware('throttle:60,1')
+        ->name('ui.interventions.mutate');
     Route::patch('/ui/participants/trash/{participant}/restore', [OperationsController::class, 'restoreDeletedParticipant'])
         ->where('participant', '[A-Za-z0-9:_-]+')
         ->name('ui.participants.trash.restore');
@@ -59,6 +64,8 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::patch('/system/training-notification-rules/{rule}', [SystemSettingsController::class, 'updateTrainingNotificationRule'])->whereNumber('rule')->name('system.training-notification-rules.update');
     Route::delete('/system/training-notification-rules/{rule}', [SystemSettingsController::class, 'deleteTrainingNotificationRule'])->whereNumber('rule')->name('system.training-notification-rules.destroy');
     Route::post('/system/training-email-notification-rules', [SystemSettingsController::class, 'createTrainingEmailNotificationRule'])->name('system.training-email-notification-rules.store');
+    Route::patch('/system/email-notifications', [SystemSettingsController::class, 'updateEmailNotifications'])->name('system.email-notifications.update');
+    Route::patch('/system/notification-email-types/{type}', [SystemSettingsController::class, 'updateNotificationEmailType'])->name('system.notification-email-types.update');
     Route::patch('/system/training-email-notification-rules/{rule}', [SystemSettingsController::class, 'updateTrainingEmailNotificationRule'])->whereNumber('rule')->name('system.training-email-notification-rules.update');
     Route::delete('/system/training-email-notification-rules/{rule}', [SystemSettingsController::class, 'deleteTrainingEmailNotificationRule'])->whereNumber('rule')->name('system.training-email-notification-rules.destroy');
     Route::post('/system/branding', [SystemSettingsController::class, 'updateBranding'])->name('system.branding.update');
@@ -70,6 +77,9 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::post('/system/intervention-types', [SystemSettingsController::class, 'storeInterventionType'])->name('system.intervention-types.store');
     Route::patch('/system/intervention-types/{option}', [SystemSettingsController::class, 'updateInterventionType'])->whereNumber('option')->name('system.intervention-types.update');
     Route::delete('/system/intervention-types/{option}', [SystemSettingsController::class, 'deleteInterventionType'])->whereNumber('option')->name('system.intervention-types.destroy');
+    Route::post('/system/intervention-units', [SystemSettingsController::class, 'storeInterventionUnit'])->name('system.intervention-units.store');
+    Route::patch('/system/intervention-units/{option}', [SystemSettingsController::class, 'updateInterventionUnit'])->whereNumber('option')->name('system.intervention-units.update');
+    Route::delete('/system/intervention-units/{option}', [SystemSettingsController::class, 'deleteInterventionUnit'])->whereNumber('option')->name('system.intervention-units.destroy');
     Route::get('/system/record-statuses', [SystemSettingsController::class, 'recordStatuses'])->name('system.record-statuses.index');
     Route::post('/system/record-statuses', [SystemSettingsController::class, 'storeRecordStatus'])->name('system.record-statuses.store');
     Route::patch('/system/record-statuses/{status}', [SystemSettingsController::class, 'updateRecordStatus'])->whereNumber('status')->name('system.record-statuses.update');
@@ -166,12 +176,6 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::view('/app/admin/evaluation/id/view-rp-evaluation/{id?}', 'admin.evaluation.id.view-rp-evaluation')->where('id', '[A-Za-z0-9:_-]+')->name('admin.evaluation.id.view-rp-evaluation');
     Route::view('/app/admin/evaluation/id/view-training-evaluation/{id?}', 'admin.evaluation.id.view-training-evaluation')->where('id', '[A-Za-z0-9:_-]+')->name('admin.evaluation.id.view-training-evaluation');
     Route::view('/app/admin/notification/details/all-notification', 'admin.notification.details.all-notification')->name('admin.notification.details.all-notification');
-    // Notification composition is a system-administrator capability, including for direct URL access.
-    Route::get('/app/admin/notification/notification', function (Request $request): View {
-        abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
-
-        return view('admin.notification.notification');
-    })->name('admin.notification.notification');
     Route::view('/app/admin/participants/create/fa-register', 'admin.participants.create.fa-register')->name('admin.participants.create.fa-register');
     Route::view('/app/admin/participants/create/register', 'admin.participants.create.register')->name('admin.participants.create.register');
     Route::view('/app/admin/participants/details/all-with-status', 'admin.participants.details.all-with-status')->name('admin.participants.details.all-with-status');
@@ -302,7 +306,6 @@ Route::middleware(EnsureEligibleUser::class)->group(function (): void {
     Route::get('/app/admin/evaluation/id/view-rp-evaluation.html', fn (Request $request) => redirect()->route('admin.evaluation.id.view-rp-evaluation', $request->query(), 301));
     Route::get('/app/admin/evaluation/id/view-training-evaluation.html', fn (Request $request) => redirect()->route('admin.evaluation.id.view-training-evaluation', $request->query(), 301));
     Route::get('/app/admin/notification/details/all-notification.html', fn (Request $request) => redirect()->route('admin.notification.details.all-notification', $request->query(), 301));
-    Route::get('/app/admin/notification/notification.html', fn (Request $request) => redirect()->route('admin.notification.notification', $request->query(), 301));
     Route::get('/app/admin/participants/create/fa-register.html', fn (Request $request) => redirect()->route('admin.participants.create.fa-register', $request->query(), 301));
     Route::get('/app/admin/participants/create/register.html', fn (Request $request) => redirect()->route('admin.participants.create.register', $request->query(), 301));
     Route::get('/app/admin/participants/details/all-with-status.html', fn (Request $request) => redirect()->route('admin.participants.details.all-with-status', $request->query(), 301));

@@ -618,7 +618,7 @@ class="layout-fixed"
                 <i class="bi bi-bell-fill"></i>
                 <span
                   class="position-absolute top-0 start-100 translate-middle badge rounded-pill notification-count"
-                  >3</span
+                  ></span
                 >
               </button>
               <!-- Notification Dropdown -->
@@ -630,7 +630,7 @@ class="layout-fixed"
                   <div>
                     <span class="notification-menu-title">Notifications</span>
                     <span class="notification-menu-subtitle"
-                      >3 unread updates</span
+                      ></span
                     >
                   </div>
                   <div class="notification-menu-actions">
@@ -642,97 +642,7 @@ class="layout-fixed"
                     </button>
                   </div>
                 </div>
-                <div class="notification-menu-list">
-                  <button
-                    type="button"
-                    class="notification-menu-item is-unread"
-                    data-bs-toggle="modal"
-                    data-bs-target="#notificationDetailModal"
-                    data-notification-type="Approval required"
-                    data-notification-time="Today, 9:20 PM"
-                    data-notification-title="Training proposal review needed"
-                    data-notification-description="The Advanced Data Analysis training proposal submitted by John Doe is ready for your review. Your feedback is required before it can proceed to approval."
-                    data-notification-action="Review proposal"
-                  >
-                    <span
-                      class="notification-item-icon notification-item-icon--approval"
-                      ><i class="bi bi-clipboard2-check"></i
-                    ></span>
-                    <span class="notification-item-copy">
-                      <span class="notification-item-title"
-                        >Training proposal review needed</span
-                      >
-                      <span class="notification-item-summary"
-                        >Advanced Data Analysis needs your feedback.</span
-                      >
-                      <span class="notification-item-time">Today, 9:20 PM</span>
-                    </span>
-                    <span
-                      class="notification-unread-dot"
-                      aria-label="Unread"
-                    ></span>
-                  </button>
-                  <button
-                    type="button"
-                    class="notification-menu-item is-unread"
-                    data-bs-toggle="modal"
-                    data-bs-target="#notificationDetailModal"
-                    data-notification-type="Budget update"
-                    data-notification-time="Today, 2:45 PM"
-                    data-notification-title="District allocation records updated"
-                    data-notification-description="The beneficiary district allocation records have been updated. Open this notification to review the updated district entries."
-                    data-notification-action="View allocation records"
-                  >
-                    <span
-                      class="notification-item-icon notification-item-icon--budget"
-                      ><i class="bi bi-wallet2"></i
-                    ></span>
-                    <span class="notification-item-copy">
-                      <span class="notification-item-title"
-                        >District allocation records updated</span
-                      >
-                      <span class="notification-item-summary"
-                        >Beneficiary district entries are ready to review.</span
-                      >
-                      <span class="notification-item-time">Today, 2:45 PM</span>
-                    </span>
-                    <span
-                      class="notification-unread-dot"
-                      aria-label="Unread"
-                    ></span>
-                  </button>
-                  <button
-                    type="button"
-                    class="notification-menu-item is-unread"
-                    data-bs-toggle="modal"
-                    data-bs-target="#notificationDetailModal"
-                    data-notification-type="Participant update"
-                    data-notification-time="Yesterday, 4:10 PM"
-                    data-notification-title="Participant registration approved"
-                    data-notification-description="A participant registration has been approved and is now included in the beneficiary record for its assigned district."
-                    data-notification-action="View participant"
-                  >
-                    <span
-                      class="notification-item-icon notification-item-icon--participant"
-                      ><i class="bi bi-person-check"></i
-                    ></span>
-                    <span class="notification-item-copy">
-                      <span class="notification-item-title"
-                        >Participant registration approved</span
-                      >
-                      <span class="notification-item-summary"
-                        >A new beneficiary record is now active.</span
-                      >
-                      <span class="notification-item-time"
-                        >Yesterday, 4:10 PM</span
-                      >
-                    </span>
-                    <span
-                      class="notification-unread-dot"
-                      aria-label="Unread"
-                    ></span>
-                  </button>
-                </div>
+                <div class="notification-menu-list"></div>
                 <button type="button" class="notification-view-all">
                   View all notifications <i class="bi bi-arrow-right"></i>
                 </button>
@@ -785,7 +695,7 @@ class="layout-fixed"
                     <span>Logs</span>
                   </a>
                 </li>
-                
+
                 <li>
                   <hr class="dropdown-divider" />
                 </li>
@@ -2157,7 +2067,7 @@ class="layout-fixed"
               <span>Logs</span>
             </a>
           </li>
-          
+
           <li class="mobile-list-navigation">
             <a href="{{ route('login') }}" class="nav-link sign-out-item">
               <i class="bi bi-box-arrow-right"></i>

@@ -18,7 +18,7 @@
                             <table role="presentation" cellpadding="0" cellspacing="0">
                                 <tr>
                                     <td width="{{ $brandLogoWidth + 12 }}" valign="middle">
-                                        <img src="{{ $message->embed($brandLogoPath) }}" alt="{{ $brandName }} logo" width="{{ $brandLogoWidth }}" height="{{ $brandLogoHeight }}" style="display:block;width:{{ $brandLogoWidth }}px;height:{{ $brandLogoHeight }}px;max-width:160px;max-height:56px;object-fit:contain;border:0;">
+                                        <img src="{{ $message->embedData($brandLogoData, $brandLogoName, $brandLogoMimeType) }}" alt="{{ $brandName }} logo" width="{{ $brandLogoWidth }}" height="{{ $brandLogoHeight }}" style="display:block;width:{{ $brandLogoWidth }}px;height:{{ $brandLogoHeight }}px;max-width:160px;max-height:56px;object-fit:contain;border:0;">
                                     </td>
                                     <td valign="middle">
                                         <p style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:3px;">{{ $brandName }}</p>

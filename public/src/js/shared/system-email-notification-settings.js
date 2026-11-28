@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const roles = Array.isArray(settings.roles) ? settings.roles : [];
   const transitions = Array.isArray(settings.transitions) ? settings.transitions : [];
   const canEdit = settings.canEdit === true;
+  const globalEmailToggle = byId('systemEmailNotificationsEnabled');
+  const globalEmailFeedback = byId('systemEmailNotificationsFeedback');
   const ruleBody = byId('trainingEmailNotificationRulesBody');
   const empty = byId('trainingEmailNotificationRulesEmpty');
   const form = byId('trainingEmailNotificationRuleForm');
@@ -347,6 +349,26 @@ document.addEventListener('DOMContentLoaded', () => {
         showError(error, deleteError.message || 'The email rule could not be deleted.');
       } finally {
         button.disabled = false;
+      }
+    });
+  }
+
+  if (globalEmailToggle && canEdit) {
+    globalEmailToggle.checked = settings.emailEnabled === true;
+    globalEmailToggle.addEventListener('change', async () => {
+      const requestedValue = globalEmailToggle.checked;
+      globalEmailToggle.disabled = true;
+      globalEmailFeedback.hidden = true;
+      try {
+        const result = await api('/system/email-notifications', 'PATCH', { enabled: requestedValue });
+        settings.emailEnabled = result.enabled === true;
+        globalEmailToggle.checked = settings.emailEnabled;
+        showToast(result.message || 'System notification email delivery updated.');
+      } catch (error) {
+        globalEmailToggle.checked = !requestedValue;
+        showError(globalEmailFeedback, error.message || 'Email notification delivery could not be updated.');
+      } finally {
+        globalEmailToggle.disabled = false;
       }
     });
   }

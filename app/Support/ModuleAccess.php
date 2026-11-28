@@ -118,6 +118,11 @@ class ModuleAccess
             }
             $permissions[] = self::pageAccessPermission($module);
         }
+        foreach (['participants', 'associations'] as $module) {
+            foreach (['read', 'create', 'edit', 'delete'] as $action) {
+                $permissions[] = $module.'.interventions.'.$action;
+            }
+        }
         foreach (self::navigationPages() as $module => $pages) {
             foreach (array_keys($pages) as $page) {
                 $permissions[] = self::pagePermission($module, $page);
@@ -239,6 +244,17 @@ class ModuleAccess
         }
 
         return false;
+    }
+
+    public static function canViewInterventions(User $user, string $module): bool
+    {
+        if (! in_array($module, ['participants', 'associations'], true)) {
+            return false;
+        }
+
+        return self::allows($user, $module.'.interventions.read')
+            || self::allows($user, $module.'.interventions.edit')
+            || self::allows($user, $module.'.interventions.delete');
     }
 
     public static function allowsNavigationPage(User $user, string $module, string $page): bool

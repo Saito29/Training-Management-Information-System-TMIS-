@@ -19,8 +19,7 @@
   };
   const isAllowed = (path) => {
     if (access.administrator) return true;
-    if (path === '/app/admin/notification/notification'
-      || path.startsWith('/system/')
+    if (path.startsWith('/system/')
       || path.startsWith('/maintenance/settings')) {
       return false;
     }

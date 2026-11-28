@@ -55,7 +55,7 @@ class AccountDisplay
             }
         }
 
-        if ($user && str_starts_with($path, 'profile-photos/'.$user->user_id.'/') && ! str_contains($path, '..') && Storage::disk('local')->exists($path)) {
+        if ($user && str_starts_with($path, 'profile-photos/'.$user->user_id.'/') && ! str_contains($path, '..') && Storage::disk(config('filesystems.uploads_disk'))->exists($path)) {
             $profile['photoUrl'] = route('profile.photo', ['v' => substr(hash('sha256', $path), 0, 12)]);
         }
 

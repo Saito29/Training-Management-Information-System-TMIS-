@@ -31,9 +31,6 @@ class EnsureModuleAccess
                 ModuleAccess::authorize($request, 'administration.approve');
             }
         }
-        if ($request->is('app/admin/notification/notification', 'app/admin/notification/notification.html')) {
-            abort_unless(ModuleAccess::isAdministrator($request->user()), 403);
-        }
         $module = match (true) {
             str_starts_with($path, 'app/admin/training/') => str_contains($path, 'rp-') || str_contains($path, '-rp') ? 'resource_persons' : 'trainings',
             str_starts_with($path, 'app/admin/participants/') => str_starts_with($page, 'fa-') || str_ends_with($page, '-fa') ? 'associations' : 'participants',

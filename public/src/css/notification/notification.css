@@ -135,6 +135,12 @@
 .compose-recipient-table th:first-child { z-index:3; }
 .compose-card-body .compose-select-column { display:flex; flex-direction:column; align-items:center; gap:.35rem; margin:0; }
 .compose-recipient-table input[type=checkbox] { width:1rem; height:1rem; accent-color:var(--color-primary); cursor:pointer; }
+.compose-recipient-table input[type=checkbox]:disabled { cursor:not-allowed; opacity:.5; }
+.compose-recipient-table tr.is-sender-account td { background:var(--color-bg); }
+.compose-recipient-table tr.is-recipient-selectable { cursor:pointer; }
+.compose-recipient-table tr.is-recipient-selectable:focus-visible { outline:2px solid var(--color-primary); outline-offset:-2px; }
+.compose-recipient-table tr.is-sender-account { cursor:not-allowed; }
+.compose-current-account-note { display:block; margin-top:.15rem; color:var(--color-text-secondary); font-size:.65rem; }
 .compose-recipient-pagination { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem; padding:1rem 0; font-size:.73rem; }
 .compose-recipient-pagination label,.compose-recipient-pagination nav { display:flex; align-items:center; gap:.6rem; margin:0; }
 .compose-recipient-pagination select { width:auto; }

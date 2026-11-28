@@ -52,7 +52,7 @@ class="layout-fixed"
     <link rel="stylesheet" href="{{ asset('src/css/shared/main-body.css?v=notification-details-theme-1') }}" />
     <link
       rel="stylesheet"
-      href="{{ asset('src/css/participants/update/edit-farmer.css?v=farmer-intervention-layout-2') }}"
+      href="{{ asset('src/css/participants/update/edit-farmer.css?v=farmer-intervention-layout-4') }}"
     />
     <link rel="stylesheet" href="{{ asset('src/css/shared/theme.css') }}" />
     <link rel="stylesheet" href="{{ asset('src/css/shared/activity-logs.css?v=design-20261109-1') }}" />
@@ -2391,7 +2391,7 @@ class="layout-fixed"
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionUnit">Unit</label>
-                  <input class="form-control" id="interventionUnit" name="unit" type="text" maxlength="40" placeholder="e.g. kg, bags, units" />
+                  <select class="form-select" id="interventionUnit" name="unit"><option value="">Select a unit</option></select>
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="interventionQty">Quantity</label>
@@ -2578,6 +2578,9 @@ class="layout-fixed"
       <button type="button" class="btn btn-sm btn-light" id="cancelAttachmentDelete">Undo</button>
     </div>
 
+    @include('admin.participants.id.intervention-view-modal')
+    @include('admin.participants.id.intervention-delete-modal')
+
     <!-- Scripts -->
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
@@ -2597,7 +2600,8 @@ class="layout-fixed"
     <script src="{{ asset('src/js/shared/navigation-state.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-profile-tabs.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-training-table.js?v=farmer-training-metrics-12') }}"></script>
-            <script src="{{ asset('src/js/participants/update/farmer-intervention-table.js?v=farmer-intervention-export-layout-4') }}"></script>
+    <script src="{{ asset('src/js/participants/update/farmer-intervention-table.js?v=intervention-pagination-action-column-2') }}"></script>
+    <script src="{{ asset('src/js/participants/update/intervention-actions.js?v=intervention-toast-feedback-4') }}"></script>
     <script src="{{ asset('src/js/participants/update/farmer-activity-logs.js?v=actor-role-omission-1') }}"></script>
     <script src="{{ asset('src/js/participants/update/attachment-manager.js') }}"></script>
     <script src="{{ asset('src/js/participants/update/edit-farmer.js?v=farmer-save-toast-theme-1') }}"></script>

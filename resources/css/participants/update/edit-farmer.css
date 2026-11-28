@@ -4169,6 +4169,7 @@
 .intervention-pagination {
   margin: 8px 0;
 }
+.intervention-pagination .pagination-controls select { width: 82px; }
 
 .intervention-table-scroll {
   border: 1px solid #e0e7e2;
@@ -5248,3 +5249,21 @@
 [data-theme='dark'] .intervention-type-pill { color: #c7e9cd; background: #294a32; }
 [data-theme='dark'] .intervention-row-edit-button { color: #a8d4ff; background: #1e3850; border-color: #355d7d; }
 [data-theme='dark'] .intervention-row-edit-button:hover, [data-theme='dark'] .intervention-row-edit-button:focus-visible { color: #d6ebff; background: #284a67; border-color: #52799a; }
+#interventionDataTable.intervention-editable-table th:nth-child(1),
+#interventionDataTable.intervention-editable-table td:nth-child(1) { width:152px; min-width:152px; }
+.intervention-data-table .intervention-row-action-cell { display:flex; align-items:center; justify-content:center; gap:.3rem; white-space:nowrap; }
+.intervention-row-view-button { display:inline-grid; width:34px; height:34px; place-items:center; padding:0; color:#0873d1; background:#eef6ff; border:1px solid #c9e1fb; border-radius:9px; font-size:14px; }
+.intervention-row-delete-button { display:inline-grid; width:34px; height:34px; place-items:center; padding:0; color:#b42318; background:#fff1f0; border:1px solid #ffd1cc; border-radius:9px; font-size:14px; }
+.intervention-row-delete-button:hover, .intervention-row-delete-button:focus-visible { color:#8e1b13; background:#ffe0dc; border-color:#ffb8ad; }
+.intervention-detail-list { display:grid; grid-template-columns:minmax(120px,160px) minmax(0,1fr); margin:0; border:1px solid #e0e7e2; border-radius:10px; overflow:hidden; }
+.intervention-detail-list > div { display:contents; }
+.intervention-detail-list dt, .intervention-detail-list dd { margin:0; padding:11px 13px; border-bottom:1px solid #e8eee9; font-size:12px; }
+.intervention-detail-list dt { color:#607088; background:#f4f8f5; font-weight:700; }
+.intervention-detail-list dd { color:#263238; background:#fff; overflow-wrap:anywhere; }
+.intervention-detail-list > div:last-child dt, .intervention-detail-list > div:last-child dd { border-bottom:0; }
+[data-theme='dark'] .intervention-row-view-button { color:#a8d4ff; background:#1e3850; border-color:#355d7d; }
+[data-theme='dark'] .intervention-row-delete-button { color:#ffb4aa; background:#442522; border-color:#79413a; }
+[data-theme='dark'] .intervention-row-delete-button:hover, [data-theme='dark'] .intervention-row-delete-button:focus-visible { color:#ffe1dc; background:#5b302a; border-color:#96564c; }
+[data-theme='dark'] .intervention-detail-list { border-color:#3d4a42; }
+[data-theme='dark'] .intervention-detail-list dt { color:#c1cec4; background:#202c24; }
+[data-theme='dark'] .intervention-detail-list dd { color:#e5ece7; background:#18221c; border-color:#354239; }

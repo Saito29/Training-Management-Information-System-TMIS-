@@ -42,7 +42,9 @@ class LoginVerificationCode extends Mailable
             with: [
                 'forgotPasswordUrl' => rtrim(config('app.url'), '/').route('password.request', [], false),
                 'brandName' => $branding['name'],
-                'brandLogoPath' => $branding['logoPath'],
+                'brandLogoData' => $branding['logoData'],
+                'brandLogoName' => $branding['logoName'],
+                'brandLogoMimeType' => $branding['logoMimeType'],
                 'brandLogoWidth' => $branding['logoWidth'],
                 'brandLogoHeight' => $branding['logoHeight'],
             ],

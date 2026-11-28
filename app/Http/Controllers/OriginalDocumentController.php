@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /** Stores original-screen documents privately and rechecks workflow state under the owner lock. */
 class OriginalDocumentController
@@ -109,7 +109,8 @@ class OriginalDocumentController
             $request->validate(['file' => ['mimes:pdf,doc,docx', 'extensions:pdf,doc,docx']]);
         }
         $file = $request->file('file');
-        $path = $file->store('record-documents', 'local');
+        $disk = config('filesystems.uploads_disk');
+        $path = $file->store('record-documents', $disk);
         try {
             DB::transaction(function () use ($request, $module, $owner, $data, $design, $file, $path): void {
                 AttachmentTypeCatalog::lock(AttachmentTypeCatalog::categoryForModule($module), $data['kind']);
@@ -129,21 +130,22 @@ class OriginalDocumentController
                 $this->auditAttachmentChange($request, $owner, $module, 'uploaded', basename($file->getClientOriginalName()), (string) $data['kind'], $data['year'] ?? null, $data['remarks'] ?? null);
             });
         } catch (\Throwable $exception) {
-            Storage::disk('local')->delete($path);
+            Storage::disk($disk)->delete($path);
             throw $exception;
         }
 
         return response()->json($interface->bootstrap($request->user()) + ['message' => 'Document uploaded.']);
     }
 
-    public function show(Request $request, string $module, string $id, int $document): BinaryFileResponse
+    public function show(Request $request, string $module, string $id, int $document): StreamedResponse
     {
         $owner = $this->owner($request, $module, $id, 'read');
         [$table, $foreign] = $this->table($module);
         $file = DB::table($table)->where('id', $document)->where($foreign, $owner->id)->first();
-        abort_unless($file && Storage::disk('local')->exists($file->path), 404);
+        $disk = Storage::disk(config('filesystems.uploads_disk'));
+        abort_unless($file && $disk->exists($file->path), 404);
 
-        return response()->file(Storage::disk('local')->path($file->path), ['Content-Type' => $file->mime_type, 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'no-store, private', 'Content-Security-Policy' => "sandbox; default-src 'none'; style-src 'unsafe-inline'"]);
+        return $disk->response($file->path, $file->original_name, ['Content-Type' => $file->mime_type, 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'no-store, private', 'Content-Security-Policy' => "sandbox; default-src 'none'; style-src 'unsafe-inline'"]);
     }
 
     public function update(Request $request, string $module, string $id, int $document, OriginalInterfaceData $interface): JsonResponse
@@ -195,7 +197,7 @@ class OriginalDocumentController
             }
             DB::table($module)->where('id', $owner->id)->increment('ui_version');
             $this->auditAttachmentChange($request, $owner, $module, 'deleted', (string) $file->original_name, (string) $file->kind, $file->year === null ? null : (int) $file->year, $file->remarks);
-            DB::afterCommit(fn () => Storage::disk('local')->delete($file->path));
+            DB::afterCommit(fn () => Storage::disk(config('filesystems.uploads_disk'))->delete($file->path));
         });
 
         return response()->json($interface->bootstrap($request->user()));
@@ -232,7 +234,7 @@ class OriginalDocumentController
         try {
             foreach (['image', 'logo'] as $field) {
                 if ($request->hasFile($field)) {
-                    $paths[$field.'_path'] = $request->file($field)->store('training-highlights', 'local');
+                    $paths[$field.'_path'] = $request->file($field)->store('training-highlights', config('filesystems.uploads_disk'));
                 }
             }
             DB::transaction(function () use ($request, $owner, $data, $content, $bullets, $paths): void {
@@ -273,7 +275,7 @@ class OriginalDocumentController
             });
         } catch (\Throwable $exception) {
             foreach ($paths as $path) {
-                Storage::disk('local')->delete($path);
+                Storage::disk(config('filesystems.uploads_disk'))->delete($path);
             }
             throw $exception;
         }
@@ -281,13 +283,14 @@ class OriginalDocumentController
         return response()->json($interface->bootstrap($request->user()));
     }
 
-    public function highlightImage(Request $request, string $id, int $slide, string $kind): BinaryFileResponse
+    public function highlightImage(Request $request, string $id, int $slide, string $kind): StreamedResponse
     {
         $owner = $this->owner($request, 'trainings', $id, 'read');
         abort_unless(in_array($kind, ['image', 'logo'], true), 404);
         $path = DB::table('training_highlights')->where('training_id', $owner->id)->where('slide', $slide)->value($kind.'_path');
-        abort_unless($path && Storage::disk('local')->exists($path), 404);
+        $disk = Storage::disk(config('filesystems.uploads_disk'));
+        abort_unless($path && $disk->exists($path), 404);
 
-        return response()->file(Storage::disk('local')->path($path), ['X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'no-store, private']);
+        return $disk->response($path, headers: ['X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'no-store, private']);
     }
 }
